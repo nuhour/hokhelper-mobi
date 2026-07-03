@@ -12,15 +12,15 @@ class AppTheme {
   static const muted = Color(0xFF94A3B8);
   static const error = Color(0xFFFF6B6B);
 
-  static ThemeData dark() {
+  static ThemeData dark({Color primary = gold, Color secondary = cyan}) {
     final base = ThemeData.dark(useMaterial3: true);
     final textTheme = base.textTheme.apply(bodyColor: text, displayColor: text);
 
     return base.copyWith(
       scaffoldBackgroundColor: bg,
-      colorScheme: const ColorScheme.dark(
-        primary: gold,
-        secondary: cyan,
+      colorScheme: ColorScheme.dark(
+        primary: primary,
+        secondary: secondary,
         surface: panel,
         error: error,
       ),
@@ -34,13 +34,13 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: panel,
-        indicatorColor: gold.withValues(alpha: 0.18),
+        indicatorColor: primary.withValues(alpha: 0.18),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final color = states.contains(WidgetState.selected) ? gold : muted;
+          final color = states.contains(WidgetState.selected) ? primary : muted;
           return TextStyle(color: color, fontWeight: FontWeight.w600);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
-          final color = states.contains(WidgetState.selected) ? gold : muted;
+          final color = states.contains(WidgetState.selected) ? primary : muted;
           return IconThemeData(color: color);
         }),
       ),

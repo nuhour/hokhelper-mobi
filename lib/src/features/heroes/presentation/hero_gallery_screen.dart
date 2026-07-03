@@ -8,17 +8,19 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../settings/presentation/settings_controller.dart';
 import '../data/heroes_repository.dart';
 import '../domain/hero_summary.dart';
-
-const defaultHeroRegionId = 2;
 
 final heroesRepositoryProvider = Provider<HeroesRepository>((ref) {
   return HeroesRepository(apiClient: ref.watch(apiClientProvider));
 });
 
-final heroGalleryProvider = FutureProvider<List<HeroSummary>>((ref) {
-  return ref.watch(heroesRepositoryProvider).loadHeroes(defaultHeroRegionId);
+final heroGalleryProvider = FutureProvider<List<HeroSummary>>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(heroesRepositoryProvider)
+      .loadHeroes(settings.region.regionId);
 });
 
 class HeroGalleryScreen extends ConsumerWidget {

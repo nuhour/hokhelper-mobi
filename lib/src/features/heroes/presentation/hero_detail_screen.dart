@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../settings/presentation/settings_controller.dart';
 import 'hero_gallery_screen.dart';
 
 class HeroDetailArgs {
@@ -33,6 +34,14 @@ final heroDetailProvider =
           .loadHeroDetail(args.heroId, args.regionId);
     });
 
+final selectedRegionHeroDetailProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, heroId) async {
+      final settings = await ref.watch(appSettingsControllerProvider.future);
+      return ref
+          .watch(heroesRepositoryProvider)
+          .loadHeroDetail(heroId, settings.region.regionId);
+    });
+
 class HeroDetailScreen extends ConsumerWidget {
   const HeroDetailScreen({required this.heroId, super.key});
 
@@ -40,14 +49,13 @@ class HeroDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final args = HeroDetailArgs(heroId: heroId, regionId: defaultHeroRegionId);
-    final detailValue = ref.watch(heroDetailProvider(args));
+    final detailValue = ref.watch(selectedRegionHeroDetailProvider(heroId));
 
     return Scaffold(
       appBar: AppBar(title: Text('Hero #$heroId')),
       body: AppAsyncView<Map<String, dynamic>>(
         value: detailValue,
-        retry: () => ref.invalidate(heroDetailProvider(args)),
+        retry: () => ref.invalidate(selectedRegionHeroDetailProvider(heroId)),
         data: (detail) => ListView(
           padding: const EdgeInsets.all(20),
           children: [

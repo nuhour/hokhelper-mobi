@@ -5,20 +5,23 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../settings/presentation/settings_controller.dart';
 import '../data/content_repository.dart';
-
-const defaultContentRegionId = 2;
 
 final contentRepositoryProvider = Provider<ContentRepository>((ref) {
   return ContentRepository(apiClient: ref.watch(apiClientProvider));
 });
 
-final skinsProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.watch(contentRepositoryProvider).loadSkins(defaultContentRegionId);
+final skinsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(contentRepositoryProvider)
+      .loadSkins(settings.region.regionId);
 });
 
-final cgsProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.watch(contentRepositoryProvider).loadCgs(defaultContentRegionId);
+final cgsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref.watch(contentRepositoryProvider).loadCgs(settings.region.regionId);
 });
 
 class ContentScreen extends ConsumerWidget {

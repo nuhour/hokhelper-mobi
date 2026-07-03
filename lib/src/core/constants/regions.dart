@@ -13,3 +13,13 @@ enum HokRegion {
 extension HokRegionId on HokRegion {
   int get id => regionId;
 }
+
+HokRegion hokRegionFromId(int regionId) {
+  for (final region in HokRegion.values) {
+    if (region.id == regionId) {
+      return region;
+    }
+  }
+
+  return HokRegion.en;
+}
