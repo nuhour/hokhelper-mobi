@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/auth/presentation/login_screen.dart';
 import 'app_shell.dart';
 
 GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: '/',
     routes: [
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
