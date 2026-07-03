@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 import '../domain/equip_ranking_entry.dart';
 import '../domain/hero_ranking_entry.dart';
 import '../domain/player_ranking_entry.dart';
+import '../domain/tier_list_entry.dart';
 
 class RankingsRepository {
   const RankingsRepository({required this.apiClient});
@@ -85,5 +86,32 @@ class RankingsRepository {
     }
 
     return equips.map(EquipRankingEntry.fromJson).toList(growable: false);
+  }
+
+  Future<List<TierListEntry>> loadTierList(
+    int regionId, {
+    String source = 'all',
+    int windowDays = 999,
+  }) async {
+    final json = await apiClient.getJson(
+      '/ranking/tier-list',
+      query: {
+        'region_id': regionId,
+        'source': source,
+        'window_days': windowDays,
+      },
+    );
+    final data = json['data'];
+    final result = json['result'];
+    final tierList = data is Map
+        ? data['tier_list']
+        : result is Map
+        ? result['tier_list'] ?? result['data']
+        : json['tier_list'];
+    if (tierList is! List) {
+      return const [];
+    }
+
+    return tierList.map(TierListEntry.fromJson).toList(growable: false);
   }
 }

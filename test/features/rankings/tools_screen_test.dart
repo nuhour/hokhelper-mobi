@@ -40,6 +40,7 @@ void main() {
           heroRankingProvider.overrideWith((ref) async => const []),
           playerRankingProvider.overrideWith((ref) async => const []),
           equipRankingProvider.overrideWith((ref) async => const []),
+          tierRankingProvider.overrideWith((ref) async => const []),
         ],
         child: MaterialApp.router(routerConfig: _buildRouter()),
       ),
@@ -60,6 +61,7 @@ void main() {
           publicBuildSchemesProvider.overrideWith((ref) async => const []),
           playerRankingProvider.overrideWith((ref) async => const []),
           equipRankingProvider.overrideWith((ref) async => const []),
+          tierRankingProvider.overrideWith((ref) async => const []),
           heroRankingProvider.overrideWith((ref) async {
             return const [
               HeroRankingEntry(

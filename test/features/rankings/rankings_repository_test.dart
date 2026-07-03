@@ -65,6 +65,26 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/ranking/tier-list') {
+      return const {
+        'success': true,
+        'data': {
+          'tier_list': [
+            {
+              'hero_id': 42,
+              'heroId': '199',
+              'name': 'Lam',
+              'mainJob': 4,
+              'tier': 'T0',
+              'position': 1,
+              'score': 96.5,
+              'win_rate': 55.0,
+            },
+          ],
+          'season_id': 9,
+        },
+      };
+    }
     return const {
       'success': true,
       'data': {
@@ -163,5 +183,28 @@ void main() {
     expect(entries.single.name, 'Doombringer');
     expect(entries.single.pickRate, 0.184);
     expect(entries.single.winRate, 0.527);
+  });
+
+  test('loads tier list with backend-compatible query params', () async {
+    final apiClient = _FakeApiClient();
+    final repository = RankingsRepository(apiClient: apiClient);
+
+    final entries = await repository.loadTierList(2);
+
+    expect(apiClient.getPath, '/ranking/tier-list');
+    expect(apiClient.getQuery, {
+      'region_id': 2,
+      'source': 'all',
+      'window_days': 999,
+    });
+    expect(entries, hasLength(1));
+    expect(entries.single.heroId, 42);
+    expect(entries.single.externalHeroId, '199');
+    expect(entries.single.name, 'Lam');
+    expect(entries.single.mainJob, '4');
+    expect(entries.single.tier, 'T0');
+    expect(entries.single.position, 1);
+    expect(entries.single.score, 96.5);
+    expect(entries.single.winRate, 0.55);
   });
 }

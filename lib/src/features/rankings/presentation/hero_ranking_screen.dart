@@ -11,6 +11,7 @@ import '../data/rankings_repository.dart';
 import '../domain/equip_ranking_entry.dart';
 import '../domain/hero_ranking_entry.dart';
 import '../domain/player_ranking_entry.dart';
+import '../domain/tier_list_entry.dart';
 
 enum HeroRankingSort {
   winRate('win_rate', 'Win'),
@@ -53,6 +54,13 @@ final equipRankingProvider = FutureProvider<List<EquipRankingEntry>>((ref) {
   return ref.watch(rankingsRepositoryProvider).loadEquipRanking();
 });
 
+final tierRankingProvider = FutureProvider<List<TierListEntry>>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(rankingsRepositoryProvider)
+      .loadTierList(settings.region.regionId);
+});
+
 class HeroRankingScreen extends ConsumerStatefulWidget {
   const HeroRankingScreen({super.key});
 
@@ -67,7 +75,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -81,6 +89,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
     final rankingValue = ref.watch(heroRankingProvider);
     final playerValue = ref.watch(playerRankingProvider);
     final equipValue = ref.watch(equipRankingProvider);
+    final tierValue = ref.watch(tierRankingProvider);
     final selectedSort = ref.watch(selectedHeroRankingSortProvider);
 
     return Column(
@@ -93,7 +102,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
               const AppSectionHeader(title: 'Hero Rankings'),
               const SizedBox(height: 8),
               Text(
-                'Compare heroes and players by live performance metrics.',
+                'Compare heroes, players, equipment, and tier data.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
@@ -105,6 +114,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
                   Tab(text: 'Heroes'),
                   Tab(text: 'Players'),
                   Tab(text: 'Equips'),
+                  Tab(text: 'Tier'),
                 ],
               ),
             ],
@@ -120,6 +130,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
               ),
               _PlayerRankingTab(playerValue: playerValue),
               _EquipRankingTab(equipValue: equipValue),
+              _TierListTab(tierValue: tierValue),
             ],
           ),
         ),
@@ -264,6 +275,47 @@ class _EquipRankingTab extends ConsumerWidget {
                     entry: entries[index],
                     rank: index + 1,
                   );
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+              ),
+      ),
+    );
+  }
+}
+
+class _TierListTab extends ConsumerWidget {
+  const _TierListTab({required this.tierValue});
+
+  final AsyncValue<List<TierListEntry>> tierValue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppAsyncView<List<TierListEntry>>(
+      value: tierValue,
+      retry: () => ref.invalidate(tierRankingProvider),
+      data: (entries) => RefreshIndicator(
+        onRefresh: () => ref.refresh(tierRankingProvider.future),
+        child: entries.isEmpty
+            ? const CustomScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppEmptyState(
+                      icon: Icons.workspace_premium_outlined,
+                      title: 'No tier data found',
+                      message: 'Pull to refresh once tier snapshots are ready.',
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  return _TierListCard(entry: entries[index], rank: index + 1);
                 },
                 separatorBuilder: (context, index) =>
                     const SizedBox(height: 12),
@@ -523,6 +575,113 @@ class _EquipRankingCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TierListCard extends StatelessWidget {
+  const _TierListCard({required this.entry, required this.rank});
+
+  final TierListEntry entry;
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                _TierBadge(label: entry.tier),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        entry.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        entry.mainJob.isEmpty
+                            ? 'Hero'
+                            : 'Lane ${entry.mainJob}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                _RankBadge(rank: entry.position > 0 ? entry.position : rank),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _MetricChip(
+                  label: 'Score',
+                  value: entry.score.toStringAsFixed(1),
+                ),
+                _MetricChip(label: 'Win', value: _formatPercent(entry.winRate)),
+                if (entry.externalHeroId.isNotEmpty)
+                  _MetricChip(label: 'Hero ID', value: entry.externalHeroId),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TierBadge extends StatelessWidget {
+  const _TierBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.2),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Center(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.gold,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
       ),
     );
