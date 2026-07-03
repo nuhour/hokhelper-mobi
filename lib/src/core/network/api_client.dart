@@ -43,18 +43,23 @@ class ApiClient {
   }
 
   Map<String, dynamic> _readJsonMap(Object? data) {
-    if (data is Map<String, dynamic>) {
-      return data;
+    final json = switch (data) {
+      Map<String, dynamic>() => data,
+      Map() => Map<String, dynamic>.from(data),
+      _ => throw const ApiError(
+        kind: ApiErrorKind.backend,
+        message: 'Unexpected backend response',
+      ),
+    };
+
+    if (json['success'] == false) {
+      throw ApiError(
+        kind: ApiErrorKind.backend,
+        message: _readEnvelopeMessage(json),
+      );
     }
 
-    if (data is Map) {
-      return Map<String, dynamic>.from(data);
-    }
-
-    throw const ApiError(
-      kind: ApiErrorKind.backend,
-      message: 'Unexpected backend response',
-    );
+    return json;
   }
 
   ApiError _mapDioException(DioException error) {
@@ -96,13 +101,19 @@ class ApiClient {
     final data = error.response?.data;
 
     if (data is Map) {
-      final message = data['message'] ?? data['msg'] ?? data['error'];
-      if (message != null) {
-        return message.toString();
-      }
+      return _readEnvelopeMessage(data);
     }
 
     return error.message ?? 'Request failed';
+  }
+
+  String _readEnvelopeMessage(Map<dynamic, dynamic> json) {
+    final message = json['message'] ?? json['msg'] ?? json['error'];
+    if (message != null && message.toString().isNotEmpty) {
+      return message.toString();
+    }
+
+    return 'Request failed';
   }
 }
 

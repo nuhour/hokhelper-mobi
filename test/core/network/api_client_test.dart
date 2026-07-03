@@ -12,6 +12,23 @@ class _ThrowingTokenStore extends SecureTokenStore {
   }
 }
 
+class _EnvelopeFailureInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    handler.resolve(
+      Response<Object?>(
+        requestOptions: options,
+        statusCode: 200,
+        data: {
+          'success': false,
+          'message': 'Backend validation failed',
+          'result': null,
+        },
+      ),
+    );
+  }
+}
+
 void main() {
   test('maps token read failures without hanging the request', () async {
     final client = ApiClient(
@@ -32,6 +49,30 @@ void main() {
               (error) => error.message,
               'message',
               contains('token storage unavailable'),
+            ),
+      ),
+    );
+  });
+
+  test('maps failed backend envelopes to backend errors', () async {
+    final dio = Dio()..interceptors.add(_EnvelopeFailureInterceptor());
+    final client = ApiClient(
+      dio: dio,
+      config: const AppConfig(
+        apiBaseUrl: 'https://example.test',
+        apiPrefix: '',
+      ),
+    );
+
+    await expectLater(
+      client.postJson('/heroes', body: {}),
+      throwsA(
+        isA<ApiError>()
+            .having((error) => error.kind, 'kind', ApiErrorKind.backend)
+            .having(
+              (error) => error.message,
+              'message',
+              'Backend validation failed',
             ),
       ),
     );
