@@ -6,6 +6,9 @@ import 'package:hok_helper_mobile/src/features/builds/presentation/build_explore
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/tools_screen.dart';
+import 'package:hok_helper_mobile/src/features/teambuild/domain/team_build_hero.dart';
+import 'package:hok_helper_mobile/src/features/teambuild/domain/team_recommendation.dart';
+import 'package:hok_helper_mobile/src/features/teambuild/presentation/team_builder_screen.dart';
 
 GoRouter _buildRouter() {
   return GoRouter(
@@ -22,6 +25,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'rankings',
             builder: (context, state) => const HeroRankingScreen(),
+          ),
+          GoRoute(
+            path: 'team-builder',
+            builder: (context, state) => const TeamBuilderScreen(),
           ),
         ],
       ),
@@ -41,6 +48,10 @@ void main() {
           playerRankingProvider.overrideWith((ref) async => const []),
           equipRankingProvider.overrideWith((ref) async => const []),
           tierRankingProvider.overrideWith((ref) async => const []),
+          teamBuilderHeroesProvider.overrideWith((ref) async => const []),
+          teamRecommendationsProvider.overrideWith(
+            (ref) async => const TeamRecommendationResult(recommendations: []),
+          ),
         ],
         child: MaterialApp.router(routerConfig: _buildRouter()),
       ),
@@ -62,6 +73,10 @@ void main() {
           playerRankingProvider.overrideWith((ref) async => const []),
           equipRankingProvider.overrideWith((ref) async => const []),
           tierRankingProvider.overrideWith((ref) async => const []),
+          teamBuilderHeroesProvider.overrideWith((ref) async => const []),
+          teamRecommendationsProvider.overrideWith(
+            (ref) async => const TeamRecommendationResult(recommendations: []),
+          ),
           heroRankingProvider.overrideWith((ref) async {
             return const [
               HeroRankingEntry(
@@ -89,6 +104,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Hero Rankings'), findsOneWidget);
+    expect(find.text('Lam'), findsOneWidget);
+  });
+
+  testWidgets('team builder tile opens the team builder route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          publicBuildSchemesProvider.overrideWith((ref) async => const []),
+          heroRankingProvider.overrideWith((ref) async => const []),
+          playerRankingProvider.overrideWith((ref) async => const []),
+          equipRankingProvider.overrideWith((ref) async => const []),
+          tierRankingProvider.overrideWith((ref) async => const []),
+          teamBuilderHeroesProvider.overrideWith((ref) async {
+            return const [
+              TeamBuildHero(
+                id: 42,
+                externalHeroId: '142',
+                name: 'Lam',
+                mainJob: 3,
+                avatarUrl: '',
+              ),
+            ];
+          }),
+          teamRecommendationsProvider.overrideWith(
+            (ref) async => const TeamRecommendationResult(recommendations: []),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Team Builder'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Team Builder'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
   });
 }

@@ -12,6 +12,7 @@ import '../features/rankings/presentation/hero_ranking_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
 import '../features/rankings/presentation/tools_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/teambuild/presentation/team_builder_screen.dart';
 import 'app_shell.dart';
 
 GoRouter createAppRouter() {
@@ -83,6 +84,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'rankings',
                     builder: (context, state) => const HeroRankingScreen(),
+                  ),
+                  GoRoute(
+                    path: 'team-builder',
+                    builder: (context, state) => const TeamBuilderScreen(),
                   ),
                 ],
               ),
