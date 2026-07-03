@@ -41,6 +41,13 @@ class ToolsScreen extends StatelessWidget {
           subtitle: 'Explore public AI prompt templates',
           onTap: () => context.go('/tools/prompts'),
         ),
+        const SizedBox(height: 12),
+        _ToolTile(
+          icon: Icons.emoji_events_outlined,
+          title: 'Esports',
+          subtitle: 'Matches, teams, and pro players',
+          onTap: () => context.go('/tools/esports'),
+        ),
       ],
     );
   }

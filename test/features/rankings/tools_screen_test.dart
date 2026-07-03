@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
@@ -36,10 +40,65 @@ GoRouter _buildRouter() {
             path: 'prompts',
             builder: (context, state) => const PromptsScreen(),
           ),
+          GoRoute(
+            path: 'esports',
+            builder: (context, state) => const EsportsScreen(),
+          ),
         ],
       ),
     ],
   );
+}
+
+List<Override> _emptyToolOverrides() {
+  return [
+    publicBuildSchemesProvider.overrideWith((ref) async => const []),
+    heroRankingProvider.overrideWith((ref) async => const []),
+    playerRankingProvider.overrideWith((ref) async => const []),
+    equipRankingProvider.overrideWith((ref) async => const []),
+    tierRankingProvider.overrideWith((ref) async => const []),
+    teamBuilderHeroesProvider.overrideWith((ref) async => const []),
+    teamRecommendationsProvider.overrideWith(
+      (ref) async => const TeamRecommendationResult(recommendations: []),
+    ),
+    publicPromptsProvider.overrideWith((ref) async => const []),
+    esportsMatchesProvider.overrideWith((ref) async => const []),
+    esportsTeamsProvider.overrideWith((ref) async => const []),
+    esportsPlayersProvider.overrideWith((ref) async => const []),
+  ];
+}
+
+List<Override> _toolOverrides({
+  Future<List<HeroRankingEntry>> Function(Ref)? heroRanking,
+  Future<List<TeamBuildHero>> Function(Ref)? teamBuilderHeroes,
+  Future<List<PromptSummary>> Function(Ref)? publicPrompts,
+  Future<List<EsportsMatchSummary>> Function(Ref)? esportsMatches,
+  Future<List<EsportsTeamSummary>> Function(Ref)? esportsTeams,
+  Future<List<EsportsPlayerSummary>> Function(Ref)? esportsPlayers,
+}) {
+  return [
+    publicBuildSchemesProvider.overrideWith((ref) async => const []),
+    heroRankingProvider.overrideWith(heroRanking ?? (ref) async => const []),
+    playerRankingProvider.overrideWith((ref) async => const []),
+    equipRankingProvider.overrideWith((ref) async => const []),
+    tierRankingProvider.overrideWith((ref) async => const []),
+    teamBuilderHeroesProvider.overrideWith(
+      teamBuilderHeroes ?? (ref) async => const [],
+    ),
+    teamRecommendationsProvider.overrideWith(
+      (ref) async => const TeamRecommendationResult(recommendations: []),
+    ),
+    publicPromptsProvider.overrideWith(
+      publicPrompts ?? (ref) async => const [],
+    ),
+    esportsMatchesProvider.overrideWith(
+      esportsMatches ?? (ref) async => const [],
+    ),
+    esportsTeamsProvider.overrideWith(esportsTeams ?? (ref) async => const []),
+    esportsPlayersProvider.overrideWith(
+      esportsPlayers ?? (ref) async => const [],
+    ),
+  ];
 }
 
 void main() {
@@ -48,18 +107,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          publicBuildSchemesProvider.overrideWith((ref) async => const []),
-          heroRankingProvider.overrideWith((ref) async => const []),
-          playerRankingProvider.overrideWith((ref) async => const []),
-          equipRankingProvider.overrideWith((ref) async => const []),
-          tierRankingProvider.overrideWith((ref) async => const []),
-          teamBuilderHeroesProvider.overrideWith((ref) async => const []),
-          teamRecommendationsProvider.overrideWith(
-            (ref) async => const TeamRecommendationResult(recommendations: []),
-          ),
-          publicPromptsProvider.overrideWith((ref) async => const []),
-        ],
+        overrides: _emptyToolOverrides(),
         child: MaterialApp.router(routerConfig: _buildRouter()),
       ),
     );
@@ -75,17 +123,8 @@ void main() {
   testWidgets('rankings tile opens the hero rankings route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          publicBuildSchemesProvider.overrideWith((ref) async => const []),
-          playerRankingProvider.overrideWith((ref) async => const []),
-          equipRankingProvider.overrideWith((ref) async => const []),
-          tierRankingProvider.overrideWith((ref) async => const []),
-          teamBuilderHeroesProvider.overrideWith((ref) async => const []),
-          teamRecommendationsProvider.overrideWith(
-            (ref) async => const TeamRecommendationResult(recommendations: []),
-          ),
-          publicPromptsProvider.overrideWith((ref) async => const []),
-          heroRankingProvider.overrideWith((ref) async {
+        overrides: _toolOverrides(
+          heroRanking: (ref) async {
             return const [
               HeroRankingEntry(
                 heroId: 42,
@@ -101,8 +140,8 @@ void main() {
                 avgGrade: 13,
               ),
             ];
-          }),
-        ],
+          },
+        ),
         child: MaterialApp.router(routerConfig: _buildRouter()),
       ),
     );
@@ -118,13 +157,8 @@ void main() {
   testWidgets('team builder tile opens the team builder route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          publicBuildSchemesProvider.overrideWith((ref) async => const []),
-          heroRankingProvider.overrideWith((ref) async => const []),
-          playerRankingProvider.overrideWith((ref) async => const []),
-          equipRankingProvider.overrideWith((ref) async => const []),
-          tierRankingProvider.overrideWith((ref) async => const []),
-          teamBuilderHeroesProvider.overrideWith((ref) async {
+        overrides: _toolOverrides(
+          teamBuilderHeroes: (ref) async {
             return const [
               TeamBuildHero(
                 id: 42,
@@ -134,12 +168,8 @@ void main() {
                 avatarUrl: '',
               ),
             ];
-          }),
-          teamRecommendationsProvider.overrideWith(
-            (ref) async => const TeamRecommendationResult(recommendations: []),
-          ),
-          publicPromptsProvider.overrideWith((ref) async => const []),
-        ],
+          },
+        ),
         child: MaterialApp.router(routerConfig: _buildRouter()),
       ),
     );
@@ -155,17 +185,8 @@ void main() {
   testWidgets('prompts tile opens the prompts route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          publicBuildSchemesProvider.overrideWith((ref) async => const []),
-          heroRankingProvider.overrideWith((ref) async => const []),
-          playerRankingProvider.overrideWith((ref) async => const []),
-          equipRankingProvider.overrideWith((ref) async => const []),
-          tierRankingProvider.overrideWith((ref) async => const []),
-          teamBuilderHeroesProvider.overrideWith((ref) async => const []),
-          teamRecommendationsProvider.overrideWith(
-            (ref) async => const TeamRecommendationResult(recommendations: []),
-          ),
-          publicPromptsProvider.overrideWith((ref) async {
+        overrides: _toolOverrides(
+          publicPrompts: (ref) async {
             return const [
               PromptSummary(
                 id: '7',
@@ -179,8 +200,8 @@ void main() {
                 isPublic: true,
               ),
             ];
-          }),
-        ],
+          },
+        ),
         child: MaterialApp.router(routerConfig: _buildRouter()),
       ),
     );
@@ -191,5 +212,70 @@ void main() {
 
     expect(find.text('Prompts'), findsOneWidget);
     expect(find.text('Cyber skin concept'), findsOneWidget);
+  });
+
+  testWidgets('esports tile opens the esports route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _toolOverrides(
+          esportsMatches: (ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+            ];
+          },
+          esportsTeams: (ref) async {
+            return const [
+              EsportsTeamSummary(
+                id: '1',
+                name: 'Wolves',
+                shortName: 'WOL',
+                logoUrl: '',
+                leagueName: 'KPL Spring',
+                club: 'Chongqing Wolves',
+                wins: 12,
+                losses: 3,
+                winRate: 0.8,
+              ),
+            ];
+          },
+          esportsPlayers: (ref) async {
+            return const [
+              EsportsPlayerSummary(
+                id: '8',
+                name: 'Fly',
+                avatarUrl: '',
+                teamName: 'Wolves',
+                teamLogoUrl: '',
+                role: 'Clash Lane',
+                grade: 91.5,
+                kda: 6.8,
+                winRate: 0.76,
+              ),
+            ];
+          },
+        ),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Esports'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('KPL Spring'), findsOneWidget);
+    expect(find.text('4 - 3'), findsOneWidget);
   });
 }
