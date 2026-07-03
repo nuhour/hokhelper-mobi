@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/presentation/login_screen.dart';
+import '../features/heroes/presentation/hero_detail_screen.dart';
+import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
 import 'app_shell.dart';
@@ -28,7 +30,17 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/heroes',
-                builder: (context, state) => const _TabScreen(title: 'Heroes'),
+                builder: (context, state) => const HeroGalleryScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':heroId',
+                    builder: (context, state) {
+                      return HeroDetailScreen(
+                        heroId: state.pathParameters['heroId'] ?? '',
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
