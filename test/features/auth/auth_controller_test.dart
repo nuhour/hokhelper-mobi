@@ -77,21 +77,24 @@ class _FakeAuthRepository implements AuthRepository {
 
 void main() {
   group('AuthController', () {
-    test('restores a lightweight signed-in session when access token exists', () async {
-      final tokenStore = _MemoryTokenStore()..access = 'access-token';
-      final container = ProviderContainer(
-        overrides: [tokenStoreProvider.overrideWithValue(tokenStore)],
-      );
-      addTearDown(container.dispose);
+    test(
+      'restores a lightweight signed-in session when access token exists',
+      () async {
+        final tokenStore = _MemoryTokenStore()..access = 'access-token';
+        final container = ProviderContainer(
+          overrides: [tokenStoreProvider.overrideWithValue(tokenStore)],
+        );
+        addTearDown(container.dispose);
 
-      final state = await container.read(authControllerProvider.future);
+        final state = await container.read(authControllerProvider.future);
 
-      expect(state, isNotNull);
-      expect(state!.id, 0);
-      expect(state.username, 'Signed in');
-      expect(state.email, 'Signed in');
-      expect(state.displayName, 'Signed in');
-    });
+        expect(state, isNotNull);
+        expect(state!.id, 0);
+        expect(state.username, 'Signed in');
+        expect(state.email, 'Signed in');
+        expect(state.displayName, 'Signed in');
+      },
+    );
 
     test('successful login updates auth state with returned user', () async {
       final tokenStore = _MemoryTokenStore();
@@ -107,42 +110,43 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(authControllerProvider.notifier).login(
-        'mulan@example.test',
-        'secret',
-      );
+      await container
+          .read(authControllerProvider.notifier)
+          .login('mulan@example.test', 'secret');
 
       final state = container.read(authControllerProvider);
       expect(state.valueOrNull?.id, 7);
       expect(state.valueOrNull?.displayName, 'Mulan');
     });
 
-    test('auth expiry during login clears tokens and exposes error state', () async {
-      final tokenStore = _MemoryTokenStore()
-        ..access = 'access-token'
-        ..refresh = 'refresh-token';
-      final repository = _FakeAuthRepository(tokenStore: tokenStore)
-        ..errorToThrow = const ApiError(
-          kind: ApiErrorKind.authExpired,
-          message: 'Expired',
-          statusCode: 401,
+    test(
+      'auth expiry during login clears tokens and exposes error state',
+      () async {
+        final tokenStore = _MemoryTokenStore()
+          ..access = 'access-token'
+          ..refresh = 'refresh-token';
+        final repository = _FakeAuthRepository(tokenStore: tokenStore)
+          ..errorToThrow = const ApiError(
+            kind: ApiErrorKind.authExpired,
+            message: 'Expired',
+            statusCode: 401,
+          );
+        final container = ProviderContainer(
+          overrides: [authRepositoryProvider.overrideWithValue(repository)],
         );
-      final container = ProviderContainer(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
-      );
-      addTearDown(container.dispose);
+        addTearDown(container.dispose);
 
-      await container.read(authControllerProvider.notifier).login(
-        'mulan@example.test',
-        'secret',
-      );
+        await container
+            .read(authControllerProvider.notifier)
+            .login('mulan@example.test', 'secret');
 
-      final state = container.read(authControllerProvider);
-      expect(state.hasError, isTrue);
-      expect(tokenStore.didClear, isTrue);
-      expect(tokenStore.access, isNull);
-      expect(tokenStore.refresh, isNull);
-    });
+        final state = container.read(authControllerProvider);
+        expect(state.hasError, isTrue);
+        expect(tokenStore.didClear, isTrue);
+        expect(tokenStore.access, isNull);
+        expect(tokenStore.refresh, isNull);
+      },
+    );
 
     test('forbidden login clears tokens and exposes error state', () async {
       final tokenStore = _MemoryTokenStore()
@@ -159,10 +163,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(authControllerProvider.notifier).login(
-        'mulan@example.test',
-        'secret',
-      );
+      await container
+          .read(authControllerProvider.notifier)
+          .login('mulan@example.test', 'secret');
 
       expect(container.read(authControllerProvider).hasError, isTrue);
       expect(tokenStore.didClear, isTrue);
@@ -183,10 +186,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(authControllerProvider.notifier).login(
-        'mulan@example.test',
-        'secret',
-      );
+      await container
+          .read(authControllerProvider.notifier)
+          .login('mulan@example.test', 'secret');
       await container.read(authControllerProvider.notifier).logout();
 
       expect(repository.didLogout, isTrue);

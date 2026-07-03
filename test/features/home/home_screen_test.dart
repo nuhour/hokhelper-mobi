@@ -6,9 +6,7 @@ import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dar
 
 Widget _buildHomeScreen(HomeStats stats) {
   return ProviderScope(
-    overrides: [
-      homeStatsProvider.overrideWith((ref) async => stats),
-    ],
+    overrides: [homeStatsProvider.overrideWith((ref) async => stats)],
     child: const MaterialApp(home: Scaffold(body: HomeScreen())),
   );
 }

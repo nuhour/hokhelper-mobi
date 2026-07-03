@@ -8,11 +8,7 @@ enum ApiErrorKind {
 }
 
 class ApiError implements Exception {
-  const ApiError({
-    required this.kind,
-    required this.message,
-    this.statusCode,
-  });
+  const ApiError({required this.kind, required this.message, this.statusCode});
 
   final ApiErrorKind kind;
   final String message;
