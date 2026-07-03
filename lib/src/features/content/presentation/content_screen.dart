@@ -70,6 +70,13 @@ class ContentScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           _CommunityEntryCard(onTap: () => context.go('/content/community')),
+          const SizedBox(height: 12),
+          _ContentActionCard(
+            icon: Icons.event_available_outlined,
+            title: 'Event Assistance',
+            subtitle: 'Share event codes and teammate requests',
+            onTap: () => context.go('/content/event-assistance'),
+          ),
           const SizedBox(height: 20),
           AppAsyncView<List<ContentItemSummary>>(
             value: skinsValue,
@@ -109,6 +116,30 @@ class _CommunityEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _ContentActionCard(
+      icon: Icons.forum_outlined,
+      title: 'Community Hub',
+      subtitle: 'Hot posts, leaks, and community signals',
+      onTap: onTap,
+    );
+  }
+}
+
+class _ContentActionCard extends StatelessWidget {
+  const _ContentActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
@@ -120,19 +151,22 @@ class _CommunityEntryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: ListTile(
           onTap: onTap,
-          leading: const Icon(Icons.forum_outlined, color: AppTheme.gold),
+          leading: Icon(icon, color: AppTheme.gold),
           trailing: const Icon(Icons.chevron_right, color: AppTheme.muted),
-          title: const Text(
-            'Community Hub',
+          title: Text(
+            title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppTheme.text, fontWeight: FontWeight.w800),
+            style: const TextStyle(
+              color: AppTheme.text,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          subtitle: const Text(
-            'Hot posts, leaks, and community signals',
+          subtitle: Text(
+            subtitle,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppTheme.muted),
+            style: const TextStyle(color: AppTheme.muted),
           ),
         ),
       ),

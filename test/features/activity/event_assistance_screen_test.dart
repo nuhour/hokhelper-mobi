@@ -1,0 +1,95 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/activity/data/event_assistance_repository.dart';
+import 'package:hok_helper_mobile/src/features/activity/domain/event_assistance_record.dart';
+import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
+
+class _FakeRepository extends EventAssistanceRepository {
+  _FakeRepository()
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  String? submittedText;
+  int? submittedRegionId;
+
+  @override
+  Future<EventAssistanceRecord> submitText({
+    required String text,
+    required int regionId,
+  }) async {
+    submittedText = text;
+    submittedRegionId = regionId;
+    return EventAssistanceRecord(
+      id: '78',
+      regionId: regionId,
+      content: text,
+      eventTime: '2026-07-04T09:00:00Z',
+      isReported: false,
+      rawText: text,
+      sharedBy: 'me',
+      createdAt: '2026-07-04T09:00:00Z',
+      updatedAt: '2026-07-04T09:00:00Z',
+    );
+  }
+}
+
+void main() {
+  testWidgets('renders event assistance records and submits text', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRepositoryProvider.overrideWithValue(repository),
+          eventAssistanceRecordsProvider.overrideWith((ref) async {
+            return const [
+              EventAssistanceRecord(
+                id: '77',
+                regionId: 1,
+                content: 'Need one player for Friday event team.',
+                eventTime: '2026-07-03T12:00:00Z',
+                isReported: false,
+                rawText: 'Need one player for Friday event team.',
+                sharedBy: 'captain',
+                createdAt: '2026-07-03T12:00:00Z',
+                updatedAt: '2026-07-03T12:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Event Assistance'), findsOneWidget);
+    expect(find.text('Need one player for Friday event team.'), findsOneWidget);
+    expect(find.text('captain'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
+
+    await tester.tap(find.text('Share Text'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField),
+      'Join my activity code ABCD.',
+    );
+    final submitButton = find.widgetWithText(FilledButton, 'Submit');
+    await tester.ensureVisible(submitButton);
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.submittedText, 'Join my activity code ABCD.');
+    expect(repository.submittedRegionId, 1);
+  });
+}

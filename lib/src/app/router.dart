@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../features/activity/presentation/event_assistance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
@@ -75,6 +76,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'community',
                     builder: (context, state) => const CommunityScreen(),
+                  ),
+                  GoRoute(
+                    path: 'event-assistance',
+                    builder: (context, state) => const EventAssistanceScreen(),
                   ),
                 ],
               ),
