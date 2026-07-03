@@ -19,6 +19,7 @@ final authControllerProvider = AsyncNotifierProvider<AuthController, AuthUser?>(
 class AuthController extends AsyncNotifier<AuthUser?> {
   @override
   Future<AuthUser?> build() async {
+    ref.watch(authSessionInvalidationProvider);
     final accessToken = await ref.read(tokenStoreProvider).readAccessToken();
     if (accessToken != null && accessToken.isNotEmpty) {
       return const AuthUser(

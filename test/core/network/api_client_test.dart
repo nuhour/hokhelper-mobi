@@ -29,6 +29,26 @@ class _EnvelopeFailureInterceptor extends Interceptor {
   }
 }
 
+class _UnauthorizedInterceptor extends Interceptor {
+  _UnauthorizedInterceptor(this.statusCode);
+
+  final int statusCode;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    handler.reject(
+      DioException(
+        requestOptions: options,
+        response: Response<Object?>(
+          requestOptions: options,
+          statusCode: statusCode,
+          data: {'message': 'Session expired'},
+        ),
+      ),
+    );
+  }
+}
+
 void main() {
   test('maps token read failures without hanging the request', () async {
     final client = ApiClient(
@@ -76,5 +96,34 @@ void main() {
             ),
       ),
     );
+  });
+
+  test('notifies auth failure callback for unauthorized responses', () async {
+    ApiError? callbackError;
+    final dio = Dio()..interceptors.add(_UnauthorizedInterceptor(401));
+    final client = ApiClient(
+      dio: dio,
+      onAuthFailure: (error) async {
+        callbackError = error;
+      },
+      config: const AppConfig(
+        apiBaseUrl: 'https://example.test',
+        apiPrefix: '',
+      ),
+    );
+
+    await expectLater(
+      client.getJson('/profile'),
+      throwsA(
+        isA<ApiError>().having(
+          (error) => error.kind,
+          'kind',
+          ApiErrorKind.authExpired,
+        ),
+      ),
+    );
+
+    expect(callbackError?.kind, ApiErrorKind.authExpired);
+    expect(callbackError?.statusCode, 401);
   });
 }

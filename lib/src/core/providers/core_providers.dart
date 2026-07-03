@@ -7,6 +7,17 @@ final tokenStoreProvider = Provider<SecureTokenStore>((ref) {
   return SecureTokenStore();
 });
 
+final authSessionInvalidationProvider = StateProvider<int>((ref) {
+  return 0;
+});
+
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(tokenStore: ref.watch(tokenStoreProvider));
+  final tokenStore = ref.watch(tokenStoreProvider);
+  return ApiClient(
+    tokenStore: tokenStore,
+    onAuthFailure: (error) async {
+      await tokenStore.clear();
+      ref.read(authSessionInvalidationProvider.notifier).state++;
+    },
+  );
 });

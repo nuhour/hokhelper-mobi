@@ -1,5 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
@@ -194,5 +197,76 @@ void main() {
       expect(repository.didLogout, isTrue);
       expect(container.read(authControllerProvider).valueOrNull, isNull);
     });
+
+    test('global auth invalidation clears restored signed-in state', () async {
+      final tokenStore = _MemoryTokenStore()
+        ..access = 'access-token'
+        ..refresh = 'refresh-token';
+      final container = ProviderContainer(
+        overrides: [tokenStoreProvider.overrideWithValue(tokenStore)],
+      );
+      addTearDown(container.dispose);
+
+      final restored = await container.read(authControllerProvider.future);
+      expect(restored, isNotNull);
+
+      await tokenStore.clear();
+      container.read(authSessionInvalidationProvider.notifier).state++;
+
+      final invalidated = await container.read(authControllerProvider.future);
+      expect(invalidated, isNull);
+      expect(tokenStore.access, isNull);
+      expect(tokenStore.refresh, isNull);
+    });
+
+    test('api client auth failure clears tokens and auth state', () async {
+      final tokenStore = _MemoryTokenStore()
+        ..access = 'access-token'
+        ..refresh = 'refresh-token';
+      final container = ProviderContainer(
+        overrides: [tokenStoreProvider.overrideWithValue(tokenStore)],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(authControllerProvider.future), isNotNull);
+      final client = ApiClient(
+        dio: Dio()..interceptors.add(_AuthFailureInterceptor(403)),
+        tokenStore: tokenStore,
+        onAuthFailure: (error) async {
+          await tokenStore.clear();
+          container.read(authSessionInvalidationProvider.notifier).state++;
+        },
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+
+      await expectLater(client.getJson('/me'), throwsA(isA<ApiError>()));
+
+      expect(tokenStore.access, isNull);
+      expect(tokenStore.refresh, isNull);
+      expect(await container.read(authControllerProvider.future), isNull);
+    });
   });
+}
+
+class _AuthFailureInterceptor extends Interceptor {
+  _AuthFailureInterceptor(this.statusCode);
+
+  final int statusCode;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    handler.reject(
+      DioException(
+        requestOptions: options,
+        response: Response<Object?>(
+          requestOptions: options,
+          statusCode: statusCode,
+          data: {'message': 'Forbidden'},
+        ),
+      ),
+    );
+  }
 }

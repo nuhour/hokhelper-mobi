@@ -4,10 +4,13 @@ import '../config/app_config.dart';
 import '../storage/secure_token_store.dart';
 import 'api_error.dart';
 
+typedef AuthFailureCallback = Future<void> Function(ApiError error);
+
 class ApiClient {
   ApiClient({
     Dio? dio,
     SecureTokenStore? tokenStore,
+    this.onAuthFailure,
     AppConfig config = AppConfig.current,
   }) : _dio = dio ?? Dio(BaseOptions(baseUrl: config.apiRoot)),
        _tokenStore = tokenStore ?? SecureTokenStore() {
@@ -20,6 +23,7 @@ class ApiClient {
 
   final Dio _dio;
   final SecureTokenStore _tokenStore;
+  final AuthFailureCallback? onAuthFailure;
 
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -29,7 +33,9 @@ class ApiClient {
       final response = await _dio.get<Object?>(path, queryParameters: query);
       return _readJsonMap(response.data);
     } on DioException catch (error) {
-      throw _mapDioException(error);
+      final apiError = _mapDioException(error);
+      await _notifyAuthFailure(apiError);
+      throw apiError;
     }
   }
 
@@ -38,7 +44,9 @@ class ApiClient {
       final response = await _dio.post<Object?>(path, data: body);
       return _readJsonMap(response.data);
     } on DioException catch (error) {
-      throw _mapDioException(error);
+      final apiError = _mapDioException(error);
+      await _notifyAuthFailure(apiError);
+      throw apiError;
     }
   }
 
@@ -114,6 +122,15 @@ class ApiClient {
     }
 
     return 'Request failed';
+  }
+
+  Future<void> _notifyAuthFailure(ApiError error) async {
+    if (error.kind != ApiErrorKind.authExpired &&
+        error.kind != ApiErrorKind.forbidden) {
+      return;
+    }
+
+    await onAuthFailure?.call(error);
   }
 }
 
