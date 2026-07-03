@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
+import 'package:hok_helper_mobile/src/features/rankings/domain/player_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 
 void main() {
@@ -26,6 +27,7 @@ void main() {
               ),
             ];
           }),
+          playerRankingProvider.overrideWith((ref) async => const []),
         ],
         child: const MaterialApp(home: Scaffold(body: HeroRankingScreen())),
       ),
@@ -40,5 +42,50 @@ void main() {
     expect(find.text('Ban 3.2%'), findsOneWidget);
     expect(find.text('MVP 21.0%'), findsOneWidget);
     expect(find.text('Grade 13.1'), findsOneWidget);
+  });
+
+  testWidgets('renders player ranking entries from the player tab', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroRankingProvider.overrideWith((ref) async => const []),
+          playerRankingProvider.overrideWith((ref) async {
+            return const [
+              PlayerRankingEntry(
+                playerId: '1001',
+                playerName: 'Top Mid',
+                avatarUrl: '',
+                peakScore: 2300.5,
+                rankStars: 88,
+                winRate: 0.612,
+                avgKda: 6.8,
+                playCount: 320,
+                grade: 14.2,
+                mvpCount: 90,
+                region: 2,
+                playerTypeLabel: 'Pro',
+                bestHeroes: [
+                  PlayerBestHero(heroId: 199, playCount: 80, score: 99.5),
+                ],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroRankingScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Players'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Top Mid'), findsOneWidget);
+    expect(find.text('Pro'), findsOneWidget);
+    expect(find.text('2,300.5'), findsOneWidget);
+    expect(find.text('Stars 88'), findsOneWidget);
+    expect(find.text('Win 61.2%'), findsOneWidget);
+    expect(find.text('KDA 6.8'), findsOneWidget);
+    expect(find.text('Matches 320'), findsOneWidget);
   });
 }

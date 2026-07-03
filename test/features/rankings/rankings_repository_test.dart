@@ -22,6 +22,34 @@ class _FakeApiClient extends ApiClient {
   }) async {
     getPath = path;
     getQuery = query;
+    if (path == '/ranking/players') {
+      return const {
+        'success': true,
+        'data': {
+          'players': [
+            {
+              'player_id': '1001',
+              'player_name': 'Top Mid',
+              'avatar_url': 'https://example.test/avatar.png',
+              'peak_score': 2300.5,
+              'rank_stars': 88,
+              'win_rate': 0.6123,
+              'avg_kda': 6.8,
+              'play_cnt': 320,
+              'grade': 14.2,
+              'mvp': 90,
+              'region': 2,
+              'player_type_label': '职业',
+              'rank_type': 'peak',
+              'best_heroes': [
+                {'hero_id': 199, 'play_cnt': 80, 'score': 99.5},
+              ],
+            },
+          ],
+          'region_options': [1, 2],
+        },
+      };
+    }
     return const {
       'success': true,
       'data': {
@@ -73,5 +101,37 @@ void main() {
     expect(entries.single.avgKills, 8.4);
     expect(entries.single.avgAssists, 5.6);
     expect(entries.single.avgGrade, 13.1);
+  });
+
+  test('loads player rankings with backend-compatible query params', () async {
+    final apiClient = _FakeApiClient();
+    final repository = RankingsRepository(apiClient: apiClient);
+
+    final entries = await repository.loadPlayerRanking(2);
+
+    expect(apiClient.getPath, '/ranking/players');
+    expect(apiClient.getQuery, {
+      'region_id': 2,
+      'rank_type': 'peak',
+      'window_days': 999,
+      'limit': 20,
+    });
+    expect(entries, hasLength(1));
+    expect(entries.single.playerId, '1001');
+    expect(entries.single.playerName, 'Top Mid');
+    expect(entries.single.avatarUrl, 'https://example.test/avatar.png');
+    expect(entries.single.peakScore, 2300.5);
+    expect(entries.single.rankStars, 88);
+    expect(entries.single.winRate, 0.6123);
+    expect(entries.single.avgKda, 6.8);
+    expect(entries.single.playCount, 320);
+    expect(entries.single.grade, 14.2);
+    expect(entries.single.mvpCount, 90);
+    expect(entries.single.region, 2);
+    expect(entries.single.playerTypeLabel, '职业');
+    expect(entries.single.bestHeroes, hasLength(1));
+    expect(entries.single.bestHeroes.single.heroId, 199);
+    expect(entries.single.bestHeroes.single.playCount, 80);
+    expect(entries.single.bestHeroes.single.score, 99.5);
   });
 }
