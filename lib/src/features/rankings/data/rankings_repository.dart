@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../domain/equip_ranking_entry.dart';
 import '../domain/hero_ranking_entry.dart';
 import '../domain/player_ranking_entry.dart';
 
@@ -62,5 +63,27 @@ class RankingsRepository {
     }
 
     return players.map(PlayerRankingEntry.fromJson).toList(growable: false);
+  }
+
+  Future<List<EquipRankingEntry>> loadEquipRanking({
+    String sortBy = 'pick_rate',
+    int limit = 20,
+  }) async {
+    final json = await apiClient.getJson(
+      '/ranking/equips',
+      query: {'sort_by': sortBy, 'limit': limit},
+    );
+    final data = json['data'];
+    final result = json['result'];
+    final equips = data is Map
+        ? data['equips']
+        : result is Map
+        ? result['equips'] ?? result['data']
+        : json['equips'];
+    if (equips is! List) {
+      return const [];
+    }
+
+    return equips.map(EquipRankingEntry.fromJson).toList(growable: false);
   }
 }

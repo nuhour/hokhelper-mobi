@@ -50,6 +50,21 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/ranking/equips') {
+      return const {
+        'success': true,
+        'data': {
+          'equips': [
+            {
+              'equip_id': 501,
+              'equip_name': 'Doombringer',
+              'stats': {'pick_rate': 0.184, 'win_rate': 0.527},
+            },
+          ],
+          'season_id': 9,
+        },
+      };
+    }
     return const {
       'success': true,
       'data': {
@@ -133,5 +148,20 @@ void main() {
     expect(entries.single.bestHeroes.single.heroId, 199);
     expect(entries.single.bestHeroes.single.playCount, 80);
     expect(entries.single.bestHeroes.single.score, 99.5);
+  });
+
+  test('loads equip rankings with backend-compatible query params', () async {
+    final apiClient = _FakeApiClient();
+    final repository = RankingsRepository(apiClient: apiClient);
+
+    final entries = await repository.loadEquipRanking();
+
+    expect(apiClient.getPath, '/ranking/equips');
+    expect(apiClient.getQuery, {'sort_by': 'pick_rate', 'limit': 20});
+    expect(entries, hasLength(1));
+    expect(entries.single.equipId, 501);
+    expect(entries.single.name, 'Doombringer');
+    expect(entries.single.pickRate, 0.184);
+    expect(entries.single.winRate, 0.527);
   });
 }

@@ -8,6 +8,7 @@ import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/rankings_repository.dart';
+import '../domain/equip_ranking_entry.dart';
 import '../domain/hero_ranking_entry.dart';
 import '../domain/player_ranking_entry.dart';
 
@@ -48,6 +49,10 @@ final playerRankingProvider = FutureProvider<List<PlayerRankingEntry>>((
       .loadPlayerRanking(settings.region.regionId);
 });
 
+final equipRankingProvider = FutureProvider<List<EquipRankingEntry>>((ref) {
+  return ref.watch(rankingsRepositoryProvider).loadEquipRanking();
+});
+
 class HeroRankingScreen extends ConsumerStatefulWidget {
   const HeroRankingScreen({super.key});
 
@@ -62,7 +67,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -75,6 +80,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
   Widget build(BuildContext context) {
     final rankingValue = ref.watch(heroRankingProvider);
     final playerValue = ref.watch(playerRankingProvider);
+    final equipValue = ref.watch(equipRankingProvider);
     final selectedSort = ref.watch(selectedHeroRankingSortProvider);
 
     return Column(
@@ -98,6 +104,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
                 tabs: const [
                   Tab(text: 'Heroes'),
                   Tab(text: 'Players'),
+                  Tab(text: 'Equips'),
                 ],
               ),
             ],
@@ -112,6 +119,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
                 selectedSort: selectedSort,
               ),
               _PlayerRankingTab(playerValue: playerValue),
+              _EquipRankingTab(equipValue: equipValue),
             ],
           ),
         ),
@@ -208,6 +216,51 @@ class _PlayerRankingTab extends ConsumerWidget {
                 itemCount: entries.length,
                 itemBuilder: (context, index) {
                   return _PlayerRankingCard(
+                    entry: entries[index],
+                    rank: index + 1,
+                  );
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+              ),
+      ),
+    );
+  }
+}
+
+class _EquipRankingTab extends ConsumerWidget {
+  const _EquipRankingTab({required this.equipValue});
+
+  final AsyncValue<List<EquipRankingEntry>> equipValue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppAsyncView<List<EquipRankingEntry>>(
+      value: equipValue,
+      retry: () => ref.invalidate(equipRankingProvider),
+      data: (entries) => RefreshIndicator(
+        onRefresh: () => ref.refresh(equipRankingProvider.future),
+        child: entries.isEmpty
+            ? const CustomScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppEmptyState(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No equipment found',
+                      message:
+                          'Pull to refresh once equipment stats are ready.',
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  return _EquipRankingCard(
                     entry: entries[index],
                     rank: index + 1,
                   );
@@ -416,6 +469,57 @@ class _PlayerRankingCard extends StatelessWidget {
                   value: entry.grade.toStringAsFixed(1),
                 ),
                 _MetricChip(label: 'MVP', value: entry.mvpCount.toString()),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EquipRankingCard extends StatelessWidget {
+  const _EquipRankingCard({required this.entry, required this.rank});
+
+  final EquipRankingEntry entry;
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _RankBadge(rank: rank),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                entry.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MetricChip(
+                  label: 'Pick',
+                  value: _formatPercent(entry.pickRate),
+                ),
+                const SizedBox(height: 8),
+                _MetricChip(label: 'Win', value: _formatPercent(entry.winRate)),
               ],
             ),
           ],

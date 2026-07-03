@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/features/rankings/domain/equip_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/domain/player_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
@@ -28,6 +29,7 @@ void main() {
             ];
           }),
           playerRankingProvider.overrideWith((ref) async => const []),
+          equipRankingProvider.overrideWith((ref) async => const []),
         ],
         child: const MaterialApp(home: Scaffold(body: HeroRankingScreen())),
       ),
@@ -51,6 +53,7 @@ void main() {
       ProviderScope(
         overrides: [
           heroRankingProvider.overrideWith((ref) async => const []),
+          equipRankingProvider.overrideWith((ref) async => const []),
           playerRankingProvider.overrideWith((ref) async {
             return const [
               PlayerRankingEntry(
@@ -87,5 +90,36 @@ void main() {
     expect(find.text('Win 61.2%'), findsOneWidget);
     expect(find.text('KDA 6.8'), findsOneWidget);
     expect(find.text('Matches 320'), findsOneWidget);
+  });
+
+  testWidgets('renders equip ranking entries from the equips tab', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroRankingProvider.overrideWith((ref) async => const []),
+          playerRankingProvider.overrideWith((ref) async => const []),
+          equipRankingProvider.overrideWith((ref) async {
+            return const [
+              EquipRankingEntry(
+                equipId: 501,
+                name: 'Doombringer',
+                pickRate: 0.184,
+                winRate: 0.527,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroRankingScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Equips'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Doombringer'), findsOneWidget);
+    expect(find.text('Pick 18.4%'), findsOneWidget);
+    expect(find.text('Win 52.7%'), findsOneWidget);
   });
 }
