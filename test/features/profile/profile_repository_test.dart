@@ -131,5 +131,21 @@ void main() {
         'social_links': {'discord': 'updated'},
       });
     });
+
+    test('changes password with hokx request fields', () async {
+      final apiClient = _FakeApiClient({'success': true});
+      final repository = ProfileRepository(apiClient: apiClient);
+
+      await repository.changePassword(
+        oldPassword: 'OldPass1!',
+        newPassword: 'NewPass1!',
+      );
+
+      expect(apiClient.postPath, '/user/password/change');
+      expect(apiClient.postBody, {
+        'old_password': 'OldPass1!',
+        'new_password': 'NewPass1!',
+      });
+    });
   });
 }

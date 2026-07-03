@@ -39,7 +39,32 @@ class ProfileRepository {
     return _readProfile(json, fallbackMessage: 'Failed to update profile');
   }
 
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final json = await apiClient.postJson(
+      '/user/password/change',
+      body: {'old_password': oldPassword, 'new_password': newPassword},
+    );
+    _ensureSuccess(json, fallbackMessage: 'Failed to change password');
+  }
+
   UserProfile _readProfile(
+    Map<String, dynamic> json, {
+    required String fallbackMessage,
+  }) {
+    _ensureSuccess(json, fallbackMessage: fallbackMessage);
+
+    final result = json['result'];
+    if (result is! Map) {
+      throw ApiError(kind: ApiErrorKind.backend, message: fallbackMessage);
+    }
+
+    return UserProfile.fromJson(result);
+  }
+
+  void _ensureSuccess(
     Map<String, dynamic> json, {
     required String fallbackMessage,
   }) {
@@ -49,12 +74,5 @@ class ProfileRepository {
         message: (json['message'] ?? json['msg'] ?? fallbackMessage).toString(),
       );
     }
-
-    final result = json['result'];
-    if (result is! Map) {
-      throw ApiError(kind: ApiErrorKind.backend, message: fallbackMessage);
-    }
-
-    return UserProfile.fromJson(result);
   }
 }

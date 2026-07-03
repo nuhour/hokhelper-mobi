@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
+import 'package:hok_helper_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
 import 'package:hok_helper_mobile/src/features/profile/presentation/me_screen.dart';
 
@@ -14,6 +17,76 @@ class _TestAuthController extends AuthController {
   @override
   Future<AuthUser?> build() async {
     return user;
+  }
+}
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
+
+class _FakeProfileRepository extends ProfileRepository {
+  _FakeProfileRepository(this.profile) : super(apiClient: _NoopApiClient());
+
+  UserProfile profile;
+  String? updatedDisplayName;
+  String? updatedAvatar;
+  String? updatedBio;
+  Map<String, dynamic>? updatedSocialLinks;
+  String? oldPassword;
+  String? newPassword;
+
+  @override
+  Future<UserProfile> loadProfile({int? userId}) async {
+    return profile;
+  }
+
+  @override
+  Future<UserProfile> updateProfile({
+    String? displayName,
+    String? avatar,
+    String? bio,
+    Map<String, dynamic>? socialLinks,
+  }) async {
+    updatedDisplayName = displayName;
+    updatedAvatar = avatar;
+    updatedBio = bio;
+    updatedSocialLinks = socialLinks;
+    profile = UserProfile(
+      id: profile.id,
+      username: profile.username,
+      displayName: displayName ?? profile.displayName,
+      email: profile.email,
+      avatar: avatar ?? profile.avatar,
+      level: profile.level,
+      points: profile.points,
+      xpTotal: profile.xpTotal,
+      xpCurrentLevel: profile.xpCurrentLevel,
+      xpToNextLevel: profile.xpToNextLevel,
+      levelProgress: profile.levelProgress,
+      levelCap: profile.levelCap,
+      bio: bio ?? profile.bio,
+      socialLinks: socialLinks ?? profile.socialLinks,
+      stats: profile.stats,
+      isFollowing: profile.isFollowing,
+      isLiked: profile.isLiked,
+      isSelf: profile.isSelf,
+    );
+    return profile;
+  }
+
+  @override
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    this.oldPassword = oldPassword;
+    this.newPassword = newPassword;
   }
 }
 
@@ -41,6 +114,43 @@ Widget _buildMeScreenWithProfile(AuthUser user, UserProfile profile) {
     ),
   );
 }
+
+Widget _buildMeScreenWithRepository(
+  AuthUser user,
+  ProfileRepository repository,
+) {
+  return ProviderScope(
+    overrides: [
+      authControllerProvider.overrideWith(() => _TestAuthController(user)),
+      profileRepositoryProvider.overrideWithValue(repository),
+    ],
+    child: MaterialApp(
+      routes: {'/login': (_) => const Scaffold(body: Text('Login screen'))},
+      home: const Scaffold(body: MeScreen()),
+    ),
+  );
+}
+
+const _profile = UserProfile(
+  id: 42,
+  username: 'lam',
+  displayName: 'Lam',
+  email: 'lam@example.test',
+  avatar: '',
+  level: 7,
+  points: 1200,
+  xpTotal: 1400,
+  xpCurrentLevel: 260,
+  xpToNextLevel: 740,
+  levelProgress: 26,
+  levelCap: false,
+  bio: 'Jungle main',
+  socialLinks: {'discord': 'lam#0001'},
+  stats: ProfileStats(posts: 3, following: 4, followers: 5, likes: 6),
+  isFollowing: false,
+  isLiked: false,
+  isSelf: true,
+);
 
 void main() {
   testWidgets('signed-in compact viewport handles long identity text', (
@@ -84,28 +194,7 @@ void main() {
       email: 'lam@example.test',
       displayName: 'Lam',
     );
-    const profile = UserProfile(
-      id: 42,
-      username: 'lam',
-      displayName: 'Lam',
-      email: 'lam@example.test',
-      avatar: '',
-      level: 7,
-      points: 1200,
-      xpTotal: 1400,
-      xpCurrentLevel: 260,
-      xpToNextLevel: 740,
-      levelProgress: 26,
-      levelCap: false,
-      bio: 'Jungle main',
-      socialLinks: {'discord': 'lam#0001'},
-      stats: ProfileStats(posts: 3, following: 4, followers: 5, likes: 6),
-      isFollowing: false,
-      isLiked: false,
-      isSelf: true,
-    );
-
-    await tester.pumpWidget(_buildMeScreenWithProfile(user, profile));
+    await tester.pumpWidget(_buildMeScreenWithProfile(user, _profile));
     await tester.pumpAndSettle();
 
     expect(find.text('LV.7'), findsOneWidget);
@@ -115,5 +204,89 @@ void main() {
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Followers'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
+  });
+
+  testWidgets('profile editor saves updated mobile profile fields', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final repository = _FakeProfileRepository(_profile);
+
+    await tester.pumpWidget(_buildMeScreenWithRepository(user, repository));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Display name'),
+      'Lam Mobile',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Avatar URL'),
+      'https://example.test/new.png',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Bio'),
+      'Roamer main',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Discord'),
+      'lam#9999',
+    );
+    await tester.ensureVisible(find.text('Save profile'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save profile'));
+    await tester.pumpAndSettle();
+
+    expect(repository.updatedDisplayName, 'Lam Mobile');
+    expect(repository.updatedAvatar, 'https://example.test/new.png');
+    expect(repository.updatedBio, 'Roamer main');
+    expect(repository.updatedSocialLinks, {'discord': 'lam#9999'});
+  });
+
+  testWidgets('change password sheet submits old and new passwords', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final repository = _FakeProfileRepository(_profile);
+
+    await tester.pumpWidget(_buildMeScreenWithRepository(user, repository));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Change password'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change password'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Current password'),
+      'OldPass1!',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'New password'),
+      'NewPass1!',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Confirm new password'),
+      'NewPass1!',
+    );
+    await tester.ensureVisible(find.text('Update password'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Update password'));
+    await tester.pumpAndSettle();
+
+    expect(repository.oldPassword, 'OldPass1!');
+    expect(repository.newPassword, 'NewPass1!');
   });
 }

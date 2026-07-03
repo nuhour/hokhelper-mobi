@@ -193,19 +193,367 @@ class _ProfileCard extends ConsumerWidget {
               ],
             ],
             const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ref.read(authControllerProvider.notifier).logout();
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-              ),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (profile != null)
+                  FilledButton.icon(
+                    onPressed: () => _showEditProfileSheet(context, profile!),
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit profile'),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: () => _showChangePasswordSheet(context),
+                  icon: const Icon(Icons.lock_reset),
+                  label: const Text('Change password'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ref.read(authControllerProvider.notifier).logout();
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Logout'),
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showEditProfileSheet(BuildContext context, UserProfile profile) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _EditProfileSheet(profile: profile),
+    );
+  }
+
+  void _showChangePasswordSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const _ChangePasswordSheet(),
+    );
+  }
+}
+
+class _EditProfileSheet extends ConsumerStatefulWidget {
+  const _EditProfileSheet({required this.profile});
+
+  final UserProfile profile;
+
+  @override
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _displayNameController;
+  late final TextEditingController _avatarController;
+  late final TextEditingController _bioController;
+  late final TextEditingController _discordController;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayNameController = TextEditingController(
+      text: widget.profile.displayName,
+    );
+    _avatarController = TextEditingController(text: widget.profile.avatar);
+    _bioController = TextEditingController(text: widget.profile.bio);
+    _discordController = TextEditingController(
+      text: widget.profile.socialLinks['discord']?.toString() ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _displayNameController.dispose();
+    _avatarController.dispose();
+    _bioController.dispose();
+    _discordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _SheetHandle(title: 'Edit profile'),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: _displayNameController,
+                decoration: const InputDecoration(labelText: 'Display name'),
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if ((value ?? '').trim().isEmpty) {
+                    return 'Display name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _avatarController,
+                decoration: const InputDecoration(labelText: 'Avatar URL'),
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _bioController,
+                decoration: const InputDecoration(labelText: 'Bio'),
+                minLines: 3,
+                maxLines: 5,
+                textInputAction: TextInputAction.newline,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _discordController,
+                decoration: const InputDecoration(labelText: 'Discord'),
+                textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save),
+                  label: const Text('Save profile'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final discord = _discordController.text.trim();
+      await ref
+          .read(profileRepositoryProvider)
+          .updateProfile(
+            displayName: _displayNameController.text.trim(),
+            avatar: _avatarController.text.trim(),
+            bio: _bioController.text.trim(),
+            socialLinks: discord.isEmpty ? const {} : {'discord': discord},
+          );
+      ref.invalidate(currentUserProfileProvider);
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile updated')));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+}
+
+class _ChangePasswordSheet extends ConsumerStatefulWidget {
+  const _ChangePasswordSheet();
+
+  @override
+  ConsumerState<_ChangePasswordSheet> createState() =>
+      _ChangePasswordSheetState();
+}
+
+class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _SheetHandle(title: 'Change password'),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: _oldPasswordController,
+                decoration: const InputDecoration(
+                  labelText: 'Current password',
+                ),
+                obscureText: true,
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if ((value ?? '').isEmpty) {
+                    return 'Current password is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _newPasswordController,
+                decoration: const InputDecoration(labelText: 'New password'),
+                obscureText: true,
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if ((value ?? '').length < 8) {
+                    return 'Use at least 8 characters';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _confirmPasswordController,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm new password',
+                ),
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                validator: (value) {
+                  if (value != _newPasswordController.text) {
+                    return 'Passwords do not match';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.lock_reset),
+                  label: const Text('Update password'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(profileRepositoryProvider)
+          .changePassword(
+            oldPassword: _oldPasswordController.text,
+            newPassword: _newPasswordController.text,
+          );
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Password updated')));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+}
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const SizedBox(width: 40, height: 4),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }
