@@ -14,6 +14,41 @@ class _FakeApiClient extends ApiClient {
 
   String? postPath;
   Object? postBody;
+  String? getPath;
+  Map<String, dynamic>? getQuery;
+
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
+    getPath = path;
+    getQuery = query;
+    return const {
+      'total': 2,
+      'rows': [
+        {
+          'id': 31,
+          'title': 'Version 1.2.3 Patch Notes',
+          'date': '2026-07-01',
+          'created_at': '2026-07-01T10:00:00Z',
+          'content_preview': 'Lam and Angela adjusted.',
+          'tags': ['Patch Notes'],
+          'hero_histories': [
+            {'hero_id': 42, 'change_type': 'buff'},
+            {'hero_id': 99, 'change_type': 'nerf'},
+          ],
+        },
+        {
+          'id': 32,
+          'title': 'Community Spotlight',
+          'date': '2026-07-02',
+          'content_preview': 'Not a patch note.',
+          'tags': ['Community'],
+        },
+      ],
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
@@ -107,6 +142,29 @@ void main() {
       expect(cgs.single.viewCount, 300);
       expect(cgs.single.rating, 4);
       expect(cgs.single.ratingCount, 9);
+    });
+
+    test('loads patch notes from community posts with region filter', () async {
+      final apiClient = _FakeApiClient();
+      final repository = ContentRepository(apiClient: apiClient);
+
+      final notes = await repository.loadPatchNotes(2);
+
+      expect(apiClient.getPath, '/community/posts');
+      expect(apiClient.getQuery, {
+        'page': 1,
+        'pageSize': 120,
+        'sort': 'new',
+        'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
+      });
+      expect(notes, hasLength(1));
+      expect(notes.single.id, 31);
+      expect(notes.single.version, '1.2.3');
+      expect(notes.single.title, 'Version 1.2.3 Patch Notes');
+      expect(notes.single.date, '2026-07-01');
+      expect(notes.single.preview, 'Lam and Angela adjusted.');
+      expect(notes.single.changeCount, 2);
+      expect(notes.single.tags, ['Patch Notes']);
     });
   });
 }

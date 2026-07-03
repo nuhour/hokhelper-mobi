@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/patch_note_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
 
 void main() {
@@ -39,6 +40,19 @@ void main() {
               ),
             ];
           }),
+          patchNotesProvider.overrideWith((ref) async {
+            return const [
+              PatchNoteSummary(
+                id: 31,
+                version: '1.2.3',
+                title: 'Version 1.2.3 Patch Notes',
+                date: '2026-07-01',
+                preview: 'Lam and Angela adjusted.',
+                changeCount: 2,
+                tags: ['Patch Notes'],
+              ),
+            ];
+          }),
         ],
         child: const MaterialApp(home: Scaffold(body: ContentScreen())),
       ),
@@ -54,5 +68,11 @@ void main() {
     expect(find.text('Origin Story'), findsOneWidget);
     expect(find.text('Angela'), findsOneWidget);
     expect(find.text('300 views'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('Patch Notes'), findsWidgets);
+    expect(find.text('Version 1.2.3 Patch Notes'), findsOneWidget);
+    expect(find.text('V1.2.3 · 2026-07-01'), findsOneWidget);
+    expect(find.text('2 hero changes'), findsOneWidget);
   });
 }

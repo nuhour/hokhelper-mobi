@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import '../../../core/network/api_client.dart';
 import '../domain/content_item_summary.dart';
+import '../domain/patch_note_summary.dart';
 
 class ContentRepository {
   const ContentRepository({required this.apiClient});
@@ -24,6 +27,25 @@ class ContentRepository {
     return _readRows(
       json,
     ).map(ContentItemSummary.cgFromJson).toList(growable: false);
+  }
+
+  Future<List<PatchNoteSummary>> loadPatchNotes(int regionId) async {
+    final json = await apiClient.getJson(
+      '/community/posts',
+      query: {
+        'page': 1,
+        'pageSize': 120,
+        'sort': 'new',
+        'filterRules': jsonEncode([
+          {'field': 'region_id', 'op': 'eq', 'value': regionId},
+        ]),
+      },
+    );
+
+    return _readRows(json)
+        .where(isPatchNotePost)
+        .map(PatchNoteSummary.fromJson)
+        .toList(growable: false);
   }
 
   Map<String, Object> _pagedRegionBody(int regionId) {
