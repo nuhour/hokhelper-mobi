@@ -34,6 +34,13 @@ class ToolsScreen extends StatelessWidget {
           subtitle: 'Draft picks and review lineup recommendations',
           onTap: () => context.go('/tools/team-builder'),
         ),
+        const SizedBox(height: 12),
+        _ToolTile(
+          icon: Icons.auto_awesome_outlined,
+          title: 'Prompts',
+          subtitle: 'Explore public AI prompt templates',
+          onTap: () => context.go('/tools/prompts'),
+        ),
       ],
     );
   }

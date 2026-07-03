@@ -8,6 +8,7 @@ import '../features/content/presentation/content_screen.dart';
 import '../features/heroes/presentation/hero_detail_screen.dart';
 import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/prompts/presentation/prompts_screen.dart';
 import '../features/rankings/presentation/hero_ranking_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
 import '../features/rankings/presentation/tools_screen.dart';
@@ -88,6 +89,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'team-builder',
                     builder: (context, state) => const TeamBuilderScreen(),
+                  ),
+                  GoRoute(
+                    path: 'prompts',
+                    builder: (context, state) => const PromptsScreen(),
                   ),
                 ],
               ),
