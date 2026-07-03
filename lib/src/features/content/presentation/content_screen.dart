@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -68,6 +69,8 @@ class ContentScreen extends ConsumerWidget {
             ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
           ),
           const SizedBox(height: 24),
+          _CommunityEntryCard(onTap: () => context.go('/content/community')),
+          const SizedBox(height: 20),
           AppAsyncView<List<ContentItemSummary>>(
             value: skinsValue,
             retry: () => ref.invalidate(skinsProvider),
@@ -94,6 +97,44 @@ class ContentScreen extends ConsumerWidget {
             data: (items) => _PatchNotesRail(items: items),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CommunityEntryCard extends StatelessWidget {
+  const _CommunityEntryCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: ListTile(
+          onTap: onTap,
+          leading: const Icon(Icons.forum_outlined, color: AppTheme.gold),
+          trailing: const Icon(Icons.chevron_right, color: AppTheme.muted),
+          title: const Text(
+            'Community Hub',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: AppTheme.text, fontWeight: FontWeight.w800),
+          ),
+          subtitle: const Text(
+            'Hot posts, leaks, and community signals',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: AppTheme.muted),
+          ),
+        ),
       ),
     );
   }
