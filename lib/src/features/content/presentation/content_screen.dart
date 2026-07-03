@@ -4,22 +4,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/content_repository.dart';
+import '../domain/content_item_summary.dart';
 
 final contentRepositoryProvider = Provider<ContentRepository>((ref) {
   return ContentRepository(apiClient: ref.watch(apiClientProvider));
 });
 
-final skinsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final skinsProvider = FutureProvider<List<ContentItemSummary>>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
   return ref
       .watch(contentRepositoryProvider)
       .loadSkins(settings.region.regionId);
 });
 
-final cgsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final cgsProvider = FutureProvider<List<ContentItemSummary>>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
   return ref.watch(contentRepositoryProvider).loadCgs(settings.region.regionId);
 });
@@ -54,115 +57,167 @@ class ContentScreen extends ConsumerWidget {
             ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
           ),
           const SizedBox(height: 24),
-          AppAsyncView<Map<String, dynamic>>(
+          AppAsyncView<List<ContentItemSummary>>(
             value: skinsValue,
             retry: () => ref.invalidate(skinsProvider),
-            data: (json) => _ContentStatusCard(
+            data: (items) => _ContentRail(
               title: 'Skins',
-              subtitle: _readCount(json) == 1
-                  ? '1 skin record loaded'
-                  : '${_readCount(json)} skin records loaded',
               icon: Icons.collections_outlined,
+              items: items,
             ),
           ),
-          const SizedBox(height: 12),
-          AppAsyncView<Map<String, dynamic>>(
+          const SizedBox(height: 20),
+          AppAsyncView<List<ContentItemSummary>>(
             value: cgsValue,
             retry: () => ref.invalidate(cgsProvider),
-            data: (json) => _ContentStatusCard(
+            data: (items) => _ContentRail(
               title: 'CGs',
-              subtitle: _readCount(json) == 1
-                  ? '1 CG record loaded'
-                  : '${_readCount(json)} CG records loaded',
               icon: Icons.movie_creation_outlined,
+              items: items,
             ),
           ),
         ],
       ),
     );
   }
-
-  int _readCount(Map<String, dynamic> json) {
-    final result = json['result'];
-    if (result is Map) {
-      return _readCountFromMap(result);
-    }
-
-    return _readCountFromMap(json);
-  }
-
-  int _readCountFromMap(Map<dynamic, dynamic> json) {
-    final total = json['total'];
-    if (total is int) {
-      return total;
-    }
-
-    final data = json['data'];
-    if (data is List) {
-      return data.length;
-    }
-
-    final rows = json['rows'];
-    if (rows is List) {
-      return rows.length;
-    }
-
-    return 0;
-  }
 }
 
-class _ContentStatusCard extends StatelessWidget {
-  const _ContentStatusCard({
+class _ContentRail extends StatelessWidget {
+  const _ContentRail({
     required this.title,
-    required this.subtitle,
     required this.icon,
+    required this.items,
   });
 
   final String title;
-  final String subtitle;
   final IconData icon;
+  final List<ContentItemSummary> items;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
+    if (items.isEmpty) {
+      return AppEmptyState(
+        icon: icon,
+        title: 'No $title found',
+        message: 'Pull to refresh or switch region in settings.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
             Icon(icon, color: AppTheme.gold),
             const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              items.length.toString(),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 222,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              return _ContentCard(item: items[index]);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContentCard extends StatelessWidget {
+  const _ContentCard({required this.item});
+
+  final ContentItemSummary item;
+
+  @override
+  Widget build(BuildContext context) {
+    final metric = item.kind == ContentKind.cg
+        ? '${item.viewCount} views'
+        : '${item.rating.toStringAsFixed(1)} · ${item.ratingCount} ratings';
+
+    return SizedBox(
+      width: 152,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.panel,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppImage(
+                url: item.imageUrl,
+                height: 112,
+                width: double.infinity,
+                borderRadius: 12,
+                semanticLabel: item.title,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                item.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.heroName.isEmpty ? item.subtitle : item.heroName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              ),
+              const Spacer(),
+              Row(
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Icon(
+                    item.kind == ContentKind.cg
+                        ? Icons.visibility_outlined
+                        : Icons.star_border_rounded,
+                    size: 15,
+                    color: AppTheme.gold,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      metric,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
