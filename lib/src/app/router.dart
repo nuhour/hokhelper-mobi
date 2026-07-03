@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
+import '../features/builds/presentation/build_explorer_screen.dart';
 import '../features/content/presentation/content_screen.dart';
 import '../features/heroes/presentation/hero_detail_screen.dart';
 import '../features/heroes/presentation/hero_gallery_screen.dart';
@@ -73,6 +74,12 @@ GoRouter createAppRouter() {
               GoRoute(
                 path: '/tools',
                 builder: (context, state) => const ToolsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'builds',
+                    builder: (context, state) => const BuildExplorerScreen(),
+                  ),
+                ],
               ),
             ],
           ),

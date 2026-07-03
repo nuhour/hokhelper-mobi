@@ -1,14 +1,15 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../domain/build_scheme_summary.dart';
 
 class BuildsRepository {
   const BuildsRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
-  Future<Map<String, dynamic>> loadPublicSchemes(int regionId) {
-    return apiClient.getJson(
+  Future<List<BuildSchemeSummary>> loadPublicSchemes(int regionId) async {
+    final json = await apiClient.getJson(
       '/build/schemes',
       query: {
         'action': 'explore',
@@ -19,5 +20,12 @@ class BuildsRepository {
         ]),
       },
     );
+    final result = json['result'];
+    final rows = result is Map ? result['data'] : json['data'];
+    if (rows is! List) {
+      return const [];
+    }
+
+    return rows.map(BuildSchemeSummary.fromJson).toList(growable: false);
   }
 }

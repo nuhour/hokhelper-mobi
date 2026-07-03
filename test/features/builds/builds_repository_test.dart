@@ -26,7 +26,23 @@ class _FakeApiClient extends ApiClient {
     getQuery = query;
     return const {
       'success': true,
-      'result': {'data': []},
+      'result': {
+        'data': [
+          {
+            'id': 7,
+            'name': 'Burst jungle',
+            'hero_name': 'Lam',
+            'author': {'username': 'coach'},
+            'equipment': [
+              {'icon': 'https://example.test/axe.png'},
+              {'icon': 'https://example.test/boots.png'},
+            ],
+            'like_count': 12,
+            'favorite_count': 5,
+            'clone_count': 3,
+          },
+        ],
+      },
     };
   }
 }
@@ -38,7 +54,7 @@ void main() {
       final apiClient = _FakeApiClient();
       final repository = BuildsRepository(apiClient: apiClient);
 
-      await repository.loadPublicSchemes(2);
+      final schemes = await repository.loadPublicSchemes(2);
 
       expect(apiClient.getPath, '/build/schemes');
       expect(apiClient.getQuery?['action'], 'explore');
@@ -47,6 +63,18 @@ void main() {
       expect(jsonDecode(apiClient.getQuery?['filterRules'] as String), [
         {'field': 'region_id', 'op': 'eq', 'value': 2},
       ]);
+      expect(schemes, hasLength(1));
+      expect(schemes.single.id, 7);
+      expect(schemes.single.title, 'Burst jungle');
+      expect(schemes.single.heroName, 'Lam');
+      expect(schemes.single.authorName, 'coach');
+      expect(schemes.single.equipmentIcons, [
+        'https://example.test/axe.png',
+        'https://example.test/boots.png',
+      ]);
+      expect(schemes.single.likeCount, 12);
+      expect(schemes.single.favoriteCount, 5);
+      expect(schemes.single.cloneCount, 3);
     },
   );
 }
