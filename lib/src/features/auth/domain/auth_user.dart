@@ -24,7 +24,7 @@ class AuthUser {
       username: (json['username'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
       displayName: _readOptionalString(
-        json['displayName'] ?? json['display_name'],
+        json['displayName'] ?? json['display_name'] ?? json['first_name'],
       ),
       avatar: _readOptionalString(json['avatar'] ?? json['avatar_url']),
     );

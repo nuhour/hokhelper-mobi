@@ -54,6 +54,8 @@ class _FakeAuthRepository implements AuthRepository {
   AuthUser? userToReturn;
   ApiError? errorToThrow;
   var didLogout = false;
+  var didSendRegisterCode = false;
+  var didResetForgottenPassword = false;
 
   @override
   Future<AuthUser> loginWithEmail(String email, String password) async {
@@ -69,6 +71,39 @@ class _FakeAuthRepository implements AuthRepository {
           email: 'lam@example.test',
           displayName: 'Lam',
         );
+  }
+
+  @override
+  Future<void> sendRegisterCode({
+    required String email,
+    required String turnstileToken,
+  }) async {
+    didSendRegisterCode = true;
+  }
+
+  @override
+  Future<AuthUser> registerWithEmail({
+    required String email,
+    required String password,
+    required String code,
+    String? username,
+  }) async {
+    return userToReturn ??
+        const AuthUser(
+          id: 100,
+          username: 'registered',
+          email: 'registered@example.test',
+          displayName: 'Registered',
+        );
+  }
+
+  @override
+  Future<void> resetForgottenPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    didResetForgottenPassword = true;
   }
 
   @override
@@ -120,6 +155,57 @@ void main() {
       final state = container.read(authControllerProvider);
       expect(state.valueOrNull?.id, 7);
       expect(state.valueOrNull?.displayName, 'Mulan');
+    });
+
+    test(
+      'successful registration updates auth state with returned user',
+      () async {
+        final tokenStore = _MemoryTokenStore();
+        final repository = _FakeAuthRepository(tokenStore: tokenStore)
+          ..userToReturn = const AuthUser(
+            id: 8,
+            username: 'new-user',
+            email: 'new@example.test',
+            displayName: 'Newbie',
+          );
+        final container = ProviderContainer(
+          overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        );
+        addTearDown(container.dispose);
+
+        await container
+            .read(authControllerProvider.notifier)
+            .register(
+              email: 'new@example.test',
+              password: 'StrongPass1!',
+              code: '123456',
+              username: 'new-user',
+            );
+
+        final state = container.read(authControllerProvider);
+        expect(state.valueOrNull?.id, 8);
+        expect(state.valueOrNull?.displayName, 'Newbie');
+      },
+    );
+
+    test('forgot password reset completes without signing in', () async {
+      final tokenStore = _MemoryTokenStore();
+      final repository = _FakeAuthRepository(tokenStore: tokenStore);
+      final container = ProviderContainer(
+        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(authControllerProvider.notifier)
+          .resetForgottenPassword(
+            email: 'lam@example.test',
+            code: '654321',
+            newPassword: 'NewStrongPass1!',
+          );
+
+      expect(repository.didResetForgottenPassword, isTrue);
+      expect(container.read(authControllerProvider).valueOrNull, isNull);
     });
 
     test(

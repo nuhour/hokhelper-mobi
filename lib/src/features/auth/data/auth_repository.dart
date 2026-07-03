@@ -15,13 +15,94 @@ class AuthRepository {
       '/auth/email/login',
       body: {'email': email, 'password': password},
     );
+
+    return _readAuthResponse(json, fallbackMessage: 'Login failed');
+  }
+
+  Future<void> sendRegisterCode({
+    required String email,
+    required String turnstileToken,
+  }) {
+    return _postVoid(
+      '/auth/email/send_register_code',
+      body: {'email': email, 'turnstile_token': turnstileToken},
+      fallbackMessage: 'Failed to send verification code',
+    );
+  }
+
+  Future<AuthUser> registerWithEmail({
+    required String email,
+    required String password,
+    required String code,
+    String? username,
+  }) async {
+    final body = <String, String>{
+      'email': email,
+      'password': password,
+      'code': code,
+      if (username != null && username.isNotEmpty) 'username': username,
+    };
+    final json = await apiClient.postJson('/auth/email/register', body: body);
+
+    return _readAuthResponse(json, fallbackMessage: 'Registration failed');
+  }
+
+  Future<void> sendVerificationCode(String email) {
+    return _postVoid(
+      '/auth/email/send_verification_code',
+      body: {'email': email},
+      fallbackMessage: 'Failed to send verification code',
+    );
+  }
+
+  Future<void> verifyCode({required String email, required String code}) {
+    return _postVoid(
+      '/auth/email/verify_code',
+      body: {'email': email, 'code': code},
+      fallbackMessage: 'Invalid verification code',
+    );
+  }
+
+  Future<void> resetForgottenPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) {
+    return _postVoid(
+      '/auth/email/forgot_password_reset',
+      body: {'email': email, 'code': code, 'new_password': newPassword},
+      fallbackMessage: 'Failed to reset password',
+    );
+  }
+
+  Future<void> logout() {
+    return tokenStore.clear();
+  }
+
+  Future<void> _postVoid(
+    String path, {
+    required Object body,
+    required String fallbackMessage,
+  }) async {
+    final json = await apiClient.postJson(path, body: body);
     if (json['success'] == false) {
       throw ApiError(
         kind: ApiErrorKind.backend,
-        message: _readFailureMessage(json),
+        message: _readFailureMessage(json, fallbackMessage),
       );
     }
+  }
 
+  Future<AuthUser> _readAuthResponse(
+    Map<String, dynamic> json, {
+    required String fallbackMessage,
+  }) async {
+    if (json['success'] == false) {
+      throw ApiError(
+        kind: ApiErrorKind.backend,
+        message: _readFailureMessage(json, fallbackMessage),
+      );
+    }
     final envelope = ApiEnvelope<Map<String, dynamic>>.fromJson(
       json,
       (result) => Map<String, dynamic>.from(result! as Map),
@@ -42,10 +123,6 @@ class AuthRepository {
     return AuthUser.fromJson(Map<String, dynamic>.from(userJson));
   }
 
-  Future<void> logout() {
-    return tokenStore.clear();
-  }
-
   String _readRequiredString(Map<String, dynamic> json, String key) {
     final value = json[key];
     if (value == null || value.toString().isEmpty) {
@@ -58,10 +135,10 @@ class AuthRepository {
     return value.toString();
   }
 
-  String _readFailureMessage(Map<String, dynamic> json) {
+  String _readFailureMessage(Map<String, dynamic> json, String fallback) {
     final value = json['message'] ?? json['msg'];
     if (value == null || value.toString().isEmpty) {
-      return 'Login failed';
+      return fallback;
     }
 
     return value.toString();

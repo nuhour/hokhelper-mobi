@@ -49,6 +49,65 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     }
   }
 
+  Future<void> register({
+    required String email,
+    required String password,
+    required String code,
+    String? username,
+  }) async {
+    final repository = ref.read(authRepositoryProvider);
+    state = const AsyncLoading();
+    try {
+      final user = await repository.registerWithEmail(
+        email: email,
+        password: password,
+        code: code,
+        username: username,
+      );
+      state = AsyncData(user);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+    }
+  }
+
+  Future<void> sendRegisterCode({
+    required String email,
+    required String turnstileToken,
+  }) {
+    return ref
+        .read(authRepositoryProvider)
+        .sendRegisterCode(email: email, turnstileToken: turnstileToken);
+  }
+
+  Future<void> sendVerificationCode(String email) {
+    return ref.read(authRepositoryProvider).sendVerificationCode(email);
+  }
+
+  Future<void> verifyCode({required String email, required String code}) {
+    return ref
+        .read(authRepositoryProvider)
+        .verifyCode(email: email, code: code);
+  }
+
+  Future<void> resetForgottenPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final repository = ref.read(authRepositoryProvider);
+    state = const AsyncLoading();
+    try {
+      await repository.resetForgottenPassword(
+        email: email,
+        code: code,
+        newPassword: newPassword,
+      );
+      state = const AsyncData(null);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+    }
+  }
+
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(null);

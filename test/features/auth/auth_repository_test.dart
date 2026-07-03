@@ -6,7 +6,7 @@ import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
 
 class _FakeApiClient extends ApiClient {
-  _FakeApiClient(this.response)
+  _FakeApiClient([this.response = const {}])
     : super(
         config: const AppConfig(
           apiBaseUrl: 'https://example.test',
@@ -17,11 +17,13 @@ class _FakeApiClient extends ApiClient {
   final Map<String, dynamic> response;
   String? path;
   Object? body;
+  final calls = <({String path, Object? body})>[];
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     this.path = path;
     this.body = body;
+    calls.add((path: path, body: body));
     return response;
   }
 }
@@ -175,5 +177,99 @@ void main() {
       expect(tokenStore.access, isNull);
       expect(tokenStore.refresh, isNull);
     });
+
+    test('sends register code with turnstile token', () async {
+      final apiClient = _FakeApiClient({'success': true});
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: _MemoryTokenStore(),
+      );
+
+      await repository.sendRegisterCode(
+        email: 'lam@example.test',
+        turnstileToken: 'turnstile-token',
+      );
+
+      expect(apiClient.path, '/auth/email/send_register_code');
+      expect(apiClient.body, {
+        'email': 'lam@example.test',
+        'turnstile_token': 'turnstile-token',
+      });
+    });
+
+    test('registers with email and stores returned tokens', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {
+          'access': 'access-token',
+          'refresh': 'refresh-token',
+          'user': {
+            'id': 8,
+            'username': 'new-user',
+            'email': 'new@example.test',
+            'first_name': 'Newbie',
+          },
+        },
+      });
+      final tokenStore = _MemoryTokenStore();
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: tokenStore,
+      );
+
+      final user = await repository.registerWithEmail(
+        email: 'new@example.test',
+        password: 'StrongPass1!',
+        code: '123456',
+        username: 'new-user',
+      );
+
+      expect(apiClient.path, '/auth/email/register');
+      expect(apiClient.body, {
+        'email': 'new@example.test',
+        'password': 'StrongPass1!',
+        'code': '123456',
+        'username': 'new-user',
+      });
+      expect(tokenStore.access, 'access-token');
+      expect(tokenStore.refresh, 'refresh-token');
+      expect(user.id, 8);
+      expect(user.displayName, 'Newbie');
+    });
+
+    test(
+      'sends and verifies forgot password code then resets password',
+      () async {
+        final apiClient = _FakeApiClient({'success': true});
+        final repository = AuthRepository(
+          apiClient: apiClient,
+          tokenStore: _MemoryTokenStore(),
+        );
+
+        await repository.sendVerificationCode('lam@example.test');
+        await repository.verifyCode(email: 'lam@example.test', code: '654321');
+        await repository.resetForgottenPassword(
+          email: 'lam@example.test',
+          code: '654321',
+          newPassword: 'NewStrongPass1!',
+        );
+
+        expect(apiClient.calls.map((call) => call.path), [
+          '/auth/email/send_verification_code',
+          '/auth/email/verify_code',
+          '/auth/email/forgot_password_reset',
+        ]);
+        expect(apiClient.calls[0].body, {'email': 'lam@example.test'});
+        expect(apiClient.calls[1].body, {
+          'email': 'lam@example.test',
+          'code': '654321',
+        });
+        expect(apiClient.calls[2].body, {
+          'email': 'lam@example.test',
+          'code': '654321',
+          'new_password': 'NewStrongPass1!',
+        });
+      },
+    );
   });
 }
