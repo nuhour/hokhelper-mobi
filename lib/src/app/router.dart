@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/presentation/login_screen.dart';
+import '../features/content/presentation/content_screen.dart';
 import '../features/heroes/presentation/hero_detail_screen.dart';
 import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
+import '../features/rankings/presentation/tools_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import 'app_shell.dart';
 
 GoRouter createAppRouter() {
@@ -13,6 +15,10 @@ GoRouter createAppRouter() {
     initialLocation: '/',
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
@@ -48,7 +54,7 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/content',
-                builder: (context, state) => const _TabScreen(title: 'Content'),
+                builder: (context, state) => const ContentScreen(),
               ),
             ],
           ),
@@ -56,7 +62,7 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/tools',
-                builder: (context, state) => const _TabScreen(title: 'Tools'),
+                builder: (context, state) => const ToolsScreen(),
               ),
             ],
           ),
@@ -72,17 +78,4 @@ GoRouter createAppRouter() {
       ),
     ],
   );
-}
-
-class _TabScreen extends StatelessWidget {
-  const _TabScreen({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(title, style: Theme.of(context).textTheme.displaySmall),
-    );
-  }
 }
