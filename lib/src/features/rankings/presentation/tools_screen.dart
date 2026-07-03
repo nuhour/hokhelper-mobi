@@ -14,10 +14,11 @@ class ToolsScreen extends StatelessWidget {
       children: [
         const AppSectionHeader(title: 'Tools'),
         const SizedBox(height: 16),
-        const _ToolTile(
+        _ToolTile(
           icon: Icons.leaderboard_outlined,
           title: 'Rankings',
-          subtitle: 'Hero ranking foundations',
+          subtitle: 'Compare hero performance metrics',
+          onTap: () => context.go('/tools/rankings'),
         ),
         const SizedBox(height: 12),
         _ToolTile(
