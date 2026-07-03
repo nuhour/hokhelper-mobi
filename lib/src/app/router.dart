@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/presentation/login_screen.dart';
+import '../features/home/presentation/home_screen.dart';
+import '../features/profile/presentation/me_screen.dart';
 import 'app_shell.dart';
 
 GoRouter createAppRouter() {
@@ -18,7 +20,7 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/',
-                builder: (context, state) => const _TabScreen(title: 'Home'),
+                builder: (context, state) => const HomeScreen(),
               ),
             ],
           ),
@@ -50,7 +52,7 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/me',
-                builder: (context, state) => const _TabScreen(title: 'Me'),
+                builder: (context, state) => const MeScreen(),
               ),
             ],
           ),
