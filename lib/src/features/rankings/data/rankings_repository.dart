@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../domain/equip_ranking_entry.dart';
 import '../domain/hero_ranking_entry.dart';
+import '../domain/player_leaderboard_result.dart';
 import '../domain/player_ranking_entry.dart';
 import '../domain/tier_list_entry.dart';
 
@@ -66,6 +67,35 @@ class RankingsRepository {
     return players.map(PlayerRankingEntry.fromJson).toList(growable: false);
   }
 
+  Future<PlayerLeaderboardResult> loadPlayerLeaderboard({
+    required int regionId,
+    required String rankType,
+    int limit = 200,
+  }) async {
+    final json = await apiClient.getJson(
+      '/ranking/players',
+      query: {'region_id': regionId, 'rank_type': rankType, 'limit': limit},
+    );
+    final data = json['data'];
+    final result = json['result'];
+    final envelope = data is Map
+        ? data
+        : result is Map
+        ? result
+        : json;
+    final players = envelope['players'];
+
+    return PlayerLeaderboardResult(
+      players: players is List
+          ? players.map(PlayerRankingEntry.fromJson).toList(growable: false)
+          : const [],
+      total: _readInt(envelope['total']),
+      regionId: _readInt(envelope['region_id']),
+      rankType: envelope['rank_type']?.toString() ?? rankType,
+      regionOptions: _readRegionOptions(envelope['region_options']),
+    );
+  }
+
   Future<List<EquipRankingEntry>> loadEquipRanking({
     String sortBy = 'pick_rate',
     int limit = 20,
@@ -113,5 +143,25 @@ class RankingsRepository {
     }
 
     return tierList.map(TierListEntry.fromJson).toList(growable: false);
+  }
+
+  int _readInt(Object? value) {
+    if (value is int) {
+      return value;
+    }
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  List<int> _readRegionOptions(Object? value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    return value
+        .map(_readInt)
+        .where((region) => region > 0)
+        .toSet()
+        .toList(growable: false)
+      ..sort();
   }
 }

@@ -22,6 +22,13 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ToolTile(
+          icon: Icons.emoji_events_outlined,
+          title: 'Player Leaderboard',
+          subtitle: 'Browse ranked and peak score players',
+          onTap: () => context.go('/tools/leaderboard'),
+        ),
+        const SizedBox(height: 12),
+        _ToolTile(
           icon: Icons.construction_outlined,
           title: 'Build Explorer',
           subtitle: 'Browse public build schemes',

@@ -24,6 +24,7 @@ import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/prompts/presentation/prompts_screen.dart';
 import '../features/rank_fortune/presentation/rank_fortune_screen.dart';
 import '../features/rankings/presentation/hero_ranking_screen.dart';
+import '../features/rankings/presentation/player_leaderboard_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
 import '../features/rankings/presentation/tools_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -94,6 +95,10 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/relationships',
         builder: (context, state) => const HeroRelationshipsScreen(),
+      ),
+      GoRoute(
+        path: '/leaderboard',
+        builder: (context, state) => const PlayerLeaderboardScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -203,6 +208,11 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'rankings',
                     builder: (context, state) => const HeroRankingScreen(),
+                  ),
+                  GoRoute(
+                    path: 'leaderboard',
+                    builder: (context, state) =>
+                        const PlayerLeaderboardScreen(),
                   ),
                   GoRoute(
                     path: 'team-builder',
