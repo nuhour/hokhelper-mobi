@@ -79,6 +79,13 @@ class ContentScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _ContentActionCard(
+            icon: Icons.movie_creation_outlined,
+            title: 'CG Gallery',
+            subtitle: 'Watch cinematics, trailers, videos, and comments',
+            onTap: () => context.go('/content/cgs'),
+          ),
+          const SizedBox(height: 12),
+          _ContentActionCard(
             icon: Icons.event_available_outlined,
             title: 'Event Assistance',
             subtitle: 'Share event codes and teammate requests',

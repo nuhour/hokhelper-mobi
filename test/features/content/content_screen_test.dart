@@ -60,18 +60,27 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    final mainScroll = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(
+      find.text('Skins'),
+      300,
+      scrollable: mainScroll,
+    );
     expect(find.text('Skins'), findsOneWidget);
     expect(find.text('Starlit Blade'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('4.5 · 18 ratings'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.drag(mainScroll, const Offset(0, -700));
     await tester.pumpAndSettle();
     expect(find.text('CGs'), findsOneWidget);
     expect(find.text('Origin Story'), findsOneWidget);
     expect(find.text('Angela'), findsOneWidget);
     expect(find.text('300 views'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Version 1.2.3 Patch Notes'),
+      300,
+      scrollable: mainScroll,
+    );
     expect(find.text('Patch Notes'), findsWidgets);
     expect(find.text('Version 1.2.3 Patch Notes'), findsOneWidget);
     expect(find.text('V1.2.3 · 2026-07-01'), findsOneWidget);

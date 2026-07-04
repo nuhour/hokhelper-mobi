@@ -8,6 +8,7 @@ import '../features/bp/presentation/bp_dashboard_screen.dart';
 import '../features/builds/presentation/build_explorer_screen.dart';
 import '../features/community/presentation/community_post_detail_screen.dart';
 import '../features/community/presentation/community_screen.dart';
+import '../features/content/presentation/cg_gallery_screen.dart';
 import '../features/content/presentation/content_screen.dart';
 import '../features/content/presentation/patch_notes_screen.dart';
 import '../features/content/presentation/skin_gallery_screen.dart';
@@ -75,6 +76,20 @@ GoRouter createAppRouter() {
           ),
         ],
       ),
+      GoRoute(
+        path: '/cg',
+        builder: (context, state) => const CgGalleryScreen(),
+        routes: [
+          GoRoute(
+            path: ':cgId',
+            builder: (context, state) {
+              return CgGalleryScreen(
+                initialCgId: int.tryParse(state.pathParameters['cgId'] ?? ''),
+              );
+            },
+          ),
+        ],
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
@@ -133,6 +148,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'skins',
                     builder: (context, state) => const SkinGalleryScreen(),
+                  ),
+                  GoRoute(
+                    path: 'cgs',
+                    builder: (context, state) => const CgGalleryScreen(),
                   ),
                   GoRoute(
                     path: 'patch-notes',

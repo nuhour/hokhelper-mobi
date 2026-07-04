@@ -1,0 +1,88 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/cg_detail.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
+import 'package:hok_helper_mobile/src/features/content/presentation/cg_gallery_screen.dart';
+
+void main() {
+  testWidgets('renders cg gallery, filters, and opens cg detail', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cgGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 501,
+                kind: ContentKind.cg,
+                title: 'Lam Cinematic',
+                heroName: 'Lam',
+                imageUrl: 'https://example.test/lam-cover.jpg',
+                subtitle: 'Playable video',
+                rating: 4.8,
+                ratingCount: 17,
+                viewCount: 2300,
+              ),
+              ContentItemSummary(
+                id: 502,
+                kind: ContentKind.cg,
+                title: 'Angela Trailer',
+                heroName: 'Angela',
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 3.9,
+                ratingCount: 6,
+                viewCount: 900,
+              ),
+            ];
+          }),
+          cgDetailProvider(501).overrideWith((ref) async {
+            return const CgDetail(
+              id: 501,
+              title: 'Lam Cinematic',
+              heroName: 'Lam',
+              coverUrl: 'https://example.test/lam-cover.jpg',
+              playUrl: 'https://example.test/lam.mp4',
+              viewCount: 2300,
+              rating: 4.8,
+              ratingCount: 17,
+            );
+          }),
+          cgCommentsProvider(501).overrideWith((ref) async {
+            return const [
+              CgCommentSummary(
+                id: 9,
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                content: 'Great cinematic.',
+                createdAt: '2026-07-03T08:30:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('CG Gallery'), findsOneWidget);
+    expect(find.text('Lam Cinematic'), findsOneWidget);
+    expect(find.text('Angela Trailer'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Lam');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lam Cinematic'), findsOneWidget);
+    expect(find.text('Angela Trailer'), findsNothing);
+
+    await tester.tap(find.text('Lam Cinematic'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CG Detail'), findsOneWidget);
+    expect(find.text('https://example.test/lam.mp4'), findsOneWidget);
+    expect(find.text('2,300 views'), findsOneWidget);
+    expect(find.text('Great cinematic.'), findsOneWidget);
+  });
+}
