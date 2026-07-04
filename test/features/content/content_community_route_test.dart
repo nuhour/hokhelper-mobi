@@ -6,6 +6,8 @@ import 'package:hok_helper_mobile/src/features/community/domain/community_post_s
 import 'package:hok_helper_mobile/src/features/community/domain/leak_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
+import 'package:hok_helper_mobile/src/features/info/domain/friend_link_summary.dart';
+import 'package:hok_helper_mobile/src/features/info/presentation/info_center_screen.dart';
 
 GoRouter _buildRouter() {
   return GoRouter(
@@ -18,6 +20,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'community',
             builder: (context, state) => const CommunityScreen(),
+          ),
+          GoRoute(
+            path: 'info',
+            builder: (context, state) => const InfoCenterScreen(),
           ),
         ],
       ),
@@ -33,6 +39,7 @@ void main() {
           skinsProvider.overrideWith((ref) async => const []),
           cgsProvider.overrideWith((ref) async => const []),
           patchNotesProvider.overrideWith((ref) async => const []),
+          friendLinksProvider.overrideWith((ref) async => const []),
           communityPostsProvider.overrideWith((ref) async {
             return const [
               CommunityPostSummary(
@@ -80,5 +87,38 @@ void main() {
 
     expect(find.text('Community'), findsOneWidget);
     expect(find.text('Best jungle rotation'), findsOneWidget);
+  });
+
+  testWidgets('content screen opens the info center route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          skinsProvider.overrideWith((ref) async => const []),
+          cgsProvider.overrideWith((ref) async => const []),
+          patchNotesProvider.overrideWith((ref) async => const []),
+          friendLinksProvider.overrideWith((ref) async {
+            return const [
+              FriendLinkSummary(
+                id: 7,
+                name: 'HOK Lab',
+                url: 'https://hoklab.example',
+                description: 'Draft tools and hero research.',
+                logoUrl: '',
+              ),
+            ];
+          }),
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Info Center'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('About HOK Helper'), findsOneWidget);
+    expect(find.text('HOK Lab'), findsOneWidget);
   });
 }

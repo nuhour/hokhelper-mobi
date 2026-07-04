@@ -64,6 +64,8 @@ void main() {
     expect(find.text('Starlit Blade'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('4.5 · 18 ratings'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
     expect(find.text('CGs'), findsOneWidget);
     expect(find.text('Origin Story'), findsOneWidget);
     expect(find.text('Angela'), findsOneWidget);

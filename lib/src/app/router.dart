@@ -11,6 +11,7 @@ import '../features/esports/presentation/esports_screen.dart';
 import '../features/heroes/presentation/hero_detail_screen.dart';
 import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/info/presentation/info_center_screen.dart';
 import '../features/prompts/presentation/prompts_screen.dart';
 import '../features/rankings/presentation/hero_ranking_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
@@ -81,6 +82,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'event-assistance',
                     builder: (context, state) => const EventAssistanceScreen(),
+                  ),
+                  GoRoute(
+                    path: 'info',
+                    builder: (context, state) => const InfoCenterScreen(),
                   ),
                 ],
               ),

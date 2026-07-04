@@ -77,6 +77,13 @@ class ContentScreen extends ConsumerWidget {
             subtitle: 'Share event codes and teammate requests',
             onTap: () => context.go('/content/event-assistance'),
           ),
+          const SizedBox(height: 12),
+          _ContentActionCard(
+            icon: Icons.info_outline,
+            title: 'Info Center',
+            subtitle: 'About, FAQ, privacy, terms, and partner links',
+            onTap: () => context.go('/content/info'),
+          ),
           const SizedBox(height: 20),
           AppAsyncView<List<ContentItemSummary>>(
             value: skinsValue,
