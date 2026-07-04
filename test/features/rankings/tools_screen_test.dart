@@ -12,6 +12,8 @@ import 'package:hok_helper_mobile/src/features/esports/presentation/esports_scre
 import 'package:hok_helper_mobile/src/features/game_assistant/presentation/game_assistant_screen.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
+import 'package:hok_helper_mobile/src/features/rank_fortune/domain/rank_fortune.dart';
+import 'package:hok_helper_mobile/src/features/rank_fortune/presentation/rank_fortune_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/tools_screen.dart';
@@ -46,6 +48,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'game-assistant',
             builder: (context, state) => const GameAssistantScreen(),
+          ),
+          GoRoute(
+            path: 'rank-fortune',
+            builder: (context, state) => const RankFortuneScreen(),
           ),
           GoRoute(
             path: 'rankings',
@@ -282,6 +288,38 @@ void main() {
 
     expect(find.text('Hero Rankings'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
+  });
+
+  testWidgets('rank fortune tile opens the rank fortune route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ..._emptyToolOverrides(),
+          rankFortuneHistoryProvider.overrideWith((ref) async {
+            return const RankFortuneHistory(
+              rows: [],
+              today: null,
+              canDraw: true,
+              days: 30,
+              catalog: [],
+            );
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Rank Fortune'), 120);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rank Fortune'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text("Draw your fortune for today's ranked matches."),
+      findsOneWidget,
+    );
+    expect(find.text('Fortune Jar'), findsOneWidget);
   });
 
   testWidgets('team builder tile opens the team builder route', (tester) async {

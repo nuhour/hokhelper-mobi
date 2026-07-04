@@ -50,6 +50,13 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ToolTile(
+          icon: Icons.auto_fix_high_outlined,
+          title: 'Rank Fortune',
+          subtitle: "Draw today's ranked match fortune",
+          onTap: () => context.go('/tools/rank-fortune'),
+        ),
+        const SizedBox(height: 12),
+        _ToolTile(
           icon: Icons.groups_2_outlined,
           title: 'Team Builder',
           subtitle: 'Draft picks and review lineup recommendations',
