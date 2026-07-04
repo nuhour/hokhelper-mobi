@@ -29,6 +29,13 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ToolTile(
+          icon: Icons.account_tree_outlined,
+          title: 'BP Simulator',
+          subtitle: 'Review pick/ban schemes and draft progress',
+          onTap: () => context.go('/tools/bp-simulator'),
+        ),
+        const SizedBox(height: 12),
+        _ToolTile(
           icon: Icons.groups_2_outlined,
           title: 'Team Builder',
           subtitle: 'Draft picks and review lineup recommendations',

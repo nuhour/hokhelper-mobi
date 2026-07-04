@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
+import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
@@ -29,6 +31,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'builds',
             builder: (context, state) => const BuildExplorerScreen(),
+          ),
+          GoRoute(
+            path: 'bp-simulator',
+            builder: (context, state) => const BpDashboardScreen(),
           ),
           GoRoute(
             path: 'rankings',
@@ -59,6 +65,7 @@ GoRouter _buildRouter() {
 List<Override> _emptyToolOverrides() {
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
+    bpSchemesProvider.overrideWith((ref) async => const []),
     heroRankingProvider.overrideWith((ref) async => const []),
     playerRankingProvider.overrideWith((ref) async => const []),
     equipRankingProvider.overrideWith((ref) async => const []),
@@ -77,6 +84,7 @@ List<Override> _emptyToolOverrides() {
 
 List<Override> _toolOverrides({
   Future<List<HeroRankingEntry>> Function(Ref)? heroRanking,
+  Future<List<BpSchemeSummary>> Function(Ref)? bpSchemes,
   Future<List<TeamBuildHero>> Function(Ref)? teamBuilderHeroes,
   Future<List<PromptSummary>> Function(Ref)? publicPrompts,
   Future<List<EsportsMatchSummary>> Function(Ref)? esportsMatches,
@@ -86,6 +94,7 @@ List<Override> _toolOverrides({
 }) {
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
+    bpSchemesProvider.overrideWith(bpSchemes ?? (ref) async => const []),
     heroRankingProvider.overrideWith(heroRanking ?? (ref) async => const []),
     playerRankingProvider.overrideWith((ref) async => const []),
     equipRankingProvider.overrideWith((ref) async => const []),
@@ -129,6 +138,43 @@ void main() {
 
     expect(find.text('Build Explorer'), findsOneWidget);
     expect(find.text('No public builds'), findsOneWidget);
+  });
+
+  testWidgets('BP simulator tile opens the BP route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _toolOverrides(
+          bpSchemes: (ref) async {
+            return const [
+              BpSchemeSummary(
+                id: '12',
+                name: 'KPL Finals Draft',
+                createdAt: '2026-07-03T10:00:00Z',
+                boMode: 7,
+                teamAName: 'Wolves',
+                teamBName: 'AG',
+                sideSelectionRule: 'loser_selects',
+                gameNumber: 3,
+                historyCount: 2,
+                currentStepIndex: 4,
+                blueBanCount: 1,
+                redBanCount: 1,
+                bluePickCount: 1,
+                redPickCount: 1,
+              ),
+            ];
+          },
+        ),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('BP Simulator'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('KPL Finals Draft'), findsOneWidget);
+    expect(find.text('Wolves vs AG'), findsOneWidget);
   });
 
   testWidgets('rankings tile opens the hero rankings route', (tester) async {
@@ -315,6 +361,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Stats'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Stats'));
     await tester.pumpAndSettle();
 
