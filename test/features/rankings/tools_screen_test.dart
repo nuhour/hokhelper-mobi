@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
+import 'package:hok_helper_mobile/src/features/curiosity/domain/curiosity.dart';
+import 'package:hok_helper_mobile/src/features/curiosity/presentation/curiosity_lab_screen.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
@@ -52,6 +54,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'rank-fortune',
             builder: (context, state) => const RankFortuneScreen(),
+          ),
+          GoRoute(
+            path: 'curiosity-lab',
+            builder: (context, state) => const CuriosityLabScreen(),
           ),
           GoRoute(
             path: 'rankings',
@@ -322,6 +328,31 @@ void main() {
     expect(find.text('Fortune Jar'), findsOneWidget);
   });
 
+  testWidgets('curiosity lab tile opens the curiosity lab route', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ..._emptyToolOverrides(),
+          curiosityOptionsProvider.overrideWith((ref) async {
+            return const CuriosityOptionResult(rows: [], verbs: []);
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Curiosity Lab'), 120);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Curiosity Lab'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('HOK Curiosity Lab'), findsOneWidget);
+    expect(find.text('Advanced Mode'), findsOneWidget);
+  });
+
   testWidgets('team builder tile opens the team builder route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -343,6 +374,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('Team Builder'), 120);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Team Builder'));
     await tester.pumpAndSettle();
 

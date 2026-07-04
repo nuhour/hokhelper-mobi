@@ -57,6 +57,13 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ToolTile(
+          icon: Icons.psychology_outlined,
+          title: 'Curiosity Lab',
+          subtitle: 'Query mechanics, interactions, and replay evidence',
+          onTap: () => context.go('/tools/curiosity-lab'),
+        ),
+        const SizedBox(height: 12),
+        _ToolTile(
           icon: Icons.groups_2_outlined,
           title: 'Team Builder',
           subtitle: 'Draft picks and review lineup recommendations',
