@@ -52,6 +52,12 @@ class HeroGalleryScreen extends ConsumerWidget {
                             child: AppSectionHeader(title: 'Heroes'),
                           ),
                           IconButton.filledTonal(
+                            tooltip: 'World Map',
+                            onPressed: () => context.go('/world-map'),
+                            icon: const Icon(Icons.travel_explore_outlined),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filledTonal(
                             tooltip: 'Hero Relationships',
                             onPressed: () => context.go('/relationships'),
                             icon: const Icon(Icons.hub_outlined),
@@ -66,10 +72,21 @@ class HeroGalleryScreen extends ConsumerWidget {
                         ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
                       ),
                       const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () => context.go('/relationships'),
-                        icon: const Icon(Icons.hub_outlined),
-                        label: const Text('Hero Relationships'),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () => context.go('/world-map'),
+                            icon: const Icon(Icons.travel_explore_outlined),
+                            label: const Text('World Map'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => context.go('/relationships'),
+                            icon: const Icon(Icons.hub_outlined),
+                            label: const Text('Hero Relationships'),
+                          ),
+                        ],
                       ),
                     ],
                   ),

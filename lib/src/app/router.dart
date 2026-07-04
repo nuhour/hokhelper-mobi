@@ -18,6 +18,7 @@ import '../features/game_assistant/presentation/game_assistant_screen.dart';
 import '../features/heroes/presentation/hero_detail_screen.dart';
 import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/heroes/presentation/hero_relationships_screen.dart';
+import '../features/heroes/presentation/world_map_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/info/presentation/info_center_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
@@ -95,6 +96,10 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/relationships',
         builder: (context, state) => const HeroRelationshipsScreen(),
+      ),
+      GoRoute(
+        path: '/world-map',
+        builder: (context, state) => const WorldMapScreen(),
       ),
       GoRoute(
         path: '/leaderboard',

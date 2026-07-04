@@ -1,12 +1,14 @@
 class HeroSummary {
   const HeroSummary({
     required this.id,
+    this.heroId = '',
     required this.name,
     required this.avatar,
     required this.title,
   });
 
   final String id;
+  final String heroId;
   final String name;
   final String avatar;
   final String title;
@@ -14,6 +16,7 @@ class HeroSummary {
   factory HeroSummary.fromJson(Map<String, dynamic> json) {
     return HeroSummary(
       id: _readHeroId(json, const ['id', 'heroId', 'hero_id']),
+      heroId: _readHeroId(json, const ['heroId', 'hero_id', 'id']),
       name: _readString(json, const ['heroName', 'name', 'hero_name']),
       avatar: _readString(json, const [
         'avatar_url_large',
