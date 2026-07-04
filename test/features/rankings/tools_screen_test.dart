@@ -9,6 +9,7 @@ import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summ
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
+import 'package:hok_helper_mobile/src/features/game_assistant/presentation/game_assistant_screen.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
@@ -41,6 +42,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'tier-list',
             builder: (context, state) => const TierListToolScreen(),
+          ),
+          GoRoute(
+            path: 'game-assistant',
+            builder: (context, state) => const GameAssistantScreen(),
           ),
           GoRoute(
             path: 'rankings',
@@ -225,6 +230,26 @@ void main() {
     expect(find.text('2 heroes'), findsOneWidget);
   });
 
+  testWidgets('game assistant tile opens the game assistant route', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _emptyToolOverrides(),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Game Assistant'), 120);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Game Assistant'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mobile Companion App'), findsOneWidget);
+    expect(find.text('Jungle timers'), findsOneWidget);
+  });
+
   testWidgets('rankings tile opens the hero rankings route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -312,6 +337,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('Prompts'), 120);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Prompts'));
     await tester.pumpAndSettle();
 

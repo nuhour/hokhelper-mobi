@@ -43,6 +43,13 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ToolTile(
+          icon: Icons.smartphone_outlined,
+          title: 'Game Assistant',
+          subtitle: 'Preview timers, economy, cooldowns, and AI tips',
+          onTap: () => context.go('/tools/game-assistant'),
+        ),
+        const SizedBox(height: 12),
+        _ToolTile(
           icon: Icons.groups_2_outlined,
           title: 'Team Builder',
           subtitle: 'Draft picks and review lineup recommendations',

@@ -9,6 +9,7 @@ import '../features/builds/presentation/build_explorer_screen.dart';
 import '../features/community/presentation/community_screen.dart';
 import '../features/content/presentation/content_screen.dart';
 import '../features/esports/presentation/esports_screen.dart';
+import '../features/game_assistant/presentation/game_assistant_screen.dart';
 import '../features/heroes/presentation/hero_detail_screen.dart';
 import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -110,6 +111,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'tier-list',
                     builder: (context, state) => const TierListToolScreen(),
+                  ),
+                  GoRoute(
+                    path: 'game-assistant',
+                    builder: (context, state) => const GameAssistantScreen(),
                   ),
                   GoRoute(
                     path: 'rankings',
