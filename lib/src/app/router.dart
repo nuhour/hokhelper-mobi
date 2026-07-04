@@ -30,6 +30,7 @@ import '../features/profile/presentation/me_screen.dart';
 import '../features/rankings/presentation/tools_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
+import '../features/stats/presentation/hero_trends_screen.dart';
 import '../features/teambuild/presentation/team_builder_screen.dart';
 import '../features/tierlist_tool/presentation/tierlist_tool_screen.dart';
 import 'app_shell.dart';
@@ -100,6 +101,10 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/world-map',
         builder: (context, state) => const WorldMapScreen(),
+      ),
+      GoRoute(
+        path: '/trends',
+        builder: (context, state) => const HeroTrendsScreen(),
       ),
       GoRoute(
         path: '/leaderboard',

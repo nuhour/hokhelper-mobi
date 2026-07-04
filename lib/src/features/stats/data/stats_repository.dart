@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../domain/hero_trend_row.dart';
 import '../domain/stats_dashboard.dart';
 
 class StatsRepository {
@@ -33,6 +34,27 @@ class StatsRepository {
       equips: results[1].cast<StatsEquipRow>(),
       combos: results[2].cast<StatsComboRow>(),
     );
+  }
+
+  Future<List<HeroTrendRow>> loadHeroTrends({
+    required String regionCode,
+  }) async {
+    final json = await apiClient.getJson(
+      '/stats/table',
+      query: {
+        'dimension': 'hero_rank',
+        'baseline': 'peak_1000',
+        'view': 'base',
+        'region': regionCode,
+        'window_days': 30,
+      },
+    );
+    return _readRows(json)
+        .map(HeroTrendRow.fromJson)
+        .where((row) {
+          return row.id > 0 && row.name.isNotEmpty;
+        })
+        .toList(growable: false);
   }
 
   Future<List<T>> _loadRows<T>({

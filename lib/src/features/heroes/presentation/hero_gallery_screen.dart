@@ -52,6 +52,12 @@ class HeroGalleryScreen extends ConsumerWidget {
                             child: AppSectionHeader(title: 'Heroes'),
                           ),
                           IconButton.filledTonal(
+                            tooltip: 'Hero Trends',
+                            onPressed: () => context.go('/trends'),
+                            icon: const Icon(Icons.trending_up_outlined),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filledTonal(
                             tooltip: 'World Map',
                             onPressed: () => context.go('/world-map'),
                             icon: const Icon(Icons.travel_explore_outlined),
@@ -76,6 +82,11 @@ class HeroGalleryScreen extends ConsumerWidget {
                         spacing: 10,
                         runSpacing: 10,
                         children: [
+                          OutlinedButton.icon(
+                            onPressed: () => context.go('/trends'),
+                            icon: const Icon(Icons.trending_up_outlined),
+                            label: const Text('Hero Trends'),
+                          ),
                           OutlinedButton.icon(
                             onPressed: () => context.go('/world-map'),
                             icon: const Icon(Icons.travel_explore_outlined),
