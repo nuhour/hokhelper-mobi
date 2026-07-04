@@ -11,6 +11,7 @@ class BuildSchemeSummary {
     required this.isPublic,
     this.slotIndex = 0,
     this.equipmentIds = const [],
+    this.runeIds = const [],
     this.summonerSkillId,
   });
 
@@ -25,6 +26,7 @@ class BuildSchemeSummary {
   final bool isPublic;
   final int slotIndex;
   final List<int> equipmentIds;
+  final List<int> runeIds;
   final int? summonerSkillId;
 
   factory BuildSchemeSummary.fromJson(Object? json) {
@@ -60,11 +62,28 @@ class BuildSchemeSummary {
       isPublic: map['is_public'] != false && map['public'] != false,
       slotIndex: _readInt(map['slot_index'] ?? map['slotIndex']),
       equipmentIds: _readEquipmentIds(rawEquipment),
+      runeIds: _readIdList(map['runes'] ?? map['arcana']),
       summonerSkillId: _readOptionalInt(
         map['summoner_skill_id'] ?? map['summonerSkillId'],
       ),
     );
   }
+}
+
+List<int> _readIdList(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+
+  return value
+      .map((item) {
+        if (item is Map) {
+          return _readInt(item['rune_id'] ?? item['id']);
+        }
+        return _readInt(item);
+      })
+      .where((id) => id > 0)
+      .toList(growable: false);
 }
 
 List<String> _readEquipmentIcons(Object? value) {

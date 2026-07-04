@@ -105,6 +105,21 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/build/runes') {
+      return const {
+        'success': true,
+        'result': {
+          'runes': [
+            {
+              'rune_id': 201,
+              'name': 'Fate',
+              'color': 1,
+              'icon': 'https://example.test/fate.png',
+            },
+          ],
+        },
+      };
+    }
     return const {
       'success': true,
       'result': {
@@ -205,6 +220,23 @@ void main() {
     expect(skills.single.name, 'Smite');
   });
 
+  test('loads level five runes with backend region filters', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    final runes = await repository.loadRunes(2);
+
+    expect(apiClient.postPath, '/build/runes');
+    final body = apiClient.postBody as Map<String, dynamic>;
+    expect(body['filterRules'], [
+      {'field': 'region_id', 'op': 'eq', 'value': 2},
+      {'field': 'level', 'op': 'eq', 'value': 5},
+    ]);
+    expect(runes.single.id, 201);
+    expect(runes.single.name, 'Fate');
+    expect(runes.single.color, 1);
+  });
+
   test('creates a build scheme slot with editor payload', () async {
     final apiClient = _FakeApiClient();
     final repository = BuildsRepository(apiClient: apiClient);
@@ -216,6 +248,7 @@ void main() {
         title: 'Mobile burst',
         isPublic: true,
         equipIds: [101, 102],
+        runeIds: [201],
         summonerSkillId: 12,
         regionCode: 'en',
       ),
@@ -230,7 +263,7 @@ void main() {
       'description': '',
       'is_public': true,
       'equips': [101, 102],
-      'runes': <int>[],
+      'runes': [201],
       'summoner_skill_id': 12,
     });
   });
@@ -249,6 +282,7 @@ void main() {
           title: 'Updated burst',
           isPublic: false,
           equipIds: [101],
+          runeIds: [201],
           summonerSkillId: 12,
           regionCode: 'en',
         ),

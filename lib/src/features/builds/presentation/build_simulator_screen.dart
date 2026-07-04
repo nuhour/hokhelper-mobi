@@ -46,10 +46,15 @@ final buildSimEditorCatalogProvider = FutureProvider<BuildEditorCatalog>((
   final settings = await ref.watch(appSettingsControllerProvider.future);
   final repository = ref.watch(buildsRepositoryProvider);
   final equips = await repository.loadTopEquips(settings.region.regionId);
+  final runes = await repository.loadRunes(settings.region.regionId);
   final summonerSkills = await repository.loadSummonerSkills(
     settings.region.regionId,
   );
-  return BuildEditorCatalog(equips: equips, summonerSkills: summonerSkills);
+  return BuildEditorCatalog(
+    equips: equips,
+    runes: runes,
+    summonerSkills: summonerSkills,
+  );
 });
 
 final buildSimSaveSchemeProvider =
@@ -465,6 +470,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   late final TextEditingController _titleController;
   late bool _isPublic;
   late List<int> _equipIds;
+  late List<int> _runeIds;
   int? _summonerSkillId;
   bool _saving = false;
 
@@ -479,6 +485,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
     );
     _isPublic = scheme?.isPublic ?? false;
     _equipIds = [...(scheme?.equipmentIds ?? const [])];
+    _runeIds = [...(scheme?.runeIds ?? const [])];
     _summonerSkillId = scheme?.summonerSkillId;
   }
 
@@ -556,6 +563,14 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
                     onToggle: _toggleEquip,
                   ),
                   const SizedBox(height: 14),
+                  _EditorSectionTitle('Arcana'),
+                  const SizedBox(height: 8),
+                  _RuneSelector(
+                    runes: catalog.runes,
+                    selectedIds: _runeIds,
+                    onToggle: _toggleRune,
+                  ),
+                  const SizedBox(height: 14),
                   _EditorSectionTitle('Summoner Skill'),
                   const SizedBox(height: 8),
                   _SummonerSkillSelector(
@@ -603,6 +618,16 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
     });
   }
 
+  void _toggleRune(int runeId) {
+    setState(() {
+      if (_runeIds.contains(runeId)) {
+        _runeIds = _runeIds.where((id) => id != runeId).toList();
+      } else if (_runeIds.length < 30) {
+        _runeIds = [..._runeIds, runeId];
+      }
+    });
+  }
+
   Future<void> _save() async {
     final title = _titleController.text.trim();
     final draft = BuildSchemeDraft(
@@ -612,6 +637,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
       title: title.isEmpty ? 'Slot ${widget.slotIndex} build' : title,
       isPublic: _isPublic,
       equipIds: _equipIds,
+      runeIds: _runeIds,
       summonerSkillId: _summonerSkillId,
       regionCode: widget.regionCode,
     );
@@ -685,6 +711,75 @@ class _EquipSelector extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+class _RuneSelector extends StatelessWidget {
+  const _RuneSelector({
+    required this.runes,
+    required this.selectedIds,
+    required this.onToggle,
+  });
+
+  final List<BuildRuneSummary> runes;
+  final List<int> selectedIds;
+  final ValueChanged<int> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    if (runes.isEmpty) {
+      return const Text(
+        'No arcana available',
+        style: TextStyle(color: AppTheme.muted),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final color in const [1, 2, 3]) ...[
+          Text(
+            _colorLabel(color),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppTheme.muted,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final rune in runes.where((rune) => rune.color == color))
+                FilterChip(
+                  selected: selectedIds.contains(rune.id),
+                  label: Text(rune.name),
+                  avatar: rune.iconUrl.isEmpty
+                      ? null
+                      : AppImage(
+                          url: rune.iconUrl,
+                          width: 24,
+                          height: 24,
+                          borderRadius: 6,
+                          semanticLabel: rune.name,
+                        ),
+                  onSelected: (_) => onToggle(rune.id),
+                ),
+            ],
+          ),
+          if (color != 3) const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+
+  String _colorLabel(int color) {
+    return switch (color) {
+      1 => 'Red Arcana',
+      2 => 'Blue Arcana',
+      3 => 'Green Arcana',
+      _ => 'Arcana',
+    };
   }
 }
 

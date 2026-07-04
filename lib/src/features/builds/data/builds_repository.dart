@@ -87,6 +87,23 @@ class BuildsRepository {
     ).map(BuildSummonerSkillSummary.fromJson).toList(growable: false);
   }
 
+  Future<List<BuildRuneSummary>> loadRunes(int regionId) async {
+    final json = await apiClient.postJson(
+      '/build/runes',
+      body: {
+        'page': 1,
+        'pageSize': 100,
+        'filterRules': [
+          {'field': 'region_id', 'op': 'eq', 'value': regionId},
+          {'field': 'level', 'op': 'eq', 'value': 5},
+        ],
+      },
+    );
+    return _readRows(
+      json,
+    ).map(BuildRuneSummary.fromJson).toList(growable: false);
+  }
+
   Future<void> saveBuildScheme(BuildSchemeDraft draft) async {
     final schemeId = draft.schemeId;
     final path = schemeId == null
@@ -149,6 +166,10 @@ class BuildsRepository {
       final skills = result['skills'];
       if (skills is List) {
         return skills;
+      }
+      final runes = result['runes'];
+      if (runes is List) {
+        return runes;
       }
     }
     final data = json['data'];

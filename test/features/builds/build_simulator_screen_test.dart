@@ -63,6 +63,7 @@ void main() {
                 equips: [
                   BuildEquipSummary(id: 101, name: 'Storm Axe', iconUrl: ''),
                 ],
+                runes: [BuildRuneSummary(id: 201, name: 'Fate', color: 1)],
                 summonerSkills: [
                   BuildSummonerSkillSummary(id: 12, name: 'Smite', iconUrl: ''),
                 ],
@@ -121,6 +122,7 @@ void main() {
               equips: [
                 BuildEquipSummary(id: 101, name: 'Storm Axe', iconUrl: ''),
               ],
+              runes: [BuildRuneSummary(id: 201, name: 'Fate', color: 1)],
               summonerSkills: [
                 BuildSummonerSkillSummary(id: 12, name: 'Smite', iconUrl: ''),
               ],
@@ -145,9 +147,16 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'Mobile burst');
     await tester.tap(find.text('Storm Axe'));
-    await tester.tap(find.text('Smite'));
     await tester.tap(find.text('Public'));
-    await tester.tap(find.text('Save Build'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -260));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fate').last);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -260));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Smite').last);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -220));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Build').last);
     await tester.pumpAndSettle();
 
     expect(savedDraft?.heroId, 199);
@@ -155,6 +164,7 @@ void main() {
     expect(savedDraft?.title, 'Mobile burst');
     expect(savedDraft?.isPublic, true);
     expect(savedDraft?.equipIds, [101]);
+    expect(savedDraft?.runeIds, [201]);
     expect(savedDraft?.summonerSkillId, 12);
   });
 
@@ -197,7 +207,11 @@ void main() {
             return const [null, null, null];
           }),
           buildSimEditorCatalogProvider.overrideWith((ref) async {
-            return const BuildEditorCatalog(equips: [], summonerSkills: []);
+            return const BuildEditorCatalog(
+              equips: [],
+              runes: [],
+              summonerSkills: [],
+            );
           }),
           buildSimSaveSchemeProvider.overrideWith((ref) {
             return (_) async {};

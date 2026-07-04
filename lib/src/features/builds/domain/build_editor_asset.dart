@@ -1,10 +1,12 @@
 class BuildEditorCatalog {
   const BuildEditorCatalog({
     required this.equips,
+    this.runes = const [],
     required this.summonerSkills,
   });
 
   final List<BuildEquipSummary> equips;
+  final List<BuildRuneSummary> runes;
   final List<BuildSummonerSkillSummary> summonerSkills;
 }
 
@@ -50,6 +52,39 @@ class BuildSummonerSkillSummary {
   }
 }
 
+class BuildRuneSummary {
+  const BuildRuneSummary({
+    required this.id,
+    required this.name,
+    required this.color,
+    this.iconUrl = '',
+  });
+
+  final int id;
+  final String name;
+  final int color;
+  final String iconUrl;
+
+  String get colorName {
+    return switch (color) {
+      1 => 'Red',
+      2 => 'Blue',
+      3 => 'Green',
+      _ => 'Arcana',
+    };
+  }
+
+  factory BuildRuneSummary.fromJson(Object? json) {
+    final map = json is Map ? json : const <String, Object?>{};
+    return BuildRuneSummary(
+      id: _readInt(map['rune_id'] ?? map['id']),
+      name: _readString(map['name'] ?? map['rune_name']),
+      color: _readInt(map['color']),
+      iconUrl: _readString(map['icon'] ?? map['image'] ?? map['avatar']),
+    );
+  }
+}
+
 class BuildSchemeDraft {
   const BuildSchemeDraft({
     this.schemeId,
@@ -58,6 +93,7 @@ class BuildSchemeDraft {
     required this.title,
     required this.isPublic,
     required this.equipIds,
+    this.runeIds = const [],
     required this.summonerSkillId,
     required this.regionCode,
   });
@@ -68,6 +104,7 @@ class BuildSchemeDraft {
   final String title;
   final bool isPublic;
   final List<int> equipIds;
+  final List<int> runeIds;
   final int? summonerSkillId;
   final String regionCode;
 
@@ -80,7 +117,7 @@ class BuildSchemeDraft {
       'description': '',
       'is_public': isPublic,
       'equips': equipIds,
-      'runes': <int>[],
+      'runes': runeIds,
       'summoner_skill_id': summonerSkillId,
     };
   }
