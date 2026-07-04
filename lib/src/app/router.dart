@@ -16,6 +16,7 @@ import '../features/heroes/presentation/hero_detail_screen.dart';
 import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/info/presentation/info_center_screen.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/prompts/presentation/prompts_screen.dart';
 import '../features/rank_fortune/presentation/rank_fortune_screen.dart';
 import '../features/rankings/presentation/hero_ranking_screen.dart';
@@ -43,6 +44,10 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

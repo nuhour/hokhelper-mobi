@@ -209,6 +209,12 @@ class _ProfileCard extends ConsumerWidget {
                   label: const Text('Change password'),
                 ),
                 OutlinedButton.icon(
+                  key: const Key('profile-notifications-button'),
+                  onPressed: () => context.push('/notifications'),
+                  icon: const Icon(Icons.notifications_none_outlined),
+                  label: const Text('Notifications'),
+                ),
+                OutlinedButton.icon(
                   onPressed: () {
                     ref.read(authControllerProvider.notifier).logout();
                   },
