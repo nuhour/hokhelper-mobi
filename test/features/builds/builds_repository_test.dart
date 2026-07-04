@@ -261,4 +261,38 @@ void main() {
       );
     },
   );
+
+  test(
+    'likes and favorites build schemes through backend action endpoints',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = BuildsRepository(apiClient: apiClient);
+
+      await repository.likeBuildScheme(7);
+      expect(apiClient.postPath, '/build/schemes/like');
+      expect(apiClient.postBody, {'scheme_id': '7'});
+
+      await repository.favoriteBuildScheme(7);
+      expect(apiClient.postPath, '/build/schemes/favorite');
+      expect(apiClient.postBody, {'scheme_id': '7'});
+    },
+  );
+
+  test('clones a public build scheme into a selected slot', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    await repository.cloneBuildScheme(
+      schemeId: 7,
+      slotIndex: 2,
+      name: 'Burst jungle',
+    );
+
+    expect(apiClient.postPath, '/build/schemes/clone');
+    expect(apiClient.postBody, {
+      'scheme_id': '7',
+      'slot_index': 2,
+      'name': 'Burst jungle',
+    });
+  });
 }

@@ -95,6 +95,35 @@ class BuildsRepository {
     await apiClient.postJson(path, body: draft.toJson());
   }
 
+  Future<void> likeBuildScheme(int schemeId) async {
+    await apiClient.postJson(
+      '/build/schemes/like',
+      body: {'scheme_id': schemeId.toString()},
+    );
+  }
+
+  Future<void> favoriteBuildScheme(int schemeId) async {
+    await apiClient.postJson(
+      '/build/schemes/favorite',
+      body: {'scheme_id': schemeId.toString()},
+    );
+  }
+
+  Future<void> cloneBuildScheme({
+    required int schemeId,
+    required int slotIndex,
+    String? name,
+  }) async {
+    await apiClient.postJson(
+      '/build/schemes/clone',
+      body: {
+        'scheme_id': schemeId.toString(),
+        'slot_index': slotIndex,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      },
+    );
+  }
+
   List<Object?> _readRows(Map<String, dynamic> json) {
     final result = json['result'];
     if (result is List) {

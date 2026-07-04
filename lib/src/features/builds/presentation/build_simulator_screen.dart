@@ -57,6 +57,28 @@ final buildSimSaveSchemeProvider =
       return ref.watch(buildsRepositoryProvider).saveBuildScheme;
     });
 
+final buildSimLikeSchemeProvider =
+    Provider<Future<void> Function(BuildSchemeSummary)>((ref) {
+      final repository = ref.watch(buildsRepositoryProvider);
+      return (scheme) => repository.likeBuildScheme(scheme.id);
+    });
+
+final buildSimFavoriteSchemeProvider =
+    Provider<Future<void> Function(BuildSchemeSummary)>((ref) {
+      final repository = ref.watch(buildsRepositoryProvider);
+      return (scheme) => repository.favoriteBuildScheme(scheme.id);
+    });
+
+final buildSimCloneSchemeProvider =
+    Provider<Future<void> Function(BuildSchemeSummary, int)>((ref) {
+      final repository = ref.watch(buildsRepositoryProvider);
+      return (scheme, slotIndex) => repository.cloneBuildScheme(
+        schemeId: scheme.id,
+        slotIndex: slotIndex,
+        name: scheme.title,
+      );
+    });
+
 class BuildSimulatorScreen extends ConsumerStatefulWidget {
   const BuildSimulatorScreen({super.key});
 
@@ -166,7 +188,15 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
                 ],
               ],
               const SizedBox(height: 22),
-              _CommunityBuilds(value: publicSchemesValue),
+              _CommunityBuilds(
+                value: publicSchemesValue,
+                onActionDone: heroId == null
+                    ? null
+                    : () {
+                        ref.invalidate(buildSimPublicSchemesProvider);
+                        ref.invalidate(buildSimUserSlotsProvider(heroId));
+                      },
+              ),
             ],
           ),
         );
@@ -702,10 +732,18 @@ class _SummonerSkillSelector extends StatelessWidget {
   }
 }
 
-class _CommunityBuilds extends StatelessWidget {
-  const _CommunityBuilds({required this.value});
+class _CommunityBuilds extends ConsumerStatefulWidget {
+  const _CommunityBuilds({required this.value, required this.onActionDone});
 
   final AsyncValue<List<BuildSchemeSummary>> value;
+  final VoidCallback? onActionDone;
+
+  @override
+  ConsumerState<_CommunityBuilds> createState() => _CommunityBuildsState();
+}
+
+class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
+  String? _busyAction;
 
   @override
   Widget build(BuildContext context) {
@@ -720,7 +758,7 @@ class _CommunityBuilds extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        value.when(
+        widget.value.when(
           data: (schemes) {
             if (schemes.isEmpty) {
               return const AppEmptyState(
@@ -733,6 +771,26 @@ class _CommunityBuilds extends StatelessWidget {
               children: [
                 for (final scheme in schemes.take(5)) ...[
                   BuildSchemeCard(scheme: scheme),
+                  const SizedBox(height: 8),
+                  _CommunityBuildActions(
+                    scheme: scheme,
+                    busyAction: _busyAction,
+                    onLike: () => _runAction(
+                      'like-${scheme.id}',
+                      () => ref.read(buildSimLikeSchemeProvider)(scheme),
+                    ),
+                    onFavorite: () => _runAction(
+                      'favorite-${scheme.id}',
+                      () => ref.read(buildSimFavoriteSchemeProvider)(scheme),
+                    ),
+                    onClone: (slotIndex) => _runAction(
+                      'clone-${scheme.id}-$slotIndex',
+                      () => ref.read(buildSimCloneSchemeProvider)(
+                        scheme,
+                        slotIndex,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                 ],
               ],
@@ -745,6 +803,72 @@ class _CommunityBuilds extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _runAction(String key, Future<void> Function() action) async {
+    setState(() => _busyAction = key);
+    try {
+      await action();
+      widget.onActionDone?.call();
+    } finally {
+      if (mounted) {
+        setState(() => _busyAction = null);
+      }
+    }
+  }
+}
+
+class _CommunityBuildActions extends StatelessWidget {
+  const _CommunityBuildActions({
+    required this.scheme,
+    required this.busyAction,
+    required this.onLike,
+    required this.onFavorite,
+    required this.onClone,
+  });
+
+  final BuildSchemeSummary scheme;
+  final String? busyAction;
+  final VoidCallback onLike;
+  final VoidCallback onFavorite;
+  final ValueChanged<int> onClone;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = busyAction != null;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: disabled ? null : onLike,
+              icon: const Icon(Icons.thumb_up_outlined, size: 18),
+              label: const Text('Like'),
+            ),
+            OutlinedButton.icon(
+              onPressed: disabled ? null : onFavorite,
+              icon: const Icon(Icons.star_border_rounded, size: 18),
+              label: const Text('Favorite'),
+            ),
+            for (final slotIndex in const [1, 2, 3])
+              OutlinedButton.icon(
+                onPressed: disabled ? null : () => onClone(slotIndex),
+                icon: const Icon(Icons.copy_all_outlined, size: 18),
+                label: Text('Clone S$slotIndex'),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

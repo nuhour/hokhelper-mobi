@@ -157,4 +157,80 @@ void main() {
     expect(savedDraft?.equipIds, [101]);
     expect(savedDraft?.summonerSkillId, 12);
   });
+
+  testWidgets('runs community build like favorite and clone actions', (
+    tester,
+  ) async {
+    final actions = <String>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '199',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 7,
+                title: 'Burst jungle',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 5,
+                cloneCount: 3,
+                isPublic: true,
+                slotIndex: 1,
+              ),
+            ];
+          }),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            return const [null, null, null];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(equips: [], summonerSkills: []);
+          }),
+          buildSimSaveSchemeProvider.overrideWith((ref) {
+            return (_) async {};
+          }),
+          buildSimLikeSchemeProvider.overrideWith((ref) {
+            return (scheme) async {
+              actions.add('like:${scheme.id}');
+            };
+          }),
+          buildSimFavoriteSchemeProvider.overrideWith((ref) {
+            return (scheme) async {
+              actions.add('favorite:${scheme.id}');
+            };
+          }),
+          buildSimCloneSchemeProvider.overrideWith((ref) {
+            return (scheme, slotIndex) async {
+              actions.add('clone:${scheme.id}:$slotIndex');
+            };
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BuildSimulatorScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Like'));
+    await tester.tap(find.text('Favorite'));
+    await tester.tap(find.text('Clone S2'));
+    await tester.pumpAndSettle();
+
+    expect(actions, ['like:7', 'favorite:7', 'clone:7:2']);
+  });
 }
