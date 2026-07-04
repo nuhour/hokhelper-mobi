@@ -10,6 +10,7 @@ import '../features/community/presentation/community_post_detail_screen.dart';
 import '../features/community/presentation/community_screen.dart';
 import '../features/content/presentation/content_screen.dart';
 import '../features/content/presentation/patch_notes_screen.dart';
+import '../features/content/presentation/skin_gallery_screen.dart';
 import '../features/curiosity/presentation/curiosity_lab_screen.dart';
 import '../features/esports/presentation/esports_screen.dart';
 import '../features/game_assistant/presentation/game_assistant_screen.dart';
@@ -57,6 +58,22 @@ GoRouter createAppRouter() {
             postId: state.pathParameters['postId'] ?? '',
           );
         },
+      ),
+      GoRoute(
+        path: '/skin-gallery',
+        builder: (context, state) => const SkinGalleryScreen(),
+        routes: [
+          GoRoute(
+            path: ':skinId',
+            builder: (context, state) {
+              return SkinGalleryScreen(
+                initialSkinId: int.tryParse(
+                  state.pathParameters['skinId'] ?? '',
+                ),
+              );
+            },
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -112,6 +129,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'event-assistance',
                     builder: (context, state) => const EventAssistanceScreen(),
+                  ),
+                  GoRoute(
+                    path: 'skins',
+                    builder: (context, state) => const SkinGalleryScreen(),
                   ),
                   GoRoute(
                     path: 'patch-notes',

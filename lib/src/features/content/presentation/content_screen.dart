@@ -72,6 +72,13 @@ class ContentScreen extends ConsumerWidget {
           _CommunityEntryCard(onTap: () => context.go('/content/community')),
           const SizedBox(height: 12),
           _ContentActionCard(
+            icon: Icons.collections_outlined,
+            title: 'Skin Gallery',
+            subtitle: 'Browse hero skins, posters, ratings, and splash art',
+            onTap: () => context.go('/content/skins'),
+          ),
+          const SizedBox(height: 12),
+          _ContentActionCard(
             icon: Icons.event_available_outlined,
             title: 'Event Assistance',
             subtitle: 'Share event codes and teammate requests',

@@ -3,20 +3,29 @@ import 'dart:convert';
 import '../../../core/network/api_client.dart';
 import '../domain/content_item_summary.dart';
 import '../domain/patch_note_summary.dart';
+import '../domain/skin_detail.dart';
 
 class ContentRepository {
   const ContentRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
-  Future<List<ContentItemSummary>> loadSkins(int regionId) async {
+  Future<List<ContentItemSummary>> loadSkins(
+    int regionId, {
+    int pageSize = 20,
+  }) async {
     final json = await apiClient.postJson(
       '/skin/list',
-      body: _pagedRegionBody(regionId),
+      body: _pagedRegionBody(regionId, pageSize: pageSize),
     );
     return _readRows(
       json,
     ).map(ContentItemSummary.skinFromJson).toList(growable: false);
+  }
+
+  Future<SkinDetail> loadSkinDetail(int skinId) async {
+    final json = await apiClient.getJson('/skin/$skinId');
+    return SkinDetail.fromJson(json['result'] ?? json);
   }
 
   Future<List<ContentItemSummary>> loadCgs(int regionId) async {
@@ -48,10 +57,10 @@ class ContentRepository {
         .toList(growable: false);
   }
 
-  Map<String, Object> _pagedRegionBody(int regionId) {
+  Map<String, Object> _pagedRegionBody(int regionId, {int pageSize = 20}) {
     return {
       'page': 1,
-      'pageSize': 20,
+      'pageSize': pageSize,
       'filterRules': [
         {'field': 'region_id', 'op': 'eq', 'value': regionId},
       ],
