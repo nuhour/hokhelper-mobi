@@ -12,6 +12,8 @@ import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_scre
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/tools_screen.dart';
+import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
+import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_build_hero.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_recommendation.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/presentation/team_builder_screen.dart';
@@ -44,6 +46,10 @@ GoRouter _buildRouter() {
             path: 'esports',
             builder: (context, state) => const EsportsScreen(),
           ),
+          GoRoute(
+            path: 'stats',
+            builder: (context, state) => const StatsScreen(),
+          ),
         ],
       ),
     ],
@@ -65,6 +71,7 @@ List<Override> _emptyToolOverrides() {
     esportsMatchesProvider.overrideWith((ref) async => const []),
     esportsTeamsProvider.overrideWith((ref) async => const []),
     esportsPlayersProvider.overrideWith((ref) async => const []),
+    statsDashboardProvider.overrideWith((ref) async => const StatsDashboard()),
   ];
 }
 
@@ -75,6 +82,7 @@ List<Override> _toolOverrides({
   Future<List<EsportsMatchSummary>> Function(Ref)? esportsMatches,
   Future<List<EsportsTeamSummary>> Function(Ref)? esportsTeams,
   Future<List<EsportsPlayerSummary>> Function(Ref)? esportsPlayers,
+  Future<StatsDashboard> Function(Ref)? statsDashboard,
 }) {
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
@@ -97,6 +105,9 @@ List<Override> _toolOverrides({
     esportsTeamsProvider.overrideWith(esportsTeams ?? (ref) async => const []),
     esportsPlayersProvider.overrideWith(
       esportsPlayers ?? (ref) async => const [],
+    ),
+    statsDashboardProvider.overrideWith(
+      statsDashboard ?? (ref) async => const StatsDashboard(),
     ),
   ];
 }
@@ -277,5 +288,38 @@ void main() {
     expect(find.text('Esports'), findsOneWidget);
     expect(find.text('KPL Spring'), findsOneWidget);
     expect(find.text('4 - 3'), findsOneWidget);
+  });
+
+  testWidgets('stats tile opens the stats route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _toolOverrides(
+          statsDashboard: (ref) async {
+            return const StatsDashboard(
+              heroes: [
+                StatsHeroRow(
+                  id: '199',
+                  name: 'Lam',
+                  avatarUrl: '',
+                  winRate: 0.561,
+                  pickRate: 0.18,
+                  banRate: 0.07,
+                  score: 91.4,
+                ),
+              ],
+            );
+          },
+        ),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stats'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stats Dashboard'), findsOneWidget);
+    expect(find.text('Lam'), findsOneWidget);
+    expect(find.text('56.1% WR'), findsOneWidget);
   });
 }

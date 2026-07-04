@@ -16,6 +16,7 @@ import '../features/rankings/presentation/hero_ranking_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
 import '../features/rankings/presentation/tools_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/stats/presentation/stats_screen.dart';
 import '../features/teambuild/presentation/team_builder_screen.dart';
 import 'app_shell.dart';
 
@@ -110,6 +111,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'esports',
                     builder: (context, state) => const EsportsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'stats',
+                    builder: (context, state) => const StatsScreen(),
                   ),
                 ],
               ),

@@ -48,6 +48,13 @@ class ToolsScreen extends StatelessWidget {
           subtitle: 'Matches, teams, and pro players',
           onTap: () => context.go('/tools/esports'),
         ),
+        const SizedBox(height: 12),
+        _ToolTile(
+          icon: Icons.query_stats_outlined,
+          title: 'Stats',
+          subtitle: 'Hero, equipment, and combo trends',
+          onTap: () => context.go('/tools/stats'),
+        ),
       ],
     );
   }
