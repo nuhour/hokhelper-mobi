@@ -24,6 +24,30 @@ class _FakeApiClient extends ApiClient {
   }) async {
     getPath = path;
     getQuery = query;
+    if (query?['action'] == 'mySchemes') {
+      return const {
+        'success': true,
+        'result': {
+          'schemes': [
+            {
+              'id': 8,
+              'name': 'Slot one burst',
+              'hero_id': 199,
+              'hero_name': 'Lam',
+              'author_name': 'me',
+              'slot_index': 1,
+              'equips': [
+                {'icon': 'https://example.test/sword.png'},
+              ],
+              'likes_count': 2,
+              'favorites_count': 1,
+              'clones_count': 0,
+              'is_public': false,
+            },
+          ],
+        },
+      };
+    }
     return const {
       'success': true,
       'result': {
@@ -75,6 +99,33 @@ void main() {
       expect(schemes.single.likeCount, 12);
       expect(schemes.single.favoriteCount, 5);
       expect(schemes.single.cloneCount, 3);
+    },
+  );
+
+  test(
+    'loads my build slots for a hero with region and hero filters',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = BuildsRepository(apiClient: apiClient);
+
+      final slots = await repository.loadUserHeroSlots(
+        heroId: 199,
+        regionId: 2,
+      );
+
+      expect(apiClient.getPath, '/build/schemes');
+      expect(apiClient.getQuery?['action'], 'mySchemes');
+      expect(apiClient.getQuery?['page'], 1);
+      expect(apiClient.getQuery?['pageSize'], 3);
+      expect(jsonDecode(apiClient.getQuery?['filterRules'] as String), [
+        {'field': 'hero__heroId', 'op': 'eq', 'value': 199},
+        {'field': 'region_id', 'op': 'eq', 'value': 2},
+      ]);
+      expect(slots, hasLength(3));
+      expect(slots[0]?.title, 'Slot one burst');
+      expect(slots[0]?.slotIndex, 1);
+      expect(slots[1], isNull);
+      expect(slots[2], isNull);
     },
   );
 }

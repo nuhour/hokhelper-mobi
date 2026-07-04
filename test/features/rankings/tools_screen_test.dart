@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
+import 'package:hok_helper_mobile/src/features/builds/presentation/build_simulator_screen.dart';
 import 'package:hok_helper_mobile/src/features/curiosity/domain/curiosity.dart';
 import 'package:hok_helper_mobile/src/features/curiosity/presentation/curiosity_lab_screen.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
@@ -38,6 +39,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'builds',
             builder: (context, state) => const BuildExplorerScreen(),
+          ),
+          GoRoute(
+            path: 'build-sim',
+            builder: (context, state) => const BuildSimulatorScreen(),
           ),
           GoRoute(
             path: 'bp-simulator',
@@ -88,6 +93,9 @@ GoRouter _buildRouter() {
 List<Override> _emptyToolOverrides() {
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
+    buildSimHeroesProvider.overrideWith((ref) async => const []),
+    buildSimPublicSchemesProvider.overrideWith((ref) async => const []),
+    buildSimUserSlotsProvider.overrideWith((ref, heroId) async => const []),
     bpSchemesProvider.overrideWith((ref) async => const []),
     tierListToolSchemesProvider.overrideWith((ref) async => const []),
     heroRankingProvider.overrideWith((ref) async => const []),
@@ -119,6 +127,9 @@ List<Override> _toolOverrides({
 }) {
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
+    buildSimHeroesProvider.overrideWith((ref) async => const []),
+    buildSimPublicSchemesProvider.overrideWith((ref) async => const []),
+    buildSimUserSlotsProvider.overrideWith((ref, heroId) async => const []),
     bpSchemesProvider.overrideWith(bpSchemes ?? (ref) async => const []),
     tierListToolSchemesProvider.overrideWith(
       tierListSchemes ?? (ref) async => const [],
@@ -166,6 +177,29 @@ void main() {
 
     expect(find.text('Build Explorer'), findsOneWidget);
     expect(find.text('No public builds'), findsOneWidget);
+  });
+
+  testWidgets('build simulator tile opens the build simulator route', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _emptyToolOverrides(),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Build Simulator'), 120);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Build Simulator'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Build Simulator'), findsOneWidget);
+    expect(
+      find.text('Select a hero to manage the three mobile slots.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('BP simulator tile opens the BP route', (tester) async {

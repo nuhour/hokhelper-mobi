@@ -73,7 +73,7 @@ class BuildExplorerScreen extends ConsumerWidget {
                   sliver: SliverList.separated(
                     itemCount: schemes.length,
                     itemBuilder: (context, index) {
-                      return _BuildSchemeCard(scheme: schemes[index]);
+                      return BuildSchemeCard(scheme: schemes[index]);
                     },
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 12),
@@ -87,8 +87,8 @@ class BuildExplorerScreen extends ConsumerWidget {
   }
 }
 
-class _BuildSchemeCard extends StatelessWidget {
-  const _BuildSchemeCard({required this.scheme});
+class BuildSchemeCard extends StatelessWidget {
+  const BuildSchemeCard({required this.scheme, super.key});
 
   final BuildSchemeSummary scheme;
 

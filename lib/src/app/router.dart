@@ -6,6 +6,7 @@ import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/bp/presentation/bp_dashboard_screen.dart';
 import '../features/builds/presentation/build_explorer_screen.dart';
+import '../features/builds/presentation/build_simulator_screen.dart';
 import '../features/community/presentation/community_post_detail_screen.dart';
 import '../features/community/presentation/community_screen.dart';
 import '../features/content/presentation/cg_gallery_screen.dart';
@@ -194,6 +195,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'builds',
                     builder: (context, state) => const BuildExplorerScreen(),
+                  ),
+                  GoRoute(
+                    path: 'build-sim',
+                    builder: (context, state) => const BuildSimulatorScreen(),
                   ),
                   GoRoute(
                     path: 'bp-simulator',

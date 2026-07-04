@@ -9,6 +9,7 @@ class BuildSchemeSummary {
     required this.favoriteCount,
     required this.cloneCount,
     required this.isPublic,
+    this.slotIndex = 0,
   });
 
   final int id;
@@ -20,6 +21,7 @@ class BuildSchemeSummary {
   final int favoriteCount;
   final int cloneCount;
   final bool isPublic;
+  final int slotIndex;
 
   factory BuildSchemeSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -52,6 +54,7 @@ class BuildSchemeSummary {
       favoriteCount: _readInt(map['favorite_count'] ?? map['favorites']),
       cloneCount: _readInt(map['clone_count'] ?? map['clones']),
       isPublic: map['is_public'] != false && map['public'] != false,
+      slotIndex: _readInt(map['slot_index'] ?? map['slotIndex']),
     );
   }
 }

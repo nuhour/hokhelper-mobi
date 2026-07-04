@@ -36,6 +36,13 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ToolTile(
+          icon: Icons.tune_outlined,
+          title: 'Build Simulator',
+          subtitle: 'Manage hero slots and clone community builds',
+          onTap: () => context.go('/tools/build-sim'),
+        ),
+        const SizedBox(height: 12),
+        _ToolTile(
           icon: Icons.account_tree_outlined,
           title: 'BP Simulator',
           subtitle: 'Review pick/ban schemes and draft progress',
