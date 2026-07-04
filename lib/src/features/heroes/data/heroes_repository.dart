@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../domain/hero_relationship.dart';
 import '../domain/hero_summary.dart';
 
 class HeroesRepository {
@@ -40,8 +41,33 @@ class HeroesRepository {
     );
   }
 
+  Future<List<HeroRelationship>> loadHeroRelationships(int regionId) async {
+    final json = await apiClient.postJson(
+      '/hero/relationships',
+      body: {
+        'filterRules': [
+          {'field': 'region_id', 'op': 'eq', 'value': regionId},
+        ],
+      },
+    );
+
+    return _readRows(json)
+        .whereType<Map>()
+        .map((row) => HeroRelationship.fromJson(Map<String, dynamic>.from(row)))
+        .where((relationship) {
+          return relationship.sourceHeroName.isNotEmpty ||
+              relationship.targetHeroName.isNotEmpty ||
+              relationship.title.isNotEmpty;
+        })
+        .toList(growable: false);
+  }
+
   List<Object?> _readRows(Map<String, dynamic> json) {
     final result = json['result'];
+
+    if (result is List) {
+      return result;
+    }
 
     if (result is Map) {
       final data = result['data'];

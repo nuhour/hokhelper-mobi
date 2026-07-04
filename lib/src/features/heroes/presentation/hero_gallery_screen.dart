@@ -45,13 +45,31 @@ class HeroGalleryScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const AppSectionHeader(title: 'Heroes'),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Expanded(
+                            child: AppSectionHeader(title: 'Heroes'),
+                          ),
+                          IconButton.filledTonal(
+                            tooltip: 'Hero Relationships',
+                            onPressed: () => context.go('/relationships'),
+                            icon: const Icon(Icons.hub_outlined),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         'Browse the international hero roster.',
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => context.go('/relationships'),
+                        icon: const Icon(Icons.hub_outlined),
+                        label: const Text('Hero Relationships'),
                       ),
                     ],
                   ),
