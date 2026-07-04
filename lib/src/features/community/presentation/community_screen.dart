@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -166,67 +167,71 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PanelCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              AppImage(
-                url: post.authorAvatarUrl,
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                semanticLabel: post.authorName,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  post.authorName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w800,
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => context.push('/content/community/post/${post.id}'),
+      child: _PanelCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AppImage(
+                  url: post.authorAvatarUrl,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  semanticLabel: post.authorName,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    post.authorName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              _Pill(label: '${post.viewCount} views'),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            post.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.text,
-              fontWeight: FontWeight.w900,
+                const SizedBox(width: 8),
+                _Pill(label: '${post.viewCount} views'),
+              ],
             ),
-          ),
-          if (post.preview.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              post.preview,
-              maxLines: 3,
+              post.title,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.muted,
-                height: 1.35,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
               ),
+            ),
+            if (post.preview.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                post.preview,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.muted,
+                  height: 1.35,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _Pill(label: post.metricText),
+                ...post.tags.take(3).map((tag) => _Pill(label: tag)),
+              ],
             ),
           ],
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _Pill(label: post.metricText),
-              ...post.tags.take(3).map((tag) => _Pill(label: tag)),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

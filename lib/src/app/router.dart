@@ -6,6 +6,7 @@ import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/bp/presentation/bp_dashboard_screen.dart';
 import '../features/builds/presentation/build_explorer_screen.dart';
+import '../features/community/presentation/community_post_detail_screen.dart';
 import '../features/community/presentation/community_screen.dart';
 import '../features/content/presentation/content_screen.dart';
 import '../features/content/presentation/patch_notes_screen.dart';
@@ -49,6 +50,14 @@ GoRouter createAppRouter() {
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
       ),
+      GoRoute(
+        path: '/community/post/:postId',
+        builder: (context, state) {
+          return CommunityPostDetailScreen(
+            postId: state.pathParameters['postId'] ?? '',
+          );
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
@@ -89,6 +98,16 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'community',
                     builder: (context, state) => const CommunityScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'post/:postId',
+                        builder: (context, state) {
+                          return CommunityPostDetailScreen(
+                            postId: state.pathParameters['postId'] ?? '',
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'event-assistance',

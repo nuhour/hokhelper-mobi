@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../domain/community_post_detail.dart';
 import '../domain/community_post_summary.dart';
 import '../domain/leak_post_summary.dart';
 
@@ -37,6 +38,18 @@ class CommunityRepository {
     );
 
     return _readRows(json).map(LeakPostSummary.fromJson).toList();
+  }
+
+  Future<CommunityPostDetail> loadPostDetail(
+    String postId, {
+    required int regionId,
+  }) async {
+    final json = await apiClient.getJson(
+      '/community/posts/$postId',
+      query: {'region_id': regionId},
+    );
+    final result = json['result'];
+    return CommunityPostDetail.fromJson(result);
   }
 
   List<Object?> _readRows(Map<String, dynamic> json) {
