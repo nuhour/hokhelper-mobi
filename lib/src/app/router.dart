@@ -20,6 +20,7 @@ import '../features/rankings/presentation/tools_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
 import '../features/teambuild/presentation/team_builder_screen.dart';
+import '../features/tierlist_tool/presentation/tierlist_tool_screen.dart';
 import 'app_shell.dart';
 
 GoRouter createAppRouter() {
@@ -105,6 +106,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'bp-simulator',
                     builder: (context, state) => const BpDashboardScreen(),
+                  ),
+                  GoRoute(
+                    path: 'tier-list',
+                    builder: (context, state) => const TierListToolScreen(),
                   ),
                   GoRoute(
                     path: 'rankings',

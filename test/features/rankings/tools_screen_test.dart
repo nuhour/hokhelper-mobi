@@ -19,6 +19,8 @@ import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.d
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_build_hero.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_recommendation.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/presentation/team_builder_screen.dart';
+import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
+import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_tool_screen.dart';
 
 GoRouter _buildRouter() {
   return GoRouter(
@@ -35,6 +37,10 @@ GoRouter _buildRouter() {
           GoRoute(
             path: 'bp-simulator',
             builder: (context, state) => const BpDashboardScreen(),
+          ),
+          GoRoute(
+            path: 'tier-list',
+            builder: (context, state) => const TierListToolScreen(),
           ),
           GoRoute(
             path: 'rankings',
@@ -66,6 +72,7 @@ List<Override> _emptyToolOverrides() {
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
     bpSchemesProvider.overrideWith((ref) async => const []),
+    tierListToolSchemesProvider.overrideWith((ref) async => const []),
     heroRankingProvider.overrideWith((ref) async => const []),
     playerRankingProvider.overrideWith((ref) async => const []),
     equipRankingProvider.overrideWith((ref) async => const []),
@@ -85,6 +92,7 @@ List<Override> _emptyToolOverrides() {
 List<Override> _toolOverrides({
   Future<List<HeroRankingEntry>> Function(Ref)? heroRanking,
   Future<List<BpSchemeSummary>> Function(Ref)? bpSchemes,
+  Future<List<TierListSchemeSummary>> Function(Ref)? tierListSchemes,
   Future<List<TeamBuildHero>> Function(Ref)? teamBuilderHeroes,
   Future<List<PromptSummary>> Function(Ref)? publicPrompts,
   Future<List<EsportsMatchSummary>> Function(Ref)? esportsMatches,
@@ -95,6 +103,9 @@ List<Override> _toolOverrides({
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
     bpSchemesProvider.overrideWith(bpSchemes ?? (ref) async => const []),
+    tierListToolSchemesProvider.overrideWith(
+      tierListSchemes ?? (ref) async => const [],
+    ),
     heroRankingProvider.overrideWith(heroRanking ?? (ref) async => const []),
     playerRankingProvider.overrideWith((ref) async => const []),
     equipRankingProvider.overrideWith((ref) async => const []),
@@ -175,6 +186,43 @@ void main() {
 
     expect(find.text('KPL Finals Draft'), findsOneWidget);
     expect(find.text('Wolves vs AG'), findsOneWidget);
+  });
+
+  testWidgets('tier list tile opens the tier list tool route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _toolOverrides(
+          tierListSchemes: (ref) async {
+            return const [
+              TierListSchemeSummary(
+                id: '9',
+                name: 'Solo Queue Meta',
+                createdAt: '2026-07-01T08:00:00Z',
+                updatedAt: '2026-07-03T12:00:00Z',
+                rows: [
+                  TierListSchemeRowSummary(
+                    id: 'r1',
+                    label: 'T0',
+                    color: 'bg-red-600',
+                    heroCount: 2,
+                  ),
+                ],
+              ),
+            ];
+          },
+        ),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Tier List Tool'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tier List Tool'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Solo Queue Meta'), findsOneWidget);
+    expect(find.text('2 heroes'), findsOneWidget);
   });
 
   testWidgets('rankings tile opens the hero rankings route', (tester) async {
@@ -328,6 +376,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('Esports'), 120);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Esports'));
     await tester.pumpAndSettle();
 
@@ -361,7 +411,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Stats'));
+    await tester.scrollUntilVisible(find.text('Stats'), 120);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Stats'));
     await tester.pumpAndSettle();

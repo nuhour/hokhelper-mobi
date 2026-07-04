@@ -36,6 +36,13 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ToolTile(
+          icon: Icons.format_list_numbered_outlined,
+          title: 'Tier List Tool',
+          subtitle: 'Review custom hero tier list schemes',
+          onTap: () => context.go('/tools/tier-list'),
+        ),
+        const SizedBox(height: 12),
+        _ToolTile(
           icon: Icons.groups_2_outlined,
           title: 'Team Builder',
           subtitle: 'Draft picks and review lineup recommendations',
