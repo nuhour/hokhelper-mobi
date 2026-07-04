@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/builds/data/builds_repository.dart';
+import 'package:hok_helper_mobile/src/features/builds/domain/build_editor_asset.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -16,6 +17,8 @@ class _FakeApiClient extends ApiClient {
 
   String? getPath;
   Map<String, dynamic>? getQuery;
+  String? postPath;
+  Object? postBody;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -66,6 +69,46 @@ class _FakeApiClient extends ApiClient {
             'clone_count': 3,
           },
         ],
+      },
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    postPath = path;
+    postBody = body;
+    if (path == '/build/equips') {
+      return const {
+        'success': true,
+        'result': {
+          'equips': [
+            {
+              'equip_id': 101,
+              'name': 'Storm Axe',
+              'icon': 'https://example.test/storm.png',
+            },
+          ],
+        },
+      };
+    }
+    if (path == '/build/summoner-skills') {
+      return const {
+        'success': true,
+        'result': {
+          'skills': [
+            {
+              'skill_id': 12,
+              'name': 'Smite',
+              'icon': 'https://example.test/smite.png',
+            },
+          ],
+        },
+      };
+    }
+    return const {
+      'success': true,
+      'result': {
+        'scheme': {'id': 10},
       },
     };
   }
@@ -126,6 +169,96 @@ void main() {
       expect(slots[0]?.slotIndex, 1);
       expect(slots[1], isNull);
       expect(slots[2], isNull);
+    },
+  );
+
+  test('loads top equips with backend region filters', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    final equips = await repository.loadTopEquips(2);
+
+    expect(apiClient.postPath, '/build/equips');
+    final body = apiClient.postBody as Map<String, dynamic>;
+    expect(body['page'], 1);
+    expect(body['pageSize'], 100);
+    expect(body['filterRules'], [
+      {'field': 'region_id', 'op': 'eq', 'value': 2},
+      {'field': 'is_top_equip', 'op': 'eq', 'value': true},
+    ]);
+    expect(equips.single.id, 101);
+    expect(equips.single.name, 'Storm Axe');
+  });
+
+  test('loads summoner skills with backend region filters', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    final skills = await repository.loadSummonerSkills(2);
+
+    expect(apiClient.postPath, '/build/summoner-skills');
+    final body = apiClient.postBody as Map<String, dynamic>;
+    expect(body['filterRules'], [
+      {'field': 'region_id', 'op': 'eq', 'value': 2},
+    ]);
+    expect(skills.single.id, 12);
+    expect(skills.single.name, 'Smite');
+  });
+
+  test('creates a build scheme slot with editor payload', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    await repository.saveBuildScheme(
+      const BuildSchemeDraft(
+        heroId: 199,
+        slotIndex: 2,
+        title: 'Mobile burst',
+        isPublic: true,
+        equipIds: [101, 102],
+        summonerSkillId: 12,
+        regionCode: 'en',
+      ),
+    );
+
+    expect(apiClient.postPath, '/build/schemes');
+    expect(apiClient.postBody, {
+      'hero_id': 199,
+      'slot_index': 2,
+      'region_code': 'en',
+      'name': 'Mobile burst',
+      'description': '',
+      'is_public': true,
+      'equips': [101, 102],
+      'runes': <int>[],
+      'summoner_skill_id': 12,
+    });
+  });
+
+  test(
+    'updates an existing build scheme through compatibility endpoint',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = BuildsRepository(apiClient: apiClient);
+
+      await repository.saveBuildScheme(
+        const BuildSchemeDraft(
+          schemeId: 8,
+          heroId: 199,
+          slotIndex: 1,
+          title: 'Updated burst',
+          isPublic: false,
+          equipIds: [101],
+          summonerSkillId: 12,
+          regionCode: 'en',
+        ),
+      );
+
+      expect(apiClient.postPath, '/build/schemes/8/update');
+      expect(
+        (apiClient.postBody as Map<String, dynamic>)['name'],
+        'Updated burst',
+      );
     },
   );
 }

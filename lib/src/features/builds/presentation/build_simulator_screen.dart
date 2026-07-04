@@ -9,6 +9,7 @@ import '../../../core/widgets/app_section_header.dart';
 import '../../heroes/domain/hero_summary.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
+import '../domain/build_editor_asset.dart';
 import '../domain/build_scheme_summary.dart';
 import 'build_explorer_screen.dart';
 
@@ -39,6 +40,23 @@ final buildSimUserSlotsProvider =
           );
     });
 
+final buildSimEditorCatalogProvider = FutureProvider<BuildEditorCatalog>((
+  ref,
+) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  final repository = ref.watch(buildsRepositoryProvider);
+  final equips = await repository.loadTopEquips(settings.region.regionId);
+  final summonerSkills = await repository.loadSummonerSkills(
+    settings.region.regionId,
+  );
+  return BuildEditorCatalog(equips: equips, summonerSkills: summonerSkills);
+});
+
+final buildSimSaveSchemeProvider =
+    Provider<Future<void> Function(BuildSchemeDraft)>((ref) {
+      return ref.watch(buildsRepositoryProvider).saveBuildScheme;
+    });
+
 class BuildSimulatorScreen extends ConsumerStatefulWidget {
   const BuildSimulatorScreen({super.key});
 
@@ -49,6 +67,8 @@ class BuildSimulatorScreen extends ConsumerStatefulWidget {
 
 class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
   int _selectedHeroIndex = 0;
+  int? _editingSlotIndex;
+  BuildSchemeSummary? _editingScheme;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +123,47 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
                   },
                 ),
                 const SizedBox(height: 18),
-                _SlotsPanel(slotsValue: slotsValue),
+                _SlotsPanel(
+                  slotsValue: slotsValue,
+                  onEdit: (slotIndex, scheme) {
+                    setState(() {
+                      _editingSlotIndex = slotIndex;
+                      _editingScheme = scheme;
+                    });
+                  },
+                ),
+                if (_editingSlotIndex != null && heroId != null) ...[
+                  const SizedBox(height: 14),
+                  _BuildEditorPanel(
+                    key: ValueKey(
+                      '${selectedHero?.heroId}-$_editingSlotIndex-${_editingScheme?.id ?? 'new'}',
+                    ),
+                    heroId: heroId,
+                    slotIndex: _editingSlotIndex!,
+                    heroName: selectedHero?.name ?? '',
+                    regionCode: ref
+                        .watch(appSettingsControllerProvider)
+                        .maybeWhen(
+                          data: (settings) => settings.region.languageCode,
+                          orElse: () => 'en',
+                        ),
+                    scheme: _editingScheme,
+                    catalogValue: ref.watch(buildSimEditorCatalogProvider),
+                    onCancel: () {
+                      setState(() {
+                        _editingSlotIndex = null;
+                        _editingScheme = null;
+                      });
+                    },
+                    onSaved: () {
+                      ref.invalidate(buildSimUserSlotsProvider(heroId));
+                      setState(() {
+                        _editingSlotIndex = null;
+                        _editingScheme = null;
+                      });
+                    },
+                  ),
+                ],
               ],
               const SizedBox(height: 22),
               _CommunityBuilds(value: publicSchemesValue),
@@ -225,9 +285,10 @@ class _HeroSelector extends StatelessWidget {
 }
 
 class _SlotsPanel extends StatelessWidget {
-  const _SlotsPanel({required this.slotsValue});
+  const _SlotsPanel({required this.slotsValue, required this.onEdit});
 
   final AsyncValue<List<BuildSchemeSummary?>> slotsValue;
+  final void Function(int slotIndex, BuildSchemeSummary? scheme) onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +312,11 @@ class _SlotsPanel extends StatelessWidget {
             return Column(
               children: [
                 for (var index = 0; index < normalized.length; index++) ...[
-                  _SlotCard(index: index + 1, scheme: normalized[index]),
+                  _SlotCard(
+                    index: index + 1,
+                    scheme: normalized[index],
+                    onTap: () => onEdit(index + 1, normalized[index]),
+                  ),
                   if (index != normalized.length - 1)
                     const SizedBox(height: 10),
                 ],
@@ -270,10 +335,15 @@ class _SlotsPanel extends StatelessWidget {
 }
 
 class _SlotCard extends StatelessWidget {
-  const _SlotCard({required this.index, required this.scheme});
+  const _SlotCard({
+    required this.index,
+    required this.scheme,
+    required this.onTap,
+  });
 
   final int index;
   final BuildSchemeSummary? scheme;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -288,44 +358,346 @@ class _SlotCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppTheme.gold.withValues(alpha: 0.14),
-          foregroundColor: AppTheme.gold,
-          child: Text('$index'),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: ListTile(
+          onTap: onTap,
+          leading: CircleAvatar(
+            backgroundColor: AppTheme.gold.withValues(alpha: 0.14),
+            foregroundColor: AppTheme.gold,
+            child: Text('$index'),
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Slot $index',
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          subtitle: Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppTheme.muted),
+          ),
+          trailing: Icon(
+            scheme == null ? Icons.add_circle_outline : Icons.edit_outlined,
+            color: AppTheme.gold,
+          ),
         ),
-        title: Column(
+      ),
+    );
+  }
+}
+
+class _BuildEditorPanel extends ConsumerStatefulWidget {
+  const _BuildEditorPanel({
+    super.key,
+    required this.heroId,
+    required this.slotIndex,
+    required this.heroName,
+    required this.regionCode,
+    required this.scheme,
+    required this.catalogValue,
+    required this.onCancel,
+    required this.onSaved,
+  });
+
+  final int heroId;
+  final int slotIndex;
+  final String heroName;
+  final String regionCode;
+  final BuildSchemeSummary? scheme;
+  final AsyncValue<BuildEditorCatalog> catalogValue;
+  final VoidCallback onCancel;
+  final VoidCallback onSaved;
+
+  @override
+  ConsumerState<_BuildEditorPanel> createState() => _BuildEditorPanelState();
+}
+
+class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
+  late final TextEditingController _titleController;
+  late bool _isPublic;
+  late List<int> _equipIds;
+  int? _summonerSkillId;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final scheme = widget.scheme;
+    _titleController = TextEditingController(
+      text:
+          scheme?.title ??
+          '${widget.heroName.isEmpty ? 'Hero' : widget.heroName} slot ${widget.slotIndex}',
+    );
+    _isPublic = scheme?.isPublic ?? false;
+    _equipIds = [...(scheme?.equipmentIds ?? const [])];
+    _summonerSkillId = scheme?.summonerSkillId;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.22)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Slot $index',
-              style: const TextStyle(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Edit Build Slot ${widget.slotIndex}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: widget.onCancel,
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'Build name',
+                border: OutlineInputBorder(),
               ),
             ),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w700,
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Private'),
+                  selected: !_isPublic,
+                  onSelected: (_) => setState(() => _isPublic = false),
+                ),
+                ChoiceChip(
+                  label: const Text('Public'),
+                  selected: _isPublic,
+                  onSelected: (_) => setState(() => _isPublic = true),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            widget.catalogValue.when(
+              data: (catalog) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _EditorSectionTitle('Equipment'),
+                  const SizedBox(height: 8),
+                  _EquipSelector(
+                    equips: catalog.equips,
+                    selectedIds: _equipIds,
+                    onToggle: _toggleEquip,
+                  ),
+                  const SizedBox(height: 14),
+                  _EditorSectionTitle('Summoner Skill'),
+                  const SizedBox(height: 8),
+                  _SummonerSkillSelector(
+                    skills: catalog.summonerSkills,
+                    selectedId: _summonerSkillId,
+                    onSelected: (skillId) {
+                      setState(() => _summonerSkillId = skillId);
+                    },
+                  ),
+                ],
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => Text(
+                error.toString(),
+                style: const TextStyle(color: AppTheme.error),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: const Text('Save Build'),
               ),
             ),
           ],
         ),
-        subtitle: Text(
-          subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: AppTheme.muted),
-        ),
-        trailing: Icon(
-          scheme == null ? Icons.add_circle_outline : Icons.edit_outlined,
-          color: AppTheme.gold,
-        ),
       ),
+    );
+  }
+
+  void _toggleEquip(int equipId) {
+    setState(() {
+      if (_equipIds.contains(equipId)) {
+        _equipIds = _equipIds.where((id) => id != equipId).toList();
+      } else if (_equipIds.length < 6) {
+        _equipIds = [..._equipIds, equipId];
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    final title = _titleController.text.trim();
+    final draft = BuildSchemeDraft(
+      schemeId: widget.scheme?.id == 0 ? null : widget.scheme?.id,
+      heroId: widget.heroId,
+      slotIndex: widget.slotIndex,
+      title: title.isEmpty ? 'Slot ${widget.slotIndex} build' : title,
+      isPublic: _isPublic,
+      equipIds: _equipIds,
+      summonerSkillId: _summonerSkillId,
+      regionCode: widget.regionCode,
+    );
+    setState(() => _saving = true);
+    try {
+      await ref.read(buildSimSaveSchemeProvider)(draft);
+      widget.onSaved();
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+}
+
+class _EditorSectionTitle extends StatelessWidget {
+  const _EditorSectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: AppTheme.muted,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+class _EquipSelector extends StatelessWidget {
+  const _EquipSelector({
+    required this.equips,
+    required this.selectedIds,
+    required this.onToggle,
+  });
+
+  final List<BuildEquipSummary> equips;
+  final List<int> selectedIds;
+  final ValueChanged<int> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    if (equips.isEmpty) {
+      return const Text(
+        'No equipment available',
+        style: TextStyle(color: AppTheme.muted),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final equip in equips.take(24))
+          FilterChip(
+            selected: selectedIds.contains(equip.id),
+            label: Text(equip.name),
+            avatar: equip.iconUrl.isEmpty
+                ? null
+                : AppImage(
+                    url: equip.iconUrl,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    semanticLabel: equip.name,
+                  ),
+            onSelected: (_) => onToggle(equip.id),
+          ),
+      ],
+    );
+  }
+}
+
+class _SummonerSkillSelector extends StatelessWidget {
+  const _SummonerSkillSelector({
+    required this.skills,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final List<BuildSummonerSkillSummary> skills;
+  final int? selectedId;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (skills.isEmpty) {
+      return const Text(
+        'No summoner skills available',
+        style: TextStyle(color: AppTheme.muted),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final skill in skills)
+          ChoiceChip(
+            selected: selectedId == skill.id,
+            label: Text(skill.name),
+            avatar: skill.iconUrl.isEmpty
+                ? null
+                : AppImage(
+                    url: skill.iconUrl,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    semanticLabel: skill.name,
+                  ),
+            onSelected: (_) => onSelected(skill.id),
+          ),
+      ],
     );
   }
 }

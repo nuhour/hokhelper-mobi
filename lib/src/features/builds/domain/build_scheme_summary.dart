@@ -10,6 +10,8 @@ class BuildSchemeSummary {
     required this.cloneCount,
     required this.isPublic,
     this.slotIndex = 0,
+    this.equipmentIds = const [],
+    this.summonerSkillId,
   });
 
   final int id;
@@ -22,6 +24,8 @@ class BuildSchemeSummary {
   final int cloneCount;
   final bool isPublic;
   final int slotIndex;
+  final List<int> equipmentIds;
+  final int? summonerSkillId;
 
   factory BuildSchemeSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -55,6 +59,10 @@ class BuildSchemeSummary {
       cloneCount: _readInt(map['clone_count'] ?? map['clones']),
       isPublic: map['is_public'] != false && map['public'] != false,
       slotIndex: _readInt(map['slot_index'] ?? map['slotIndex']),
+      equipmentIds: _readEquipmentIds(rawEquipment),
+      summonerSkillId: _readOptionalInt(
+        map['summoner_skill_id'] ?? map['summonerSkillId'],
+      ),
     );
   }
 }
@@ -75,11 +83,32 @@ List<String> _readEquipmentIcons(Object? value) {
       .toList(growable: false);
 }
 
+List<int> _readEquipmentIds(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+
+  return value
+      .map((item) {
+        if (item is Map) {
+          return _readInt(item['equip_id'] ?? item['id']);
+        }
+        return _readInt(item);
+      })
+      .where((id) => id > 0)
+      .toList(growable: false);
+}
+
 int _readInt(Object? value) {
   if (value is int) {
     return value;
   }
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+int? _readOptionalInt(Object? value) {
+  final parsed = _readInt(value);
+  return parsed > 0 ? parsed : null;
 }
 
 String _readString(Object? value, {String fallback = ''}) {

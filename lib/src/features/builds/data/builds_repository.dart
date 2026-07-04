@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../domain/build_editor_asset.dart';
 import '../domain/build_scheme_summary.dart';
 
 class BuildsRepository {
@@ -51,6 +52,49 @@ class BuildsRepository {
     return slots;
   }
 
+  Future<List<BuildEquipSummary>> loadTopEquips(int regionId) async {
+    final json = await apiClient.postJson(
+      '/build/equips',
+      body: {
+        'page': 1,
+        'pageSize': 100,
+        'filterRules': [
+          {'field': 'region_id', 'op': 'eq', 'value': regionId},
+          {'field': 'is_top_equip', 'op': 'eq', 'value': true},
+        ],
+      },
+    );
+    return _readRows(
+      json,
+    ).map(BuildEquipSummary.fromJson).toList(growable: false);
+  }
+
+  Future<List<BuildSummonerSkillSummary>> loadSummonerSkills(
+    int regionId,
+  ) async {
+    final json = await apiClient.postJson(
+      '/build/summoner-skills',
+      body: {
+        'page': 1,
+        'pageSize': 100,
+        'filterRules': [
+          {'field': 'region_id', 'op': 'eq', 'value': regionId},
+        ],
+      },
+    );
+    return _readRows(
+      json,
+    ).map(BuildSummonerSkillSummary.fromJson).toList(growable: false);
+  }
+
+  Future<void> saveBuildScheme(BuildSchemeDraft draft) async {
+    final schemeId = draft.schemeId;
+    final path = schemeId == null
+        ? '/build/schemes'
+        : '/build/schemes/$schemeId/update';
+    await apiClient.postJson(path, body: draft.toJson());
+  }
+
   List<Object?> _readRows(Map<String, dynamic> json) {
     final result = json['result'];
     if (result is List) {
@@ -68,6 +112,14 @@ class BuildsRepository {
       final rows = result['rows'];
       if (rows is List) {
         return rows;
+      }
+      final equips = result['equips'];
+      if (equips is List) {
+        return equips;
+      }
+      final skills = result['skills'];
+      if (skills is List) {
+        return skills;
       }
     }
     final data = json['data'];
