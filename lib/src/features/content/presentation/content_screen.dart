@@ -79,6 +79,13 @@ class ContentScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _ContentActionCard(
+            icon: Icons.newspaper_outlined,
+            title: 'Patch Notes',
+            subtitle: 'Version timeline and hero adjustments',
+            onTap: () => context.go('/content/patch-notes'),
+          ),
+          const SizedBox(height: 12),
+          _ContentActionCard(
             icon: Icons.info_outline,
             title: 'Info Center',
             subtitle: 'About, FAQ, privacy, terms, and partner links',

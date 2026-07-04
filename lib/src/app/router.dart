@@ -8,6 +8,7 @@ import '../features/bp/presentation/bp_dashboard_screen.dart';
 import '../features/builds/presentation/build_explorer_screen.dart';
 import '../features/community/presentation/community_screen.dart';
 import '../features/content/presentation/content_screen.dart';
+import '../features/content/presentation/patch_notes_screen.dart';
 import '../features/curiosity/presentation/curiosity_lab_screen.dart';
 import '../features/esports/presentation/esports_screen.dart';
 import '../features/game_assistant/presentation/game_assistant_screen.dart';
@@ -87,6 +88,10 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'event-assistance',
                     builder: (context, state) => const EventAssistanceScreen(),
+                  ),
+                  GoRoute(
+                    path: 'patch-notes',
+                    builder: (context, state) => const PatchNotesScreen(),
                   ),
                   GoRoute(
                     path: 'info',
