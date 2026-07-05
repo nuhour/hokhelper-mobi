@@ -43,6 +43,17 @@ import '../features/topics/presentation/topic_article_screen.dart';
 import '../features/topics/presentation/topic_hub_screen.dart';
 import 'app_shell.dart';
 
+String _communityLeaksTarget(Uri uri) {
+  final query = uri.queryParameters['q']?.trim();
+  if (query == null || query.isEmpty) {
+    return '/content/community?tab=leaks';
+  }
+  return Uri(
+    path: '/content/community',
+    queryParameters: {'tab': 'leaks', 'q': query},
+  ).toString();
+}
+
 GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: '/',
@@ -137,15 +148,15 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/leaks',
-        redirect: (context, state) => '/content/community?tab=leaks',
+        redirect: (context, state) => _communityLeaksTarget(state.uri),
       ),
       GoRoute(
         path: '/skin-leaks',
-        redirect: (context, state) => '/content/community?tab=leaks',
+        redirect: (context, state) => _communityLeaksTarget(state.uri),
       ),
       GoRoute(
         path: '/community/leaks',
-        redirect: (context, state) => '/content/community?tab=leaks',
+        redirect: (context, state) => _communityLeaksTarget(state.uri),
       ),
       GoRoute(
         path: '/event-assistance',
@@ -395,6 +406,7 @@ GoRouter createAppRouter() {
                       return CommunityScreen(
                         initialTabIndex: initialTabIndex,
                         initialView: initialView,
+                        initialLeakQuery: state.uri.queryParameters['q'],
                       );
                     },
                     routes: [

@@ -119,6 +119,63 @@ void main() {
     expect(find.text('No community posts found'), findsNothing);
   });
 
+  testWidgets('filters leaks from initial search query', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsProvider.overrideWith((ref) async {
+            return const [
+              LeakPostSummary(
+                id: '502',
+                title: 'Lam skin signal',
+                content: 'A cyber themed Lam skin appeared in preview.',
+                category: 'skin',
+                platform: 'youtube',
+                authorName: 'leaker',
+                authorHandle: '@leaker',
+                authorAvatarUrl: '',
+                mediaUrl: '',
+                mediaType: 'image',
+                publishedAt: '2026-07-02T12:00:00Z',
+                likeCount: 12,
+                viewCount: 99,
+                keywords: ['Lam', 'skin'],
+              ),
+              LeakPostSummary(
+                id: '503',
+                title: 'Angela animation leak',
+                content: 'A mage animation appeared in preview.',
+                category: 'hero',
+                platform: 'x',
+                authorName: 'scout',
+                authorHandle: '@scout',
+                authorAvatarUrl: '',
+                mediaUrl: '',
+                mediaType: 'image',
+                publishedAt: '2026-07-02T12:00:00Z',
+                likeCount: 8,
+                viewCount: 77,
+                keywords: ['Angela'],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CommunityScreen(initialTabIndex: 1, initialLeakQuery: 'Lam'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Leak Search'), findsOneWidget);
+    expect(find.text('Showing leaks matching "Lam".'), findsOneWidget);
+    expect(find.text('Lam skin signal'), findsOneWidget);
+    expect(find.text('Angela animation leak'), findsNothing);
+  });
+
   testWidgets('my posts mode filters posts to the signed-in author', (
     tester,
   ) async {

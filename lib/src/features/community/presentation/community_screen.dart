@@ -40,11 +40,13 @@ class CommunityScreen extends ConsumerWidget {
   const CommunityScreen({
     this.initialTabIndex = 0,
     this.initialView = CommunityInitialView.hot,
+    this.initialLeakQuery,
     super.key,
   });
 
   final int initialTabIndex;
   final CommunityInitialView initialView;
+  final String? initialLeakQuery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -99,7 +101,10 @@ class CommunityScreen extends ConsumerWidget {
                 value: ref.watch(communityPostsProvider),
                 initialView: initialView,
               ),
-              _LeaksTab(value: ref.watch(leakPostsProvider)),
+              _LeaksTab(
+                value: ref.watch(leakPostsProvider),
+                initialQuery: initialLeakQuery,
+              ),
             ],
           ),
         ),
@@ -221,9 +226,10 @@ class _ModePill extends StatelessWidget {
 }
 
 class _LeaksTab extends ConsumerWidget {
-  const _LeaksTab({required this.value});
+  const _LeaksTab({required this.value, required this.initialQuery});
 
   final AsyncValue<List<LeakPostSummary>> value;
+  final String? initialQuery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -231,25 +237,58 @@ class _LeaksTab extends ConsumerWidget {
       value: value,
       retry: () => ref.invalidate(leakPostsProvider),
       data: (leaks) {
-        if (leaks.isEmpty) {
-          return const AppEmptyState(
+        final query = initialQuery?.trim() ?? '';
+        final visibleLeaks = query.isEmpty
+            ? leaks
+            : leaks
+                  .where((leak) => _matchesQuery(leak, query))
+                  .toList(growable: false);
+
+        if (visibleLeaks.isEmpty) {
+          return AppEmptyState(
             icon: Icons.campaign_outlined,
-            title: 'No leaks found',
-            message: 'Pull to refresh or switch region in settings.',
+            title: query.isEmpty ? 'No leaks found' : 'No matching leaks',
+            message: query.isEmpty
+                ? 'Pull to refresh or switch region in settings.'
+                : 'No leaks matched "$query" in this region.',
           );
         }
 
         return RefreshIndicator(
           onRefresh: () => ref.refresh(leakPostsProvider.future),
-          child: ListView.separated(
+          child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            itemCount: leaks.length,
-            itemBuilder: (context, index) => _LeakCard(leak: leaks[index]),
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            children: [
+              if (query.isNotEmpty) ...[
+                _ModePill(
+                  icon: Icons.search,
+                  label: 'Leak Search',
+                  message: 'Showing leaks matching "$query".',
+                ),
+                const SizedBox(height: 12),
+              ],
+              for (final leak in visibleLeaks) ...[
+                _LeakCard(leak: leak),
+                const SizedBox(height: 12),
+              ],
+            ],
           ),
         );
       },
     );
+  }
+
+  bool _matchesQuery(LeakPostSummary leak, String query) {
+    final needle = query.toLowerCase();
+    return [
+      leak.title,
+      leak.content,
+      leak.category,
+      leak.platform,
+      leak.authorName,
+      leak.authorHandle,
+      ...leak.keywords,
+    ].any((value) => value.toLowerCase().contains(needle));
   }
 }
 
