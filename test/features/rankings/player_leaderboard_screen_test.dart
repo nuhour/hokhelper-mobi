@@ -59,4 +59,32 @@ void main() {
 
     expect(find.text('2490 peak'), findsOneWidget);
   });
+
+  testWidgets('opens with initial rank type and region filter', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          playerLeaderboardProvider.overrideWith((ref) async {
+            return const PlayerLeaderboardResult(
+              players: [],
+              total: 0,
+              regionId: 44,
+              rankType: 'peak',
+              regionOptions: [44, 62],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: PlayerLeaderboardScreen(
+            initialRankType: PlayerLeaderboardRankType.peak,
+            initialRegionId: 44,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Peak'), findsAtLeastNWidgets(1));
+    expect(find.text('Region +44'), findsAtLeastNWidgets(1));
+  });
 }

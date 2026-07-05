@@ -43,11 +43,45 @@ final playerLeaderboardProvider = FutureProvider<PlayerLeaderboardResult>((
       );
 });
 
-class PlayerLeaderboardScreen extends ConsumerWidget {
-  const PlayerLeaderboardScreen({super.key});
+class PlayerLeaderboardScreen extends ConsumerStatefulWidget {
+  const PlayerLeaderboardScreen({
+    this.initialRankType,
+    this.initialRegionId,
+    super.key,
+  });
+
+  final PlayerLeaderboardRankType? initialRankType;
+  final int? initialRegionId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlayerLeaderboardScreen> createState() =>
+      _PlayerLeaderboardScreenState();
+}
+
+class _PlayerLeaderboardScreenState
+    extends ConsumerState<PlayerLeaderboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>(() {
+      if (!mounted) {
+        return;
+      }
+      final initialRankType = widget.initialRankType;
+      if (initialRankType != null) {
+        ref.read(selectedPlayerLeaderboardRankTypeProvider.notifier).state =
+            initialRankType;
+      }
+      final initialRegionId = widget.initialRegionId;
+      if (initialRegionId != null) {
+        ref.read(selectedPlayerLeaderboardRegionProvider.notifier).state =
+            initialRegionId > 0 ? initialRegionId : 0;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final leaderboardValue = ref.watch(playerLeaderboardProvider);
     final rankType = ref.watch(selectedPlayerLeaderboardRankTypeProvider);
     final selectedRegion = ref.watch(selectedPlayerLeaderboardRegionProvider);

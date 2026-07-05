@@ -66,6 +66,22 @@ String _heroGalleryTarget(Uri uri) {
   return Uri(path: '/heroes', queryParameters: {'q': query}).toString();
 }
 
+PlayerLeaderboardRankType? _playerLeaderboardRankType(Uri uri) {
+  final rankType = uri.queryParameters['rank_type']?.trim().toLowerCase();
+  return switch (rankType) {
+    'peak' => PlayerLeaderboardRankType.peak,
+    'rank' || 'ranked' => PlayerLeaderboardRankType.ranked,
+    _ => null,
+  };
+}
+
+int? _playerLeaderboardRegionId(Uri uri) {
+  if (!uri.queryParameters.containsKey('region_id')) {
+    return null;
+  }
+  return int.tryParse(uri.queryParameters['region_id'] ?? '') ?? 0;
+}
+
 GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: '/',
@@ -251,7 +267,10 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/leaderboard',
-        builder: (context, state) => const PlayerLeaderboardScreen(),
+        builder: (context, state) => PlayerLeaderboardScreen(
+          initialRankType: _playerLeaderboardRankType(state.uri),
+          initialRegionId: _playerLeaderboardRegionId(state.uri),
+        ),
       ),
       GoRoute(
         path: '/esports',
@@ -530,8 +549,10 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'leaderboard',
-                    builder: (context, state) =>
-                        const PlayerLeaderboardScreen(),
+                    builder: (context, state) => PlayerLeaderboardScreen(
+                      initialRankType: _playerLeaderboardRankType(state.uri),
+                      initialRegionId: _playerLeaderboardRegionId(state.uri),
+                    ),
                   ),
                   GoRoute(
                     path: 'team-builder',
