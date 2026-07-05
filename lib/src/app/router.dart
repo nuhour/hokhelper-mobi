@@ -222,7 +222,11 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/trends',
-        builder: (context, state) => const HeroTrendsScreen(),
+        builder: (context, state) => HeroTrendsScreen(
+          initialHeroId: int.tryParse(
+            state.uri.queryParameters['hero_id'] ?? '',
+          ),
+        ),
       ),
       GoRoute(
         path: '/leaderboard',

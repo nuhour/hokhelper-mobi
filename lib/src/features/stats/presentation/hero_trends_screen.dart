@@ -46,7 +46,9 @@ final heroTrendsProvider = FutureProvider<List<HeroTrendRow>>((ref) async {
 });
 
 class HeroTrendsScreen extends ConsumerWidget {
-  const HeroTrendsScreen({super.key});
+  const HeroTrendsScreen({this.initialHeroId, super.key});
+
+  final int? initialHeroId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,6 +63,16 @@ class HeroTrendsScreen extends ConsumerWidget {
         data: (rows) {
           final sortedRows = [...rows]
             ..sort((a, b) => sort.valueOf(b).compareTo(sort.valueOf(a)));
+          final focusedHeroId = initialHeroId;
+          if (focusedHeroId != null && focusedHeroId > 0) {
+            final focusedIndex = sortedRows.indexWhere(
+              (row) => row.id == focusedHeroId,
+            );
+            if (focusedIndex > 0) {
+              final focusedRow = sortedRows.removeAt(focusedIndex);
+              sortedRows.insert(0, focusedRow);
+            }
+          }
 
           return RefreshIndicator(
             onRefresh: () => ref.refresh(heroTrendsProvider.future),
@@ -125,6 +137,7 @@ class HeroTrendsScreen extends ConsumerWidget {
                         return _HeroTrendCard(
                           hero: sortedRows[index],
                           rank: index + 1,
+                          isFocused: sortedRows[index].id == focusedHeroId,
                         );
                       },
                     ),
@@ -139,10 +152,15 @@ class HeroTrendsScreen extends ConsumerWidget {
 }
 
 class _HeroTrendCard extends StatelessWidget {
-  const _HeroTrendCard({required this.hero, required this.rank});
+  const _HeroTrendCard({
+    required this.hero,
+    required this.rank,
+    required this.isFocused,
+  });
 
   final HeroTrendRow hero;
   final int rank;
+  final bool isFocused;
 
   @override
   Widget build(BuildContext context) {
@@ -190,6 +208,11 @@ class _HeroTrendCard extends StatelessWidget {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
+                          if (isFocused)
+                            const _MetricPill(
+                              label: 'Focused hero',
+                              color: AppTheme.gold,
+                            ),
                           _MetricPill(label: 'Score ${hero.mvpScoreText}'),
                           _MetricPill(label: '${hero.winRateText} win'),
                           _MetricPill(label: '${hero.mvpRateText} MVP'),
@@ -252,22 +275,27 @@ class _RankBadge extends StatelessWidget {
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill({required this.label});
+  const _MetricPill({required this.label, this.color});
 
   final String label;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final tint = color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: tint?.withValues(alpha: 0.14) ?? AppTheme.panelAlt,
         borderRadius: BorderRadius.circular(999),
+        border: tint == null
+            ? null
+            : Border.all(color: tint.withValues(alpha: 0.28)),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppTheme.text,
+          color: tint ?? AppTheme.text,
           fontWeight: FontWeight.w700,
         ),
       ),

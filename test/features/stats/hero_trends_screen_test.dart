@@ -54,4 +54,48 @@ void main() {
     final lamTopLeft = tester.getTopLeft(find.text('Lam'));
     expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
   });
+
+  testWidgets('initial hero id pins and labels the focused hero', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendsProvider.overrideWith((ref) async {
+            return const [
+              HeroTrendRow(
+                id: 199,
+                name: 'Lam',
+                avatarUrl: '',
+                winRate: 56.1,
+                mvpScore: 13.8,
+                mvpRate: 22.5,
+                dmgShare: 31.4,
+                takeDmgShare: 28.7,
+                ecoShare: 24.1,
+              ),
+              HeroTrendRow(
+                id: 166,
+                name: 'Yaria',
+                avatarUrl: '',
+                winRate: 60.2,
+                mvpScore: 9.2,
+                mvpRate: 11.4,
+                dmgShare: 12.1,
+                takeDmgShare: 18.2,
+                ecoShare: 17.7,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: HeroTrendsScreen(initialHeroId: 166)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Focused hero'), findsOneWidget);
+    final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
+    final lamTopLeft = tester.getTopLeft(find.text('Lam'));
+    expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
+  });
 }

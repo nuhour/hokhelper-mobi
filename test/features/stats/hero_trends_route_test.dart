@@ -17,7 +17,11 @@ GoRouter _buildRouter() {
       ),
       GoRoute(
         path: '/trends',
-        builder: (context, state) => const HeroTrendsScreen(),
+        builder: (context, state) => HeroTrendsScreen(
+          initialHeroId: int.tryParse(
+            state.uri.queryParameters['hero_id'] ?? '',
+          ),
+        ),
       ),
     ],
   );
@@ -65,5 +69,51 @@ void main() {
 
     expect(find.text('Hero Trends'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
+  });
+
+  testWidgets('web trend hero query opens with a focused hero', (tester) async {
+    final router = _buildRouter();
+    router.go('/trends?hero_id=166');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroGalleryProvider.overrideWith((ref) async => const []),
+          heroTrendsProvider.overrideWith((ref) async {
+            return const [
+              HeroTrendRow(
+                id: 199,
+                name: 'Lam',
+                avatarUrl: '',
+                winRate: 56.1,
+                mvpScore: 13.8,
+                mvpRate: 22.5,
+                dmgShare: 31.4,
+                takeDmgShare: 28.7,
+                ecoShare: 24.1,
+              ),
+              HeroTrendRow(
+                id: 166,
+                name: 'Yaria',
+                avatarUrl: '',
+                winRate: 60.2,
+                mvpScore: 9.2,
+                mvpRate: 11.4,
+                dmgShare: 12.1,
+                takeDmgShare: 18.2,
+                ecoShare: 17.7,
+              ),
+            ];
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Focused hero'), findsOneWidget);
+    final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
+    final lamTopLeft = tester.getTopLeft(find.text('Lam'));
+    expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
   });
 }
