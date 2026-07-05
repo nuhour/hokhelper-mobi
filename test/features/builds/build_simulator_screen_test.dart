@@ -121,6 +121,7 @@ void main() {
             return const BuildEditorCatalog(
               equips: [
                 BuildEquipSummary(id: 101, name: 'Storm Axe', iconUrl: ''),
+                BuildEquipSummary(id: 102, name: 'Swift Boots', iconUrl: ''),
               ],
               runes: [BuildRuneSummary(id: 201, name: 'Fate', color: 1)],
               summonerSkills: [
@@ -147,6 +148,10 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'Mobile burst');
     await tester.tap(find.text('Storm Axe'));
+    await tester.tap(find.text('Swift Boots'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Move Swift Boots up'));
+    await tester.tap(find.byTooltip('Remove Storm Axe'));
     await tester.tap(find.text('Public'));
     await tester.drag(find.byType(ListView).first, const Offset(0, -260));
     await tester.pumpAndSettle();
@@ -163,7 +168,7 @@ void main() {
     expect(savedDraft?.slotIndex, 1);
     expect(savedDraft?.title, 'Mobile burst');
     expect(savedDraft?.isPublic, true);
-    expect(savedDraft?.equipIds, [101]);
+    expect(savedDraft?.equipIds, [102]);
     expect(savedDraft?.runeIds, [201]);
     expect(savedDraft?.summonerSkillId, 12);
   });

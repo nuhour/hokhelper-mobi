@@ -562,6 +562,14 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
                     selectedIds: _equipIds,
                     onToggle: _toggleEquip,
                   ),
+                  const SizedBox(height: 10),
+                  _SelectedEquipOrder(
+                    equips: catalog.equips,
+                    selectedIds: _equipIds,
+                    onMoveUp: _moveEquipUp,
+                    onMoveDown: _moveEquipDown,
+                    onRemove: _removeEquip,
+                  ),
                   const SizedBox(height: 14),
                   _EditorSectionTitle('Arcana'),
                   const SizedBox(height: 8),
@@ -615,6 +623,34 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
       } else if (_equipIds.length < 6) {
         _equipIds = [..._equipIds, equipId];
       }
+    });
+  }
+
+  void _moveEquipUp(int equipId) {
+    final index = _equipIds.indexOf(equipId);
+    if (index <= 0) return;
+    setState(() {
+      final next = [..._equipIds];
+      final value = next.removeAt(index);
+      next.insert(index - 1, value);
+      _equipIds = next;
+    });
+  }
+
+  void _moveEquipDown(int equipId) {
+    final index = _equipIds.indexOf(equipId);
+    if (index < 0 || index >= _equipIds.length - 1) return;
+    setState(() {
+      final next = [..._equipIds];
+      final value = next.removeAt(index);
+      next.insert(index + 1, value);
+      _equipIds = next;
+    });
+  }
+
+  void _removeEquip(int equipId) {
+    setState(() {
+      _equipIds = _equipIds.where((id) => id != equipId).toList();
     });
   }
 
@@ -710,6 +746,129 @@ class _EquipSelector extends StatelessWidget {
             onSelected: (_) => onToggle(equip.id),
           ),
       ],
+    );
+  }
+}
+
+class _SelectedEquipOrder extends StatelessWidget {
+  const _SelectedEquipOrder({
+    required this.equips,
+    required this.selectedIds,
+    required this.onMoveUp,
+    required this.onMoveDown,
+    required this.onRemove,
+  });
+
+  final List<BuildEquipSummary> equips;
+  final List<int> selectedIds;
+  final ValueChanged<int> onMoveUp;
+  final ValueChanged<int> onMoveDown;
+  final ValueChanged<int> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    if (selectedIds.isEmpty) {
+      return const Text(
+        'Select up to six items. Saved order follows this list.',
+        style: TextStyle(color: AppTheme.muted),
+      );
+    }
+
+    final equipById = {for (final equip in equips) equip.id: equip};
+
+    return Column(
+      children: [
+        for (var index = 0; index < selectedIds.length; index++) ...[
+          _SelectedEquipRow(
+            index: index,
+            equip:
+                equipById[selectedIds[index]] ??
+                BuildEquipSummary(
+                  id: selectedIds[index],
+                  name: 'Equipment ${selectedIds[index]}',
+                  iconUrl: '',
+                ),
+            isFirst: index == 0,
+            isLast: index == selectedIds.length - 1,
+            onMoveUp: onMoveUp,
+            onMoveDown: onMoveDown,
+            onRemove: onRemove,
+          ),
+          if (index != selectedIds.length - 1) const SizedBox(height: 6),
+        ],
+      ],
+    );
+  }
+}
+
+class _SelectedEquipRow extends StatelessWidget {
+  const _SelectedEquipRow({
+    required this.index,
+    required this.equip,
+    required this.isFirst,
+    required this.isLast,
+    required this.onMoveUp,
+    required this.onMoveDown,
+    required this.onRemove,
+  });
+
+  final int index;
+  final BuildEquipSummary equip;
+  final bool isFirst;
+  final bool isLast;
+  final ValueChanged<int> onMoveUp;
+  final ValueChanged<int> onMoveDown;
+  final ValueChanged<int> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Text(
+              '${index + 1}',
+              style: const TextStyle(
+                color: AppTheme.gold,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                equip.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Move ${equip.name} up',
+              onPressed: isFirst ? null : () => onMoveUp(equip.id),
+              icon: const Icon(Icons.keyboard_arrow_up),
+            ),
+            IconButton(
+              tooltip: 'Move ${equip.name} down',
+              onPressed: isLast ? null : () => onMoveDown(equip.id),
+              icon: const Icon(Icons.keyboard_arrow_down),
+            ),
+            IconButton(
+              tooltip: 'Remove ${equip.name}',
+              onPressed: () => onRemove(equip.id),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
