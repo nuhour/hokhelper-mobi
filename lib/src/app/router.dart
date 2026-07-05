@@ -28,6 +28,7 @@ import '../features/rank_fortune/presentation/rank_fortune_screen.dart';
 import '../features/rankings/presentation/hero_ranking_screen.dart';
 import '../features/rankings/presentation/player_leaderboard_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
+import '../features/profile/presentation/public_profile_screen.dart';
 import '../features/rankings/presentation/tools_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
@@ -58,6 +59,15 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(path: '/profile', redirect: (context, state) => '/me'),
+      GoRoute(
+        path: '/profile/:userId',
+        builder: (context, state) {
+          return PublicProfileScreen(
+            userId: int.tryParse(state.pathParameters['userId'] ?? '') ?? 0,
+          );
+        },
       ),
       GoRoute(
         path: '/community/post/:postId',
