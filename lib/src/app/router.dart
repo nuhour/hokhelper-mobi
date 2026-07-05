@@ -109,7 +109,18 @@ GoRouter createAppRouter() {
           );
         },
       ),
-      GoRoute(path: '/hero-gallery', redirect: (context, state) => '/heroes'),
+      GoRoute(
+        path: '/hero-gallery',
+        redirect: (context, state) {
+          final heroId = int.tryParse(
+            state.uri.queryParameters['hero_id'] ?? '',
+          );
+          if (heroId != null && heroId > 0) {
+            return '/heroes/$heroId';
+          }
+          return '/heroes';
+        },
+      ),
       GoRoute(
         path: '/hero-gallery/:heroId',
         redirect: (context, state) =>
@@ -159,6 +170,15 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/skin-gallery',
+        redirect: (context, state) {
+          final skinId = int.tryParse(
+            state.uri.queryParameters['skin_id'] ?? '',
+          );
+          if (skinId != null && skinId > 0) {
+            return '/skin-gallery/$skinId';
+          }
+          return null;
+        },
         builder: (context, state) => const SkinGalleryScreen(),
         routes: [
           GoRoute(

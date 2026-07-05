@@ -4,7 +4,10 @@ import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/skin_detail.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
+import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
+import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
@@ -17,6 +20,8 @@ void main() {
   ) async {
     final aliases = <String, ({String path, String? tab})>{
       '/hero-gallery': (path: '/heroes', tab: null),
+      '/hero-gallery?hero_id=101': (path: '/heroes/101', tab: null),
+      '/skin-gallery?skin_id=1001': (path: '/skin-gallery/1001', tab: null),
       '/community': (path: '/content/community', tab: null),
       '/community/leaks': (path: '/content/community', tab: 'leaks'),
       '/leaks': (path: '/content/community', tab: 'leaks'),
@@ -33,6 +38,24 @@ void main() {
       ProviderScope(
         overrides: [
           heroGalleryProvider.overrideWith((ref) async => const []),
+          selectedRegionHeroDetailProvider.overrideWith(
+            (ref, heroId) async => {'id': heroId},
+          ),
+          skinGalleryProvider.overrideWith((ref) async => const []),
+          skinDetailProvider(1001).overrideWith(
+            (ref) async => const SkinDetail(
+              id: 1001,
+              title: 'Crimson Hunter',
+              heroName: 'Lam',
+              portraitUrl: '',
+              landscapeUrl: '',
+              seriesName: 'Hunter Series',
+              regionName: 'Global',
+              rating: 4.5,
+              ratingCount: 12,
+              linkUrl: '',
+            ),
+          ),
           communityPostsProvider.overrideWith((ref) async => const []),
           leakPostsProvider.overrideWith((ref) async => const []),
           eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
