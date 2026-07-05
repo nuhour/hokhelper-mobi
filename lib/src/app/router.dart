@@ -5,6 +5,7 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/bp/presentation/bp_dashboard_screen.dart';
+import '../features/bp/presentation/bp_scheme_detail_screen.dart';
 import '../features/builds/presentation/build_explorer_screen.dart';
 import '../features/builds/presentation/build_simulator_screen.dart';
 import '../features/community/presentation/community_post_detail_screen.dart';
@@ -292,6 +293,16 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'bp-simulator',
                     builder: (context, state) => const BpDashboardScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':schemeId',
+                        builder: (context, state) {
+                          return BpSchemeDetailScreen(
+                            schemeId: state.pathParameters['schemeId'] ?? '',
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'tier-list',

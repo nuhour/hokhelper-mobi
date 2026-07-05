@@ -13,7 +13,41 @@ class _FakeApiClient extends ApiClient {
       );
 
   String? requestedPath;
+  Map<String, dynamic>? requestedQuery;
   Object? requestedBody;
+
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
+    requestedPath = path;
+    requestedQuery = query;
+    return const {
+      'success': true,
+      'message': 'success',
+      'result': {
+        'id': '12',
+        'name': 'KPL Finals Draft',
+        'createdAt': '2026-07-03T10:00:00Z',
+        'boMode': 7,
+        'teamAName': 'Wolves',
+        'teamBName': 'AG',
+        'gameNumber': 3,
+        'history': [
+          {'gameNumber': 1, 'winner': 'blue'},
+          {'gameNumber': 2, 'winner': 'red'},
+        ],
+        'currentState': {
+          'blueBans': ['199'],
+          'redBans': ['133'],
+          'bluePicks': ['111'],
+          'redPicks': ['222'],
+          'currentStepIndex': 4,
+        },
+      },
+    };
+  }
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
@@ -73,5 +107,18 @@ void main() {
     expect(schemes.single.boModeText, 'BO7');
     expect(schemes.single.progressText, 'Game 3 · Step 4');
     expect(schemes.single.historyCountText, '2 games');
+  });
+
+  test('loads a BP scheme detail with hokx detail endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BpRepository(apiClient: apiClient);
+
+    final scheme = await repository.loadScheme('12');
+
+    expect(apiClient.requestedPath, '/bp/scheme/12');
+    expect(apiClient.requestedQuery, isNull);
+    expect(scheme.id, '12');
+    expect(scheme.name, 'KPL Finals Draft');
+    expect(scheme.phaseSummaryText, '2 bans · 2 picks');
   });
 }

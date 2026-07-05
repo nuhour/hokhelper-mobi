@@ -25,4 +25,10 @@ class BpRepository {
 
     return schemes.map(BpSchemeSummary.fromJson).toList(growable: false);
   }
+
+  Future<BpSchemeSummary> loadScheme(String schemeId) async {
+    final json = await apiClient.getJson('/bp/scheme/$schemeId');
+    final result = json['result'];
+    return BpSchemeSummary.fromJson(result is Map ? result : json);
+  }
 }
