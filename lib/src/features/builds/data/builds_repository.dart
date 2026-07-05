@@ -26,6 +26,16 @@ class BuildsRepository {
     ).map(BuildSchemeSummary.fromJson).toList(growable: false);
   }
 
+  Future<List<BuildSchemeSummary>> loadFavoriteSchemes() async {
+    final json = await apiClient.postJson(
+      '/build/schemes/my-favorites',
+      body: {'page': 1, 'pageSize': 20},
+    );
+    return _readRows(
+      json,
+    ).map(BuildSchemeSummary.fromJson).toList(growable: false);
+  }
+
   Future<List<BuildSchemeSummary?>> loadUserHeroSlots({
     required int heroId,
     required int regionId,

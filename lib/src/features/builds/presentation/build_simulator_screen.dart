@@ -29,6 +29,11 @@ final buildSimPublicSchemesProvider = FutureProvider<List<BuildSchemeSummary>>((
       .loadPublicSchemes(settings.region.regionId);
 });
 
+final buildSimFavoriteSchemesProvider =
+    FutureProvider<List<BuildSchemeSummary>>((ref) {
+      return ref.watch(buildsRepositoryProvider).loadFavoriteSchemes();
+    });
+
 final buildSimUserSlotsProvider =
     FutureProvider.family<List<BuildSchemeSummary?>, int>((ref, heroId) async {
       final settings = await ref.watch(appSettingsControllerProvider.future);
@@ -84,15 +89,19 @@ final buildSimCloneSchemeProvider =
       );
     });
 
+enum BuildSimCommunityFilter { explore, favorites }
+
 class BuildSimulatorScreen extends ConsumerStatefulWidget {
   const BuildSimulatorScreen({
     this.initialHeroId,
     this.initialSchemeId,
+    this.initialCommunityFilter = BuildSimCommunityFilter.explore,
     super.key,
   });
 
   final int? initialHeroId;
   final int? initialSchemeId;
+  final BuildSimCommunityFilter initialCommunityFilter;
 
   @override
   ConsumerState<BuildSimulatorScreen> createState() =>
@@ -116,7 +125,10 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
   @override
   Widget build(BuildContext context) {
     final heroesValue = ref.watch(buildSimHeroesProvider);
-    final publicSchemesValue = ref.watch(buildSimPublicSchemesProvider);
+    final communitySchemesValue =
+        widget.initialCommunityFilter == BuildSimCommunityFilter.favorites
+        ? ref.watch(buildSimFavoriteSchemesProvider)
+        : ref.watch(buildSimPublicSchemesProvider);
 
     return AppAsyncView<List<HeroSummary>>(
       value: heroesValue,
@@ -211,12 +223,14 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
               ],
               const SizedBox(height: 22),
               _CommunityBuilds(
-                value: publicSchemesValue,
+                value: communitySchemesValue,
+                filter: widget.initialCommunityFilter,
                 focusedSchemeId: widget.initialSchemeId,
                 onActionDone: heroId == null
                     ? null
                     : () {
                         ref.invalidate(buildSimPublicSchemesProvider);
+                        ref.invalidate(buildSimFavoriteSchemesProvider);
                         ref.invalidate(buildSimUserSlotsProvider(heroId));
                       },
               ),
@@ -1105,11 +1119,13 @@ class _SummonerSkillSelector extends StatelessWidget {
 class _CommunityBuilds extends ConsumerStatefulWidget {
   const _CommunityBuilds({
     required this.value,
+    required this.filter,
     required this.focusedSchemeId,
     required this.onActionDone,
   });
 
   final AsyncValue<List<BuildSchemeSummary>> value;
+  final BuildSimCommunityFilter filter;
   final int? focusedSchemeId;
   final VoidCallback? onActionDone;
 
@@ -1126,7 +1142,9 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Community Builds',
+          widget.filter == BuildSimCommunityFilter.favorites
+              ? 'Favorite Builds'
+              : 'Community Builds',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             color: AppTheme.text,
             fontWeight: FontWeight.w800,

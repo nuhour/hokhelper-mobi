@@ -77,6 +77,26 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postPath = path;
     postBody = body;
+    if (path == '/build/schemes/my-favorites') {
+      return const {
+        'success': true,
+        'result': {
+          'schemes': [
+            {
+              'id': 42,
+              'name': 'Favorite burst',
+              'hero_name': 'Angela',
+              'author_name': 'coach',
+              'equipment': [],
+              'like_count': 12,
+              'favorite_count': 9,
+              'clone_count': 4,
+              'is_public': true,
+            },
+          ],
+        },
+      };
+    }
     if (path == '/build/equips') {
       return const {
         'success': true,
@@ -186,6 +206,20 @@ void main() {
       expect(slots[2], isNull);
     },
   );
+
+  test('loads favorite build schemes with hokx favorites endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    final schemes = await repository.loadFavoriteSchemes();
+
+    expect(apiClient.postPath, '/build/schemes/my-favorites');
+    expect(apiClient.postBody, {'page': 1, 'pageSize': 20});
+    expect(schemes, hasLength(1));
+    expect(schemes.single.title, 'Favorite burst');
+    expect(schemes.single.heroName, 'Angela');
+    expect(schemes.single.favoriteCount, 9);
+  });
 
   test('loads top equips with backend region filters', () async {
     final apiClient = _FakeApiClient();

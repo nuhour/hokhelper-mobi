@@ -451,6 +451,10 @@ GoRouter createAppRouter() {
                       initialSchemeId: int.tryParse(
                         state.uri.queryParameters['scheme'] ?? '',
                       ),
+                      initialCommunityFilter:
+                          state.uri.queryParameters['filter'] == 'favorites'
+                          ? BuildSimCommunityFilter.favorites
+                          : BuildSimCommunityFilter.explore,
                     ),
                   ),
                   GoRoute(

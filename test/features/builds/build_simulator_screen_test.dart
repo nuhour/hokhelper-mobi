@@ -280,6 +280,87 @@ void main() {
     expect(find.text('Angela · sharer'), findsOneWidget);
   });
 
+  testWidgets('opens favorite builds from initial community filter', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '199',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 7,
+                title: 'Public build',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 1,
+                favoriteCount: 1,
+                cloneCount: 1,
+                isPublic: true,
+              ),
+            ];
+          }),
+          buildSimFavoriteSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 42,
+                title: 'Favorite mobile build',
+                heroName: 'Angela',
+                authorName: 'collector',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 9,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+            ];
+          }),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            return const [null, null, null];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(
+              equips: [],
+              runes: [],
+              summonerSkills: [],
+            );
+          }),
+          buildSimSaveSchemeProvider.overrideWith((ref) {
+            return (_) async {};
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: BuildSimulatorScreen(
+              initialCommunityFilter: BuildSimCommunityFilter.favorites,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Favorite Builds'), findsOneWidget);
+    expect(find.text('Favorite mobile build'), findsOneWidget);
+    expect(find.text('Angela · collector'), findsOneWidget);
+    expect(find.text('Public build'), findsNothing);
+  });
+
   testWidgets('opens slot editor and saves a mobile build draft', (
     tester,
   ) async {
