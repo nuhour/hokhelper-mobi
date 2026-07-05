@@ -22,8 +22,31 @@ final statsDashboardProvider = FutureProvider<StatsDashboard>((ref) async {
       .loadDashboard(regionCode: settings.region.languageCode);
 });
 
+enum StatsEntry {
+  overview,
+  tierRank,
+  powerRank,
+  equipRank;
+
+  static StatsEntry fromRoute(String? value) {
+    return switch (value) {
+      'tier_rank' => StatsEntry.tierRank,
+      'power_rank' => StatsEntry.powerRank,
+      'equip_rank' => StatsEntry.equipRank,
+      _ => StatsEntry.overview,
+    };
+  }
+}
+
 class StatsScreen extends ConsumerWidget {
-  const StatsScreen({super.key});
+  const StatsScreen({
+    this.initialEntry = StatsEntry.overview,
+    this.initialEquipId,
+    super.key,
+  });
+
+  final StatsEntry initialEntry;
+  final String? initialEquipId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,38 +81,97 @@ class StatsScreen extends ConsumerWidget {
                   ),
                 )
               else ...[
-                _StatsSection(
-                  title: 'Hero Trends',
-                  icon: Icons.person_search_outlined,
-                  children: [
-                    for (final hero in dashboard.heroes.take(10))
-                      _HeroStatsCard(hero: hero),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _StatsSection(
-                  title: 'Equipment Trends',
-                  icon: Icons.inventory_2_outlined,
-                  children: [
-                    for (final equip in dashboard.equips.take(10))
-                      _EquipStatsCard(equip: equip),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _StatsSection(
-                  title: 'Hero Combos',
-                  icon: Icons.hub_outlined,
-                  children: [
-                    for (final combo in dashboard.combos.take(10))
-                      _ComboStatsCard(combo: combo),
-                  ],
-                ),
+                ..._buildSections(dashboard),
               ],
             ],
           ),
         );
       },
     );
+  }
+
+  List<Widget> _buildSections(StatsDashboard dashboard) {
+    final sections = <_StatsSection>[
+      _StatsSection(
+        title: 'Hero Trends',
+        icon: Icons.person_search_outlined,
+        focusLabel: switch (initialEntry) {
+          StatsEntry.tierRank => 'Focused tier rank',
+          StatsEntry.powerRank => 'Focused power rank',
+          _ => '',
+        },
+        children: [
+          for (final hero in dashboard.heroes.take(10))
+            _HeroStatsCard(hero: hero),
+        ],
+      ),
+      _StatsSection(
+        title: 'Equipment Trends',
+        icon: Icons.inventory_2_outlined,
+        focusLabel: initialEntry == StatsEntry.equipRank
+            ? 'Focused equipment rank'
+            : '',
+        children: [
+          for (final equip in _prioritizeEquips(dashboard.equips).take(10))
+            _EquipStatsCard(
+              equip: equip,
+              isFocused:
+                  initialEntry == StatsEntry.equipRank &&
+                  _matchesEquip(equip, initialEquipId),
+            ),
+        ],
+      ),
+      _StatsSection(
+        title: 'Hero Combos',
+        icon: Icons.hub_outlined,
+        children: [
+          for (final combo in dashboard.combos.take(10))
+            _ComboStatsCard(combo: combo),
+        ],
+      ),
+    ];
+
+    if (initialEntry == StatsEntry.equipRank) {
+      final equipIndex = sections.indexWhere(
+        (section) => section.title == 'Equipment Trends',
+      );
+      if (equipIndex > 0) {
+        final equipSection = sections.removeAt(equipIndex);
+        sections.insert(0, equipSection);
+      }
+    }
+
+    return [
+      for (final section in sections) ...[
+        section,
+        if (section != sections.last) const SizedBox(height: 18),
+      ],
+    ];
+  }
+
+  List<StatsEquipRow> _prioritizeEquips(List<StatsEquipRow> equips) {
+    final focusedEquipId = initialEquipId;
+    if (initialEntry != StatsEntry.equipRank ||
+        focusedEquipId == null ||
+        focusedEquipId.isEmpty) {
+      return equips;
+    }
+
+    final rows = [...equips];
+    final focusedIndex = rows.indexWhere(
+      (equip) => _matchesEquip(equip, focusedEquipId),
+    );
+    if (focusedIndex > 0) {
+      final focused = rows.removeAt(focusedIndex);
+      rows.insert(0, focused);
+    }
+    return rows;
+  }
+
+  bool _matchesEquip(StatsEquipRow equip, String? focusedEquipId) {
+    return focusedEquipId != null &&
+        focusedEquipId.isNotEmpty &&
+        equip.id == focusedEquipId;
   }
 }
 
@@ -98,11 +180,13 @@ class _StatsSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.children,
+    this.focusLabel = '',
   });
 
   final String title;
   final IconData icon;
   final List<Widget> children;
+  final String focusLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +208,12 @@ class _StatsSection extends StatelessWidget {
                 fontWeight: FontWeight.w900,
               ),
             ),
+            if (focusLabel.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: _MetricPill(label: focusLabel, color: AppTheme.gold),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 10),
@@ -186,9 +276,10 @@ class _HeroStatsCard extends StatelessWidget {
 }
 
 class _EquipStatsCard extends StatelessWidget {
-  const _EquipStatsCard({required this.equip});
+  const _EquipStatsCard({required this.equip, this.isFocused = false});
 
   final StatsEquipRow equip;
+  final bool isFocused;
 
   @override
   Widget build(BuildContext context) {
@@ -218,6 +309,13 @@ class _EquipStatsCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              if (isFocused) ...[
+                const _MetricPill(
+                  label: 'Focused equipment',
+                  color: AppTheme.gold,
+                ),
+                const SizedBox(height: 8),
+              ],
               _PrimaryMetric(label: '${equip.pickRateText} pick'),
               const SizedBox(height: 8),
               _MetricPill(label: '${equip.winRateText} WR'),
@@ -302,17 +400,25 @@ class _PrimaryMetric extends StatelessWidget {
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill({required this.label});
+  const _MetricPill({required this.label, this.color});
 
   final String label;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final tint = color;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color:
+            tint?.withValues(alpha: 0.14) ??
+            Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(
+          color:
+              tint?.withValues(alpha: 0.28) ??
+              Colors.white.withValues(alpha: 0.08),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -321,7 +427,7 @@ class _MetricPill extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: AppTheme.muted,
+            color: tint ?? AppTheme.muted,
             fontWeight: FontWeight.w700,
           ),
         ),

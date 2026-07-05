@@ -18,21 +18,93 @@ void main() {
   testWidgets('web portal paths redirect to mobile route equivalents', (
     tester,
   ) async {
-    final aliases = <String, ({String path, String? tab})>{
-      '/hero-gallery': (path: '/heroes', tab: null),
-      '/hero-gallery?hero_id=101': (path: '/heroes/101', tab: null),
-      '/skin-gallery?skin_id=1001': (path: '/skin-gallery/1001', tab: null),
-      '/community': (path: '/content/community', tab: null),
-      '/community?view=my': (path: '/content/community', tab: 'my'),
-      '/community/leaks': (path: '/content/community', tab: 'leaks'),
-      '/leaks': (path: '/content/community', tab: 'leaks'),
-      '/skin-leaks': (path: '/content/community', tab: 'leaks'),
-      '/event-assistance': (path: '/content/event-assistance', tab: null),
-      '/patch-notes': (path: '/content/patch-notes', tab: null),
-      '/versions': (path: '/content/patch-notes', tab: null),
-      '/stats': (path: '/tools/stats', tab: null),
-      '/stats?entry=hero_trend': (path: '/trends', tab: null),
-    };
+    final aliases =
+        <String, ({String path, String? tab, String? entry, String? equipId})>{
+          '/hero-gallery': (
+            path: '/heroes',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/hero-gallery?hero_id=101': (
+            path: '/heroes/101',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/skin-gallery?skin_id=1001': (
+            path: '/skin-gallery/1001',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/community': (
+            path: '/content/community',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/community?view=my': (
+            path: '/content/community',
+            tab: 'my',
+            entry: null,
+            equipId: null,
+          ),
+          '/community/leaks': (
+            path: '/content/community',
+            tab: 'leaks',
+            entry: null,
+            equipId: null,
+          ),
+          '/leaks': (
+            path: '/content/community',
+            tab: 'leaks',
+            entry: null,
+            equipId: null,
+          ),
+          '/skin-leaks': (
+            path: '/content/community',
+            tab: 'leaks',
+            entry: null,
+            equipId: null,
+          ),
+          '/event-assistance': (
+            path: '/content/event-assistance',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/patch-notes': (
+            path: '/content/patch-notes',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/versions': (
+            path: '/content/patch-notes',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/stats': (
+            path: '/tools/stats',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/stats?entry=hero_trend': (
+            path: '/trends',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/stats?entry=equip_rank&equip_id=88': (
+            path: '/tools/stats',
+            tab: null,
+            entry: 'equip_rank',
+            equipId: '88',
+          ),
+        };
 
     final router = createAppRouter();
     await tester.pumpWidget(
@@ -87,6 +159,16 @@ void main() {
         router.routeInformationProvider.value.uri.queryParameters['tab'],
         entry.value.tab,
         reason: '${entry.key} should preserve the mobile tab target',
+      );
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['entry'],
+        entry.value.entry,
+        reason: '${entry.key} should preserve the stats entry target',
+      );
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['equip_id'],
+        entry.value.equipId,
+        reason: '${entry.key} should preserve the focused equipment target',
       );
     }
   });

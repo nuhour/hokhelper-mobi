@@ -165,7 +165,8 @@ GoRouter createAppRouter() {
           if (state.uri.queryParameters['entry'] == 'hero_trend') {
             return '/trends';
           }
-          return '/tools/stats';
+          final query = state.uri.query;
+          return query.isEmpty ? '/tools/stats' : '/tools/stats?$query';
         },
       ),
       GoRoute(
@@ -512,7 +513,12 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'stats',
-                    builder: (context, state) => const StatsScreen(),
+                    builder: (context, state) => StatsScreen(
+                      initialEntry: StatsEntry.fromRoute(
+                        state.uri.queryParameters['entry'],
+                      ),
+                      initialEquipId: state.uri.queryParameters['equip_id'],
+                    ),
                   ),
                 ],
               ),
