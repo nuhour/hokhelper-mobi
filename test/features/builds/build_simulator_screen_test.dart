@@ -155,7 +155,14 @@ void main() {
     await tester.tap(find.text('Public'));
     await tester.drag(find.byType(ListView).first, const Offset(0, -260));
     await tester.pumpAndSettle();
+    expect(find.text('Red Arcana Matrix'), findsOneWidget);
+    expect(find.text('Blue Arcana Matrix'), findsOneWidget);
+    expect(find.text('Green Arcana Matrix'), findsOneWidget);
+    expect(find.text('0/10'), findsNWidgets(3));
     await tester.tap(find.text('Fate').last);
+    await tester.pumpAndSettle();
+    expect(find.text('1/10'), findsOneWidget);
+    expect(find.text('0/10'), findsNWidgets(2));
     await tester.drag(find.byType(ListView).first, const Offset(0, -260));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Smite').last);

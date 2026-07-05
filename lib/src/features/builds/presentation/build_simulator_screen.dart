@@ -897,12 +897,9 @@ class _RuneSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final color in const [1, 2, 3]) ...[
-          Text(
-            _colorLabel(color),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppTheme.muted,
-              fontWeight: FontWeight.w700,
-            ),
+          _ArcanaMatrixCard(
+            color: color,
+            selectedCount: _selectedCountForColor(color),
           ),
           const SizedBox(height: 6),
           Wrap(
@@ -932,12 +929,97 @@ class _RuneSelector extends StatelessWidget {
     );
   }
 
-  String _colorLabel(int color) {
+  int _selectedCountForColor(int color) {
+    final runeIdsForColor = runes
+        .where((rune) => rune.color == color)
+        .map((rune) => rune.id)
+        .toSet();
+    return selectedIds.where(runeIdsForColor.contains).length.clamp(0, 10);
+  }
+}
+
+class _ArcanaMatrixCard extends StatelessWidget {
+  const _ArcanaMatrixCard({required this.color, required this.selectedCount});
+
+  final int color;
+  final int selectedCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _accentColor(color);
+    final title = '${_colorName(color)} Arcana Matrix';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Text(
+                  '$selectedCount/10',
+                  style: TextStyle(color: accent, fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (var index = 0; index < 10; index++)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: index < selectedCount
+                          ? accent.withValues(alpha: 0.86)
+                          : Colors.white.withValues(alpha: 0.06),
+                      border: Border.all(
+                        color: index < selectedCount
+                            ? accent
+                            : Colors.white.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: const SizedBox(width: 18, height: 18),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _colorName(int color) {
     return switch (color) {
-      1 => 'Red Arcana',
-      2 => 'Blue Arcana',
-      3 => 'Green Arcana',
+      1 => 'Red',
+      2 => 'Blue',
+      3 => 'Green',
       _ => 'Arcana',
+    };
+  }
+
+  Color _accentColor(int color) {
+    return switch (color) {
+      1 => const Color(0xFFFF6B6B),
+      2 => AppTheme.cyan,
+      3 => const Color(0xFF4ADE80),
+      _ => AppTheme.gold,
     };
   }
 }
