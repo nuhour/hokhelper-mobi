@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -36,6 +37,8 @@ class HomeScreen extends ConsumerWidget {
               context,
             ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
           ),
+          const SizedBox(height: 18),
+          const _SearchEntryCard(),
           const SizedBox(height: 24),
           AppAsyncView<HomeStats>(
             value: statsValue,
@@ -43,6 +46,61 @@ class HomeScreen extends ConsumerWidget {
             data: (stats) => _BackendSummary(stats: stats),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SearchEntryCard extends StatelessWidget {
+  const _SearchEntryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go('/search'),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.manage_search_outlined, color: AppTheme.gold),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Global Search',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Find heroes, builds, guides, and community content.',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right, color: AppTheme.gold),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
