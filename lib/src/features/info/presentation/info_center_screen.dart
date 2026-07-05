@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -40,13 +41,14 @@ class InfoCenterScreen extends ConsumerWidget {
               ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
             ),
             const SizedBox(height: 18),
-            const _AboutCard(),
+            const _AboutCard(onTapRoute: '/about'),
             const SizedBox(height: 12),
-            const _FaqCard(),
+            const _FaqCard(onTapRoute: '/faq'),
             const SizedBox(height: 12),
             const _PolicyCard(
               icon: Icons.lock_outline,
               title: 'Privacy Policy',
+              onTapRoute: '/privacy',
               body:
                   'HOK Helper collects minimal identifiers for account sync, preferences, analytics, and optional AI prompt usage. Data is used to improve the assistant experience and is not sold.',
             ),
@@ -54,6 +56,7 @@ class InfoCenterScreen extends ConsumerWidget {
             const _PolicyCard(
               icon: Icons.description_outlined,
               title: 'Terms of Service',
+              onTapRoute: '/terms',
               body:
                   'Use HOK Helper as a strategy reference. Community conduct, AI prompt usage, and shared content must stay respectful and lawful. The project is independent from the game publisher.',
             ),
@@ -66,14 +69,83 @@ class InfoCenterScreen extends ConsumerWidget {
   }
 }
 
+class InfoStaticPage extends ConsumerWidget {
+  const InfoStaticPage({required this.section, super.key});
+
+  final InfoStaticSection section;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Info')),
+      body: RefreshIndicator(
+        onRefresh: () {
+          if (section == InfoStaticSection.links) {
+            return ref.refresh(friendLinksProvider.future);
+          }
+          return Future<void>.value();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          child: _StaticSectionBody(section: section),
+        ),
+      ),
+    );
+  }
+}
+
+enum InfoStaticSection {
+  about('About HOK Helper'),
+  faq('FAQ'),
+  privacy('Privacy Policy'),
+  terms('Terms of Service'),
+  links('Friend Links');
+
+  const InfoStaticSection(this.title);
+
+  final String title;
+}
+
+class _StaticSectionBody extends ConsumerWidget {
+  const _StaticSectionBody({required this.section});
+
+  final InfoStaticSection section;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (section != InfoStaticSection.links) ...[
+          AppSectionHeader(title: section.title),
+          const SizedBox(height: 12),
+        ],
+        switch (section) {
+          InfoStaticSection.about => const _AboutDetail(),
+          InfoStaticSection.faq => const _FaqDetail(),
+          InfoStaticSection.privacy => const _PrivacyDetail(),
+          InfoStaticSection.terms => const _TermsDetail(),
+          InfoStaticSection.links => _FriendLinksSection(
+            value: ref.watch(friendLinksProvider),
+          ),
+        },
+      ],
+    );
+  }
+}
+
 class _AboutCard extends StatelessWidget {
-  const _AboutCard();
+  const _AboutCard({this.onTapRoute});
+
+  final String? onTapRoute;
 
   @override
   Widget build(BuildContext context) {
     return _InfoPanel(
       icon: Icons.shield_outlined,
       title: 'About HOK Helper',
+      onTapRoute: onTapRoute,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
@@ -91,13 +163,16 @@ class _AboutCard extends StatelessWidget {
 }
 
 class _FaqCard extends StatelessWidget {
-  const _FaqCard();
+  const _FaqCard({this.onTapRoute});
+
+  final String? onTapRoute;
 
   @override
   Widget build(BuildContext context) {
     return _InfoPanel(
       icon: Icons.help_outline,
       title: 'FAQ',
+      onTapRoute: onTapRoute,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
@@ -234,15 +309,22 @@ class _PolicyCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.body,
+    this.onTapRoute,
   });
 
   final IconData icon;
   final String title;
   final String body;
+  final String? onTapRoute;
 
   @override
   Widget build(BuildContext context) {
-    return _InfoPanel(icon: icon, title: title, child: _BodyText(body));
+    return _InfoPanel(
+      icon: icon,
+      title: title,
+      onTapRoute: onTapRoute,
+      child: _BodyText(body),
+    );
   }
 }
 
@@ -251,15 +333,18 @@ class _InfoPanel extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.child,
+    this.onTapRoute,
   });
 
   final IconData icon;
   final String title;
   final Widget child;
+  final String? onTapRoute;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final route = onTapRoute;
+    final panel = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
         borderRadius: BorderRadius.circular(16),
@@ -285,12 +370,141 @@ class _InfoPanel extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (route != null) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppTheme.muted,
+                    size: 20,
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
             child,
           ],
         ),
+      ),
+    );
+
+    if (route == null) {
+      return panel;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go(route),
+        child: panel,
+      ),
+    );
+  }
+}
+
+class _AboutDetail extends StatelessWidget {
+  const _AboutDetail();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _InfoPanel(
+      icon: Icons.shield_outlined,
+      title: 'Global Community Intel',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _BodyText(
+            'HOK Helper brings hero data, build guides, meta trends, and community tools into one mobile-first assistant for Honor of Kings players.',
+          ),
+          SizedBox(height: 12),
+          _BulletText('Cross-region hero intelligence for CN, EN, and ID'),
+          _BulletText('Build, draft, tier list, and team composition tools'),
+          _BulletText('Community content, patch tracking, and esports context'),
+        ],
+      ),
+    );
+  }
+}
+
+class _FaqDetail extends StatelessWidget {
+  const _FaqDetail();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _InfoPanel(
+      icon: Icons.help_outline,
+      title: 'Common questions',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _QuestionAnswer(
+            question: 'Where does hero data come from?',
+            answer:
+                'Hero, equipment, and stats data are normalized from HOK Helper backend sources and public game-facing datasets for region-aware app views.',
+          ),
+          SizedBox(height: 12),
+          _QuestionAnswer(
+            question: 'Can I use it while playing?',
+            answer:
+                'Use the app as a planning and strategy reference. It does not automate gameplay or replace in-match decision making.',
+          ),
+          SizedBox(height: 12),
+          _QuestionAnswer(
+            question: 'Is this an official product?',
+            answer:
+                'No. HOK Helper is an independent community assistant for learning, discussion, and strategy planning.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrivacyDetail extends StatelessWidget {
+  const _PrivacyDetail();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _InfoPanel(
+      icon: Icons.lock_outline,
+      title: 'Data use',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _BodyText(
+            'HOK Helper uses account identifiers, preferences, and interaction data to sync your mobile experience, protect sessions, and improve recommendations.',
+          ),
+          SizedBox(height: 12),
+          _BulletText('JWT sessions are used for authenticated app requests'),
+          _BulletText('Region and language preferences shape displayed data'),
+          _BulletText(
+            'Optional community and prompt actions remain user-driven',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TermsDetail extends StatelessWidget {
+  const _TermsDetail();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _InfoPanel(
+      icon: Icons.description_outlined,
+      title: 'Community conduct',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _BodyText(
+            'Use HOK Helper for lawful strategy research, community discussion, and personal gameplay planning. Shared content should remain respectful and accurate.',
+          ),
+          SizedBox(height: 12),
+          _BulletText('Do not upload abusive, illegal, or misleading content'),
+          _BulletText('AI and community tools should support fair play'),
+          _BulletText('HOK Helper is independent from the game publisher'),
+        ],
       ),
     );
   }

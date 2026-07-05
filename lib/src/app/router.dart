@@ -111,6 +111,31 @@ GoRouter createAppRouter() {
         path: '/leaderboard',
         builder: (context, state) => const PlayerLeaderboardScreen(),
       ),
+      GoRoute(
+        path: '/about',
+        builder: (context, state) =>
+            const InfoStaticPage(section: InfoStaticSection.about),
+      ),
+      GoRoute(
+        path: '/faq',
+        builder: (context, state) =>
+            const InfoStaticPage(section: InfoStaticSection.faq),
+      ),
+      GoRoute(
+        path: '/privacy',
+        builder: (context, state) =>
+            const InfoStaticPage(section: InfoStaticSection.privacy),
+      ),
+      GoRoute(
+        path: '/terms',
+        builder: (context, state) =>
+            const InfoStaticPage(section: InfoStaticSection.terms),
+      ),
+      GoRoute(
+        path: '/links',
+        builder: (context, state) =>
+            const InfoStaticPage(section: InfoStaticSection.links),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
