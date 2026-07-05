@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../features/activity/presentation/event_assistance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
+import '../features/auth/presentation/oauth_callback_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/bp/presentation/bp_dashboard_screen.dart';
 import '../features/bp/presentation/bp_scheme_detail_screen.dart';
@@ -54,6 +55,30 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/auth/google/callback',
+        builder: (context, state) => OAuthCallbackScreen(
+          provider: 'google',
+          code: state.uri.queryParameters['code'],
+          error: state.uri.queryParameters['error'],
+        ),
+      ),
+      GoRoute(
+        path: '/auth/discord/callback',
+        builder: (context, state) => OAuthCallbackScreen(
+          provider: 'discord',
+          code: state.uri.queryParameters['code'],
+          error: state.uri.queryParameters['error'],
+        ),
+      ),
+      GoRoute(
+        path: '/auth/reddit/callback',
+        builder: (context, state) => OAuthCallbackScreen(
+          provider: 'reddit',
+          code: state.uri.queryParameters['code'],
+          error: state.uri.queryParameters['error'],
+        ),
       ),
       GoRoute(
         path: '/settings',

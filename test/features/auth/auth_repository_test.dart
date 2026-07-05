@@ -237,6 +237,66 @@ void main() {
       expect(user.displayName, 'Newbie');
     });
 
+    test('logs in with OAuth provider callback code', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {
+          'access': 'oauth-access',
+          'refresh': 'oauth-refresh',
+          'user': {
+            'id': 10,
+            'username': 'oauth-user',
+            'email': 'oauth@example.test',
+          },
+        },
+      });
+      final tokenStore = _MemoryTokenStore();
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: tokenStore,
+      );
+
+      final user = await repository.loginWithOAuth(
+        provider: 'Google',
+        code: 'callback-code',
+        redirectUri: 'hokhelper://auth/google/callback',
+      );
+
+      expect(apiClient.path, '/auth/google/login');
+      expect(apiClient.body, {
+        'code': 'callback-code',
+        'redirect_uri': 'hokhelper://auth/google/callback',
+      });
+      expect(tokenStore.access, 'oauth-access');
+      expect(tokenStore.refresh, 'oauth-refresh');
+      expect(user.id, 10);
+      expect(user.username, 'oauth-user');
+    });
+
+    test('rejects unsupported OAuth providers before calling API', () async {
+      final apiClient = _FakeApiClient({'success': true});
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: _MemoryTokenStore(),
+      );
+
+      await expectLater(
+        repository.loginWithOAuth(
+          provider: 'github',
+          code: 'callback-code',
+          redirectUri: 'hokhelper://auth/github/callback',
+        ),
+        throwsA(
+          isA<ApiError>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported OAuth provider',
+          ),
+        ),
+      );
+      expect(apiClient.calls, isEmpty);
+    });
+
     test(
       'sends and verifies forgot password code then resets password',
       () async {

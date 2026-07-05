@@ -19,6 +19,27 @@ class AuthRepository {
     return _readAuthResponse(json, fallbackMessage: 'Login failed');
   }
 
+  Future<AuthUser> loginWithOAuth({
+    required String provider,
+    required String code,
+    required String redirectUri,
+  }) async {
+    final normalizedProvider = provider.trim().toLowerCase();
+    if (!{'google', 'discord', 'reddit'}.contains(normalizedProvider)) {
+      throw const ApiError(
+        kind: ApiErrorKind.backend,
+        message: 'Unsupported OAuth provider',
+      );
+    }
+
+    final json = await apiClient.postJson(
+      '/auth/$normalizedProvider/login',
+      body: {'code': code, 'redirect_uri': redirectUri},
+    );
+
+    return _readAuthResponse(json, fallbackMessage: 'OAuth login failed');
+  }
+
   Future<void> sendRegisterCode({
     required String email,
     required String turnstileToken,

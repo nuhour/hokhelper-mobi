@@ -9,6 +9,7 @@ import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/forgot_password_screen.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/login_screen.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/oauth_callback_screen.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/register_screen.dart';
 
 class _FakeAuthRepository implements AuthRepository {
@@ -22,6 +23,10 @@ class _FakeAuthRepository implements AuthRepository {
 
   var didRegister = false;
   var didReset = false;
+  var didOAuthLogin = false;
+  String? oauthProvider;
+  String? oauthCode;
+  String? oauthRedirectUri;
 
   @override
   Future<AuthUser> registerWithEmail({
@@ -46,6 +51,24 @@ class _FakeAuthRepository implements AuthRepository {
     required String newPassword,
   }) async {
     didReset = true;
+  }
+
+  @override
+  Future<AuthUser> loginWithOAuth({
+    required String provider,
+    required String code,
+    required String redirectUri,
+  }) async {
+    didOAuthLogin = true;
+    oauthProvider = provider;
+    oauthCode = code;
+    oauthRedirectUri = redirectUri;
+    return const AuthUser(
+      id: 27,
+      username: 'oauth-user',
+      email: 'oauth@example.test',
+      displayName: 'OAuth User',
+    );
   }
 }
 
@@ -223,5 +246,73 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(repository.didReset, isTrue);
+  });
+
+  testWidgets('OAuth callback exchanges code and opens me tab', (tester) async {
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final router = GoRouter(
+      initialLocation: '/auth/google/callback?code=mobile-code',
+      routes: [
+        GoRoute(
+          path: '/auth/google/callback',
+          builder: (_, state) => OAuthCallbackScreen(
+            provider: 'google',
+            code: state.uri.queryParameters['code'],
+            error: state.uri.queryParameters['error'],
+          ),
+        ),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.didOAuthLogin, isTrue);
+    expect(repository.oauthProvider, 'google');
+    expect(repository.oauthCode, 'mobile-code');
+    expect(repository.oauthRedirectUri, 'hokhelper://auth/google/callback');
+    expect(router.routerDelegate.currentConfiguration.uri.path, '/me');
+  });
+
+  testWidgets('OAuth callback shows an error when code is missing', (
+    tester,
+  ) async {
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final router = GoRouter(
+      initialLocation: '/auth/discord/callback',
+      routes: [
+        GoRoute(
+          path: '/auth/discord/callback',
+          builder: (_, state) => OAuthCallbackScreen(
+            provider: 'discord',
+            code: state.uri.queryParameters['code'],
+            error: state.uri.queryParameters['error'],
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.didOAuthLogin, isFalse);
+    expect(find.text('Missing OAuth callback code.'), findsOneWidget);
   });
 }
