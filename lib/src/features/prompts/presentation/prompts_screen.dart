@@ -43,9 +43,11 @@ class PromptsScreen extends ConsumerStatefulWidget {
   const PromptsScreen({
     super.key,
     this.initialAction = PromptListAction.explore,
+    this.initialPromptId,
   });
 
   final PromptListAction initialAction;
+  final String? initialPromptId;
 
   @override
   ConsumerState<PromptsScreen> createState() => _PromptsScreenState();
@@ -68,6 +70,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       value: promptsValue,
       retry: () => ref.invalidate(promptListProvider(_action)),
       data: (prompts) {
+        final visiblePrompts = _visiblePrompts(prompts);
         return RefreshIndicator(
           onRefresh: () => ref.refresh(promptListProvider(_action).future),
           child: CustomScrollView(
@@ -122,9 +125,19 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   sliver: SliverList.separated(
-                    itemCount: prompts.length,
+                    itemCount: visiblePrompts.length,
                     itemBuilder: (context, index) {
-                      return _PromptCard(prompt: prompts[index]);
+                      final prompt = visiblePrompts[index];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (prompt.id == widget.initialPromptId) ...[
+                            const _SharedPromptBadge(),
+                            const SizedBox(height: 8),
+                          ],
+                          _PromptCard(prompt: prompt),
+                        ],
+                      );
                     },
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 12),
@@ -134,6 +147,46 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
           ),
         );
       },
+    );
+  }
+
+  List<PromptSummary> _visiblePrompts(List<PromptSummary> prompts) {
+    final initialPromptId = widget.initialPromptId?.trim();
+    if (initialPromptId == null || initialPromptId.isEmpty) {
+      return prompts;
+    }
+
+    final focusedIndex = prompts.indexWhere(
+      (prompt) => prompt.id == initialPromptId,
+    );
+    if (focusedIndex < 0) {
+      return prompts;
+    }
+
+    final focused = prompts[focusedIndex];
+    final rest = prompts.where((prompt) => prompt.id != initialPromptId);
+    return [focused, ...rest].toList(growable: false);
+  }
+}
+
+class _SharedPromptBadge extends StatelessWidget {
+  const _SharedPromptBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.32)),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Text(
+          'Shared prompt',
+          style: TextStyle(color: AppTheme.gold, fontWeight: FontWeight.w800),
+        ),
+      ),
     );
   }
 }

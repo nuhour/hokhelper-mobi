@@ -512,6 +512,7 @@ GoRouter createAppRouter() {
                       initialAction: promptListActionFromRoute(
                         state.uri.queryParameters['tab'],
                       ),
+                      initialPromptId: state.uri.queryParameters['promptId'],
                     ),
                   ),
                   GoRoute(

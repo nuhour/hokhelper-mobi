@@ -80,4 +80,61 @@ void main() {
     expect(find.text('Favorite prompt'), findsOneWidget);
     expect(find.text('Cyber skin concept'), findsNothing);
   });
+
+  testWidgets('pins shared prompt from initial prompt id', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '1',
+                title: 'Prompt 1',
+                content: 'First prompt.',
+                tags: [],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 1,
+                favoriteCount: 1,
+                isPublic: true,
+              ),
+              PromptSummary(
+                id: '2',
+                title: 'Prompt 2',
+                content: 'Second prompt.',
+                tags: [],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 2,
+                favoriteCount: 2,
+                isPublic: true,
+              ),
+              PromptSummary(
+                id: '42',
+                title: 'Shared prompt target',
+                content: 'Prompt shared from the hokx portal.',
+                tags: ['share'],
+                imageUrl: '',
+                authorName: 'sharer',
+                likeCount: 12,
+                favoriteCount: 7,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: PromptsScreen(initialPromptId: '42')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shared prompt'), findsOneWidget);
+    expect(find.text('Shared prompt target'), findsOneWidget);
+    expect(find.text('Prompt shared from the hokx portal.'), findsOneWidget);
+    expect(find.text('sharer'), findsOneWidget);
+  });
 }

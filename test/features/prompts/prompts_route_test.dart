@@ -47,4 +47,53 @@ void main() {
     expect(find.text('Favorite prompt'), findsOneWidget);
     expect(find.text('No prompts found'), findsNothing);
   });
+
+  testWidgets('web prompt share query pins the shared mobile prompt', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/prompts?promptId=42');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '1',
+                title: 'Prompt 1',
+                content: 'First prompt.',
+                tags: [],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 1,
+                favoriteCount: 1,
+                isPublic: true,
+              ),
+              PromptSummary(
+                id: '42',
+                title: 'Shared route prompt',
+                content: 'Prompt opened from a hokx share link.',
+                tags: ['share'],
+                imageUrl: '',
+                authorName: 'sharer',
+                likeCount: 12,
+                favoriteCount: 7,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/tools/prompts');
+    expect(find.text('Shared prompt'), findsOneWidget);
+    expect(find.text('Shared route prompt'), findsOneWidget);
+    expect(find.text('Prompt opened from a hokx share link.'), findsOneWidget);
+  });
 }
