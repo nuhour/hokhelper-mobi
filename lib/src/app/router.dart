@@ -34,6 +34,8 @@ import '../features/stats/presentation/stats_screen.dart';
 import '../features/stats/presentation/hero_trends_screen.dart';
 import '../features/teambuild/presentation/team_builder_screen.dart';
 import '../features/tierlist_tool/presentation/tierlist_tool_screen.dart';
+import '../features/topics/presentation/topic_article_screen.dart';
+import '../features/topics/presentation/topic_hub_screen.dart';
 import 'app_shell.dart';
 
 GoRouter createAppRouter() {
@@ -135,6 +137,30 @@ GoRouter createAppRouter() {
         path: '/links',
         builder: (context, state) =>
             const InfoStaticPage(section: InfoStaticSection.links),
+      ),
+      GoRoute(
+        path: '/honor-of-kings-world-tier-list',
+        redirect: (context, state) => '/hok-world/hok-world-tier-list',
+      ),
+      GoRoute(
+        path: '/hok-world-tier-list',
+        redirect: (context, state) => '/hok-world/hok-world-tier-list',
+      ),
+      GoRoute(
+        path: '/hok-world',
+        builder: (context, state) =>
+            const TopicHubScreen(topicKey: 'hok-world'),
+        routes: [
+          GoRoute(
+            path: ':slug',
+            builder: (context, state) {
+              return TopicArticleScreen(
+                topicKey: 'hok-world',
+                slug: state.pathParameters['slug'] ?? '',
+              );
+            },
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
