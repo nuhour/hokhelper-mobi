@@ -43,6 +43,45 @@ void main() {
     expect(find.text('12W / 3L'), findsOneWidget);
     expect(find.text('4 - 3'), findsNothing);
   });
+
+  testWidgets('legacy esports team query opens the team route', (tester) async {
+    final router = createAppRouter();
+    router.go('/esports?team_id=1');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/esports/teams/1');
+    expect(find.text('Chongqing Wolves'), findsOneWidget);
+    expect(find.text('4 - 3'), findsNothing);
+  });
+
+  testWidgets('legacy esports player query opens the player route', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/esports?player_id=8');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/esports/players/8',
+    );
+    expect(find.text('Fly'), findsOneWidget);
+    expect(find.text('KPL Spring'), findsNothing);
+  });
 }
 
 List<Override> _esportsOverrides() {

@@ -225,6 +225,17 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/esports',
+        redirect: (context, state) {
+          final teamId = state.uri.queryParameters['team_id']?.trim() ?? '';
+          if (teamId.isNotEmpty) {
+            return '/esports/teams/$teamId';
+          }
+          final playerId = state.uri.queryParameters['player_id']?.trim() ?? '';
+          if (playerId.isNotEmpty) {
+            return '/esports/players/$playerId';
+          }
+          return null;
+        },
         builder: (context, state) => const EsportsScreen(),
         routes: [
           GoRoute(
