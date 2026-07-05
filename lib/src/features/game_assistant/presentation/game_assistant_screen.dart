@@ -450,38 +450,167 @@ class _DownloadPanel extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.qr_code_2_outlined, color: AppTheme.muted, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Scan to download',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.muted,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 92,
+                      height: 92,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.qr_code_2_outlined,
+                        color: Color(0xFF334155),
+                        size: 58,
+                      ),
+                    ),
+                    Container(
+                      width: 92,
+                      height: 92,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.52),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    Transform.rotate(
+                      angle: -0.18,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.94),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'COMING SOON',
+                          style: TextStyle(
+                            color: Color(0xFF1F2937),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Coming soon',
+                        style: TextStyle(
+                          color: AppTheme.gold,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      _StoreButton(
+                        icon: Icons.apple,
+                        eyebrow: 'Download on the',
+                        label: 'App Store',
+                      ),
+                      SizedBox(height: 10),
+                      _StoreButton(
+                        icon: Icons.play_arrow_rounded,
+                        eyebrow: 'Get it on',
+                        label: 'Google Play',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Store download links will unlock when the companion build is ready.',
+              style: TextStyle(color: AppTheme.muted, height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StoreButton extends StatelessWidget {
+  const _StoreButton({
+    required this.icon,
+    required this.eyebrow,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String eyebrow;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.qr_code_2_outlined,
-                color: AppTheme.muted,
-                size: 42,
-              ),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
+            Icon(icon, color: AppTheme.text, size: 24),
+            const SizedBox(width: 10),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Coming soon',
-                    style: TextStyle(
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w900,
+                    eyebrow,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppTheme.muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    'Store download links will unlock when the companion build is ready.',
-                    style: TextStyle(color: AppTheme.muted, height: 1.35),
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),

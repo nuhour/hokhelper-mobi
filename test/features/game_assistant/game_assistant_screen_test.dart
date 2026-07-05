@@ -17,5 +17,10 @@ void main() {
     expect(find.text('Enemy cooldowns'), findsWidgets);
     expect(find.text('AI tactical tips'), findsOneWidget);
     expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.text('Scan to download'), findsOneWidget);
+    expect(find.text('Download on the'), findsOneWidget);
+    expect(find.text('App Store'), findsOneWidget);
+    expect(find.text('Get it on'), findsOneWidget);
+    expect(find.text('Google Play'), findsOneWidget);
   });
 }
