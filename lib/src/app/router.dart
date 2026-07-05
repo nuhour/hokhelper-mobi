@@ -31,6 +31,7 @@ import '../features/rankings/presentation/player_leaderboard_screen.dart';
 import '../features/profile/presentation/me_screen.dart';
 import '../features/profile/presentation/public_profile_screen.dart';
 import '../features/rankings/presentation/tools_screen.dart';
+import '../features/search/presentation/search_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
 import '../features/stats/presentation/hero_trends_screen.dart';
@@ -57,6 +58,10 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
         path: '/notifications',
