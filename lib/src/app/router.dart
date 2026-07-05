@@ -448,6 +448,9 @@ GoRouter createAppRouter() {
                       initialHeroId: int.tryParse(
                         state.uri.queryParameters['hero_id'] ?? '',
                       ),
+                      initialSchemeId: int.tryParse(
+                        state.uri.queryParameters['scheme'] ?? '',
+                      ),
                     ),
                   ),
                   GoRoute(

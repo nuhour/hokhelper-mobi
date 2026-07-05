@@ -164,6 +164,122 @@ void main() {
     expect(find.text('Blazing Mage'), findsOneWidget);
   });
 
+  testWidgets('pins shared community build from scheme deep link', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '199',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 1,
+                title: 'Public build 1',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 1,
+                favoriteCount: 1,
+                cloneCount: 1,
+                isPublic: true,
+              ),
+              BuildSchemeSummary(
+                id: 2,
+                title: 'Public build 2',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 2,
+                favoriteCount: 2,
+                cloneCount: 2,
+                isPublic: true,
+              ),
+              BuildSchemeSummary(
+                id: 3,
+                title: 'Public build 3',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 3,
+                favoriteCount: 3,
+                cloneCount: 3,
+                isPublic: true,
+              ),
+              BuildSchemeSummary(
+                id: 4,
+                title: 'Public build 4',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 4,
+                favoriteCount: 4,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+              BuildSchemeSummary(
+                id: 5,
+                title: 'Public build 5',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 5,
+                favoriteCount: 5,
+                cloneCount: 5,
+                isPublic: true,
+              ),
+              BuildSchemeSummary(
+                id: 42,
+                title: 'Shared target build',
+                heroName: 'Angela',
+                authorName: 'sharer',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 8,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+            ];
+          }),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            return const [null, null, null];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(
+              equips: [],
+              runes: [],
+              summonerSkills: [],
+            );
+          }),
+          buildSimSaveSchemeProvider.overrideWith((ref) {
+            return (_) async {};
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: BuildSimulatorScreen(initialSchemeId: 42)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shared build'), findsOneWidget);
+    expect(find.text('Shared target build'), findsOneWidget);
+    expect(find.text('Angela · sharer'), findsOneWidget);
+  });
+
   testWidgets('opens slot editor and saves a mobile build draft', (
     tester,
   ) async {

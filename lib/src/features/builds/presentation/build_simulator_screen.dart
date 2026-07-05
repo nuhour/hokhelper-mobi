@@ -85,9 +85,14 @@ final buildSimCloneSchemeProvider =
     });
 
 class BuildSimulatorScreen extends ConsumerStatefulWidget {
-  const BuildSimulatorScreen({this.initialHeroId, super.key});
+  const BuildSimulatorScreen({
+    this.initialHeroId,
+    this.initialSchemeId,
+    super.key,
+  });
 
   final int? initialHeroId;
+  final int? initialSchemeId;
 
   @override
   ConsumerState<BuildSimulatorScreen> createState() =>
@@ -207,6 +212,7 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
               const SizedBox(height: 22),
               _CommunityBuilds(
                 value: publicSchemesValue,
+                focusedSchemeId: widget.initialSchemeId,
                 onActionDone: heroId == null
                     ? null
                     : () {
@@ -1097,9 +1103,14 @@ class _SummonerSkillSelector extends StatelessWidget {
 }
 
 class _CommunityBuilds extends ConsumerStatefulWidget {
-  const _CommunityBuilds({required this.value, required this.onActionDone});
+  const _CommunityBuilds({
+    required this.value,
+    required this.focusedSchemeId,
+    required this.onActionDone,
+  });
 
   final AsyncValue<List<BuildSchemeSummary>> value;
+  final int? focusedSchemeId;
   final VoidCallback? onActionDone;
 
   @override
@@ -1131,9 +1142,14 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
                 message: 'Pull to refresh or switch region in settings.',
               );
             }
+            final visibleSchemes = _visibleSchemes(schemes);
             return Column(
               children: [
-                for (final scheme in schemes.take(5)) ...[
+                for (final scheme in visibleSchemes) ...[
+                  if (scheme.id == widget.focusedSchemeId) ...[
+                    const _SharedBuildBadge(),
+                    const SizedBox(height: 8),
+                  ],
                   BuildSchemeCard(scheme: scheme),
                   const SizedBox(height: 8),
                   _CommunityBuildActions(
@@ -1170,6 +1186,24 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
     );
   }
 
+  List<BuildSchemeSummary> _visibleSchemes(List<BuildSchemeSummary> schemes) {
+    final focusedSchemeId = widget.focusedSchemeId;
+    if (focusedSchemeId == null) {
+      return schemes.take(5).toList(growable: false);
+    }
+
+    final focusedIndex = schemes.indexWhere(
+      (scheme) => scheme.id == focusedSchemeId,
+    );
+    if (focusedIndex < 0) {
+      return schemes.take(5).toList(growable: false);
+    }
+
+    final focused = schemes[focusedIndex];
+    final rest = schemes.where((scheme) => scheme.id != focusedSchemeId);
+    return [focused, ...rest].take(5).toList(growable: false);
+  }
+
   Future<void> _runAction(String key, Future<void> Function() action) async {
     setState(() => _busyAction = key);
     try {
@@ -1180,6 +1214,31 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
         setState(() => _busyAction = null);
       }
     }
+  }
+}
+
+class _SharedBuildBadge extends StatelessWidget {
+  const _SharedBuildBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.gold.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppTheme.gold.withValues(alpha: 0.32)),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Text(
+            'Shared build',
+            style: TextStyle(color: AppTheme.gold, fontWeight: FontWeight.w800),
+          ),
+        ),
+      ),
+    );
   }
 }
 
