@@ -23,118 +23,192 @@ final heroGalleryProvider = FutureProvider<List<HeroSummary>>((ref) async {
       .loadHeroes(settings.region.regionId);
 });
 
-class HeroGalleryScreen extends ConsumerWidget {
-  const HeroGalleryScreen({super.key});
+class HeroGalleryScreen extends ConsumerStatefulWidget {
+  const HeroGalleryScreen({this.initialSearchQuery, super.key});
+
+  final String? initialSearchQuery;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HeroGalleryScreen> createState() => _HeroGalleryScreenState();
+}
+
+class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final initialQuery = widget.initialSearchQuery?.trim() ?? '';
+    if (initialQuery.isNotEmpty) {
+      _query = initialQuery;
+      _searchController.text = initialQuery;
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final heroesValue = ref.watch(heroGalleryProvider);
 
-    return AppAsyncView<List<HeroSummary>>(
-      value: heroesValue,
-      retry: () => ref.invalidate(heroGalleryProvider),
-      data: (heroes) {
-        return RefreshIndicator(
-          onRefresh: () => ref.refresh(heroGalleryProvider.future),
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Expanded(
-                            child: AppSectionHeader(title: 'Heroes'),
-                          ),
-                          IconButton.filledTonal(
-                            tooltip: 'Hero Trends',
-                            onPressed: () => context.go('/trends'),
-                            icon: const Icon(Icons.trending_up_outlined),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            tooltip: 'World Map',
-                            onPressed: () => context.go('/world-map'),
-                            icon: const Icon(Icons.travel_explore_outlined),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            tooltip: 'Hero Relationships',
-                            onPressed: () => context.go('/relationships'),
-                            icon: const Icon(Icons.hub_outlined),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Browse the international hero roster.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: () => context.go('/trends'),
-                            icon: const Icon(Icons.trending_up_outlined),
-                            label: const Text('Hero Trends'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () => context.go('/world-map'),
-                            icon: const Icon(Icons.travel_explore_outlined),
-                            label: const Text('World Map'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () => context.go('/relationships'),
-                            icon: const Icon(Icons.hub_outlined),
-                            label: const Text('Hero Relationships'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (heroes.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: AppEmptyState(
-                    icon: Icons.shield_outlined,
-                    title: 'No heroes found',
-                    message:
-                        'Pull to refresh and try loading the roster again.',
-                  ),
-                )
-              else
+    return Material(
+      color: AppTheme.bg,
+      child: AppAsyncView<List<HeroSummary>>(
+        value: heroesValue,
+        retry: () => ref.invalidate(heroGalleryProvider),
+        data: (heroes) {
+          final visibleHeroes = _filterHeroes(heroes);
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(heroGalleryProvider.future),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  sliver: SliverGrid.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 0.68,
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: AppSectionHeader(title: 'Heroes'),
+                            ),
+                            IconButton.filledTonal(
+                              tooltip: 'Hero Trends',
+                              onPressed: () => context.go('/trends'),
+                              icon: const Icon(Icons.trending_up_outlined),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              tooltip: 'World Map',
+                              onPressed: () => context.go('/world-map'),
+                              icon: const Icon(Icons.travel_explore_outlined),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              tooltip: 'Hero Relationships',
+                              onPressed: () => context.go('/relationships'),
+                              icon: const Icon(Icons.hub_outlined),
+                            ),
+                          ],
                         ),
-                    itemCount: heroes.length,
-                    itemBuilder: (context, index) {
-                      return _HeroCard(hero: heroes[index]);
-                    },
+                        const SizedBox(height: 8),
+                        Text(
+                          'Browse the international hero roster.',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => context.go('/trends'),
+                              icon: const Icon(Icons.trending_up_outlined),
+                              label: const Text('Hero Trends'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => context.go('/world-map'),
+                              icon: const Icon(Icons.travel_explore_outlined),
+                              label: const Text('World Map'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => context.go('/relationships'),
+                              icon: const Icon(Icons.hub_outlined),
+                              label: const Text('Hero Relationships'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (value) => setState(() => _query = value),
+                          style: const TextStyle(color: AppTheme.text),
+                          decoration: InputDecoration(
+                            hintText: 'Search hero or title',
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: AppTheme.muted,
+                            ),
+                            suffixIcon: _query.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Clear',
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _query = '');
+                                    },
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: AppTheme.muted,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-            ],
-          ),
-        );
-      },
+                if (visibleHeroes.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppEmptyState(
+                      icon: Icons.shield_outlined,
+                      title: _query.trim().isEmpty
+                          ? 'No heroes found'
+                          : 'No matching heroes',
+                      message: _query.trim().isEmpty
+                          ? 'Pull to refresh and try loading the roster again.'
+                          : 'Try another hero name or title.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    sliver: SliverGrid.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.68,
+                          ),
+                      itemCount: visibleHeroes.length,
+                      itemBuilder: (context, index) {
+                        return _HeroCard(hero: visibleHeroes[index]);
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
+  }
+
+  List<HeroSummary> _filterHeroes(List<HeroSummary> heroes) {
+    final normalizedQuery = _query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) {
+      return heroes;
+    }
+    return heroes
+        .where(
+          (hero) =>
+              hero.name.toLowerCase().contains(normalizedQuery) ||
+              hero.title.toLowerCase().contains(normalizedQuery) ||
+              hero.heroId.toLowerCase().contains(normalizedQuery) ||
+              hero.id.toLowerCase().contains(normalizedQuery),
+        )
+        .toList(growable: false);
   }
 }
 

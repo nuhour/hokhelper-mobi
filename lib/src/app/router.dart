@@ -54,6 +54,18 @@ String _communityLeaksTarget(Uri uri) {
   ).toString();
 }
 
+String _heroGalleryTarget(Uri uri) {
+  final heroId = int.tryParse(uri.queryParameters['hero_id'] ?? '');
+  if (heroId != null && heroId > 0) {
+    return '/heroes/$heroId';
+  }
+  final query = uri.queryParameters['q']?.trim();
+  if (query == null || query.isEmpty) {
+    return '/heroes';
+  }
+  return Uri(path: '/heroes', queryParameters: {'q': query}).toString();
+}
+
 GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: '/',
@@ -122,15 +134,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/hero-gallery',
-        redirect: (context, state) {
-          final heroId = int.tryParse(
-            state.uri.queryParameters['hero_id'] ?? '',
-          );
-          if (heroId != null && heroId > 0) {
-            return '/heroes/$heroId';
-          }
-          return '/heroes';
-        },
+        redirect: (context, state) => _heroGalleryTarget(state.uri),
       ),
       GoRoute(
         path: '/hero-gallery/:heroId',
@@ -380,7 +384,9 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/heroes',
-                builder: (context, state) => const HeroGalleryScreen(),
+                builder: (context, state) => HeroGalleryScreen(
+                  initialSearchQuery: state.uri.queryParameters['q'],
+                ),
                 routes: [
                   GoRoute(
                     path: ':heroId',

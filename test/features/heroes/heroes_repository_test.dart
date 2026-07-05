@@ -236,4 +236,38 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('hero gallery filters from initial search query', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroGalleryProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '1',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Rider',
+              ),
+              HeroSummary(
+                id: '2',
+                name: 'Angela',
+                avatar: '',
+                title: 'Arcane Mage',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: HeroGalleryScreen(initialSearchQuery: 'Lam')),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
+    expect(find.text('Shark Rider'), findsOneWidget);
+    expect(find.text('Angela'), findsNothing);
+  });
 }
