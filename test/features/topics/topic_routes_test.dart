@@ -80,6 +80,48 @@ void main() {
     expect(find.text('Back to Hok World Hub'), findsOneWidget);
   });
 
+  testWidgets('legacy topics slug route opens the hok world article detail', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/topics/hok-world-tier-list');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          topicArticlesProvider((
+            'hok-world-tier-list',
+            12,
+          )).overrideWith((ref) async => const []),
+          topicArticleProvider('hok-world-tier-list').overrideWith((ref) async {
+            return const TopicArticleDetail(
+              id: 11,
+              slug: 'hok-world-tier-list',
+              topicKey: 'hok-world',
+              locale: 'en',
+              title: 'HOK World Tier List',
+              excerpt: 'A starter guide for HOK World rankings.',
+              content: '## Why it matters\nUse hero roles and stats together.',
+              seoTitle: 'HOK World Tier List | HOK Helper',
+              seoDescription: 'Ranked context for HOK World.',
+              coverImageUrl: '',
+              tags: ['Guide', 'Meta'],
+              availableLocales: ['en', 'zh'],
+              publishedAt: '2026-07-01 10:00:00',
+              updatedAt: '2026-07-02 10:00:00',
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Why it matters'), findsOneWidget);
+    expect(find.text('Back to Hok World Hub'), findsOneWidget);
+  });
+
   testWidgets('hok world hub opens a topic article detail', (tester) async {
     final router = createAppRouter();
     router.go('/hok-world');

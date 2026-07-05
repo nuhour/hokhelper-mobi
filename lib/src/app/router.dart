@@ -240,6 +240,13 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/topics/:topicKey',
+        redirect: (context, state) {
+          final topicKey = state.pathParameters['topicKey'] ?? '';
+          if (state.uri.pathSegments.length == 2 && topicKey != 'hok-world') {
+            return '/hok-world/$topicKey';
+          }
+          return null;
+        },
         builder: (context, state) {
           return TopicHubScreen(
             topicKey: state.pathParameters['topicKey'] ?? '',
