@@ -196,7 +196,9 @@ GoRouter createAppRouter() {
           }
           return null;
         },
-        builder: (context, state) => const SkinGalleryScreen(),
+        builder: (context, state) => SkinGalleryScreen(
+          initialSearchQuery: state.uri.queryParameters['q'],
+        ),
         routes: [
           GoRoute(
             path: ':skinId',
@@ -205,6 +207,7 @@ GoRouter createAppRouter() {
                 initialSkinId: int.tryParse(
                   state.pathParameters['skinId'] ?? '',
                 ),
+                initialSearchQuery: state.uri.queryParameters['q'],
               );
             },
           ),
@@ -426,7 +429,9 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'skins',
-                    builder: (context, state) => const SkinGalleryScreen(),
+                    builder: (context, state) => SkinGalleryScreen(
+                      initialSearchQuery: state.uri.queryParameters['q'],
+                    ),
                   ),
                   GoRoute(
                     path: 'cgs',

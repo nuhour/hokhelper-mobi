@@ -76,4 +76,47 @@ void main() {
     expect(find.text('4.5'), findsOneWidget);
     expect(find.text('12 ratings'), findsOneWidget);
   });
+
+  testWidgets('filters skins from initial search query', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          skinGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 1001,
+                kind: ContentKind.skin,
+                title: 'Crimson Hunter',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Hunter Series',
+                rating: 4.5,
+                ratingCount: 12,
+                viewCount: 0,
+              ),
+              ContentItemSummary(
+                id: 1002,
+                kind: ContentKind.skin,
+                title: 'Moonlight Tune',
+                heroName: 'Angela',
+                imageUrl: '',
+                subtitle: 'Music Series',
+                rating: 3.5,
+                ratingCount: 4,
+                viewCount: 0,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: SkinGalleryScreen(initialSearchQuery: 'Lam')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
+    expect(find.text('Crimson Hunter'), findsOneWidget);
+    expect(find.text('Moonlight Tune'), findsNothing);
+  });
 }

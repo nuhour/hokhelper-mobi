@@ -28,9 +28,14 @@ final skinDetailProvider = FutureProvider.family<SkinDetail, int>((
 });
 
 class SkinGalleryScreen extends ConsumerStatefulWidget {
-  const SkinGalleryScreen({this.initialSkinId, super.key});
+  const SkinGalleryScreen({
+    this.initialSkinId,
+    this.initialSearchQuery,
+    super.key,
+  });
 
   final int? initialSkinId;
+  final String? initialSearchQuery;
 
   @override
   ConsumerState<SkinGalleryScreen> createState() => _SkinGalleryScreenState();
@@ -41,6 +46,16 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   String _query = '';
   _SkinSort _sort = _SkinSort.latest;
   int? _openedInitialSkinId;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialQuery = widget.initialSearchQuery?.trim() ?? '';
+    if (initialQuery.isNotEmpty) {
+      _query = initialQuery;
+      _searchController.text = initialQuery;
+    }
+  }
 
   @override
   void dispose() {
