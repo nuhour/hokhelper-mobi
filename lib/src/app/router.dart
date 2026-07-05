@@ -444,7 +444,11 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'build-sim',
-                    builder: (context, state) => const BuildSimulatorScreen(),
+                    builder: (context, state) => BuildSimulatorScreen(
+                      initialHeroId: int.tryParse(
+                        state.uri.queryParameters['hero_id'] ?? '',
+                      ),
+                    ),
                   ),
                   GoRoute(
                     path: 'bp-simulator',

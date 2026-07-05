@@ -94,6 +94,76 @@ void main() {
     },
   );
 
+  testWidgets('selects initial hero from build simulator deep link', (
+    tester,
+  ) async {
+    final requestedSlots = <int>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '199',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+              HeroSummary(
+                id: '166',
+                heroId: '166',
+                name: 'Angela',
+                avatar: '',
+                title: 'Blazing Mage',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async => const []),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            requestedSlots.add(heroId);
+            return [
+              BuildSchemeSummary(
+                id: heroId,
+                title: heroId == 166 ? 'Angela opener' : 'Lam opener',
+                heroName: heroId == 166 ? 'Angela' : 'Lam',
+                authorName: 'me',
+                equipmentIcons: const [],
+                likeCount: 0,
+                favoriteCount: 0,
+                cloneCount: 0,
+                isPublic: false,
+                slotIndex: 1,
+              ),
+              null,
+              null,
+            ];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(
+              equips: [],
+              runes: [],
+              summonerSkills: [],
+            );
+          }),
+          buildSimSaveSchemeProvider.overrideWith((ref) {
+            return (_) async {};
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: BuildSimulatorScreen(initialHeroId: 166)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requestedSlots, contains(166));
+    expect(find.text('Angela'), findsWidgets);
+    expect(find.text('Angela opener'), findsOneWidget);
+    expect(find.text('Blazing Mage'), findsOneWidget);
+  });
+
   testWidgets('opens slot editor and saves a mobile build draft', (
     tester,
   ) async {

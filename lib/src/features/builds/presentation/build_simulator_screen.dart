@@ -85,7 +85,9 @@ final buildSimCloneSchemeProvider =
     });
 
 class BuildSimulatorScreen extends ConsumerStatefulWidget {
-  const BuildSimulatorScreen({super.key});
+  const BuildSimulatorScreen({this.initialHeroId, super.key});
+
+  final int? initialHeroId;
 
   @override
   ConsumerState<BuildSimulatorScreen> createState() =>
@@ -94,8 +96,17 @@ class BuildSimulatorScreen extends ConsumerStatefulWidget {
 
 class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
   int _selectedHeroIndex = 0;
+  bool _didResolveInitialHero = false;
   int? _editingSlotIndex;
   BuildSchemeSummary? _editingScheme;
+
+  @override
+  void didUpdateWidget(covariant BuildSimulatorScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialHeroId != widget.initialHeroId) {
+      _didResolveInitialHero = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +117,7 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
       value: heroesValue,
       retry: () => ref.invalidate(buildSimHeroesProvider),
       data: (heroes) {
+        _resolveInitialHero(heroes);
         final selectedHero = heroes.isEmpty
             ? null
             : heroes[_selectedHeroIndex.clamp(0, heroes.length - 1)];
@@ -207,6 +219,22 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
         );
       },
     );
+  }
+
+  void _resolveInitialHero(List<HeroSummary> heroes) {
+    final initialHeroId = widget.initialHeroId;
+    if (_didResolveInitialHero || initialHeroId == null || heroes.isEmpty) {
+      return;
+    }
+
+    final index = heroes.indexWhere((hero) {
+      return int.tryParse(hero.heroId) == initialHeroId ||
+          int.tryParse(hero.id) == initialHeroId;
+    });
+    if (index >= 0) {
+      _selectedHeroIndex = index;
+    }
+    _didResolveInitialHero = true;
   }
 }
 
