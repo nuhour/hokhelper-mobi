@@ -30,13 +30,39 @@ final esportsPlayersProvider = FutureProvider<List<EsportsPlayerSummary>>((
   return ref.watch(esportsRepositoryProvider).loadPlayers();
 });
 
+enum EsportsInitialTab {
+  matches,
+  teams,
+  players;
+
+  int get tabIndex => switch (this) {
+    EsportsInitialTab.matches => 0,
+    EsportsInitialTab.teams => 1,
+    EsportsInitialTab.players => 2,
+  };
+}
+
+EsportsInitialTab esportsInitialTabFromRoute(String? value) {
+  return switch ((value ?? '').trim().toLowerCase()) {
+    'teams' => EsportsInitialTab.teams,
+    'players' => EsportsInitialTab.players,
+    'stats' => EsportsInitialTab.teams,
+    'schedule' => EsportsInitialTab.matches,
+    'matches' => EsportsInitialTab.matches,
+    _ => EsportsInitialTab.matches,
+  };
+}
+
 class EsportsScreen extends ConsumerWidget {
-  const EsportsScreen({super.key});
+  const EsportsScreen({super.key, this.initialTab = EsportsInitialTab.matches});
+
+  final EsportsInitialTab initialTab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
       length: 3,
+      initialIndex: initialTab.tabIndex,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: NestedScrollView(

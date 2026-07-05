@@ -114,6 +114,34 @@ GoRouter createAppRouter() {
         builder: (context, state) => const PlayerLeaderboardScreen(),
       ),
       GoRoute(
+        path: '/esports',
+        builder: (context, state) => const EsportsScreen(),
+        routes: [
+          GoRoute(
+            path: 'teams/:teamId',
+            builder: (context, state) {
+              return const EsportsScreen(initialTab: EsportsInitialTab.teams);
+            },
+          ),
+          GoRoute(
+            path: 'players/:playerId',
+            builder: (context, state) {
+              return const EsportsScreen(initialTab: EsportsInitialTab.players);
+            },
+          ),
+          GoRoute(
+            path: ':tab',
+            builder: (context, state) {
+              return EsportsScreen(
+                initialTab: esportsInitialTabFromRoute(
+                  state.pathParameters['tab'],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      GoRoute(
         path: '/about',
         builder: (context, state) =>
             const InfoStaticPage(section: InfoStaticSection.about),
