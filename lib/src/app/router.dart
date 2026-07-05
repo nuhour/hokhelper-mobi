@@ -84,6 +84,37 @@ GoRouter createAppRouter() {
           );
         },
       ),
+      GoRoute(path: '/hero-gallery', redirect: (context, state) => '/heroes'),
+      GoRoute(
+        path: '/hero-gallery/:heroId',
+        redirect: (context, state) =>
+            '/heroes/${state.pathParameters['heroId'] ?? ''}',
+      ),
+      GoRoute(
+        path: '/community',
+        redirect: (context, state) => '/content/community',
+      ),
+      GoRoute(
+        path: '/community/leaks',
+        redirect: (context, state) => '/content/community',
+      ),
+      GoRoute(
+        path: '/event-assistance',
+        redirect: (context, state) => '/content/event-assistance',
+      ),
+      GoRoute(
+        path: '/patch-notes',
+        redirect: (context, state) => '/content/patch-notes',
+      ),
+      GoRoute(
+        path: '/versions',
+        redirect: (context, state) => '/content/patch-notes',
+      ),
+      GoRoute(path: '/stats', redirect: (context, state) => '/tools/stats'),
+      GoRoute(
+        path: '/tier-list',
+        redirect: (context, state) => '/tools/rankings',
+      ),
       GoRoute(
         path: '/skin-gallery',
         builder: (context, state) => const SkinGalleryScreen(),
