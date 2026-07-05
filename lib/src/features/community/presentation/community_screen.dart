@@ -34,12 +34,15 @@ final leakPostsProvider = FutureProvider<List<LeakPostSummary>>((ref) async {
 });
 
 class CommunityScreen extends ConsumerWidget {
-  const CommunityScreen({super.key});
+  const CommunityScreen({this.initialTabIndex = 0, super.key});
+
+  final int initialTabIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
       length: 2,
+      initialIndex: initialTabIndex.clamp(0, 1),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: NestedScrollView(

@@ -14,14 +14,16 @@ void main() {
   testWidgets('web portal paths redirect to mobile route equivalents', (
     tester,
   ) async {
-    final aliases = <String, String>{
-      '/hero-gallery': '/heroes',
-      '/community': '/content/community',
-      '/community/leaks': '/content/community',
-      '/event-assistance': '/content/event-assistance',
-      '/patch-notes': '/content/patch-notes',
-      '/versions': '/content/patch-notes',
-      '/stats': '/tools/stats',
+    final aliases = <String, ({String path, String? tab})>{
+      '/hero-gallery': (path: '/heroes', tab: null),
+      '/community': (path: '/content/community', tab: null),
+      '/community/leaks': (path: '/content/community', tab: 'leaks'),
+      '/leaks': (path: '/content/community', tab: 'leaks'),
+      '/skin-leaks': (path: '/content/community', tab: 'leaks'),
+      '/event-assistance': (path: '/content/event-assistance', tab: null),
+      '/patch-notes': (path: '/content/patch-notes', tab: null),
+      '/versions': (path: '/content/patch-notes', tab: null),
+      '/stats': (path: '/tools/stats', tab: null),
     };
 
     final router = createAppRouter();
@@ -51,8 +53,13 @@ void main() {
 
       expect(
         router.routeInformationProvider.value.uri.path,
-        entry.value,
-        reason: '${entry.key} should open ${entry.value}',
+        entry.value.path,
+        reason: '${entry.key} should open ${entry.value.path}',
+      );
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['tab'],
+        entry.value.tab,
+        reason: '${entry.key} should preserve the mobile tab target',
       );
     }
   });

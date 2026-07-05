@@ -120,8 +120,16 @@ GoRouter createAppRouter() {
         redirect: (context, state) => '/content/community',
       ),
       GoRoute(
+        path: '/leaks',
+        redirect: (context, state) => '/content/community?tab=leaks',
+      ),
+      GoRoute(
+        path: '/skin-leaks',
+        redirect: (context, state) => '/content/community?tab=leaks',
+      ),
+      GoRoute(
         path: '/community/leaks',
-        redirect: (context, state) => '/content/community',
+        redirect: (context, state) => '/content/community?tab=leaks',
       ),
       GoRoute(
         path: '/event-assistance',
@@ -329,7 +337,11 @@ GoRouter createAppRouter() {
                 routes: [
                   GoRoute(
                     path: 'community',
-                    builder: (context, state) => const CommunityScreen(),
+                    builder: (context, state) {
+                      final initialTabIndex =
+                          state.uri.queryParameters['tab'] == 'leaks' ? 1 : 0;
+                      return CommunityScreen(initialTabIndex: initialTabIndex);
+                    },
                     routes: [
                       GoRoute(
                         path: 'post/:postId',

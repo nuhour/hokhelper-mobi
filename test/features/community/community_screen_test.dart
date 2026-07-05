@@ -67,4 +67,41 @@ void main() {
     expect(find.text('skin'), findsWidgets);
     expect(find.text('Lam'), findsOneWidget);
   });
+
+  testWidgets('can open directly on the leaks tab', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsProvider.overrideWith((ref) async {
+            return const [
+              LeakPostSummary(
+                id: '502',
+                title: 'Direct leak entry',
+                content: 'Opened from a legacy leak route.',
+                category: 'skin',
+                platform: 'youtube',
+                authorName: 'leaker',
+                authorHandle: '@leaker',
+                authorAvatarUrl: '',
+                mediaUrl: '',
+                mediaType: 'image',
+                publishedAt: '2026-07-02T12:00:00Z',
+                likeCount: 12,
+                viewCount: 99,
+                keywords: ['skin'],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Direct leak entry'), findsOneWidget);
+    expect(find.text('No community posts found'), findsNothing);
+  });
 }
