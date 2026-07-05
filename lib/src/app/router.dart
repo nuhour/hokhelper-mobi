@@ -35,6 +35,7 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
 import '../features/stats/presentation/hero_trends_screen.dart';
 import '../features/teambuild/presentation/team_builder_screen.dart';
+import '../features/tierlist_tool/presentation/tierlist_scheme_detail_screen.dart';
 import '../features/tierlist_tool/presentation/tierlist_tool_screen.dart';
 import '../features/topics/presentation/topic_article_screen.dart';
 import '../features/topics/presentation/topic_hub_screen.dart';
@@ -307,6 +308,16 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'tier-list',
                     builder: (context, state) => const TierListToolScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':schemeId',
+                        builder: (context, state) {
+                          return TierListSchemeDetailScreen(
+                            schemeId: state.pathParameters['schemeId'] ?? '',
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'game-assistant',

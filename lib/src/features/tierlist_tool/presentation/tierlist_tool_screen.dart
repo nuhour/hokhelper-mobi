@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -77,60 +78,70 @@ class _TierListSchemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        onTap: () => context.go('/tools/tier-list/${scheme.id}'),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.format_list_numbered_outlined,
-                  color: AppTheme.gold,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    scheme.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.format_list_numbered_outlined,
+                      color: AppTheme.gold,
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        scheme.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    _Badge(label: scheme.heroCountText, isPrimary: true),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                _Badge(label: scheme.heroCountText, isPrimary: true),
+                const SizedBox(height: 10),
+                Text(
+                  'Updated ${scheme.updatedDateText}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final row in scheme.rows.take(5))
+                      _Badge(label: '${row.label} · ${row.heroCount}'),
+                  ],
+                ),
+                if (scheme.rows.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _RowPreview(
+                    rows: scheme.rows.take(5).toList(growable: false),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              'Updated ${scheme.updatedDateText}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final row in scheme.rows.take(5))
-                  _Badge(label: '${row.label} · ${row.heroCount}'),
-              ],
-            ),
-            if (scheme.rows.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _RowPreview(rows: scheme.rows.take(5).toList(growable: false)),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -168,7 +179,7 @@ class _RowPreview extends StatelessWidget {
                   child: LinearProgressIndicator(
                     minHeight: 6,
                     value: row.heroCount <= 0 ? 0.04 : row.heroCount / 8,
-                    color: _tierColor(row.label),
+                    color: tierListColor(row.label),
                     backgroundColor: Colors.white.withValues(alpha: 0.06),
                   ),
                 ),
@@ -219,7 +230,7 @@ class _Badge extends StatelessWidget {
   }
 }
 
-Color _tierColor(String label) {
+Color tierListColor(String label) {
   return switch (label.toUpperCase()) {
     'T0' => const Color(0xFFFF6B6B),
     'T1' => const Color(0xFFF59E0B),

@@ -25,4 +25,10 @@ class TierListToolRepository {
 
     return schemes.map(TierListSchemeSummary.fromJson).toList(growable: false);
   }
+
+  Future<TierListSchemeSummary> loadScheme(String schemeId) async {
+    final json = await apiClient.getJson('/tierlist/schemes/$schemeId');
+    final result = json['result'];
+    return TierListSchemeSummary.fromJson(result is Map ? result : json);
+  }
 }

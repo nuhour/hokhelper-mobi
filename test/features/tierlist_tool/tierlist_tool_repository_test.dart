@@ -16,6 +16,39 @@ class _FakeApiClient extends ApiClient {
   Object? requestedBody;
 
   @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
+    requestedPath = path;
+    requestedBody = query;
+    return const {
+      'success': true,
+      'message': 'success',
+      'result': {
+        'id': '42',
+        'name': 'KIC Knockout Meta',
+        'createdAt': '2026-07-02T08:00:00Z',
+        'updatedAt': '2026-07-04T12:00:00Z',
+        'rows': [
+          {
+            'id': 'r1',
+            'label': 'T0',
+            'color': 'bg-red-600',
+            'heroIds': [111, 222, 333],
+          },
+          {
+            'id': 'r2',
+            'label': 'T1',
+            'color': 'bg-orange-500',
+            'heroIds': [444],
+          },
+        ],
+      },
+    };
+  }
+
+  @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     requestedPath = path;
     requestedBody = body;
@@ -71,5 +104,20 @@ void main() {
     expect(schemes.single.heroCountText, '3 heroes');
     expect(schemes.single.rows.first.label, 'T0');
     expect(schemes.single.rows.first.heroCount, 2);
+  });
+
+  test('loads a tier list scheme detail with hokx detail endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = TierListToolRepository(apiClient: apiClient);
+
+    final scheme = await repository.loadScheme('42');
+
+    expect(apiClient.requestedPath, '/tierlist/schemes/42');
+    expect(apiClient.requestedBody, isNull);
+    expect(scheme.id, '42');
+    expect(scheme.name, 'KIC Knockout Meta');
+    expect(scheme.heroCountText, '4 heroes');
+    expect(scheme.rows.first.label, 'T0');
+    expect(scheme.rows.first.heroCount, 3);
   });
 }
