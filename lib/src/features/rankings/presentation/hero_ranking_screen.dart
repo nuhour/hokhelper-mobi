@@ -62,7 +62,9 @@ final tierRankingProvider = FutureProvider<List<TierListEntry>>((ref) async {
 });
 
 class HeroRankingScreen extends ConsumerStatefulWidget {
-  const HeroRankingScreen({super.key});
+  const HeroRankingScreen({super.key, this.initialTabIndex = 0});
+
+  final int initialTabIndex;
 
   @override
   ConsumerState<HeroRankingScreen> createState() => _HeroRankingScreenState();
@@ -75,7 +77,11 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      initialIndex: widget.initialTabIndex.clamp(0, 3),
+      vsync: this,
+    );
   }
 
   @override

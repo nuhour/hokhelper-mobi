@@ -113,7 +113,8 @@ GoRouter createAppRouter() {
       GoRoute(path: '/stats', redirect: (context, state) => '/tools/stats'),
       GoRoute(
         path: '/tier-list',
-        redirect: (context, state) => '/tools/rankings',
+        builder: (context, state) =>
+            const HeroRankingScreen(initialTabIndex: 3),
       ),
       GoRoute(
         path: '/skin-gallery',

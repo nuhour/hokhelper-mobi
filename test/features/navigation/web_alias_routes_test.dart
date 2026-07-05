@@ -22,7 +22,6 @@ void main() {
       '/patch-notes': '/content/patch-notes',
       '/versions': '/content/patch-notes',
       '/stats': '/tools/stats',
-      '/tier-list': '/tools/rankings',
     };
 
     final router = createAppRouter();
