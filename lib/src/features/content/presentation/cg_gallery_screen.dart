@@ -30,9 +30,10 @@ final cgCommentsProvider = FutureProvider.family<List<CgCommentSummary>, int>((
 });
 
 class CgGalleryScreen extends ConsumerStatefulWidget {
-  const CgGalleryScreen({this.initialCgId, super.key});
+  const CgGalleryScreen({this.initialCgId, this.initialSearchQuery, super.key});
 
   final int? initialCgId;
+  final String? initialSearchQuery;
 
   @override
   ConsumerState<CgGalleryScreen> createState() => _CgGalleryScreenState();
@@ -43,6 +44,16 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
   String _query = '';
   _CgSort _sort = _CgSort.updated;
   int? _openedInitialCgId;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialQuery = widget.initialSearchQuery?.trim() ?? '';
+    if (initialQuery.isNotEmpty) {
+      _query = initialQuery;
+      _searchController.text = initialQuery;
+    }
+  }
 
   @override
   void dispose() {

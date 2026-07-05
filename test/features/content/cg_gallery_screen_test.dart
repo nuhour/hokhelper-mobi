@@ -85,4 +85,47 @@ void main() {
     expect(find.text('2,300 views'), findsOneWidget);
     expect(find.text('Great cinematic.'), findsOneWidget);
   });
+
+  testWidgets('filters cgs from initial search query', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cgGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 501,
+                kind: ContentKind.cg,
+                title: 'Lam Cinematic',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 4.8,
+                ratingCount: 17,
+                viewCount: 2300,
+              ),
+              ContentItemSummary(
+                id: 502,
+                kind: ContentKind.cg,
+                title: 'Angela Trailer',
+                heroName: 'Angela',
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 3.9,
+                ratingCount: 6,
+                viewCount: 900,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CgGalleryScreen(initialSearchQuery: 'Lam')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
+    expect(find.text('Lam Cinematic'), findsOneWidget);
+    expect(find.text('Angela Trailer'), findsNothing);
+  });
 }

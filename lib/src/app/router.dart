@@ -215,13 +215,15 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/cg',
-        builder: (context, state) => const CgGalleryScreen(),
+        builder: (context, state) =>
+            CgGalleryScreen(initialSearchQuery: state.uri.queryParameters['q']),
         routes: [
           GoRoute(
             path: ':cgId',
             builder: (context, state) {
               return CgGalleryScreen(
                 initialCgId: int.tryParse(state.pathParameters['cgId'] ?? ''),
+                initialSearchQuery: state.uri.queryParameters['q'],
               );
             },
           ),
@@ -435,7 +437,9 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'cgs',
-                    builder: (context, state) => const CgGalleryScreen(),
+                    builder: (context, state) => CgGalleryScreen(
+                      initialSearchQuery: state.uri.queryParameters['q'],
+                    ),
                   ),
                   GoRoute(
                     path: 'patch-notes',
