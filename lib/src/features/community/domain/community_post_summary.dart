@@ -3,6 +3,7 @@ class CommunityPostSummary {
     required this.id,
     required this.title,
     required this.preview,
+    this.authorId = 0,
     required this.authorName,
     required this.authorAvatarUrl,
     required this.tags,
@@ -15,6 +16,7 @@ class CommunityPostSummary {
   final String id;
   final String title;
   final String preview;
+  final int authorId;
   final String authorName;
   final String authorAvatarUrl;
   final List<String> tags;
@@ -32,6 +34,7 @@ class CommunityPostSummary {
       id: _readString(map['id']),
       title: _readString(map['title'], fallback: 'Community Post'),
       preview: _readString(map['content_preview'] ?? map['content']),
+      authorId: _readInt(map['author_id']),
       authorName: _readString(map['author_name'], fallback: 'Player'),
       authorAvatarUrl: _readString(map['author_avatar']),
       tags: _readStringList(map['tags']),

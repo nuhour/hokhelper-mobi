@@ -8,6 +8,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/community_repository.dart';
 import '../domain/community_post_summary.dart';
@@ -33,10 +34,17 @@ final leakPostsProvider = FutureProvider<List<LeakPostSummary>>((ref) async {
       .loadLeaks(settings.region.regionId);
 });
 
+enum CommunityInitialView { hot, myPosts }
+
 class CommunityScreen extends ConsumerWidget {
-  const CommunityScreen({this.initialTabIndex = 0, super.key});
+  const CommunityScreen({
+    this.initialTabIndex = 0,
+    this.initialView = CommunityInitialView.hot,
+    super.key,
+  });
 
   final int initialTabIndex;
+  final CommunityInitialView initialView;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,7 +95,10 @@ class CommunityScreen extends ConsumerWidget {
           },
           body: TabBarView(
             children: [
-              _PostsTab(value: ref.watch(communityPostsProvider)),
+              _PostsTab(
+                value: ref.watch(communityPostsProvider),
+                initialView: initialView,
+              ),
               _LeaksTab(value: ref.watch(leakPostsProvider)),
             ],
           ),
@@ -98,34 +109,113 @@ class CommunityScreen extends ConsumerWidget {
 }
 
 class _PostsTab extends ConsumerWidget {
-  const _PostsTab({required this.value});
+  const _PostsTab({required this.value, required this.initialView});
 
   final AsyncValue<List<CommunityPostSummary>> value;
+  final CommunityInitialView initialView;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authUser = ref.watch(authControllerProvider).valueOrNull;
     return AppAsyncView<List<CommunityPostSummary>>(
       value: value,
       retry: () => ref.invalidate(communityPostsProvider),
       data: (posts) {
-        if (posts.isEmpty) {
-          return const AppEmptyState(
+        final visiblePosts = initialView == CommunityInitialView.myPosts
+            ? posts
+                  .where(
+                    (post) =>
+                        post.authorId > 0 && post.authorId == authUser?.id,
+                  )
+                  .toList(growable: false)
+            : posts;
+
+        if (visiblePosts.isEmpty) {
+          return AppEmptyState(
             icon: Icons.forum_outlined,
-            title: 'No community posts found',
-            message: 'Pull to refresh or switch region in settings.',
+            title: initialView == CommunityInitialView.myPosts
+                ? 'No posts from you yet'
+                : 'No community posts found',
+            message: initialView == CommunityInitialView.myPosts
+                ? 'Create or sync a community post on HOK Helper first.'
+                : 'Pull to refresh or switch region in settings.',
           );
         }
 
         return RefreshIndicator(
           onRefresh: () => ref.refresh(communityPostsProvider.future),
-          child: ListView.separated(
+          child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            itemCount: posts.length,
-            itemBuilder: (context, index) => _PostCard(post: posts[index]),
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            children: [
+              if (initialView == CommunityInitialView.myPosts) ...[
+                const _ModePill(
+                  icon: Icons.person_outline,
+                  label: 'My Posts',
+                  message: 'Showing posts authored by your signed-in account.',
+                ),
+                const SizedBox(height: 12),
+              ],
+              for (final post in visiblePosts) ...[
+                _PostCard(post: post),
+                const SizedBox(height: 12),
+              ],
+            ],
           ),
         );
       },
+    );
+  }
+}
+
+class _ModePill extends StatelessWidget {
+  const _ModePill({
+    required this.icon,
+    required this.label,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String label;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.22)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(icon, color: AppTheme.gold, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: AppTheme.gold,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    message,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppTheme.muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

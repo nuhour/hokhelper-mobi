@@ -128,7 +128,12 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/community',
-        redirect: (context, state) => '/content/community',
+        redirect: (context, state) {
+          if (state.uri.queryParameters['view'] == 'my') {
+            return '/content/community?tab=my';
+          }
+          return '/content/community';
+        },
       ),
       GoRoute(
         path: '/leaks',
@@ -377,9 +382,15 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'community',
                     builder: (context, state) {
-                      final initialTabIndex =
-                          state.uri.queryParameters['tab'] == 'leaks' ? 1 : 0;
-                      return CommunityScreen(initialTabIndex: initialTabIndex);
+                      final tab = state.uri.queryParameters['tab'];
+                      final initialTabIndex = tab == 'leaks' ? 1 : 0;
+                      final initialView = tab == 'my'
+                          ? CommunityInitialView.myPosts
+                          : CommunityInitialView.hot;
+                      return CommunityScreen(
+                        initialTabIndex: initialTabIndex,
+                        initialView: initialView,
+                      );
                     },
                     routes: [
                       GoRoute(

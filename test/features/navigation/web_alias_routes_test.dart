@@ -23,6 +23,7 @@ void main() {
       '/hero-gallery?hero_id=101': (path: '/heroes/101', tab: null),
       '/skin-gallery?skin_id=1001': (path: '/skin-gallery/1001', tab: null),
       '/community': (path: '/content/community', tab: null),
+      '/community?view=my': (path: '/content/community', tab: 'my'),
       '/community/leaks': (path: '/content/community', tab: 'leaks'),
       '/leaks': (path: '/content/community', tab: 'leaks'),
       '/skin-leaks': (path: '/content/community', tab: 'leaks'),

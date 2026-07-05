@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/leak_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
+
+class _TestAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async {
+    return const AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+  }
+}
 
 void main() {
   testWidgets('renders community posts and leak tabs', (tester) async {
@@ -103,5 +117,58 @@ void main() {
 
     expect(find.text('Direct leak entry'), findsOneWidget);
     expect(find.text('No community posts found'), findsNothing);
+  });
+
+  testWidgets('my posts mode filters posts to the signed-in author', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
+          communityPostsProvider.overrideWith((ref) async {
+            return const [
+              CommunityPostSummary(
+                id: '201',
+                title: 'My roaming notes',
+                preview: 'Rotate after clearing mid.',
+                authorId: 42,
+                authorName: 'Lam',
+                authorAvatarUrl: '',
+                tags: ['Roam'],
+                createdAt: '2026-07-03T10:00:00Z',
+                viewCount: 45,
+                likeCount: 6,
+                commentCount: 2,
+              ),
+              CommunityPostSummary(
+                id: '202',
+                title: 'Someone else draft',
+                preview: 'Pick front line first.',
+                authorId: 7,
+                authorName: 'Coach',
+                authorAvatarUrl: '',
+                tags: ['Draft'],
+                createdAt: '2026-07-03T11:00:00Z',
+                viewCount: 99,
+                likeCount: 12,
+                commentCount: 4,
+              ),
+            ];
+          }),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CommunityScreen(initialView: CommunityInitialView.myPosts),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Posts'), findsOneWidget);
+    expect(find.text('My roaming notes'), findsOneWidget);
+    expect(find.text('Someone else draft'), findsNothing);
   });
 }
