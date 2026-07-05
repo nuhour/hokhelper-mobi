@@ -202,6 +202,25 @@ GoRouter createAppRouter() {
           ),
         ],
       ),
+      GoRoute(
+        path: '/topics/:topicKey',
+        builder: (context, state) {
+          return TopicHubScreen(
+            topicKey: state.pathParameters['topicKey'] ?? '',
+          );
+        },
+        routes: [
+          GoRoute(
+            path: ':slug',
+            builder: (context, state) {
+              return TopicArticleScreen(
+                topicKey: state.pathParameters['topicKey'] ?? '',
+                slug: state.pathParameters['slug'] ?? '',
+              );
+            },
+          ),
+        ],
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
