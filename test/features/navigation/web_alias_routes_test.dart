@@ -8,6 +8,7 @@ import 'package:hok_helper_mobile/src/features/content/presentation/content_scre
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
+import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
 
 void main() {
@@ -24,6 +25,7 @@ void main() {
       '/patch-notes': (path: '/content/patch-notes', tab: null),
       '/versions': (path: '/content/patch-notes', tab: null),
       '/stats': (path: '/tools/stats', tab: null),
+      '/stats?entry=hero_trend': (path: '/trends', tab: null),
     };
 
     final router = createAppRouter();
@@ -38,6 +40,7 @@ void main() {
           statsDashboardProvider.overrideWith(
             (ref) async => const StatsDashboard(),
           ),
+          heroTrendsProvider.overrideWith((ref) async => const []),
           heroRankingProvider.overrideWith((ref) async => const []),
           playerRankingProvider.overrideWith((ref) async => const []),
           equipRankingProvider.overrideWith((ref) async => const []),

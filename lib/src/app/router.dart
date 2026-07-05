@@ -143,7 +143,15 @@ GoRouter createAppRouter() {
         path: '/versions',
         redirect: (context, state) => '/content/patch-notes',
       ),
-      GoRoute(path: '/stats', redirect: (context, state) => '/tools/stats'),
+      GoRoute(
+        path: '/stats',
+        redirect: (context, state) {
+          if (state.uri.queryParameters['entry'] == 'hero_trend') {
+            return '/trends';
+          }
+          return '/tools/stats';
+        },
+      ),
       GoRoute(
         path: '/tier-list',
         builder: (context, state) =>
