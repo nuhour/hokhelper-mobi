@@ -3,16 +3,32 @@ import 'dart:convert';
 import '../../../core/network/api_client.dart';
 import '../domain/prompt_summary.dart';
 
+enum PromptListAction {
+  explore('explore'),
+  myPrompts('myPrompts'),
+  favorites('favorites');
+
+  const PromptListAction(this.backendValue);
+
+  final String backendValue;
+}
+
 class PromptsRepository {
   const PromptsRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
-  Future<List<PromptSummary>> loadExplorePrompts() async {
+  Future<List<PromptSummary>> loadExplorePrompts() {
+    return loadPrompts(action: PromptListAction.explore);
+  }
+
+  Future<List<PromptSummary>> loadPrompts({
+    required PromptListAction action,
+  }) async {
     final json = await apiClient.getJson(
       '/prompt',
       query: {
-        'action': 'explore',
+        'action': action.backendValue,
         'page': 1,
         'pageSize': 20,
         'sort': '-hot',

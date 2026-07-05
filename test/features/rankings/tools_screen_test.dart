@@ -13,6 +13,7 @@ import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_sum
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
 import 'package:hok_helper_mobile/src/features/game_assistant/presentation/game_assistant_screen.dart';
+import 'package:hok_helper_mobile/src/features/prompts/data/prompts_repository.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
 import 'package:hok_helper_mobile/src/features/rank_fortune/domain/rank_fortune.dart';
@@ -106,7 +107,9 @@ List<Override> _emptyToolOverrides() {
     teamRecommendationsProvider.overrideWith(
       (ref) async => const TeamRecommendationResult(recommendations: []),
     ),
-    publicPromptsProvider.overrideWith((ref) async => const []),
+    promptListProvider(
+      PromptListAction.explore,
+    ).overrideWith((ref) async => const []),
     esportsMatchesProvider.overrideWith((ref) async => const []),
     esportsTeamsProvider.overrideWith((ref) async => const []),
     esportsPlayersProvider.overrideWith((ref) async => const []),
@@ -144,9 +147,9 @@ List<Override> _toolOverrides({
     teamRecommendationsProvider.overrideWith(
       (ref) async => const TeamRecommendationResult(recommendations: []),
     ),
-    publicPromptsProvider.overrideWith(
-      publicPrompts ?? (ref) async => const [],
-    ),
+    promptListProvider(
+      PromptListAction.explore,
+    ).overrideWith(publicPrompts ?? (ref) async => const []),
     esportsMatchesProvider.overrideWith(
       esportsMatches ?? (ref) async => const [],
     ),

@@ -15,22 +15,61 @@ final promptsRepositoryProvider = Provider<PromptsRepository>((ref) {
 });
 
 final publicPromptsProvider = FutureProvider<List<PromptSummary>>((ref) {
-  return ref.watch(promptsRepositoryProvider).loadExplorePrompts();
+  return ref.watch(promptListProvider(PromptListAction.explore).future);
 });
 
-class PromptsScreen extends ConsumerWidget {
-  const PromptsScreen({super.key});
+final promptListProvider =
+    FutureProvider.family<List<PromptSummary>, PromptListAction>((ref, action) {
+      return ref.watch(promptsRepositoryProvider).loadPrompts(action: action);
+    });
+
+extension PromptListActionLabel on PromptListAction {
+  String get label => switch (this) {
+    PromptListAction.explore => 'Explore',
+    PromptListAction.myPrompts => 'My Prompts',
+    PromptListAction.favorites => 'Favorites',
+  };
+}
+
+PromptListAction promptListActionFromRoute(String? value) {
+  return switch ((value ?? '').trim()) {
+    'myPrompts' => PromptListAction.myPrompts,
+    'favorites' => PromptListAction.favorites,
+    _ => PromptListAction.explore,
+  };
+}
+
+class PromptsScreen extends ConsumerStatefulWidget {
+  const PromptsScreen({
+    super.key,
+    this.initialAction = PromptListAction.explore,
+  });
+
+  final PromptListAction initialAction;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final promptsValue = ref.watch(publicPromptsProvider);
+  ConsumerState<PromptsScreen> createState() => _PromptsScreenState();
+}
+
+class _PromptsScreenState extends ConsumerState<PromptsScreen> {
+  late PromptListAction _action;
+
+  @override
+  void initState() {
+    super.initState();
+    _action = widget.initialAction;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final promptsValue = ref.watch(promptListProvider(_action));
 
     return AppAsyncView<List<PromptSummary>>(
       value: promptsValue,
-      retry: () => ref.invalidate(publicPromptsProvider),
+      retry: () => ref.invalidate(promptListProvider(_action)),
       data: (prompts) {
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(publicPromptsProvider.future),
+          onRefresh: () => ref.refresh(promptListProvider(_action).future),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -47,6 +86,24 @@ class PromptsScreen extends ConsumerWidget {
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                      ),
+                      const SizedBox(height: 14),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SegmentedButton<PromptListAction>(
+                          segments: PromptListAction.values
+                              .map(
+                                (action) => ButtonSegment(
+                                  value: action,
+                                  label: Text(action.label),
+                                ),
+                              )
+                              .toList(growable: false),
+                          selected: {_action},
+                          onSelectionChanged: (selection) {
+                            setState(() => _action = selection.single);
+                          },
+                        ),
                       ),
                     ],
                   ),

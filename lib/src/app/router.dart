@@ -485,7 +485,11 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'prompts',
-                    builder: (context, state) => const PromptsScreen(),
+                    builder: (context, state) => PromptsScreen(
+                      initialAction: promptListActionFromRoute(
+                        state.uri.queryParameters['tab'],
+                      ),
+                    ),
                   ),
                   GoRoute(
                     path: 'esports',

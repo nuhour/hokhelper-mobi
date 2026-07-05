@@ -75,4 +75,20 @@ void main() {
     expect(prompts.single.likeCount, 12);
     expect(prompts.single.favoriteCount, 5);
   });
+
+  test('loads prompt lists by backend action', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final prompts = await repository.loadPrompts(
+      action: PromptListAction.favorites,
+    );
+
+    expect(apiClient.getPath, '/prompt');
+    expect(apiClient.getQuery?['action'], 'favorites');
+    expect(apiClient.getQuery?['page'], 1);
+    expect(apiClient.getQuery?['pageSize'], 20);
+    expect(apiClient.getQuery?['sort'], '-hot');
+    expect(prompts.single.title, 'Cyber skin concept');
+  });
 }
