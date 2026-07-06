@@ -85,4 +85,43 @@ void main() {
     expect(find.text('91.5'), findsOneWidget);
     expect(find.text('6.8 KDA'), findsOneWidget);
   });
+
+  testWidgets('match cards open a mobile match detail sheet', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('KPL Spring'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Match Detail'), findsOneWidget);
+    expect(find.text('KPL Spring · Playoffs'), findsOneWidget);
+    expect(find.text('Wolves'), findsWidgets);
+    expect(find.text('AG'), findsWidgets);
+    expect(find.text('4 - 3'), findsWidgets);
+    expect(find.text('Finished'), findsWidgets);
+    expect(find.text('2026-06-28T11:00:00Z'), findsWidgets);
+  });
 }

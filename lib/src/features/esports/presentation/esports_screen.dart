@@ -323,6 +323,7 @@ class _MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
+      onTap: () => _showMatchDetailSheet(context, match),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -398,6 +399,138 @@ class _MatchCard extends StatelessWidget {
               ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+void _showMatchDetailSheet(BuildContext context, EsportsMatchSummary match) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppTheme.panel,
+    showDragHandle: true,
+    builder: (context) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Match Detail',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, color: AppTheme.muted),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                match.title.isEmpty ? 'Match' : match.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.muted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTheme.panel,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _TeamIdentity(
+                          name: match.teamAName,
+                          logoUrl: match.teamALogoUrl,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          match.scoreText,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: AppTheme.gold,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                      ),
+                      Expanded(
+                        child: _TeamIdentity(
+                          name: match.teamBName,
+                          logoUrl: match.teamBLogoUrl,
+                          alignEnd: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              _MatchDetailRow(label: 'Status', value: match.statusLabel),
+              if (match.startTime.isNotEmpty)
+                _MatchDetailRow(label: 'Start', value: match.startTime),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _MatchDetailRow extends StatelessWidget {
+  const _MatchDetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -986,14 +1119,15 @@ class _TeamIdentity extends StatelessWidget {
 }
 
 class _PanelCard extends StatelessWidget {
-  const _PanelCard({required this.child, this.accentColor});
+  const _PanelCard({required this.child, this.accentColor, this.onTap});
 
   final Widget child;
   final Color? accentColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final card = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
         border: Border.all(
@@ -1004,6 +1138,14 @@ class _PanelCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
+    );
+    if (onTap == null) {
+      return card;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: card,
     );
   }
 }
