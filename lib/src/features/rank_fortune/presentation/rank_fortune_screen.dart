@@ -294,6 +294,11 @@ class _HistoryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sorted = [...rows]..sort((a, b) => a.date.compareTo(b.date));
+    final latestRows = sorted.reversed
+        .take(30)
+        .toList(growable: false)
+        .reversed
+        .toList(growable: false);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
@@ -330,8 +335,116 @@ class _HistoryPanel extends StatelessWidget {
                 title: 'No fortune history yet',
                 message: 'Draw a fortune to start the trend.',
               )
-            else
-              _HistoryBars(rows: sorted.take(30).toList(growable: false)),
+            else ...[
+              _HistorySummary(rows: latestRows),
+              const SizedBox(height: 14),
+              _HistoryBars(rows: latestRows),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistorySummary extends StatelessWidget {
+  const _HistorySummary({required this.rows});
+
+  final List<RankFortuneRecord> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final scores = rows.map((row) => row.score).toList(growable: false);
+    final average = scores.isEmpty
+        ? 0
+        : (scores.reduce((a, b) => a + b) / scores.length).round();
+    final best = scores.isEmpty ? 0 : scores.reduce((a, b) => a > b ? a : b);
+    final lowest = scores.isEmpty ? 0 : scores.reduce((a, b) => a < b ? a : b);
+    final streak = _currentStreak(rows);
+
+    return Row(
+      children: [
+        Expanded(
+          child: _SummaryMetric(
+            label: '30d Average',
+            value: '$average',
+            color: _scoreColor(average),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SummaryMetric(
+            label: 'Best',
+            value: '$best',
+            color: _scoreColor(best),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SummaryMetric(
+            label: 'Lowest',
+            value: '$lowest',
+            color: _scoreColor(lowest),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SummaryMetric(
+            label: 'Streak',
+            value: '$streak days',
+            color: AppTheme.cyan,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppTheme.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ],
         ),
       ),
@@ -425,6 +538,33 @@ class _HistoryRow extends StatelessWidget {
       ),
     );
   }
+}
+
+int _currentStreak(List<RankFortuneRecord> rows) {
+  if (rows.isEmpty) {
+    return 0;
+  }
+  final dates =
+      rows
+          .map((row) => DateTime.tryParse(row.date))
+          .whereType<DateTime>()
+          .toList(growable: false)
+        ..sort();
+  if (dates.length != rows.length) {
+    return rows.length;
+  }
+  var streak = 1;
+  for (var index = dates.length - 1; index > 0; index -= 1) {
+    final expectedPrevious = dates[index].subtract(const Duration(days: 1));
+    final previous = dates[index - 1];
+    if (previous.year != expectedPrevious.year ||
+        previous.month != expectedPrevious.month ||
+        previous.day != expectedPrevious.day) {
+      break;
+    }
+    streak += 1;
+  }
+  return streak;
 }
 
 ({String title, String description}) _fortuneCopy(String typeId) {

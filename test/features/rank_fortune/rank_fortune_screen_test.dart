@@ -105,4 +105,51 @@ void main() {
     expect(find.text('99'), findsWidgets);
     expect(find.text('Already drawn today'), findsOneWidget);
   });
+
+  testWidgets('summarizes the latest thirty fortune history rows', (
+    tester,
+  ) async {
+    final rows = List<RankFortuneRecord>.generate(31, (index) {
+      final day = index + 1;
+      return RankFortuneRecord(
+        id: day,
+        date: '2026-07-${day.toString().padLeft(2, '0')}',
+        typeId: day == 31 ? 'legendary' : 'steady',
+        score: day,
+      );
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          rankFortuneHistoryProvider.overrideWith((ref) async {
+            return RankFortuneHistory(
+              rows: rows,
+              today: rows.last,
+              canDraw: false,
+              days: 30,
+              catalog: const [
+                RankFortuneCatalogEntry(typeId: 'steady', score: 45),
+                RankFortuneCatalogEntry(typeId: 'legendary', score: 99),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: RankFortuneScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('30d Average'), findsOneWidget);
+    expect(find.text('16.5'), findsNothing);
+    expect(find.text('17'), findsOneWidget);
+    expect(find.text('Best'), findsOneWidget);
+    expect(find.text('31'), findsWidgets);
+    expect(find.text('Lowest'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('Streak'), findsOneWidget);
+    expect(find.text('30 days'), findsOneWidget);
+    expect(find.text('2026-07-01'), findsNothing);
+    expect(find.text('2026-07-31'), findsOneWidget);
+  });
 }
