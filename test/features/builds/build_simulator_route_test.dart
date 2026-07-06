@@ -8,6 +8,8 @@ import 'package:hok_helper_mobile/src/features/builds/domain/build_scheme_summar
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_simulator_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
+import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
+import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
 
 void main() {
   testWidgets('build explorer card opens focused build simulator route', (
@@ -90,6 +92,73 @@ void main() {
 
     expect(find.text('Shared build'), findsOneWidget);
     expect(find.text('Shared route build'), findsOneWidget);
+  });
+
+  testWidgets('build explorer author opens public profile route', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+
+    router.go('/tools/builds');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          publicBuildSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 42,
+                title: 'Shared route build',
+                heroName: 'Angela',
+                authorName: 'sharer',
+                authorId: 77,
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 8,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+            ];
+          }),
+          publicUserProfileProvider(77).overrideWith((ref) async {
+            return const UserProfile(
+              id: 77,
+              username: 'sharer',
+              displayName: 'Sharer',
+              email: '',
+              avatar: '',
+              level: 1,
+              points: 0,
+              xpTotal: 0,
+              xpCurrentLevel: 0,
+              xpToNextLevel: 100,
+              levelProgress: 0,
+              levelCap: false,
+              bio: 'Build creator',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 0,
+                following: 0,
+                followers: 0,
+                likes: 0,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('sharer'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/profile/77');
+    expect(find.text('Public Profile'), findsOneWidget);
+    expect(find.text('Build creator'), findsOneWidget);
   });
 
   testWidgets('build simulator route focuses hero from hokx hero_id query', (
@@ -277,7 +346,8 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
     expect(find.text('Shared build'), findsOneWidget);
     expect(find.text('Shared route build'), findsOneWidget);
-    expect(find.text('Angela · sharer'), findsOneWidget);
+    expect(find.text('Angela · '), findsOneWidget);
+    expect(find.text('sharer'), findsOneWidget);
   });
 
   testWidgets('build simulator route opens favorite builds filter', (
@@ -356,7 +426,8 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
     expect(find.text('Favorite Builds'), findsOneWidget);
     expect(find.text('Favorite route build'), findsOneWidget);
-    expect(find.text('Angela · collector'), findsOneWidget);
+    expect(find.text('Angela · '), findsOneWidget);
+    expect(find.text('collector'), findsOneWidget);
     expect(find.text('Public route build'), findsNothing);
   });
 }

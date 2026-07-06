@@ -59,7 +59,7 @@ class _FakeApiClient extends ApiClient {
             'id': 7,
             'name': 'Burst jungle',
             'hero_name': 'Lam',
-            'author': {'username': 'coach'},
+            'author': {'id': 77, 'username': 'coach'},
             'equipment': [
               {'icon': 'https://example.test/axe.png'},
               {'icon': 'https://example.test/boots.png'},
@@ -170,6 +170,7 @@ void main() {
       expect(schemes.single.title, 'Burst jungle');
       expect(schemes.single.heroName, 'Lam');
       expect(schemes.single.authorName, 'coach');
+      expect(schemes.single.authorId, 77);
       expect(schemes.single.equipmentIcons, [
         'https://example.test/axe.png',
         'https://example.test/boots.png',

@@ -277,7 +277,8 @@ void main() {
 
     expect(find.text('Shared build'), findsOneWidget);
     expect(find.text('Shared target build'), findsOneWidget);
-    expect(find.text('Angela · sharer'), findsOneWidget);
+    expect(find.text('Angela · '), findsOneWidget);
+    expect(find.text('sharer'), findsOneWidget);
   });
 
   testWidgets('opens favorite builds from initial community filter', (
@@ -357,7 +358,8 @@ void main() {
 
     expect(find.text('Favorite Builds'), findsOneWidget);
     expect(find.text('Favorite mobile build'), findsOneWidget);
-    expect(find.text('Angela · collector'), findsOneWidget);
+    expect(find.text('Angela · '), findsOneWidget);
+    expect(find.text('collector'), findsOneWidget);
     expect(find.text('Public build'), findsNothing);
   });
 

@@ -132,13 +132,10 @@ class BuildSchemeCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            '$heroName · ${scheme.authorName}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.muted,
-                            ),
+                          _BuildAuthorLine(
+                            heroName: heroName,
+                            authorName: scheme.authorName,
+                            authorId: scheme.authorId,
                           ),
                         ],
                       ),
@@ -173,6 +170,69 @@ class BuildSchemeCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BuildAuthorLine extends StatelessWidget {
+  const _BuildAuthorLine({
+    required this.heroName,
+    required this.authorName,
+    required this.authorId,
+  });
+
+  final String heroName;
+  final String authorName;
+  final int authorId;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted);
+    final authorStyle = style?.copyWith(
+      color: authorId > 0 ? AppTheme.gold : AppTheme.muted,
+      fontWeight: authorId > 0 ? FontWeight.w800 : FontWeight.w400,
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            '$heroName · ',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          ),
+        ),
+        if (authorId > 0)
+          TextButton(
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: authorStyle,
+            ),
+            onPressed: () => context.go('/profile/$authorId'),
+            child: Text(
+              authorName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: authorStyle,
+            ),
+          )
+        else
+          Flexible(
+            child: Text(
+              authorName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: authorStyle,
+            ),
+          ),
+      ],
     );
   }
 }

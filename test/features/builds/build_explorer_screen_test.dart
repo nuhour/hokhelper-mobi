@@ -32,7 +32,8 @@ void main() {
 
     expect(find.text('Build Explorer'), findsOneWidget);
     expect(find.text('Burst jungle'), findsOneWidget);
-    expect(find.text('Lam · coach'), findsOneWidget);
+    expect(find.text('Lam · '), findsOneWidget);
+    expect(find.text('coach'), findsOneWidget);
     expect(find.text('Public'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);

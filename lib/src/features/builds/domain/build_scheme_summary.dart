@@ -13,12 +13,14 @@ class BuildSchemeSummary {
     this.equipmentIds = const [],
     this.runeIds = const [],
     this.summonerSkillId,
+    this.authorId = 0,
   });
 
   final int id;
   final String title;
   final String heroName;
   final String authorName;
+  final int authorId;
   final List<String> equipmentIcons;
   final int likeCount;
   final int favoriteCount;
@@ -54,6 +56,12 @@ class BuildSchemeSummary {
             map['creator_name'] ??
             (author is Map ? author['first_name'] ?? author['username'] : null),
         fallback: 'Unknown player',
+      ),
+      authorId: _readInt(
+        map['author_id'] ??
+            map['authorId'] ??
+            map['creator_id'] ??
+            (author is Map ? author['id'] : null),
       ),
       equipmentIcons: _readEquipmentIcons(rawEquipment),
       likeCount: _readInt(map['like_count'] ?? map['likes']),
