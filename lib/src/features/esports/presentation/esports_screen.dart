@@ -795,58 +795,66 @@ class _TeamCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PanelCard(
-      child: Row(
-        children: [
-          AppImage(
-            url: team.logoUrl,
-            width: 58,
-            height: 58,
-            borderRadius: 14,
-            semanticLabel: team.name,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  team.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  team.club.isEmpty ? team.leagueName : team.club,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go('/esports/teams/${team.id}'),
+        child: _PanelCard(
+          child: Row(
             children: [
-              Text(
-                team.recordText,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w800,
+              AppImage(
+                url: team.logoUrl,
+                width: 58,
+                height: 58,
+                borderRadius: 14,
+                semanticLabel: team.name,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      team.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      team.club.isEmpty ? team.leagueName : team.club,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              _Pill(label: team.winRateText),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    team.recordText,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _Pill(label: team.winRateText),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -859,66 +867,74 @@ class _PlayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PanelCard(
-      child: Row(
-        children: [
-          AppImage(
-            url: player.avatarUrl,
-            width: 58,
-            height: 58,
-            borderRadius: 14,
-            semanticLabel: player.name,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  player.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                if (player.teamName.isNotEmpty)
-                  Text(
-                    player.teamName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                  ),
-                if (player.role.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    player.role,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Wrap(
-            direction: Axis.vertical,
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.end,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go('/esports/players/${player.id}'),
+        child: _PanelCard(
+          child: Row(
             children: [
-              _Pill(label: player.gradeText),
-              _Pill(label: '${player.kdaText} KDA'),
+              AppImage(
+                url: player.avatarUrl,
+                width: 58,
+                height: 58,
+                borderRadius: 14,
+                semanticLabel: player.name,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      player.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (player.teamName.isNotEmpty)
+                      Text(
+                        player.teamName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    if (player.role.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        player.role,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.gold,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Wrap(
+                direction: Axis.vertical,
+                spacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.end,
+                children: [
+                  _Pill(label: player.gradeText),
+                  _Pill(label: '${player.kdaText} KDA'),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
