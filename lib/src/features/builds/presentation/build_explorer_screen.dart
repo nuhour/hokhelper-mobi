@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
@@ -214,6 +215,11 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                       icon: const Icon(Icons.copy_all_outlined, size: 16),
                       label: const Text('Clone'),
                     ),
+                    OutlinedButton.icon(
+                      onPressed: () => _shareScheme(context),
+                      icon: const Icon(Icons.ios_share_outlined, size: 16),
+                      label: const Text('Share'),
+                    ),
                   ],
                 ),
               ],
@@ -348,6 +354,18 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
         const SnackBar(content: Text('Failed to clone build')),
       );
     }
+  }
+
+  Future<void> _shareScheme(BuildContext context) async {
+    await Clipboard.setData(
+      ClipboardData(text: '/tools/build-sim?scheme=${widget.scheme.id}'),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(const SnackBar(content: Text('Build link copied')));
   }
 }
 

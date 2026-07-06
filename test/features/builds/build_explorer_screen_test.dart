@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
@@ -47,6 +48,13 @@ class _NoopApiClient extends ApiClient {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+
   testWidgets('renders public build scheme summaries', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -196,5 +204,49 @@ void main() {
     expect(repository.clonedSchemeId, 7);
     expect(repository.clonedSlotIndex, 2);
     expect(find.text('Build cloned to Slot 2'), findsOneWidget);
+  });
+
+  testWidgets('copies public build share links from explorer cards', (
+    tester,
+  ) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          publicBuildSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 7,
+                title: 'Burst jungle',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 5,
+                cloneCount: 3,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BuildExplorerScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall, isNotNull);
+    expect(clipboardCall!.arguments, {'text': '/tools/build-sim?scheme=7'});
+    expect(find.text('Build link copied'), findsOneWidget);
   });
 }
