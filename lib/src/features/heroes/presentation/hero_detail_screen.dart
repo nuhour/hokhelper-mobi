@@ -43,9 +43,14 @@ final selectedRegionHeroDetailProvider =
     });
 
 class HeroDetailScreen extends ConsumerWidget {
-  const HeroDetailScreen({required this.heroId, super.key});
+  const HeroDetailScreen({
+    required this.heroId,
+    this.focusHistory = false,
+    super.key,
+  });
 
   final String heroId;
+  final bool focusHistory;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,18 +61,26 @@ class HeroDetailScreen extends ConsumerWidget {
       body: AppAsyncView<Map<String, dynamic>>(
         value: detailValue,
         retry: () => ref.invalidate(selectedRegionHeroDetailProvider(heroId)),
-        data: (detail) =>
-            _HeroDetailContent(detail: detail, routeHeroId: heroId),
+        data: (detail) => _HeroDetailContent(
+          detail: detail,
+          routeHeroId: heroId,
+          focusHistory: focusHistory,
+        ),
       ),
     );
   }
 }
 
 class _HeroDetailContent extends StatelessWidget {
-  const _HeroDetailContent({required this.detail, required this.routeHeroId});
+  const _HeroDetailContent({
+    required this.detail,
+    required this.routeHeroId,
+    required this.focusHistory,
+  });
 
   final Map<String, dynamic> detail;
   final String routeHeroId;
+  final bool focusHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +133,10 @@ class _HeroDetailContent extends StatelessWidget {
           ratingCount: ratingCount,
         ),
         const SizedBox(height: 14),
+        if (focusHistory) ...[
+          const _HistoryFocusPanel(),
+          const SizedBox(height: 14),
+        ],
         _MetricGrid(
           items: [
             _MetricItem(label: 'Tier', value: tier.isEmpty ? '--' : tier),
@@ -163,6 +180,53 @@ class _HeroDetailContent extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _HistoryFocusPanel extends StatelessWidget {
+  const _HistoryFocusPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.update_outlined, color: AppTheme.gold),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Patch history focus',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Opened from a patch note link. Balance changes are highlighted below.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.muted,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

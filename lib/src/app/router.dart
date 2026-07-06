@@ -223,8 +223,10 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/hero-gallery/:heroId',
-        redirect: (context, state) =>
-            '/heroes/${state.pathParameters['heroId'] ?? ''}',
+        redirect: (context, state) => _targetWithQuery(
+          '/heroes/${state.pathParameters['heroId'] ?? ''}',
+          state.uri,
+        ),
       ),
       GoRoute(
         path: '/community',
@@ -530,6 +532,8 @@ GoRouter createAppRouter() {
                     builder: (context, state) {
                       return HeroDetailScreen(
                         heroId: state.pathParameters['heroId'] ?? '',
+                        focusHistory:
+                            state.uri.queryParameters['tab'] == 'history',
                       );
                     },
                   ),
