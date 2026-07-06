@@ -3,34 +3,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/heroes/data/heroes_repository.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 
+class _FakeApiClient extends ApiClient {
+  _FakeApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
+
+class _FakeHeroesRepository extends HeroesRepository {
+  _FakeHeroesRepository() : super(apiClient: _FakeApiClient());
+
+  String? requestedSearch;
+
+  @override
+  Future<List<HeroSummary>> loadHeroes(
+    int regionId, {
+    int page = 1,
+    int pageSize = 60,
+    String sort = 'created_at',
+    String order = 'desc',
+    String search = '',
+    int? lanePosition,
+  }) async {
+    requestedSearch = search;
+    return const [
+      HeroSummary(id: '1', name: 'Lam', avatar: '', title: 'Shark Rider'),
+      HeroSummary(id: '2', name: 'Angela', avatar: '', title: 'Arcane Mage'),
+    ];
+  }
+}
+
 void main() {
   testWidgets('web hero gallery route preserves search query', (tester) async {
     final router = createAppRouter();
+    final repository = _FakeHeroesRepository();
     router.go('/hero-gallery?q=Lam');
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          heroGalleryProvider.overrideWith((ref) async {
-            return const [
-              HeroSummary(
-                id: '1',
-                name: 'Lam',
-                avatar: '',
-                title: 'Shark Rider',
-              ),
-              HeroSummary(
-                id: '2',
-                name: 'Angela',
-                avatar: '',
-                title: 'Arcane Mage',
-              ),
-            ];
-          }),
+          heroesRepositoryProvider.overrideWithValue(repository),
+          heroGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: HokHelperApp(router: router),
       ),
@@ -45,6 +68,7 @@ void main() {
     expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
     expect(find.text('Shark Rider'), findsOneWidget);
     expect(find.text('Angela'), findsNothing);
+    expect(repository.requestedSearch, 'Lam');
   });
 
   testWidgets('web hero history tab deep link focuses mobile history', (

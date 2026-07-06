@@ -41,6 +41,43 @@ class _FakeApiClient extends ApiClient {
   }
 }
 
+class _FakeHeroesRepository extends HeroesRepository {
+  _FakeHeroesRepository({
+    this.heroes = const [
+      HeroSummary(id: '1', name: 'Lam', avatar: '', title: 'Shark Rider'),
+    ],
+  }) : super(
+         apiClient: _FakeApiClient(
+           postResponse: {
+             'result': {'data': <Map<String, Object>>[]},
+           },
+         ),
+       );
+
+  String? requestedSearch;
+  String? requestedSort;
+  String? requestedOrder;
+  int? requestedLanePosition;
+  final List<HeroSummary> heroes;
+
+  @override
+  Future<List<HeroSummary>> loadHeroes(
+    int regionId, {
+    int page = 1,
+    int pageSize = 60,
+    String sort = 'created_at',
+    String order = 'desc',
+    String search = '',
+    int? lanePosition,
+  }) async {
+    requestedSearch = search;
+    requestedSort = sort;
+    requestedOrder = order;
+    requestedLanePosition = lanePosition;
+    return heroes;
+  }
+}
+
 void main() {
   group('HeroSummary', () {
     test('parses alternate backend field names', () {
@@ -132,12 +169,47 @@ void main() {
       expect(apiClient.postBody, {
         'page': 1,
         'pageSize': 60,
+        'sort': 'created_at',
+        'order': 'desc',
         'filterRules': [
           {'field': 'region_id', 'op': 'eq', 'value': 2},
         ],
       });
       expect(heroes.map((hero) => hero.name), ['Arthur', 'Angela']);
     });
+
+    test(
+      'loads heroes with hokx-compatible search sort and lane filters',
+      () async {
+        final apiClient = _FakeApiClient(
+          postResponse: {
+            'result': {'data': <Map<String, Object>>[]},
+          },
+        );
+        final repository = HeroesRepository(apiClient: apiClient);
+
+        await repository.loadHeroes(
+          2,
+          search: 'Lam',
+          sort: 'rating',
+          order: 'asc',
+          lanePosition: 0,
+        );
+
+        expect(apiClient.postPath, '/hero/gallery');
+        expect(apiClient.postBody, {
+          'page': 1,
+          'pageSize': 60,
+          'sort': 'rating',
+          'order': 'asc',
+          'filterRules': [
+            {'field': 'region_id', 'op': 'eq', 'value': 2},
+            {'field': 'name', 'op': 'contains', 'value': 'Lam', 'ig': true},
+            {'field': 'position', 'op': 'eq', 'value': 0},
+          ],
+        });
+      },
+    );
 
     test('filters heroes with empty malformed or non-numeric ids', () async {
       final repository = HeroesRepository(
@@ -238,25 +310,18 @@ void main() {
   );
 
   testWidgets('hero gallery filters from initial search query', (tester) async {
+    final repository = _FakeHeroesRepository(
+      heroes: const [
+        HeroSummary(id: '1', name: 'Lam', avatar: '', title: 'Shark Rider'),
+        HeroSummary(id: '2', name: 'Angela', avatar: '', title: 'Arcane Mage'),
+      ],
+    );
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          heroGalleryProvider.overrideWith((ref) async {
-            return const [
-              HeroSummary(
-                id: '1',
-                name: 'Lam',
-                avatar: '',
-                title: 'Shark Rider',
-              ),
-              HeroSummary(
-                id: '2',
-                name: 'Angela',
-                avatar: '',
-                title: 'Arcane Mage',
-              ),
-            ];
-          }),
+          heroesRepositoryProvider.overrideWithValue(repository),
+          heroGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
           home: Scaffold(body: HeroGalleryScreen(initialSearchQuery: 'Lam')),
@@ -269,5 +334,33 @@ void main() {
     expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
     expect(find.text('Shark Rider'), findsOneWidget);
     expect(find.text('Angela'), findsNothing);
+    expect(repository.requestedSearch, 'Lam');
+  });
+
+  testWidgets('hero gallery requests hokx-compatible filters', (tester) async {
+    final repository = _FakeHeroesRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroesRepositoryProvider.overrideWithValue(repository),
+          heroGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroGalleryScreen())),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Lam');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rating'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clash'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedSearch, 'Lam');
+    expect(repository.requestedSort, 'rating');
+    expect(repository.requestedOrder, 'asc');
+    expect(repository.requestedLanePosition, 0);
   });
 }

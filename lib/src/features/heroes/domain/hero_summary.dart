@@ -5,6 +5,7 @@ class HeroSummary {
     required this.name,
     required this.avatar,
     required this.title,
+    this.position,
   });
 
   final String id;
@@ -12,6 +13,7 @@ class HeroSummary {
   final String name;
   final String avatar;
   final String title;
+  final int? position;
 
   factory HeroSummary.fromJson(Map<String, dynamic> json) {
     return HeroSummary(
@@ -27,6 +29,7 @@ class HeroSummary {
         'image',
       ]),
       title: _readString(json, const ['title', 'heroTitle']),
+      position: _readInt(json, const ['position', 'mainJob', 'main_job']),
     );
   }
 
@@ -69,5 +72,20 @@ class HeroSummary {
     }
 
     return '';
+  }
+
+  static int? _readInt(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is int) {
+        return value;
+      }
+      final parsedValue = int.tryParse(value?.toString().trim() ?? '');
+      if (parsedValue != null) {
+        return parsedValue;
+      }
+    }
+
+    return null;
   }
 }

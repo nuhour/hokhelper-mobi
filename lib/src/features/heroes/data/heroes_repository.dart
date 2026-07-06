@@ -7,15 +7,32 @@ class HeroesRepository {
 
   final ApiClient apiClient;
 
-  Future<List<HeroSummary>> loadHeroes(int regionId) async {
+  Future<List<HeroSummary>> loadHeroes(
+    int regionId, {
+    int page = 1,
+    int pageSize = 60,
+    String sort = 'created_at',
+    String order = 'desc',
+    String search = '',
+    int? lanePosition,
+  }) async {
+    final trimmedSearch = search.trim();
+    final filterRules = [
+      {'field': 'region_id', 'op': 'eq', 'value': regionId},
+      if (trimmedSearch.isNotEmpty)
+        {'field': 'name', 'op': 'contains', 'value': trimmedSearch, 'ig': true},
+      if (lanePosition != null)
+        {'field': 'position', 'op': 'eq', 'value': lanePosition},
+    ];
+
     final json = await apiClient.postJson(
       '/hero/gallery',
       body: {
-        'page': 1,
-        'pageSize': 60,
-        'filterRules': [
-          {'field': 'region_id', 'op': 'eq', 'value': regionId},
-        ],
+        'page': page,
+        'pageSize': pageSize,
+        'sort': sort,
+        'order': order,
+        'filterRules': filterRules,
       },
     );
 
