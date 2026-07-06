@@ -192,14 +192,36 @@ class _SharedPromptBadge extends StatelessWidget {
   }
 }
 
-class _PromptCard extends StatelessWidget {
+class _PromptCard extends ConsumerStatefulWidget {
   const _PromptCard({required this.prompt});
 
   final PromptSummary prompt;
 
   @override
+  ConsumerState<_PromptCard> createState() => _PromptCardState();
+}
+
+class _PromptCardState extends ConsumerState<_PromptCard> {
+  late var _favoriteCount = widget.prompt.favoriteCount;
+  late var _isFavorited = widget.prompt.isFavorited;
+  var _favoriteSubmitting = false;
+
+  @override
+  void didUpdateWidget(covariant _PromptCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.prompt.id != widget.prompt.id ||
+        oldWidget.prompt.favoriteCount != widget.prompt.favoriteCount ||
+        oldWidget.prompt.isFavorited != widget.prompt.isFavorited) {
+      _favoriteCount = widget.prompt.favoriteCount;
+      _isFavorited = widget.prompt.isFavorited;
+      _favoriteSubmitting = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final prompt = widget.prompt;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -289,9 +311,16 @@ class _PromptCard extends StatelessWidget {
                   icon: Icons.favorite_border,
                   value: prompt.likeCount,
                 ),
-                _MetricChip(
-                  icon: Icons.bookmark_border,
-                  value: prompt.favoriteCount,
+                _MetricChip(icon: Icons.bookmark_border, value: _favoriteCount),
+                OutlinedButton.icon(
+                  onPressed: _favoriteSubmitting
+                      ? null
+                      : () => _favoritePrompt(context),
+                  icon: Icon(
+                    _isFavorited ? Icons.bookmark : Icons.bookmark_border,
+                    size: 16,
+                  ),
+                  label: const Text('Favorite'),
                 ),
                 if (prompt.content.isNotEmpty)
                   OutlinedButton.icon(
@@ -308,13 +337,52 @@ class _PromptCard extends StatelessWidget {
   }
 
   Future<void> _copyPrompt(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: prompt.content));
+    await Clipboard.setData(ClipboardData(text: widget.prompt.content));
     if (!context.mounted) {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(const SnackBar(content: Text('Prompt copied')));
+  }
+
+  Future<void> _favoritePrompt(BuildContext context) async {
+    setState(() => _favoriteSubmitting = true);
+    try {
+      final result = await ref
+          .read(promptsRepositoryProvider)
+          .toggleFavorite(widget.prompt.id);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _isFavorited = result.isFavorited;
+        _favoriteCount = result.favoriteCount;
+        _favoriteSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isFavorited ? 'Prompt favorited' : 'Prompt unfavorited',
+          ),
+        ),
+      );
+      if (!result.isFavorited) {
+        ref.invalidate(promptListProvider(PromptListAction.favorites));
+      }
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _favoriteSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to favorite prompt')),
+      );
+    }
   }
 }
 

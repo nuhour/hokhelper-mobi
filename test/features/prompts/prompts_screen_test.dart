@@ -2,9 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/prompts/data/prompts_repository.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
+
+class _FakePromptsRepository extends PromptsRepository {
+  _FakePromptsRepository() : super(apiClient: _NoopApiClient());
+
+  String? favoritedPromptId;
+
+  @override
+  Future<PromptFavoriteResult> toggleFavorite(String promptId) async {
+    favoritedPromptId = promptId;
+    return const PromptFavoriteResult(isFavorited: true, favoriteCount: 6);
+  }
+}
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -189,5 +213,43 @@ void main() {
       'text': 'Create a neon Honor of Kings skin splash art.',
     });
     expect(find.text('Prompt copied'), findsOneWidget);
+  });
+
+  testWidgets('favorites prompt cards through the backend', (tester) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorite'));
+    await tester.pumpAndSettle();
+
+    expect(repository.favoritedPromptId, '7');
+    expect(find.text('6'), findsOneWidget);
+    expect(find.text('Prompt favorited'), findsOneWidget);
   });
 }

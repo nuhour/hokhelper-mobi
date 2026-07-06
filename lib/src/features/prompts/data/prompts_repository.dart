@@ -46,4 +46,46 @@ class PromptsRepository {
 
     return rows.map(PromptSummary.fromJson).toList(growable: false);
   }
+
+  Future<PromptFavoriteResult> toggleFavorite(String promptId) async {
+    final json = await apiClient.postJson(
+      '/prompt/$promptId/favorite',
+      body: {},
+    );
+    final result = json['result'];
+    final map = result is Map ? result : const <String, Object?>{};
+    return PromptFavoriteResult.fromJson(map);
+  }
+}
+
+class PromptFavoriteResult {
+  const PromptFavoriteResult({
+    required this.isFavorited,
+    required this.favoriteCount,
+  });
+
+  final bool isFavorited;
+  final int favoriteCount;
+
+  factory PromptFavoriteResult.fromJson(Map<dynamic, dynamic> json) {
+    return PromptFavoriteResult(
+      isFavorited: _readBool(json['is_favorited']),
+      favoriteCount: _readInt(json['favorites'] ?? json['favorite_count']),
+    );
+  }
+}
+
+bool _readBool(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  final text = value?.toString().toLowerCase() ?? '';
+  return text == 'true' || text == '1';
+}
+
+int _readInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  return int.tryParse(value?.toString() ?? '') ?? 0;
 }

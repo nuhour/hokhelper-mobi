@@ -14,6 +14,8 @@ class _FakeApiClient extends ApiClient {
 
   String? getPath;
   Map<String, dynamic>? getQuery;
+  String? postPath;
+  Object? postBody;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -42,6 +44,16 @@ class _FakeApiClient extends ApiClient {
           },
         ],
       },
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    postPath = path;
+    postBody = body;
+    return const {
+      'success': true,
+      'result': {'is_favorited': true, 'favorites': 6},
     };
   }
 }
@@ -90,5 +102,17 @@ void main() {
     expect(apiClient.getQuery?['pageSize'], 20);
     expect(apiClient.getQuery?['sort'], '-hot');
     expect(prompts.single.title, 'Cyber skin concept');
+  });
+
+  test('toggles prompt favorite with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final result = await repository.toggleFavorite('7');
+
+    expect(apiClient.postPath, '/prompt/7/favorite');
+    expect(apiClient.postBody, isEmpty);
+    expect(result.isFavorited, isTrue);
+    expect(result.favoriteCount, 6);
   });
 }
