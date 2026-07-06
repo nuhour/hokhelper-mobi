@@ -86,6 +86,11 @@ String _heroGalleryTarget(Uri uri) {
   return Uri(path: '/heroes', queryParameters: {'q': query}).toString();
 }
 
+String _targetWithQuery(String path, Uri uri) {
+  final query = uri.query;
+  return query.isEmpty ? path : '$path?$query';
+}
+
 PlayerLeaderboardRankType? _playerLeaderboardRankType(Uri uri) {
   final rankType = uri.queryParameters['rank_type']?.trim().toLowerCase();
   return switch (rankType) {
@@ -224,6 +229,51 @@ GoRouter createAppRouter() {
         path: '/tier-list',
         builder: (context, state) =>
             const HeroRankingScreen(initialTabIndex: 3),
+      ),
+      GoRoute(
+        path: '/builds',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/builds', state.uri),
+      ),
+      GoRoute(
+        path: '/build-sim',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/build-sim', state.uri),
+      ),
+      GoRoute(
+        path: '/bp-simulator',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/bp-simulator', state.uri),
+      ),
+      GoRoute(
+        path: '/rankings',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/rankings', state.uri),
+      ),
+      GoRoute(
+        path: '/game-assistant',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/game-assistant', state.uri),
+      ),
+      GoRoute(
+        path: '/rank-fortune',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/rank-fortune', state.uri),
+      ),
+      GoRoute(
+        path: '/curiosity-lab',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/curiosity-lab', state.uri),
+      ),
+      GoRoute(
+        path: '/team-builder',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/team-builder', state.uri),
+      ),
+      GoRoute(
+        path: '/prompts',
+        redirect: (context, state) =>
+            _targetWithQuery('/tools/prompts', state.uri),
       ),
       GoRoute(
         path: '/skin-gallery',

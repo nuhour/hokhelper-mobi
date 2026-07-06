@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
@@ -104,51 +105,107 @@ void main() {
             entry: 'equip_rank',
             equipId: '88',
           ),
+          '/builds': (
+            path: '/tools/builds',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/build-sim?hero_id=101&scheme=22': (
+            path: '/tools/build-sim',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/bp-simulator': (
+            path: '/tools/bp-simulator',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/rankings': (
+            path: '/tools/rankings',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/game-assistant': (
+            path: '/tools/game-assistant',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/rank-fortune': (
+            path: '/tools/rank-fortune',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/curiosity-lab': (
+            path: '/tools/curiosity-lab',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/team-builder': (
+            path: '/tools/team-builder',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/prompts?tab=favorites': (
+            path: '/tools/prompts',
+            tab: 'favorites',
+            entry: null,
+            equipId: null,
+          ),
         };
 
-    final router = createAppRouter();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          heroGalleryProvider.overrideWith((ref) async => const []),
-          selectedRegionHeroDetailProvider.overrideWith(
-            (ref, heroId) async => {'id': heroId},
-          ),
-          skinGalleryProvider.overrideWith((ref) async => const []),
-          skinDetailProvider(1001).overrideWith(
-            (ref) async => const SkinDetail(
-              id: 1001,
-              title: 'Crimson Hunter',
-              heroName: 'Lam',
-              portraitUrl: '',
-              landscapeUrl: '',
-              seriesName: 'Hunter Series',
-              regionName: 'Global',
-              rating: 4.5,
-              ratingCount: 12,
-              linkUrl: '',
-            ),
-          ),
-          communityPostsProvider.overrideWith((ref) async => const []),
-          leakPostsProvider.overrideWith((ref) async => const []),
-          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
-          patchNotesProvider.overrideWith((ref) async => const []),
-          statsDashboardProvider.overrideWith(
-            (ref) async => const StatsDashboard(),
-          ),
-          heroTrendsProvider.overrideWith((ref) async => const []),
-          heroRankingProvider.overrideWith((ref) async => const []),
-          playerRankingProvider.overrideWith((ref) async => const []),
-          equipRankingProvider.overrideWith((ref) async => const []),
-          tierRankingProvider.overrideWith((ref) async => const []),
-        ],
-        child: HokHelperApp(router: router),
-      ),
-    );
-
     for (final entry in aliases.entries) {
-      router.go(entry.key);
-      await tester.pumpAndSettle();
+      final router = createAppRouter()..go(entry.key);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            heroGalleryProvider.overrideWith((ref) async => const []),
+            selectedRegionHeroDetailProvider.overrideWith(
+              (ref, heroId) async => {'id': heroId},
+            ),
+            skinGalleryProvider.overrideWith((ref) async => const []),
+            skinDetailProvider(1001).overrideWith(
+              (ref) async => const SkinDetail(
+                id: 1001,
+                title: 'Crimson Hunter',
+                heroName: 'Lam',
+                portraitUrl: '',
+                landscapeUrl: '',
+                seriesName: 'Hunter Series',
+                regionName: 'Global',
+                rating: 4.5,
+                ratingCount: 12,
+                linkUrl: '',
+              ),
+            ),
+            communityPostsProvider.overrideWith((ref) async => const []),
+            leakPostsProvider.overrideWith((ref) async => const []),
+            eventAssistanceRecordsProvider.overrideWith(
+              (ref) async => const [],
+            ),
+            patchNotesProvider.overrideWith((ref) async => const []),
+            statsDashboardProvider.overrideWith(
+              (ref) async => const StatsDashboard(),
+            ),
+            heroTrendsProvider.overrideWith((ref) async => const []),
+            heroRankingProvider.overrideWith((ref) async => const []),
+            playerRankingProvider.overrideWith((ref) async => const []),
+            equipRankingProvider.overrideWith((ref) async => const []),
+            tierRankingProvider.overrideWith((ref) async => const []),
+          ],
+          child: HokHelperApp(router: router),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 16));
 
       expect(
         router.routeInformationProvider.value.uri.path,
@@ -170,6 +227,7 @@ void main() {
         entry.value.equipId,
         reason: '${entry.key} should preserve the focused equipment target',
       );
+      await tester.pumpWidget(const SizedBox.shrink());
     }
   });
 }
