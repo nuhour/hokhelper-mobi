@@ -121,6 +121,12 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/prompt/recharge') {
+      return const {
+        'success': true,
+        'result': {'quota_used': 5, 'quota_total': 15, 'added': 10},
+      };
+    }
     if (path.endsWith('/like')) {
       return const {
         'success': true,
@@ -324,5 +330,25 @@ void main() {
     });
     expect(updated.id, '7');
     expect(updated.imageUrl, 'https://example.test/generated-1.png');
+  });
+
+  test('recharges prompt generation quota with hokx request fields', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final result = await repository.rechargeGenerationQuota(
+      planId: 'standard',
+      paymentMethod: 'card',
+    );
+
+    expect(apiClient.postPath, '/prompt/recharge');
+    expect(apiClient.postBody, {
+      'plan_id': 'standard',
+      'payment_method': 'card',
+    });
+    expect(result.quota.used, 5);
+    expect(result.quota.total, 15);
+    expect(result.quota.remaining, 10);
+    expect(result.added, 10);
   });
 }

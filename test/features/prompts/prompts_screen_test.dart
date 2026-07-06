@@ -9,7 +9,11 @@ import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dar
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
 
 class _FakePromptsRepository extends PromptsRepository {
-  _FakePromptsRepository() : super(apiClient: _NoopApiClient());
+  _FakePromptsRepository({
+    this.initialQuota = const PromptGenerationQuota(used: 1, total: 5),
+  }) : super(apiClient: _NoopApiClient());
+
+  final PromptGenerationQuota initialQuota;
 
   String? likedPromptId;
   String? favoritedPromptId;
@@ -22,6 +26,8 @@ class _FakePromptsRepository extends PromptsRepository {
   String? generatedContent;
   String? setCoverPromptId;
   String? setCoverImageData;
+  String? rechargePlanId;
+  String? rechargePaymentMethod;
 
   @override
   Future<PromptLikeResult> toggleLike(String promptId) async {
@@ -75,7 +81,7 @@ class _FakePromptsRepository extends PromptsRepository {
 
   @override
   Future<PromptGenerationQuota> loadGenerationQuota() async {
-    return const PromptGenerationQuota(used: 1, total: 5);
+    return initialQuota;
   }
 
   @override
@@ -110,6 +116,19 @@ class _FakePromptsRepository extends PromptsRepository {
       likeCount: 12,
       favoriteCount: 5,
       isPublic: true,
+    );
+  }
+
+  @override
+  Future<PromptRechargeResult> rechargeGenerationQuota({
+    required String planId,
+    String paymentMethod = 'card',
+  }) async {
+    rechargePlanId = planId;
+    rechargePaymentMethod = paymentMethod;
+    return const PromptRechargeResult(
+      quota: PromptGenerationQuota(used: 5, total: 15),
+      added: 10,
     );
   }
 }
@@ -644,5 +663,56 @@ void main() {
       'https://example.test/generated-1.png',
     );
     expect(find.text('Prompt cover updated'), findsOneWidget);
+  });
+
+  testWidgets('recharges prompt generation quota from the sheet', (
+    tester,
+  ) async {
+    final repository = _FakePromptsRepository(
+      initialQuota: const PromptGenerationQuota(used: 5, total: 5),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0 / 5 left'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Recharge'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recharge quota'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Pay'));
+    await tester.pumpAndSettle();
+
+    expect(repository.rechargePlanId, 'standard');
+    expect(repository.rechargePaymentMethod, 'card');
+    expect(find.text('10 / 15 left'), findsOneWidget);
+    expect(find.text('Quota recharged +10'), findsOneWidget);
   });
 }

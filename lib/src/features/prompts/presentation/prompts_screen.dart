@@ -396,7 +396,10 @@ class _PromptGenerationSheetState
                     return const LinearProgressIndicator();
                   }
                   _quota = quota;
-                  return _QuotaPanel(quota: quota);
+                  return _QuotaPanel(
+                    quota: quota,
+                    onRecharge: _openRechargeSheet,
+                  );
                 },
               ),
               const SizedBox(height: 12),
@@ -570,12 +573,37 @@ class _PromptGenerationSheetState
       );
     }
   }
+
+  Future<void> _openRechargeSheet() async {
+    final result = await showModalBottomSheet<PromptRechargeResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _PromptRechargeSheet(),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _quota = result.quota;
+      _quotaFuture = Future.value(result.quota);
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(content: Text('Quota recharged +${result.added}')),
+    );
+  }
 }
 
 class _QuotaPanel extends StatelessWidget {
-  const _QuotaPanel({required this.quota});
+  const _QuotaPanel({required this.quota, this.onRecharge});
 
   final PromptGenerationQuota quota;
+  final VoidCallback? onRecharge;
 
   @override
   Widget build(BuildContext context) {
@@ -590,16 +618,278 @@ class _QuotaPanel extends StatelessWidget {
           children: [
             const Icon(Icons.bolt_outlined, color: AppTheme.gold),
             const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${quota.remaining} / ${quota.total} left',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: onRecharge,
+              icon: const Icon(Icons.credit_card, size: 16),
+              label: const Text('Recharge'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PromptRechargeSheet extends ConsumerStatefulWidget {
+  const _PromptRechargeSheet();
+
+  @override
+  ConsumerState<_PromptRechargeSheet> createState() =>
+      _PromptRechargeSheetState();
+}
+
+class _PromptRechargeSheetState extends ConsumerState<_PromptRechargeSheet> {
+  var _planId = 'standard';
+  var _paymentMethod = 'card';
+  var _submitting = false;
+
+  static const _plans = [
+    _RechargePlan('basic', '+5', 'Starter'),
+    _RechargePlan('standard', '+10', 'Standard'),
+    _RechargePlan('pro', '+30', 'Pro'),
+  ];
+
+  static const _paymentMethods = [
+    _PaymentMethod('wechat', 'WeChat', Icons.chat_bubble_outline),
+    _PaymentMethod('alipay', 'Alipay', Icons.qr_code_2),
+    _PaymentMethod('card', 'Card', Icons.credit_card),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Recharge quota',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _submitting ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Close',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             Text(
-              '${quota.remaining} / ${quota.total} left',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.text,
+              'Plan',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppTheme.muted,
                 fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                for (final plan in _plans) ...[
+                  Expanded(
+                    child: _OptionTile(
+                      selected: _planId == plan.id,
+                      title: plan.name,
+                      subtitle: plan.count,
+                      onTap: _submitting
+                          ? null
+                          : () => setState(() => _planId = plan.id),
+                    ),
+                  ),
+                  if (plan != _plans.last) const SizedBox(width: 8),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Payment',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final method in _paymentMethods) ...[
+              _PaymentTile(
+                method: method,
+                selected: _paymentMethod == method.id,
+                onTap: _submitting
+                    ? null
+                    : () => setState(() => _paymentMethod = method.id),
+              ),
+              if (method != _paymentMethods.last) const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _submitting ? null : _submit,
+                icon: _submitting
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.lock_open),
+                label: const Text('Pay'),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    try {
+      final result = await ref
+          .read(promptsRepositoryProvider)
+          .rechargeGenerationQuota(
+            planId: _planId,
+            paymentMethod: _paymentMethod,
+          );
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(result);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _submitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to recharge quota')),
+      );
+    }
+  }
+}
+
+class _RechargePlan {
+  const _RechargePlan(this.id, this.count, this.name);
+
+  final String id;
+  final String count;
+  final String name;
+}
+
+class _PaymentMethod {
+  const _PaymentMethod(this.id, this.label, this.icon);
+
+  final String id;
+  final String label;
+  final IconData icon;
+}
+
+class _OptionTile extends StatelessWidget {
+  const _OptionTile({
+    required this.selected,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.gold.withValues(alpha: 0.14)
+              : AppTheme.panelAlt,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppTheme.gold : AppTheme.panelAlt,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          child: Column(
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppTheme.gold,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentTile extends StatelessWidget {
+  const _PaymentTile({
+    required this.method,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _PaymentMethod method;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      tileColor: selected
+          ? AppTheme.gold.withValues(alpha: 0.12)
+          : AppTheme.panelAlt,
+      leading: Icon(
+        method.icon,
+        color: selected ? AppTheme.gold : AppTheme.muted,
+      ),
+      title: Text(
+        method.label,
+        style: const TextStyle(
+          color: AppTheme.text,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      trailing: selected
+          ? const Icon(Icons.check_circle, color: AppTheme.gold)
+          : null,
     );
   }
 }

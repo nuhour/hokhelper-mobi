@@ -127,6 +127,19 @@ class PromptsRepository {
     final prompt = map['prompt'];
     return PromptSummary.fromJson(prompt ?? map);
   }
+
+  Future<PromptRechargeResult> rechargeGenerationQuota({
+    required String planId,
+    String paymentMethod = 'card',
+  }) async {
+    final json = await apiClient.postJson(
+      '/prompt/recharge',
+      body: {'plan_id': planId, 'payment_method': paymentMethod},
+    );
+    final result = json['result'];
+    final map = result is Map ? result : const <String, Object?>{};
+    return PromptRechargeResult.fromJson(map);
+  }
 }
 
 class PromptGenerationQuota {
@@ -168,6 +181,20 @@ class PromptGenerateResult {
     return PromptGenerateResult(
       images: images,
       quota: PromptGenerationQuota.fromJson(json),
+    );
+  }
+}
+
+class PromptRechargeResult {
+  const PromptRechargeResult({required this.quota, required this.added});
+
+  final PromptGenerationQuota quota;
+  final int added;
+
+  factory PromptRechargeResult.fromJson(Map<dynamic, dynamic> json) {
+    return PromptRechargeResult(
+      quota: PromptGenerationQuota.fromJson(json),
+      added: _readInt(json['added']),
     );
   }
 }
