@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -34,7 +36,7 @@ class GameAssistantScreen extends StatelessWidget {
           SizedBox(height: 18),
           _FeatureGrid(),
           SizedBox(height: 18),
-          _DownloadPanel(),
+          _LiveMatchConsole(),
         ],
       ),
     );
@@ -437,8 +439,25 @@ class _FeatureCard extends StatelessWidget {
   }
 }
 
-class _DownloadPanel extends StatelessWidget {
-  const _DownloadPanel();
+class _LiveMatchConsole extends StatefulWidget {
+  const _LiveMatchConsole();
+
+  @override
+  State<_LiveMatchConsole> createState() => _LiveMatchConsoleState();
+}
+
+class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
+  Timer? _timer;
+  var _isRunning = false;
+  var _elapsedSeconds = 0;
+  var _blueBuffSeconds = 15;
+  var _redBuffSeconds = 42;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -451,169 +470,227 @@ class _DownloadPanel extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.qr_code_2_outlined, color: AppTheme.muted, size: 18),
-                SizedBox(width: 8),
+                const Icon(
+                  Icons.sports_esports_outlined,
+                  color: AppTheme.gold,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Scan to download',
+                    'Live Match Console',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppTheme.muted,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.text,
                       fontWeight: FontWeight.w900,
                     ),
+                  ),
+                ),
+                Text(
+                  _formatClock(_elapsedSeconds),
+                  style: const TextStyle(
+                    color: AppTheme.gold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 92,
-                      height: 92,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.qr_code_2_outlined,
-                        color: Color(0xFF334155),
-                        size: 58,
-                      ),
-                    ),
-                    Container(
-                      width: 92,
-                      height: 92,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.52),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    Transform.rotate(
-                      angle: -0.18,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Text(
-                          'COMING SOON',
-                          style: TextStyle(
-                            color: Color(0xFF1F2937),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                Expanded(
+                  child: _LiveTimerTile(
+                    title: 'Blue Buff',
+                    value: 'Blue Buff ${_blueBuffSeconds}s',
+                    color: AppTheme.cyan,
+                    icon: Icons.water_drop_outlined,
+                    resetLabel: 'Reset blue',
+                    onReset: () => _setBlueBuff(15),
+                  ),
                 ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Coming soon',
-                        style: TextStyle(
-                          color: AppTheme.gold,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      _StoreButton(
-                        icon: Icons.apple,
-                        eyebrow: 'Download on the',
-                        label: 'App Store',
-                      ),
-                      SizedBox(height: 10),
-                      _StoreButton(
-                        icon: Icons.play_arrow_rounded,
-                        eyebrow: 'Get it on',
-                        label: 'Google Play',
-                      ),
-                    ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _LiveTimerTile(
+                    title: 'Red Buff',
+                    value: 'Red Buff ${_redBuffSeconds}s',
+                    color: AppTheme.error,
+                    icon: Icons.local_fire_department_outlined,
+                    resetLabel: 'Reset red',
+                    onReset: () => _setRedBuff(42),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Store download links will unlock when the companion build is ready.',
-              style: TextStyle(color: AppTheme.muted, height: 1.35),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppTheme.gold.withValues(alpha: 0.16),
+                ),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.psychology_outlined,
+                      color: AppTheme.gold,
+                      size: 18,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Tip: sync jungle timers before river fights and ping cooldown windows when the enemy mid has no flash.',
+                        style: TextStyle(color: AppTheme.muted, height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _toggleRunning,
+                    icon: Icon(
+                      _isRunning
+                          ? Icons.pause_outlined
+                          : Icons.play_arrow_rounded,
+                      size: 18,
+                    ),
+                    label: Text(_isRunning ? 'Pause' : 'Start match'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: _resetAll,
+                  icon: const Icon(Icons.restart_alt, size: 18),
+                  label: const Text('Reset'),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
+  void _toggleRunning() {
+    if (_isRunning) {
+      _timer?.cancel();
+      setState(() => _isRunning = false);
+      return;
+    }
+    setState(() => _isRunning = true);
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _elapsedSeconds += 1;
+        _blueBuffSeconds = (_blueBuffSeconds - 1).clamp(0, 999);
+        _redBuffSeconds = (_redBuffSeconds - 1).clamp(0, 999);
+      });
+    });
+  }
+
+  void _resetAll() {
+    _timer?.cancel();
+    setState(() {
+      _isRunning = false;
+      _elapsedSeconds = 0;
+      _blueBuffSeconds = 15;
+      _redBuffSeconds = 42;
+    });
+  }
+
+  void _setBlueBuff(int seconds) {
+    setState(() => _blueBuffSeconds = seconds);
+  }
+
+  void _setRedBuff(int seconds) {
+    setState(() => _redBuffSeconds = seconds);
+  }
+
+  String _formatClock(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
 }
 
-class _StoreButton extends StatelessWidget {
-  const _StoreButton({
+class _LiveTimerTile extends StatelessWidget {
+  const _LiveTimerTile({
+    required this.title,
+    required this.value,
+    required this.color,
     required this.icon,
-    required this.eyebrow,
-    required this.label,
+    required this.resetLabel,
+    required this.onReset,
   });
 
+  final String title;
+  final String value;
+  final Color color;
   final IconData icon;
-  final String eyebrow;
-  final String label;
+  final String resetLabel;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.62),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: AppTheme.text, size: 24),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    eyebrow,
+            Row(
+              children: [
+                Icon(icon, color: color, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppTheme.muted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(color: color, fontWeight: FontWeight.w900),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppTheme.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
               ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: onReset,
+              icon: const Icon(Icons.restart_alt, size: 16),
+              label: Text(resetLabel),
             ),
           ],
         ),

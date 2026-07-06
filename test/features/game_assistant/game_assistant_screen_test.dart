@@ -16,11 +16,39 @@ void main() {
     expect(find.text('Gold analytics'), findsWidgets);
     expect(find.text('Enemy cooldowns'), findsWidgets);
     expect(find.text('AI tactical tips'), findsOneWidget);
-    expect(find.text('Coming soon'), findsOneWidget);
-    expect(find.text('Scan to download'), findsOneWidget);
-    expect(find.text('Download on the'), findsOneWidget);
-    expect(find.text('App Store'), findsOneWidget);
-    expect(find.text('Get it on'), findsOneWidget);
-    expect(find.text('Google Play'), findsOneWidget);
+    expect(find.text('Live Match Console'), findsOneWidget);
+    expect(find.text('Coming soon'), findsNothing);
+  });
+
+  testWidgets('runs the live match timer controls', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: GameAssistantScreen())),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Start match'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('Blue Buff 15s'), findsOneWidget);
+
+    await tester.tap(find.text('Start match'));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('00:02'), findsOneWidget);
+    expect(find.text('Blue Buff 13s'), findsOneWidget);
+    expect(find.text('Pause'), findsOneWidget);
+
+    await tester.tap(find.text('Pause'));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('00:02'), findsOneWidget);
+
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+
+    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('Blue Buff 15s'), findsOneWidget);
   });
 }
