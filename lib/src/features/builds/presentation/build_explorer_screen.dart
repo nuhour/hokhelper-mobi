@@ -102,6 +102,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   late var _favoriteCount = widget.scheme.favoriteCount;
   var _likeSubmitting = false;
   var _favoriteSubmitting = false;
+  var _cloneSubmitting = false;
 
   @override
   void didUpdateWidget(covariant BuildSchemeCard oldWidget) {
@@ -115,6 +116,9 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
         oldWidget.scheme.favoriteCount != widget.scheme.favoriteCount) {
       _favoriteCount = widget.scheme.favoriteCount;
       _favoriteSubmitting = false;
+    }
+    if (oldWidget.scheme.id != widget.scheme.id) {
+      _cloneSubmitting = false;
     }
   }
 
@@ -203,6 +207,13 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                       icon: const Icon(Icons.star_border_rounded, size: 16),
                       label: const Text('Favorite'),
                     ),
+                    OutlinedButton.icon(
+                      onPressed: _cloneSubmitting
+                          ? null
+                          : () => _showCloneSheet(context),
+                      icon: const Icon(Icons.copy_all_outlined, size: 16),
+                      label: const Text('Clone'),
+                    ),
                   ],
                 ),
               ],
@@ -267,6 +278,74 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(content: Text('Failed to favorite build')),
+      );
+    }
+  }
+
+  Future<void> _showCloneSheet(BuildContext context) async {
+    final slotIndex = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppTheme.panel,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Clone build to slot',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (var slot = 1; slot <= 3; slot++) ...[
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(slot),
+                  icon: const Icon(Icons.inventory_2_outlined, size: 18),
+                  label: Text('Slot $slot'),
+                ),
+                if (slot < 3) const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+    if (slotIndex == null || !context.mounted) {
+      return;
+    }
+    await _cloneScheme(context, slotIndex);
+  }
+
+  Future<void> _cloneScheme(BuildContext context, int slotIndex) async {
+    setState(() => _cloneSubmitting = true);
+    try {
+      await ref.read(buildsRepositoryProvider).cloneBuildScheme(
+            schemeId: widget.scheme.id,
+            slotIndex: slotIndex,
+          );
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _cloneSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Build cloned to Slot $slotIndex')),
+      );
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _cloneSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to clone build')),
       );
     }
   }
