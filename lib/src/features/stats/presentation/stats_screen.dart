@@ -355,6 +355,17 @@ class _HeroEquipUsageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
+      onTap: equip.id.isEmpty
+          ? null
+          : () => context.go(
+              Uri(
+                path: '/tools/stats',
+                queryParameters: {
+                  'entry': 'equip_rank',
+                  'equip_id': equip.id,
+                },
+              ).toString(),
+            ),
       child: Row(
         children: [
           AppImage(
@@ -405,6 +416,17 @@ class _EquipHeroUsageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
+      onTap: hero.id.isEmpty
+          ? null
+          : () => context.go(
+              Uri(
+                path: '/tools/stats',
+                queryParameters: {
+                  'entry': 'tier_rank',
+                  'hero_id': hero.id,
+                },
+              ).toString(),
+            ),
       child: Row(
         children: [
           AppImage(
