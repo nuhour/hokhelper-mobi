@@ -44,6 +44,7 @@ class SkinGalleryScreen extends ConsumerStatefulWidget {
 class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+  _SkinViewMode _viewMode = _SkinViewMode.poster;
   _SkinSort _sort = _SkinSort.latest;
   double _minRating = 0;
   int? _lanePosition;
@@ -120,6 +121,24 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            SegmentedButton<_SkinViewMode>(
+              segments: const [
+                ButtonSegment(
+                  value: _SkinViewMode.poster,
+                  label: Text('Poster'),
+                  icon: Icon(Icons.view_module_outlined),
+                ),
+                ButtonSegment(
+                  value: _SkinViewMode.splash,
+                  label: Text('Splash'),
+                  icon: Icon(Icons.panorama_outlined),
+                ),
+              ],
+              selected: {_viewMode},
+              onSelectionChanged: (value) =>
+                  setState(() => _viewMode = value.first),
+            ),
+            const SizedBox(height: 12),
             SegmentedButton<_SkinSort>(
               segments: const [
                 ButtonSegment(
@@ -170,15 +189,18 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   shrinkWrap: true,
                   itemCount: skins.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _viewMode == _SkinViewMode.poster ? 2 : 1,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 0.64,
+                    childAspectRatio: _viewMode == _SkinViewMode.poster
+                        ? 0.64
+                        : 1.42,
                   ),
                   itemBuilder: (context, index) {
                     return _SkinCard(
                       skin: skins[index],
+                      viewMode: _viewMode,
                       isRating: _ratingSkinId == skins[index].id,
                       onRate: (rating) =>
                           _rateSkinFromCard(skins[index], rating),
@@ -365,18 +387,26 @@ class _RatingFilterOption {
 class _SkinCard extends StatelessWidget {
   const _SkinCard({
     required this.skin,
+    required this.viewMode,
     required this.isRating,
     required this.onRate,
     required this.onTap,
   });
 
   final ContentItemSummary skin;
+  final _SkinViewMode viewMode;
   final bool isRating;
   final ValueChanged<double> onRate;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final isSplash = viewMode == _SkinViewMode.splash;
+    final imageUrl = isSplash && skin.landscapeImageUrl.isNotEmpty
+        ? skin.landscapeImageUrl
+        : skin.imageUrl;
+    final imageHeight = isSplash ? 150.0 : 178.0;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
@@ -395,12 +425,12 @@ class _SkinCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 178,
+                  height: imageHeight,
                   width: double.infinity,
                   child: AppImage(
-                    url: skin.imageUrl,
+                    url: imageUrl,
                     width: double.infinity,
-                    height: 178,
+                    height: imageHeight,
                     borderRadius: 12,
                     semanticLabel: skin.title,
                   ),
@@ -742,3 +772,5 @@ class _SkinRatingControl extends StatelessWidget {
 }
 
 enum _SkinSort { latest, name, rating }
+
+enum _SkinViewMode { poster, splash }

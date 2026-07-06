@@ -11,6 +11,7 @@ class ContentItemSummary {
     required this.rating,
     required this.ratingCount,
     required this.viewCount,
+    this.landscapeImageUrl = '',
     this.heroPosition,
   });
 
@@ -23,6 +24,7 @@ class ContentItemSummary {
   final double rating;
   final int ratingCount;
   final int viewCount;
+  final String landscapeImageUrl;
   final int? heroPosition;
 
   factory ContentItemSummary.skinFromJson(Object? json) {
@@ -37,6 +39,9 @@ class ContentItemSummary {
             map['portraitUrl'] ??
             map['image_url'] ??
             map['landscapeUrl'],
+      ),
+      landscapeImageUrl: _readString(
+        map['image_url'] ?? map['landscapeUrl'] ?? map['landscape_image_url'],
       ),
       subtitle: _readString(map['series_name'] ?? map['region_name']),
       rating: _readDouble(map['rating']),
@@ -59,6 +64,7 @@ class ContentItemSummary {
       ),
       heroName: _readString(map['hero_name']),
       imageUrl: _readString(map['video_cover'] ?? map['cover_url']),
+      landscapeImageUrl: '',
       subtitle: _readPlayUrl(map['play_url_info_list']).isEmpty
           ? 'Video'
           : 'Playable video',

@@ -89,6 +89,7 @@ void main() {
     expect(skins.single.title, 'Crimson Hunter');
     expect(skins.single.heroName, 'Lam');
     expect(skins.single.imageUrl, 'https://example.test/portrait.jpg');
+    expect(skins.single.landscapeImageUrl, 'https://example.test/splash.jpg');
     expect(skins.single.heroPosition, 0);
 
     expect(apiClient.getCalls, ['/skin/1001']);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/skin_detail.dart';
@@ -286,6 +287,44 @@ void main() {
 
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsOneWidget);
+  });
+
+  testWidgets('switches skin cards between poster and splash art', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          skinGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 1001,
+                kind: ContentKind.skin,
+                title: 'Crimson Hunter',
+                heroName: 'Lam',
+                imageUrl: 'https://example.test/portrait.jpg',
+                landscapeImageUrl: 'https://example.test/splash.jpg',
+                subtitle: 'Hunter Series',
+                rating: 4.5,
+                ratingCount: 12,
+                viewCount: 0,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    AppImage cardImage() => tester.widget<AppImage>(find.byType(AppImage));
+
+    expect(cardImage().url, 'https://example.test/portrait.jpg');
+
+    await tester.tap(find.text('Splash'));
+    await tester.pumpAndSettle();
+
+    expect(cardImage().url, 'https://example.test/splash.jpg');
   });
 
   testWidgets('rates skins from the detail sheet', (tester) async {
