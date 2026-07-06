@@ -14,6 +14,9 @@ class _FakePromptsRepository extends PromptsRepository {
   String? likedPromptId;
   String? favoritedPromptId;
   PromptDraft? createdDraft;
+  String? updatedPromptId;
+  PromptDraft? updatedDraft;
+  String? deletedPromptId;
 
   @override
   Future<PromptLikeResult> toggleLike(String promptId) async {
@@ -41,6 +44,28 @@ class _FakePromptsRepository extends PromptsRepository {
       favoriteCount: 0,
       isPublic: draft.isPublic,
     );
+  }
+
+  @override
+  Future<PromptSummary> updatePrompt(String promptId, PromptDraft draft) async {
+    updatedPromptId = promptId;
+    updatedDraft = draft;
+    return PromptSummary(
+      id: promptId,
+      title: draft.title,
+      content: draft.content,
+      tags: draft.tags,
+      imageUrl: '',
+      authorName: 'me',
+      likeCount: 12,
+      favoriteCount: 5,
+      isPublic: draft.isPublic,
+    );
+  }
+
+  @override
+  Future<void> deletePrompt(String promptId) async {
+    deletedPromptId = promptId;
   }
 }
 
@@ -365,5 +390,111 @@ void main() {
     expect(repository.createdDraft?.tags, ['portrait', 'mobile']);
     expect(find.text('Mobile prompt'), findsOneWidget);
     expect(find.text('Prompt created'), findsOneWidget);
+  });
+
+  testWidgets('edits my prompts from the mobile prompt form', (tester) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'me',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: PromptsScreen(initialAction: PromptListAction.myPrompts),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Edit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit prompt'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Title'),
+      'Updated prompt',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Prompt content'),
+      'Updated HOK prompt content.',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Tags'),
+      'updated',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Save prompt'));
+    await tester.pumpAndSettle();
+
+    expect(repository.updatedPromptId, '7');
+    expect(repository.updatedDraft?.title, 'Updated prompt');
+    expect(repository.updatedDraft?.tags, ['updated']);
+    expect(find.text('Updated prompt'), findsOneWidget);
+    expect(find.text('Prompt updated'), findsOneWidget);
+  });
+
+  testWidgets('deletes my prompts after confirmation', (tester) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'me',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: PromptsScreen(initialAction: PromptListAction.myPrompts),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete prompt?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedPromptId, '7');
+    expect(find.text('Cyber skin concept'), findsNothing);
+    expect(find.text('Prompt deleted'), findsOneWidget);
   });
 }

@@ -57,6 +57,8 @@ class PromptsScreen extends ConsumerStatefulWidget {
 class _PromptsScreenState extends ConsumerState<PromptsScreen> {
   late PromptListAction _action;
   final _createdPrompts = <PromptSummary>[];
+  final _updatedPrompts = <String, PromptSummary>{};
+  final _deletedPromptIds = <String>{};
 
   @override
   void initState() {
@@ -72,10 +74,9 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       value: promptsValue,
       retry: () => ref.invalidate(promptListProvider(_action)),
       data: (prompts) {
-        final visiblePrompts = _visiblePrompts([
-          ..._createdPrompts,
-          ...prompts,
-        ]);
+        final visiblePrompts = _visiblePrompts(
+          _mergePromptChanges([..._createdPrompts, ...prompts]),
+        );
         return RefreshIndicator(
           onRefresh: () => ref.refresh(promptListProvider(_action).future),
           child: CustomScrollView(
@@ -147,7 +148,12 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                             const _SharedPromptBadge(),
                             const SizedBox(height: 8),
                           ],
-                          _PromptCard(prompt: prompt),
+                          _PromptCard(
+                            prompt: prompt,
+                            canManage: _action == PromptListAction.myPrompts,
+                            onEdit: () => _openEditSheet(context, prompt),
+                            onDelete: () => _confirmDelete(context, prompt),
+                          ),
                         ],
                       );
                     },
@@ -180,6 +186,18 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     return [focused, ...rest].toList(growable: false);
   }
 
+  List<PromptSummary> _mergePromptChanges(List<PromptSummary> prompts) {
+    final seen = <String>{};
+    final rows = <PromptSummary>[];
+    for (final prompt in prompts) {
+      if (_deletedPromptIds.contains(prompt.id) || !seen.add(prompt.id)) {
+        continue;
+      }
+      rows.add(_updatedPrompts[prompt.id] ?? prompt);
+    }
+    return rows;
+  }
+
   Future<void> _openCreateSheet(BuildContext context) async {
     final created = await showModalBottomSheet<PromptSummary>(
       context: context,
@@ -200,10 +218,86 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     });
     ref.invalidate(promptListProvider(PromptListAction.myPrompts));
   }
+
+  Future<void> _openEditSheet(
+    BuildContext context,
+    PromptSummary prompt,
+  ) async {
+    final updated = await showModalBottomSheet<PromptSummary>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _PromptEditorSheet(prompt: prompt),
+    );
+    if (updated == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _updatedPrompts[updated.id] = updated;
+      final createdIndex = _createdPrompts.indexWhere(
+        (prompt) => prompt.id == updated.id,
+      );
+      if (createdIndex >= 0) {
+        _createdPrompts[createdIndex] = updated;
+      }
+    });
+    ref.invalidate(promptListProvider(PromptListAction.myPrompts));
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    PromptSummary prompt,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete prompt?'),
+        content: Text('Delete "${prompt.title}" from your prompt library.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || !context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(promptsRepositoryProvider).deletePrompt(prompt.id);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _deletedPromptIds.add(prompt.id);
+        _createdPrompts.removeWhere((row) => row.id == prompt.id);
+        _updatedPrompts.remove(prompt.id);
+      });
+      ref.invalidate(promptListProvider(PromptListAction.myPrompts));
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Prompt deleted')));
+    } catch (_) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to delete prompt')),
+      );
+    }
+  }
 }
 
 class _PromptEditorSheet extends ConsumerStatefulWidget {
-  const _PromptEditorSheet();
+  const _PromptEditorSheet({this.prompt});
+
+  final PromptSummary? prompt;
 
   @override
   ConsumerState<_PromptEditorSheet> createState() => _PromptEditorSheetState();
@@ -218,6 +312,20 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
   var _submitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    final prompt = widget.prompt;
+    if (prompt != null) {
+      _titleController.text = prompt.title;
+      _contentController.text = prompt.content;
+      _tagsController.text = prompt.tags
+          .where((tag) => !tag.startsWith('Lang:'))
+          .join(', ');
+      _isPublic = prompt.isPublic;
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
@@ -228,6 +336,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final isEditing = widget.prompt != null;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
@@ -242,7 +351,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Create prompt',
+                        isEditing ? 'Edit prompt' : 'Create prompt',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppTheme.text,
                           fontWeight: FontWeight.w900,
@@ -334,25 +443,33 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
           .map((tag) => tag.trim())
           .where((tag) => tag.isNotEmpty)
           .toList(growable: false);
-      final created = await ref
-          .read(promptsRepositoryProvider)
-          .createPrompt(
-            PromptDraft(
-              title: _titleController.text,
-              content: _contentController.text,
-              tags: tags,
-              isPublic: _isPublic,
-              language: 'en',
-            ),
-          );
+      final draft = PromptDraft(
+        title: _titleController.text,
+        content: _contentController.text,
+        tags: tags,
+        isPublic: _isPublic,
+        language: 'en',
+      );
+      final editingPrompt = widget.prompt;
+      final saved = editingPrompt == null
+          ? await ref.read(promptsRepositoryProvider).createPrompt(draft)
+          : await ref
+                .read(promptsRepositoryProvider)
+                .updatePrompt(editingPrompt.id, draft);
       if (!mounted) {
         return;
       }
       final navigator = Navigator.of(context);
       final messenger = ScaffoldMessenger.of(context);
-      navigator.pop(created);
+      navigator.pop(saved);
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(const SnackBar(content: Text('Prompt created')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            editingPrompt == null ? 'Prompt created' : 'Prompt updated',
+          ),
+        ),
+      );
     } catch (_) {
       if (!mounted) {
         return;
@@ -390,9 +507,17 @@ class _SharedPromptBadge extends StatelessWidget {
 }
 
 class _PromptCard extends ConsumerStatefulWidget {
-  const _PromptCard({required this.prompt});
+  const _PromptCard({
+    required this.prompt,
+    this.canManage = false,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final PromptSummary prompt;
+  final bool canManage;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   ConsumerState<_PromptCard> createState() => _PromptCardState();
@@ -543,6 +668,18 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                     icon: const Icon(Icons.copy_outlined, size: 16),
                     label: const Text('Copy'),
                   ),
+                if (widget.canManage) ...[
+                  OutlinedButton.icon(
+                    onPressed: widget.onEdit,
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('Edit'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Delete'),
+                  ),
+                ],
               ],
             ),
           ],

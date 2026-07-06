@@ -66,6 +66,24 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/prompt/7/update') {
+      return const {
+        'success': true,
+        'result': {
+          'prompt': {
+            'id': '7',
+            'title': 'Updated prompt',
+            'content': 'Updated HOK prompt content.',
+            'tags': ['updated', 'Lang:en'],
+            'is_public': false,
+            'author_name': 'me',
+          },
+        },
+      };
+    }
+    if (path == '/prompt/7/delete') {
+      return const {'success': true, 'result': {}};
+    }
     if (path.endsWith('/like')) {
       return const {
         'success': true,
@@ -175,5 +193,45 @@ void main() {
     });
     expect(created.id, '10');
     expect(created.title, 'Mobile prompt');
+  });
+
+  test('updates prompt with hokx request fields', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final updated = await repository.updatePrompt(
+      '7',
+      const PromptDraft(
+        title: 'Updated prompt',
+        content: 'Updated HOK prompt content.',
+        tags: ['updated'],
+        isPublic: false,
+        language: 'en',
+      ),
+    );
+
+    expect(apiClient.postPath, '/prompt/7/update');
+    expect(apiClient.postBody, {
+      'title': 'Updated prompt',
+      'content': 'Updated HOK prompt content.',
+      'tags': ['updated', 'Lang:en'],
+      'is_public': false,
+      'source_image_url': '',
+      'effect_image_url': '',
+      'language': 'en',
+    });
+    expect(updated.id, '7');
+    expect(updated.title, 'Updated prompt');
+    expect(updated.isPublic, isFalse);
+  });
+
+  test('deletes prompt with hokx-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    await repository.deletePrompt('7');
+
+    expect(apiClient.postPath, '/prompt/7/delete');
+    expect(apiClient.postBody, isEmpty);
   });
 }

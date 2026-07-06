@@ -71,6 +71,21 @@ class PromptsRepository {
     final prompt = map['prompt'];
     return PromptSummary.fromJson(prompt ?? map);
   }
+
+  Future<PromptSummary> updatePrompt(String promptId, PromptDraft draft) async {
+    final json = await apiClient.postJson(
+      '/prompt/$promptId/update',
+      body: draft.toJson(),
+    );
+    final result = json['result'];
+    final map = result is Map ? result : json;
+    final prompt = map['prompt'];
+    return PromptSummary.fromJson(prompt ?? map);
+  }
+
+  Future<void> deletePrompt(String promptId) async {
+    await apiClient.postJson('/prompt/$promptId/delete', body: {});
+  }
 }
 
 class PromptDraft {
