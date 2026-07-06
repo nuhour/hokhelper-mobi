@@ -43,6 +43,7 @@ class _FakeApiClient extends ApiClient {
             'image_url': 'https://example.test/splash.jpg',
             'series_name': 'Hunter Series',
             'region_name': 'Global',
+            'hero_position': 0,
             'rating': 4.5,
             'rating_count': 12,
             'link_url': 'https://example.test/skin/1001',
@@ -88,6 +89,7 @@ void main() {
     expect(skins.single.title, 'Crimson Hunter');
     expect(skins.single.heroName, 'Lam');
     expect(skins.single.imageUrl, 'https://example.test/portrait.jpg');
+    expect(skins.single.heroPosition, 0);
 
     expect(apiClient.getCalls, ['/skin/1001']);
     expect(detail.id, 1001);

@@ -71,6 +71,11 @@ void main() {
   testWidgets('renders skin gallery, filters, and opens skin detail', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -130,6 +135,7 @@ void main() {
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsNothing);
 
+    await tester.ensureVisible(find.text('Crimson Hunter'));
     await tester.tap(find.text('Crimson Hunter'));
     await tester.pumpAndSettle();
 
@@ -225,6 +231,57 @@ void main() {
     expect(find.text('Moonlight Tune'), findsNothing);
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'All ratings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Crimson Hunter'), findsOneWidget);
+    expect(find.text('Moonlight Tune'), findsOneWidget);
+  });
+
+  testWidgets('filters skins by hero lane position', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          skinGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 1001,
+                kind: ContentKind.skin,
+                title: 'Crimson Hunter',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Hunter Series',
+                rating: 4.5,
+                ratingCount: 12,
+                viewCount: 0,
+                heroPosition: 0,
+              ),
+              ContentItemSummary(
+                id: 1002,
+                kind: ContentKind.skin,
+                title: 'Moonlight Tune',
+                heroName: 'Angela',
+                imageUrl: '',
+                subtitle: 'Music Series',
+                rating: 4.2,
+                ratingCount: 4,
+                viewCount: 0,
+                heroPosition: 1,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Clash'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Crimson Hunter'), findsOneWidget);
+    expect(find.text('Moonlight Tune'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'All lanes'));
     await tester.pumpAndSettle();
 
     expect(find.text('Crimson Hunter'), findsOneWidget);

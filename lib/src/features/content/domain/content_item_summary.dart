@@ -11,6 +11,7 @@ class ContentItemSummary {
     required this.rating,
     required this.ratingCount,
     required this.viewCount,
+    this.heroPosition,
   });
 
   final int id;
@@ -22,6 +23,7 @@ class ContentItemSummary {
   final double rating;
   final int ratingCount;
   final int viewCount;
+  final int? heroPosition;
 
   factory ContentItemSummary.skinFromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -40,6 +42,9 @@ class ContentItemSummary {
       rating: _readDouble(map['rating']),
       ratingCount: _readInt(map['rating_count'] ?? map['ratingCount']),
       viewCount: 0,
+      heroPosition: _readOptionalInt(
+        map['hero_position'] ?? map['heroPosition'] ?? map['position'],
+      ),
     );
   }
 
@@ -60,6 +65,7 @@ class ContentItemSummary {
       rating: _readDouble(map['rating']),
       ratingCount: _readInt(map['rating_count']),
       viewCount: _readInt(map['view_count']),
+      heroPosition: null,
     );
   }
 }
@@ -92,6 +98,17 @@ double _readDouble(Object? value) {
     return value.toDouble();
   }
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+int? _readOptionalInt(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  final text = value.toString().trim();
+  if (text.isEmpty) {
+    return null;
+  }
+  return int.tryParse(text);
 }
 
 String _readString(Object? value, {String fallback = ''}) {

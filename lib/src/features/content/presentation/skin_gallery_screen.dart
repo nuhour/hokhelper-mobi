@@ -46,6 +46,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   String _query = '';
   _SkinSort _sort = _SkinSort.latest;
   double _minRating = 0;
+  int? _lanePosition;
   int? _openedInitialSkinId;
   int? _ratingSkinId;
 
@@ -146,6 +147,11 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
               minRating: _minRating,
               onChanged: (value) => setState(() => _minRating = value),
             ),
+            const SizedBox(height: 10),
+            _LaneFilterBar(
+              lanePosition: _lanePosition,
+              onChanged: (value) => setState(() => _lanePosition = value),
+            ),
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
               value: galleryValue,
@@ -193,6 +199,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     final filtered = items
         .where((skin) {
           if (skin.rating < _minRating) {
+            return false;
+          }
+
+          if (_lanePosition != null && skin.heroPosition != _lanePosition) {
             return false;
           }
 
@@ -249,6 +259,58 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       }
     }
   }
+}
+
+class _LaneFilterBar extends StatelessWidget {
+  const _LaneFilterBar({required this.lanePosition, required this.onChanged});
+
+  final int? lanePosition;
+  final ValueChanged<int?> onChanged;
+
+  static const _options = [
+    _LaneFilterOption(label: 'All lanes'),
+    _LaneFilterOption(label: 'Clash', value: 0),
+    _LaneFilterOption(label: 'Mid', value: 1),
+    _LaneFilterOption(label: 'Farm', value: 2),
+    _LaneFilterOption(label: 'Jungle', value: 3),
+    _LaneFilterOption(label: 'Support', value: 4),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final option in _options)
+          ChoiceChip(
+            label: Text(option.label),
+            selected: lanePosition == option.value,
+            onSelected: (_) => onChanged(option.value),
+            avatar: option.value == null
+                ? const Icon(Icons.route_outlined, size: 16)
+                : const Icon(Icons.sports_martial_arts, size: 16),
+            labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: lanePosition == option.value ? AppTheme.bg : AppTheme.text,
+              fontWeight: FontWeight.w800,
+            ),
+            selectedColor: AppTheme.gold,
+            backgroundColor: AppTheme.panel,
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _LaneFilterOption {
+  const _LaneFilterOption({required this.label, this.value});
+
+  final String label;
+  final int? value;
 }
 
 class _RatingFilterBar extends StatelessWidget {
