@@ -5,6 +5,16 @@ import '../domain/community_post_detail.dart';
 import '../domain/community_post_summary.dart';
 import '../domain/leak_post_summary.dart';
 
+enum CommunityPostSort {
+  newest('new'),
+  oldest('old'),
+  hot('hot');
+
+  const CommunityPostSort(this.backendValue);
+
+  final String backendValue;
+}
+
 class CommunityRepository {
   const CommunityRepository({required this.apiClient});
 
@@ -14,13 +24,17 @@ class CommunityRepository {
     int regionId, {
     int page = 1,
     int pageSize = 30,
+    String search = '',
+    CommunityPostSort sort = CommunityPostSort.newest,
   }) async {
+    final trimmedSearch = search.trim();
     final json = await apiClient.getJson(
       '/community/posts',
       query: {
         'page': page,
         'pageSize': pageSize,
-        'sort': 'hot',
+        'sort': sort.backendValue,
+        if (trimmedSearch.isNotEmpty) 'search': trimmedSearch,
         'filterRules': jsonEncode([
           {'field': 'region_id', 'op': 'eq', 'value': regionId},
         ]),

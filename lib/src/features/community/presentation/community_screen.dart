@@ -35,6 +35,25 @@ final communityPostsProvider = FutureProvider<List<CommunityPostSummary>>((
       .loadPosts(regionId, pageSize: _communityPostsPageSize);
 });
 
+final communityPostsQueryProvider =
+    FutureProvider.family<List<CommunityPostSummary>, CommunityPostsQuery>((
+      ref,
+      query,
+    ) async {
+      if (query.isDefault) {
+        return ref.watch(communityPostsProvider.future);
+      }
+      final regionId = await ref.watch(communityPostsRegionProvider.future);
+      return ref
+          .watch(communityRepositoryProvider)
+          .loadPosts(
+            regionId,
+            pageSize: _communityPostsPageSize,
+            search: query.search,
+            sort: query.sort,
+          );
+    });
+
 final leakPostsProvider = FutureProvider<List<LeakPostSummary>>((ref) async {
   final regionId = await ref.watch(leakPostsRegionProvider.future);
   return ref
@@ -46,6 +65,29 @@ final leakPostsRegionProvider = FutureProvider<int>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
   return settings.region.regionId;
 });
+
+class CommunityPostsQuery {
+  const CommunityPostsQuery({
+    this.search = '',
+    this.sort = CommunityPostSort.newest,
+  });
+
+  final String search;
+  final CommunityPostSort sort;
+
+  bool get isDefault =>
+      search.trim().isEmpty && sort == CommunityPostSort.newest;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CommunityPostsQuery &&
+        other.search == search &&
+        other.sort == sort;
+  }
+
+  @override
+  int get hashCode => Object.hash(search, sort);
+}
 
 enum CommunityInitialView { hot, myPosts, likedPosts }
 
@@ -112,11 +154,7 @@ class CommunityScreen extends ConsumerWidget {
           },
           body: TabBarView(
             children: [
-              _PostsTab(
-                value: ref.watch(communityPostsProvider),
-                initialView: initialView,
-                initialTag: initialPostTag,
-              ),
+              _PostsTab(initialView: initialView, initialTag: initialPostTag),
               _LeaksTab(
                 value: ref.watch(leakPostsProvider),
                 initialQuery: initialLeakQuery,
@@ -130,13 +168,8 @@ class CommunityScreen extends ConsumerWidget {
 }
 
 class _PostsTab extends ConsumerStatefulWidget {
-  const _PostsTab({
-    required this.value,
-    required this.initialView,
-    required this.initialTag,
-  });
+  const _PostsTab({required this.initialView, required this.initialTag});
 
-  final AsyncValue<List<CommunityPostSummary>> value;
   final CommunityInitialView initialView;
   final String? initialTag;
 
@@ -146,10 +179,13 @@ class _PostsTab extends ConsumerStatefulWidget {
 
 class _PostsTabState extends ConsumerState<_PostsTab> {
   final _contentController = TextEditingController();
+  final _searchController = TextEditingController();
   final _titleController = TextEditingController();
   final _createdPosts = <CommunityPostSummary>[];
   final _extraPosts = <CommunityPostSummary>[];
   final _deletedPostIds = <String>{};
+  var _search = '';
+  var _sort = CommunityPostSort.newest;
   var _isCreateOpen = false;
   var _createSubmitting = false;
   var _nextPostsPage = 2;
@@ -159,6 +195,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   @override
   void dispose() {
     _contentController.dispose();
+    _searchController.dispose();
     _titleController.dispose();
     super.dispose();
   }
@@ -166,9 +203,11 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   @override
   Widget build(BuildContext context) {
     final authUser = ref.watch(authControllerProvider).valueOrNull;
+    final query = CommunityPostsQuery(search: _search, sort: _sort);
+    final postsValue = ref.watch(communityPostsQueryProvider(query));
     return AppAsyncView<List<CommunityPostSummary>>(
-      value: widget.value,
-      retry: () => ref.invalidate(communityPostsProvider),
+      value: postsValue,
+      retry: () => ref.invalidate(communityPostsQueryProvider(query)),
       data: (posts) {
         final tag = widget.initialTag?.trim() ?? '';
         final combinedPosts = [...posts, ..._extraPosts];
@@ -195,11 +234,29 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
         return RefreshIndicator(
           onRefresh: () async {
             _resetLoadedPages();
-            return ref.refresh(communityPostsProvider.future);
+            return ref.refresh(communityPostsQueryProvider(query).future);
           },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
+              _PostSearchSortBar(
+                controller: _searchController,
+                search: _search,
+                sort: _sort,
+                onSearchChanged: (value) {
+                  setState(() {
+                    _search = value;
+                    _resetLoadedPages();
+                  });
+                },
+                onSortChanged: (value) {
+                  setState(() {
+                    _sort = value;
+                    _resetLoadedPages();
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
               if (widget.initialView != CommunityInitialView.likedPosts) ...[
                 _CreatePostCard(
                   contentController: _contentController,
@@ -291,6 +348,8 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
             regionId,
             page: _nextPostsPage,
             pageSize: _communityPostsPageSize,
+            search: _search,
+            sort: _sort,
           );
       if (!mounted) {
         return;
@@ -402,6 +461,94 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   bool _matchesTag(CommunityPostSummary post, String tag) {
     final needle = tag.toLowerCase();
     return post.tags.any((value) => value.toLowerCase() == needle);
+  }
+}
+
+class _PostSearchSortBar extends StatelessWidget {
+  const _PostSearchSortBar({
+    required this.controller,
+    required this.search,
+    required this.sort,
+    required this.onSearchChanged,
+    required this.onSortChanged,
+  });
+
+  final TextEditingController controller;
+  final String search;
+  final CommunityPostSort sort;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<CommunityPostSort> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              onChanged: onSearchChanged,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                isDense: true,
+                labelText: 'Search posts',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: search.trim().isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          controller.clear();
+                          onSearchChanged('');
+                        },
+                        icon: const Icon(Icons.close, size: 18),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final option in CommunityPostSort.values)
+                  ChoiceChip(
+                    label: Text(option.label),
+                    selected: sort == option,
+                    onSelected: (_) => onSortChanged(option),
+                    avatar: Icon(option.icon, size: 16),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+extension on CommunityPostSort {
+  String get label {
+    return switch (this) {
+      CommunityPostSort.newest => 'Newest',
+      CommunityPostSort.oldest => 'Oldest',
+      CommunityPostSort.hot => 'Hot',
+    };
+  }
+
+  IconData get icon {
+    return switch (this) {
+      CommunityPostSort.newest => Icons.fiber_new_outlined,
+      CommunityPostSort.oldest => Icons.history_outlined,
+      CommunityPostSort.hot => Icons.local_fire_department_outlined,
+    };
   }
 }
 

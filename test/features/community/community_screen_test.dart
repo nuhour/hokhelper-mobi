@@ -32,6 +32,8 @@ class _FakeCommunityRepository extends CommunityRepository {
   String? createdTitle;
   String? deletedPostId;
   String? likedPostId;
+  String? requestedPostSearch;
+  CommunityPostSort? requestedPostSort;
   final requestedPostPages = <int>[];
   final requestedLeakPages = <int>[];
   List<CommunityPostSummary> Function(int page, int pageSize)? loadPostsPage;
@@ -42,8 +44,12 @@ class _FakeCommunityRepository extends CommunityRepository {
     int regionId, {
     int page = 1,
     int pageSize = 30,
+    String search = '',
+    CommunityPostSort sort = CommunityPostSort.newest,
   }) async {
     requestedPostPages.add(page);
+    requestedPostSearch = search;
+    requestedPostSort = sort;
     final loader = loadPostsPage;
     if (loader == null) {
       return const [];
@@ -420,6 +426,51 @@ void main() {
     expect(find.text('Unliked draft'), findsNothing);
   });
 
+  testWidgets('searches and sorts community posts like the hokx portal', (
+    tester,
+  ) async {
+    final repository = _FakeCommunityRepository();
+    repository.loadPostsPage = (page, pageSize) {
+      return const [
+        CommunityPostSummary(
+          id: '101',
+          title: 'Best jungle rotation',
+          preview: 'Start blue, punish mid wave, then invade.',
+          authorName: 'coach',
+          authorAvatarUrl: '',
+          tags: ['Guide', 'Jungle'],
+          createdAt: '2026-07-01T10:00:00Z',
+          viewCount: 230,
+          likeCount: 18,
+          commentCount: 7,
+        ),
+      ];
+    };
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsRegionProvider.overrideWith((ref) async => 2),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CommunityScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search posts'),
+      'jungle',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Oldest'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPostSearch, 'jungle');
+    expect(repository.requestedPostSort, CommunityPostSort.oldest);
+  });
+
   testWidgets('likes community post cards through the backend', (tester) async {
     final repository = _FakeCommunityRepository();
 
@@ -498,9 +549,9 @@ void main() {
     expect(find.text('Paged post 31'), findsNothing);
 
     await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Load more'),
+      find.widgetWithText(FilledButton, 'Load more', skipOffstage: false),
       900,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.byType(Scrollable).first,
     );
     final loadMore = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Load more'),
@@ -596,9 +647,12 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Create Post'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(0), 'Mobile macro notes');
     await tester.enterText(
-      find.byType(TextField).at(1),
+      find.widgetWithText(TextField, 'Title'),
+      'Mobile macro notes',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Content'),
       'Rotate after clearing mid and protect river vision.',
     );
     await tester.pumpAndSettle();
@@ -659,7 +713,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.scrollUntilVisible(
+      find.widgetWithText(OutlinedButton, 'Delete', skipOffstage: false),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final deleteButton = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Delete'),
+    );
+    deleteButton.onPressed!();
     await tester.pumpAndSettle();
 
     expect(repository.deletedPostId, '201');

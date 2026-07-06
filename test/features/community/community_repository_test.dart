@@ -117,7 +117,7 @@ void main() {
     expect(apiClient.getQueries['/community/posts'], {
       'page': 1,
       'pageSize': 30,
-      'sort': 'hot',
+      'sort': 'new',
       'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
     });
     expect(posts, hasLength(1));
@@ -138,10 +138,32 @@ void main() {
     expect(apiClient.getQueries['/community/posts'], {
       'page': 2,
       'pageSize': 15,
-      'sort': 'hot',
+      'sort': 'new',
       'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
     });
   });
+
+  test(
+    'loads community posts with hokx-compatible search and sorting',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = CommunityRepository(apiClient: apiClient);
+
+      await repository.loadPosts(
+        2,
+        search: 'jungle',
+        sort: CommunityPostSort.oldest,
+      );
+
+      expect(apiClient.getQueries['/community/posts'], {
+        'page': 1,
+        'pageSize': 30,
+        'sort': 'old',
+        'search': 'jungle',
+        'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
+      });
+    },
+  );
 
   test('loads leak posts with region and all-category query', () async {
     final apiClient = _FakeApiClient();
