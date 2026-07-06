@@ -28,6 +28,17 @@ class _FakeApiClient extends ApiClient {
         'data': {'id': 12},
       };
     }
+    if (path.endsWith('/view')) {
+      return const {'success': true, 'view_count': 2301};
+    }
+    if (path.endsWith('/rate')) {
+      return const {
+        'success': true,
+        'avg_rating': 5,
+        'rating_count': 18,
+        'action': 'created',
+      };
+    }
 
     return const {
       'success': true,
@@ -124,4 +135,30 @@ void main() {
     expect(apiClient.postCalls, ['/cg/501/comments']);
     expect(apiClient.postBodies.single, {'content': 'Nice trailer.'});
   });
+
+  test('records cg views with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    final viewCount = await repository.recordCgView(501);
+
+    expect(apiClient.postCalls, ['/cg/501/view']);
+    expect(apiClient.postBodies.single, isEmpty);
+    expect(viewCount, 2301);
+  });
+
+  test(
+    'rates cgs with web-compatible payload and parses updated metrics',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = ContentRepository(apiClient: apiClient);
+
+      final result = await repository.rateCg(501, 5);
+
+      expect(apiClient.postCalls, ['/cg/501/rate']);
+      expect(apiClient.postBodies.single, {'rating': 5.0});
+      expect(result.rating, 5);
+      expect(result.ratingCount, 18);
+    },
+  );
 }

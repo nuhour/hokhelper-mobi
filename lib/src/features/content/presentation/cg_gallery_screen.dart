@@ -314,6 +314,16 @@ class _CgDetailSheet extends ConsumerStatefulWidget {
 class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
   final _commentController = TextEditingController();
   var _isPosting = false;
+  var _isRating = false;
+  int? _viewCountOverride;
+  double? _ratingOverride;
+  int? _ratingCountOverride;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_recordView);
+  }
 
   @override
   void dispose() {
@@ -352,7 +362,14 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
             AppAsyncView<CgDetail>(
               value: detailValue,
               retry: () => ref.invalidate(cgDetailProvider(widget.cgId)),
-              data: (detail) => _CgDetailContent(detail: detail),
+              data: (detail) => _CgDetailContent(
+                detail: detail,
+                viewCount: _viewCountOverride ?? detail.viewCount,
+                rating: _ratingOverride ?? detail.rating,
+                ratingCount: _ratingCountOverride ?? detail.ratingCount,
+                isRating: _isRating,
+                onRate: _rateCg,
+              ),
             ),
             const SizedBox(height: 22),
             Text(
@@ -423,6 +440,52 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
       }
     }
   }
+
+  Future<void> _recordView() async {
+    try {
+      final viewCount = await ref
+          .read(contentRepositoryProvider)
+          .recordCgView(widget.cgId);
+      if (!mounted || viewCount <= 0) {
+        return;
+      }
+      setState(() => _viewCountOverride = viewCount);
+      ref.invalidate(cgGalleryProvider);
+      ref.invalidate(cgDetailProvider(widget.cgId));
+    } catch (_) {
+      // Viewing should never block reading the CG detail.
+    }
+  }
+
+  Future<void> _rateCg(double rating) async {
+    if (_isRating) {
+      return;
+    }
+
+    setState(() => _isRating = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final result = await ref
+          .read(contentRepositoryProvider)
+          .rateCg(widget.cgId, rating);
+      setState(() {
+        _ratingOverride = result.rating;
+        _ratingCountOverride = result.ratingCount;
+      });
+      ref.invalidate(cgGalleryProvider);
+      ref.invalidate(cgDetailProvider(widget.cgId));
+      messenger.showSnackBar(const SnackBar(content: Text('Rating submitted')));
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to submit rating: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRating = false);
+      }
+    }
+  }
 }
 
 class _CgCommentComposer extends StatelessWidget {
@@ -483,9 +546,21 @@ class _CgCommentComposer extends StatelessWidget {
 }
 
 class _CgDetailContent extends StatelessWidget {
-  const _CgDetailContent({required this.detail});
+  const _CgDetailContent({
+    required this.detail,
+    required this.viewCount,
+    required this.rating,
+    required this.ratingCount,
+    required this.isRating,
+    required this.onRate,
+  });
 
   final CgDetail detail;
+  final int viewCount;
+  final double rating;
+  final int ratingCount;
+  final bool isRating;
+  final ValueChanged<double> onRate;
 
   @override
   Widget build(BuildContext context) {
@@ -536,11 +611,13 @@ class _CgDetailContent extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            _DetailChip(label: '${_compact(detail.viewCount)} views'),
-            _DetailChip(label: detail.rating.toStringAsFixed(1)),
-            _DetailChip(label: '${detail.ratingCount} ratings'),
+            _DetailChip(label: '${_compact(viewCount)} views'),
+            _DetailChip(label: rating.toStringAsFixed(1)),
+            _DetailChip(label: '$ratingCount ratings'),
           ],
         ),
+        const SizedBox(height: 14),
+        _CgRatingControl(rating: rating, isRating: isRating, onRate: onRate),
         if (detail.playUrl.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
@@ -606,6 +683,55 @@ class _CgCommentCard extends StatelessWidget {
                 height: 1.35,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CgRatingControl extends StatelessWidget {
+  const _CgRatingControl({
+    required this.rating,
+    required this.isRating,
+    required this.onRate,
+  });
+
+  final double rating;
+  final bool isRating;
+  final ValueChanged<double> onRate;
+
+  @override
+  Widget build(BuildContext context) {
+    final roundedRating = rating.round();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Rate this CG',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            for (var index = 1; index <= 5; index++)
+              IconButton(
+                tooltip: 'Rate $index stars',
+                onPressed: isRating ? null : () => onRate(index.toDouble()),
+                icon: Icon(
+                  index <= roundedRating ? Icons.star : Icons.star_border,
+                  color: AppTheme.gold,
+                ),
+              ),
           ],
         ),
       ),

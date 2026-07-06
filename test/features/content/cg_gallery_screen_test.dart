@@ -22,6 +22,9 @@ class _FakeContentRepository extends ContentRepository {
 
   int? submittedCgId;
   String? submittedComment;
+  int? viewedCgId;
+  int? ratedCgId;
+  double? submittedRating;
 
   @override
   Future<List<ContentItemSummary>> loadCgs(
@@ -74,6 +77,19 @@ class _FakeContentRepository extends ContentRepository {
   Future<void> createCgComment(int cgId, String content) async {
     submittedCgId = cgId;
     submittedComment = content;
+  }
+
+  @override
+  Future<int> recordCgView(int cgId) async {
+    viewedCgId = cgId;
+    return 2301;
+  }
+
+  @override
+  Future<CgRatingResult> rateCg(int cgId, double rating) async {
+    ratedCgId = cgId;
+    submittedRating = rating;
+    return const CgRatingResult(rating: 5, ratingCount: 18);
   }
 }
 
@@ -247,5 +263,48 @@ void main() {
     expect(repository.submittedCgId, 501);
     expect(repository.submittedComment, 'Fresh take.');
     expect(find.text('Comment posted'), findsOneWidget);
+  });
+
+  testWidgets('records views and rates cgs from the detail sheet', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _FakeContentRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          cgGalleryProvider.overrideWith(
+            (ref) =>
+                ref.watch(contentRepositoryProvider).loadCgs(2, pageSize: 60),
+          ),
+          cgDetailProvider(501).overrideWith(
+            (ref) => ref.watch(contentRepositoryProvider).loadCgDetail(501),
+          ),
+          cgCommentsProvider(501).overrideWith(
+            (ref) => ref.watch(contentRepositoryProvider).loadCgComments(501),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Lam Cinematic'));
+    await tester.pumpAndSettle();
+
+    expect(repository.viewedCgId, 501);
+
+    await tester.tap(find.byTooltip('Rate 5 stars'));
+    await tester.pumpAndSettle();
+
+    expect(repository.ratedCgId, 501);
+    expect(repository.submittedRating, 5);
+    expect(find.text('Rating submitted'), findsOneWidget);
   });
 }

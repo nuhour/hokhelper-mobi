@@ -72,6 +72,25 @@ class ContentRepository {
     );
   }
 
+  Future<int> recordCgView(int cgId) async {
+    final json = await apiClient.postJson(
+      '/cg/$cgId/view',
+      body: const <String, Object?>{},
+    );
+    final result = json['result'];
+    final source = result is Map ? result : json;
+    return _readInt(source['view_count'] ?? source['viewCount']);
+  }
+
+  Future<CgRatingResult> rateCg(int cgId, double rating) async {
+    final normalizedRating = (rating.clamp(0.5, 5) * 2).round() / 2;
+    final json = await apiClient.postJson(
+      '/cg/$cgId/rate',
+      body: {'rating': normalizedRating},
+    );
+    return CgRatingResult.fromJson(json['result'] ?? json);
+  }
+
   Future<List<PatchNoteSummary>> loadPatchNotes(int regionId) async {
     final json = await apiClient.getJson(
       '/community/posts',
@@ -112,4 +131,36 @@ class ContentRepository {
 
     return rows;
   }
+}
+
+class CgRatingResult {
+  const CgRatingResult({required this.rating, required this.ratingCount});
+
+  final double rating;
+  final int ratingCount;
+
+  factory CgRatingResult.fromJson(Object? json) {
+    final map = json is Map ? json : const <String, Object?>{};
+    return CgRatingResult(
+      rating: _readDouble(map['avg_rating'] ?? map['rating']),
+      ratingCount: _readInt(map['rating_count'] ?? map['ratingCount']),
+    );
+  }
+}
+
+int _readInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double _readDouble(Object? value) {
+  if (value is double) {
+    return value;
+  }
+  if (value is int) {
+    return value.toDouble();
+  }
+  return double.tryParse(value?.toString() ?? '') ?? 0;
 }
