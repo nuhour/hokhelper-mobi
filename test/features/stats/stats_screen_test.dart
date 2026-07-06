@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
 
@@ -292,6 +294,66 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Focused home core stats'), findsOneWidget);
+  });
+
+  testWidgets('stats hero cards open focused hero usage detail route', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/stats');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider.overrideWith((ref, entry) async {
+            return const StatsDashboard(
+              heroes: [
+                StatsHeroRow(
+                  id: '199',
+                  name: 'Lam',
+                  avatarUrl: '',
+                  winRate: 0.561,
+                  pickRate: 0.18,
+                  banRate: 0.07,
+                  score: 91.4,
+                ),
+              ],
+              equips: [],
+              combos: [],
+            );
+          }),
+          statsHeroDetailProvider('199').overrideWith((ref) async {
+            return const StatsHeroDetail(
+              heroId: '199',
+              heroName: 'Lam',
+              heroAvatarUrl: '',
+              equips: [
+                StatsHeroEquipRow(
+                  id: '88',
+                  name: 'Doomsday',
+                  iconUrl: '',
+                  pickRate: 0.42,
+                  winRate: 0.57,
+                  matches: 8900,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Lam'));
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/tools/stats');
+    expect(uri.queryParameters['entry'], 'tier_rank');
+    expect(uri.queryParameters['hero_id'], '199');
+    expect(find.text('Hero Build Usage'), findsOneWidget);
+    expect(find.text('Doomsday'), findsOneWidget);
   });
 
   testWidgets('tier rank entry reaches the stats repository entry config', (

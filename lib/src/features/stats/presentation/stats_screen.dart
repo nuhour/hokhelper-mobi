@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -454,6 +455,17 @@ class _HeroStatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
+      onTap: hero.id.isEmpty
+          ? null
+          : () => context.go(
+              Uri(
+                path: '/tools/stats',
+                queryParameters: {
+                  'entry': 'tier_rank',
+                  'hero_id': hero.id,
+                },
+              ).toString(),
+            ),
       child: Row(
         children: [
           AppImage(
@@ -660,19 +672,34 @@ class _MetricPill extends StatelessWidget {
 }
 
 class _PanelCard extends StatelessWidget {
-  const _PanelCard({required this.child});
+  const _PanelCard({required this.child, this.onTap});
 
   final Widget child;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final content = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
+    );
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: content,
+      ),
     );
   }
 }
