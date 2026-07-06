@@ -209,29 +209,202 @@ class _FriendLinksSection extends ConsumerWidget {
     return _InfoPanel(
       icon: Icons.link_outlined,
       title: 'Friend Links',
-      child: AppAsyncView<List<FriendLinkSummary>>(
-        value: value,
-        retry: () => ref.invalidate(friendLinksProvider),
-        data: (links) {
-          if (links.isEmpty) {
-            return const AppEmptyState(
-              icon: Icons.link_off_outlined,
-              title: 'No links found',
-              message: 'Pull to refresh once partner links are available.',
-            );
-          }
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.icon(
+              onPressed: () => _showFriendLinkApplySheet(context),
+              icon: const Icon(Icons.add_link),
+              label: const Text('Apply for link'),
+            ),
+          ),
+          const SizedBox(height: 14),
+          AppAsyncView<List<FriendLinkSummary>>(
+            value: value,
+            retry: () => ref.invalidate(friendLinksProvider),
+            data: (links) {
+              if (links.isEmpty) {
+                return const AppEmptyState(
+                  icon: Icons.link_off_outlined,
+                  title: 'No links found',
+                  message: 'Pull to refresh once partner links are available.',
+                );
+              }
 
-          return Column(
-            children: [
-              for (final link in links) ...[
-                _FriendLinkCard(link: link),
-                if (link != links.last) const SizedBox(height: 10),
-              ],
-            ],
-          );
-        },
+              return Column(
+                children: [
+                  for (final link in links) ...[
+                    _FriendLinkCard(link: link),
+                    if (link != links.last) const SizedBox(height: 10),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
+  }
+
+  void _showFriendLinkApplySheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => const _FriendLinkApplySheet(),
+    );
+  }
+}
+
+class _FriendLinkApplySheet extends ConsumerStatefulWidget {
+  const _FriendLinkApplySheet();
+
+  @override
+  ConsumerState<_FriendLinkApplySheet> createState() =>
+      _FriendLinkApplySheetState();
+}
+
+class _FriendLinkApplySheetState extends ConsumerState<_FriendLinkApplySheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _urlController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  var _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _urlController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 20),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.add_link, color: AppTheme.gold),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Link exchange',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Site name',
+                  hintText: 'HOK Lab',
+                ),
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Site name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _urlController,
+                decoration: const InputDecoration(
+                  labelText: 'Portal URL',
+                  hintText: 'www.example.com',
+                ),
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Portal URL is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Brief description',
+                  hintText: 'Draft tools and hero research.',
+                ),
+                minLines: 2,
+                maxLines: 4,
+                textInputAction: TextInputAction.newline,
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: _isSubmitting ? null : _submit,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Send application'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    try {
+      await ref
+          .read(infoRepositoryProvider)
+          .applyFriendLink(
+            name: _nameController.text,
+            url: _urlController.text,
+            description: _descriptionController.text,
+          );
+      ref.invalidate(friendLinksProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Friend link application submitted')),
+      );
+      navigator.pop();
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Application failed: $error')),
+      );
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 }
 

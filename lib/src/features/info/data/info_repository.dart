@@ -29,4 +29,27 @@ class InfoRepository {
 
     return const [];
   }
+
+  Future<void> applyFriendLink({
+    required String name,
+    required String url,
+    String description = '',
+  }) async {
+    final normalizedUrl = _normalizeUrl(url);
+    final body = <String, String>{'name': name.trim(), 'url': normalizedUrl};
+    final trimmedDescription = description.trim();
+    if (trimmedDescription.isNotEmpty) {
+      body['description'] = trimmedDescription;
+    }
+
+    await apiClient.postJson('/friendlink/apply', body: body);
+  }
+}
+
+String _normalizeUrl(String value) {
+  final trimmed = value.trim();
+  if (trimmed.startsWith(RegExp('https?://', caseSensitive: false))) {
+    return trimmed;
+  }
+  return 'https://$trimmed';
 }

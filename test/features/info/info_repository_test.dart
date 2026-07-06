@@ -13,6 +13,8 @@ class _FakeApiClient extends ApiClient {
       );
 
   String? requestedPath;
+  String? postedPath;
+  Object? postedBody;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -34,6 +36,17 @@ class _FakeApiClient extends ApiClient {
       ],
     };
   }
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    postedPath = path;
+    postedBody = body;
+    return const {
+      'success': true,
+      'message': 'Application submitted',
+      'data': {'id': 12},
+    };
+  }
 }
 
 void main() {
@@ -49,5 +62,23 @@ void main() {
     expect(links.single.url, 'https://hoklab.example');
     expect(links.single.description, 'Draft tools and hero research.');
     expect(links.single.logoUrl, 'https://example.test/logo.png');
+  });
+
+  test('applies for friend links with web-compatible payload', () async {
+    final apiClient = _FakeApiClient();
+    final repository = InfoRepository(apiClient: apiClient);
+
+    await repository.applyFriendLink(
+      name: 'New Lab',
+      url: 'newlab.example',
+      description: 'Meta tools.',
+    );
+
+    expect(apiClient.postedPath, '/friendlink/apply');
+    expect(apiClient.postedBody, {
+      'name': 'New Lab',
+      'url': 'https://newlab.example',
+      'description': 'Meta tools.',
+    });
   });
 }
