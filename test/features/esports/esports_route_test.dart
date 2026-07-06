@@ -112,6 +112,36 @@ void main() {
     expect(find.text('KPL Spring'), findsOneWidget);
     expect(find.text('4 - 3'), findsNothing);
   });
+
+  testWidgets('esports tab changes synchronize the web route', (tester) async {
+    final router = createAppRouter();
+    router.go('/esports?season=2026');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Teams'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/esports/teams');
+    expect(router.routeInformationProvider.value.uri.query, isEmpty);
+
+    await tester.tap(find.text('Players'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/esports/players');
+
+    await tester.tap(find.text('Stats'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/esports/stats');
+
+    await tester.tap(find.text('Matches'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/esports/schedule');
+  });
 }
 
 List<Override> _esportsOverrides() {

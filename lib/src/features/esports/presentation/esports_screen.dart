@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -102,12 +103,13 @@ class EsportsScreen extends ConsumerWidget {
                           color: AppTheme.panel,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const TabBar(
+                        child: TabBar(
                           isScrollable: true,
                           indicatorSize: TabBarIndicatorSize.tab,
                           dividerColor: Colors.transparent,
                           labelColor: AppTheme.gold,
                           unselectedLabelColor: AppTheme.muted,
+                          onTap: (index) => _syncRouteWithTab(context, index),
                           tabs: [
                             Tab(text: 'Matches'),
                             Tab(text: 'Stats'),
@@ -139,6 +141,25 @@ class EsportsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _syncRouteWithTab(BuildContext context, int index) {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      return;
+    }
+    final tabPath = switch (index) {
+      1 => 'stats',
+      2 => 'teams',
+      3 => 'players',
+      _ => 'schedule',
+    };
+    final currentUri = router.routeInformationProvider.value.uri;
+    final nextUri = Uri(path: '/esports/$tabPath');
+    if (nextUri == currentUri) {
+      return;
+    }
+    router.go(nextUri.toString());
   }
 }
 
