@@ -17,7 +17,9 @@ final searchRepositoryProvider = Provider<SearchRepository>((ref) {
 });
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({this.initialQuery, super.key});
+
+  final String? initialQuery;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -27,6 +29,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   Future<List<SearchResultGroup>>? _searchFuture;
   String _lastQuery = '';
+  var _didRunInitialQuery = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialQuery = widget.initialQuery?.trim() ?? '';
+    if (initialQuery.isNotEmpty) {
+      _controller.text = initialQuery;
+    }
+  }
 
   @override
   void dispose() {
@@ -53,6 +65,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final initialQuery = widget.initialQuery?.trim() ?? '';
+    if (!_didRunInitialQuery && initialQuery.isNotEmpty) {
+      _didRunInitialQuery = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _submit();
+        }
+      });
+    }
+
     return Material(
       color: AppTheme.bg,
       child: ListView(

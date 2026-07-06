@@ -205,7 +205,8 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/search',
-        builder: (context, state) => const SearchScreen(),
+        builder: (context, state) =>
+            SearchScreen(initialQuery: state.uri.queryParameters['q']),
       ),
       GoRoute(
         path: '/notifications',

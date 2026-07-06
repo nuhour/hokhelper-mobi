@@ -55,6 +55,27 @@ class _FakeSearchRepository extends SearchRepository {
 }
 
 void main() {
+  testWidgets('search route query auto-runs global search', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _FakeSearchRepository();
+    final router = createAppRouter();
+    router.go('/search?q=arthur');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [searchRepositoryProvider.overrideWithValue(repository)],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'arthur'), findsOneWidget);
+    expect(repository.requestedKeyword, 'arthur');
+    expect(repository.requestedRegionId, 2);
+    expect(find.text('Heroes'), findsOneWidget);
+    expect(find.text('Arthur'), findsOneWidget);
+  });
+
   testWidgets('search route submits global query and renders grouped results', (
     tester,
   ) async {
