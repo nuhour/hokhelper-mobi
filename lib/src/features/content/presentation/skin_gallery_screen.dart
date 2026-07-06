@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -385,6 +386,13 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   }
 
   void _openDetail(BuildContext context, int skinId) {
+    final router = GoRouter.maybeOf(context);
+    final listPath = router == null
+        ? null
+        : _skinGalleryListPath(router.routeInformationProvider.value.uri);
+    if (router != null && listPath != null) {
+      _syncDetailRoute(router: router, listPath: listPath, skinId: skinId);
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -394,7 +402,32 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => _SkinDetailSheet(skinId: skinId),
+    ).whenComplete(() {
+      if (mounted && router != null && listPath != null) {
+        _syncDetailRoute(router: router, listPath: listPath, skinId: null);
+      }
+    });
+  }
+
+  String _skinGalleryListPath(Uri uri) {
+    return uri.path.startsWith('/content/skins')
+        ? '/content/skins'
+        : '/skin-gallery';
+  }
+
+  void _syncDetailRoute({
+    required GoRouter router,
+    required String listPath,
+    required int? skinId,
+  }) {
+    final currentUri = router.routeInformationProvider.value.uri;
+    final nextUri = currentUri.replace(
+      path: skinId == null ? listPath : '$listPath/$skinId',
     );
+    if (nextUri == currentUri) {
+      return;
+    }
+    router.go(nextUri.toString());
   }
 
   Future<void> _rateSkinFromCard(ContentItemSummary skin, double rating) async {

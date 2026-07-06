@@ -7,6 +7,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/skin_detail.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
 
@@ -35,6 +36,22 @@ class _RouteSkinRepository extends ContentRepository {
     int? lanePosition,
   }) async {
     return skins;
+  }
+
+  @override
+  Future<SkinDetail> loadSkinDetail(int skinId) async {
+    return SkinDetail(
+      id: skinId,
+      title: 'Crimson Hunter',
+      heroName: 'Lam',
+      portraitUrl: '',
+      landscapeUrl: '',
+      seriesName: 'Hunter Series',
+      regionName: 'Global',
+      rating: 4.5,
+      ratingCount: 12,
+      linkUrl: 'https://example.test/skin/$skinId',
+    );
   }
 }
 
@@ -158,5 +175,65 @@ void main() {
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsNothing);
     expect(find.text('Low Rank Skin'), findsNothing);
+  });
+
+  testWidgets('skin detail sheet synchronizes the web detail route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/skin-gallery?q=Lam');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteSkinRepository(const [
+              ContentItemSummary(
+                id: 1001,
+                kind: ContentKind.skin,
+                title: 'Crimson Hunter',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Hunter Series',
+                rating: 4.5,
+                ratingCount: 12,
+                viewCount: 0,
+              ),
+            ]),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Crimson Hunter'));
+    await tester.tap(find.text('Crimson Hunter'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/skin-gallery/1001',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['q'],
+      'Lam',
+    );
+    expect(find.text('Hunter Series'), findsWidgets);
+
+    Navigator.of(tester.element(find.text('Skin Detail'))).pop();
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/skin-gallery');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['q'],
+      'Lam',
+    );
   });
 }
