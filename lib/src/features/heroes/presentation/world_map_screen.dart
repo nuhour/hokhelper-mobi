@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -270,12 +271,19 @@ class _HeroDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(14),
-      ),
+    final detailRouteId = hero.detailRouteId;
+
+    return Material(
+      color: AppTheme.panelAlt,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
+        onTap: detailRouteId == null
+            ? null
+            : () {
+                Navigator.of(context).pop();
+                context.go('/heroes/$detailRouteId');
+              },
         leading: AppImage(
           url: hero.avatar,
           aspectRatio: 1,
