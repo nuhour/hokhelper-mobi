@@ -27,6 +27,7 @@ class _FakeSkinRepository extends ContentRepository {
   @override
   Future<List<ContentItemSummary>> loadSkins(
     int regionId, {
+    int page = 1,
     int pageSize = 20,
   }) async {
     return const [
@@ -65,6 +66,45 @@ class _FakeSkinRepository extends ContentRepository {
     ratedSkinId = skinId;
     submittedRating = rating;
     return const SkinRatingResult(rating: 5, ratingCount: 13);
+  }
+}
+
+class _PagedSkinRepository extends ContentRepository {
+  _PagedSkinRepository()
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  final requestedPages = <int>[];
+
+  @override
+  Future<List<ContentItemSummary>> loadSkins(
+    int regionId, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    requestedPages.add(page);
+    final startId = (page - 1) * pageSize + 1;
+    final count = page == 1 ? pageSize : 1;
+    return List.generate(count, (index) {
+      final id = startId + index;
+      return ContentItemSummary(
+        id: id,
+        kind: ContentKind.skin,
+        title: 'Paged Skin $id',
+        heroName: 'Hero $id',
+        imageUrl: '',
+        subtitle: 'Paged Series',
+        rating: 4,
+        ratingCount: 1,
+        viewCount: 0,
+      );
+    }, growable: false);
   }
 }
 
@@ -325,6 +365,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(cardImage().url, 'https://example.test/splash.jpg');
+  });
+
+  testWidgets('loads more skins after the first gallery page', (tester) async {
+    final repository = _PagedSkinRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paged Skin 1'), findsOneWidget);
+    expect(find.text('Paged Skin 61'), findsNothing);
+
+    final loadMoreButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Load more'),
+    );
+    await tester.runAsync(() async {
+      loadMoreButton.onPressed!();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+
+    expect(repository.requestedPages, [1, 2]);
+    expect(find.text('Paged Skin 61'), findsOneWidget);
   });
 
   testWidgets('rates skins from the detail sheet', (tester) async {

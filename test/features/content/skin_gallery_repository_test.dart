@@ -114,4 +114,23 @@ void main() {
       expect(result.ratingCount, 13);
     },
   );
+
+  test(
+    'loads later skin gallery pages with backend-compatible payload',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = ContentRepository(apiClient: apiClient);
+
+      await repository.loadSkins(2, page: 2, pageSize: 30);
+
+      expect(apiClient.postCalls, ['/skin/list']);
+      expect(apiClient.lastBody, {
+        'page': 2,
+        'pageSize': 30,
+        'filterRules': [
+          {'field': 'region_id', 'op': 'eq', 'value': 2},
+        ],
+      });
+    },
+  );
 }

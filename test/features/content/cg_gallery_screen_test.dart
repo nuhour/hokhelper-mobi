@@ -30,6 +30,7 @@ class _FakeContentRepository extends ContentRepository {
   @override
   Future<List<ContentItemSummary>> loadCgs(
     int regionId, {
+    int page = 1,
     int pageSize = 20,
   }) async {
     return const [

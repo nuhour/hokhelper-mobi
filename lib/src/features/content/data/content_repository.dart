@@ -13,11 +13,12 @@ class ContentRepository {
 
   Future<List<ContentItemSummary>> loadSkins(
     int regionId, {
+    int page = 1,
     int pageSize = 20,
   }) async {
     final json = await apiClient.postJson(
       '/skin/list',
-      body: _pagedRegionBody(regionId, pageSize: pageSize),
+      body: _pagedRegionBody(regionId, page: page, pageSize: pageSize),
     );
     return _readRows(
       json,
@@ -40,11 +41,12 @@ class ContentRepository {
 
   Future<List<ContentItemSummary>> loadCgs(
     int regionId, {
+    int page = 1,
     int pageSize = 20,
   }) async {
     final json = await apiClient.postJson(
       '/cg/list',
-      body: _pagedRegionBody(regionId, pageSize: pageSize),
+      body: _pagedRegionBody(regionId, page: page, pageSize: pageSize),
     );
     return _readRows(
       json,
@@ -123,9 +125,13 @@ class ContentRepository {
         .toList(growable: false);
   }
 
-  Map<String, Object> _pagedRegionBody(int regionId, {int pageSize = 20}) {
+  Map<String, Object> _pagedRegionBody(
+    int regionId, {
+    int page = 1,
+    int pageSize = 20,
+  }) {
     return {
-      'page': 1,
+      'page': page,
       'pageSize': pageSize,
       'filterRules': [
         {'field': 'region_id', 'op': 'eq', 'value': regionId},

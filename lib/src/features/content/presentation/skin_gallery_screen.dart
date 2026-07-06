@@ -11,13 +11,20 @@ import '../domain/content_item_summary.dart';
 import '../domain/skin_detail.dart';
 import 'content_screen.dart';
 
+const _skinGalleryPageSize = 60;
+
+final skinGalleryRegionProvider = FutureProvider<int>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return settings.region.regionId;
+});
+
 final skinGalleryProvider = FutureProvider<List<ContentItemSummary>>((
   ref,
 ) async {
-  final settings = await ref.watch(appSettingsControllerProvider.future);
+  final regionId = await ref.watch(skinGalleryRegionProvider.future);
   return ref
       .watch(contentRepositoryProvider)
-      .loadSkins(settings.region.regionId, pageSize: 60);
+      .loadSkins(regionId, pageSize: _skinGalleryPageSize);
 });
 
 final skinDetailProvider = FutureProvider.family<SkinDetail, int>((
@@ -50,6 +57,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   int? _lanePosition;
   int? _openedInitialSkinId;
   int? _ratingSkinId;
+  final _extraSkins = <ContentItemSummary>[];
+  var _nextPage = 2;
+  var _hasMoreSkins = true;
+  var _isLoadingMoreSkins = false;
 
   @override
   void initState() {
@@ -85,6 +96,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       color: AppTheme.bg,
       child: RefreshIndicator(
         onRefresh: () async {
+          _resetLoadedPages();
           ref.invalidate(skinGalleryProvider);
           await ref.read(skinGalleryProvider.future);
         },
@@ -176,7 +188,8 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
               value: galleryValue,
               retry: () => ref.invalidate(skinGalleryProvider),
               data: (items) {
-                final skins = _filterAndSort(items);
+                final allItems = [...items, ..._extraSkins];
+                final skins = _filterAndSort(allItems);
                 if (skins.isEmpty) {
                   return const AppEmptyState(
                     icon: Icons.collections_outlined,
@@ -185,28 +198,54 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                   );
                 }
 
-                return GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: skins.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _viewMode == _SkinViewMode.poster ? 2 : 1,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: _viewMode == _SkinViewMode.poster
-                        ? 0.64
-                        : 1.42,
-                  ),
-                  itemBuilder: (context, index) {
-                    return _SkinCard(
-                      skin: skins[index],
-                      viewMode: _viewMode,
-                      isRating: _ratingSkinId == skins[index].id,
-                      onRate: (rating) =>
-                          _rateSkinFromCard(skins[index], rating),
-                      onTap: () => _openDetail(context, skins[index].id),
-                    );
-                  },
+                return Column(
+                  children: [
+                    GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: skins.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _viewMode == _SkinViewMode.poster
+                            ? 2
+                            : 1,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: _viewMode == _SkinViewMode.poster
+                            ? 0.64
+                            : 1.42,
+                      ),
+                      itemBuilder: (context, index) {
+                        return _SkinCard(
+                          skin: skins[index],
+                          viewMode: _viewMode,
+                          isRating: _ratingSkinId == skins[index].id,
+                          onRate: (rating) =>
+                              _rateSkinFromCard(skins[index], rating),
+                          onTap: () => _openDetail(context, skins[index].id),
+                        );
+                      },
+                    ),
+                    if (_hasMoreSkins && items.length >= _skinGalleryPageSize)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: FilledButton.icon(
+                          onPressed: _isLoadingMoreSkins
+                              ? null
+                              : _loadMoreSkins,
+                          icon: _isLoadingMoreSkins
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label: Text(
+                            _isLoadingMoreSkins ? 'Loading...' : 'Load more',
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -246,6 +285,13 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     });
   }
 
+  void _resetLoadedPages() {
+    _extraSkins.clear();
+    _nextPage = 2;
+    _hasMoreSkins = true;
+    _isLoadingMoreSkins = false;
+  }
+
   void _openDetail(BuildContext context, int skinId) {
     showModalBottomSheet<void>(
       context: context,
@@ -279,6 +325,41 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       if (mounted) {
         setState(() => _ratingSkinId = null);
       }
+    }
+  }
+
+  Future<void> _loadMoreSkins() async {
+    if (_isLoadingMoreSkins || !_hasMoreSkins) {
+      return;
+    }
+
+    setState(() => _isLoadingMoreSkins = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final regionId = await ref.read(skinGalleryRegionProvider.future);
+      final nextItems = await ref
+          .read(contentRepositoryProvider)
+          .loadSkins(regionId, page: _nextPage, pageSize: _skinGalleryPageSize);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _nextPage += 1;
+        _extraSkins.addAll(nextItems);
+        _hasMoreSkins = nextItems.length >= _skinGalleryPageSize;
+        _isLoadingMoreSkins = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isLoadingMoreSkins = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to load more skins: $error')),
+      );
     }
   }
 }
