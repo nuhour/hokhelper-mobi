@@ -218,4 +218,34 @@ void main() {
     expect(find.text('Rating submitted'), findsOneWidget);
     expect(find.text('13 ratings'), findsOneWidget);
   });
+
+  testWidgets('rates skins directly from gallery cards', (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _FakeSkinRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          skinGalleryProvider.overrideWith(
+            (ref) =>
+                ref.watch(contentRepositoryProvider).loadSkins(2, pageSize: 60),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Rate Crimson Hunter 5 stars'));
+    await tester.pumpAndSettle();
+
+    expect(repository.ratedSkinId, 1001);
+    expect(repository.submittedRating, 5);
+    expect(find.text('Rating submitted'), findsOneWidget);
+  });
 }

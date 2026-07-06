@@ -46,6 +46,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   String _query = '';
   _SkinSort _sort = _SkinSort.latest;
   int? _openedInitialSkinId;
+  int? _ratingSkinId;
 
   @override
   void initState() {
@@ -166,6 +167,9 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                   itemBuilder: (context, index) {
                     return _SkinCard(
                       skin: skins[index],
+                      isRating: _ratingSkinId == skins[index].id,
+                      onRate: (rating) =>
+                          _rateSkinFromCard(skins[index], rating),
                       onTap: () => _openDetail(context, skins[index].id),
                     );
                   },
@@ -212,12 +216,42 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       builder: (context) => _SkinDetailSheet(skinId: skinId),
     );
   }
+
+  Future<void> _rateSkinFromCard(ContentItemSummary skin, double rating) async {
+    if (_ratingSkinId != null) {
+      return;
+    }
+
+    setState(() => _ratingSkinId = skin.id);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await ref.read(contentRepositoryProvider).rateSkin(skin.id, rating);
+      ref.invalidate(skinGalleryProvider);
+      messenger.showSnackBar(const SnackBar(content: Text('Rating submitted')));
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to submit rating: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _ratingSkinId = null);
+      }
+    }
+  }
 }
 
 class _SkinCard extends StatelessWidget {
-  const _SkinCard({required this.skin, required this.onTap});
+  const _SkinCard({
+    required this.skin,
+    required this.isRating,
+    required this.onRate,
+    required this.onTap,
+  });
 
   final ContentItemSummary skin;
+  final bool isRating;
+  final ValueChanged<double> onRate;
   final VoidCallback onTap;
 
   @override
@@ -278,11 +312,54 @@ class _SkinCard extends StatelessWidget {
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppTheme.gold),
                 ),
+                const SizedBox(height: 4),
+                _SkinCardRatingControl(
+                  skinTitle: skin.title,
+                  rating: skin.rating,
+                  isRating: isRating,
+                  onRate: onRate,
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SkinCardRatingControl extends StatelessWidget {
+  const _SkinCardRatingControl({
+    required this.skinTitle,
+    required this.rating,
+    required this.isRating,
+    required this.onRate,
+  });
+
+  final String skinTitle;
+  final double rating;
+  final bool isRating;
+  final ValueChanged<double> onRate;
+
+  @override
+  Widget build(BuildContext context) {
+    final roundedRating = rating.round();
+    return Row(
+      children: [
+        for (var index = 1; index <= 5; index++)
+          IconButton(
+            tooltip: 'Rate $skinTitle $index stars',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+            padding: EdgeInsets.zero,
+            onPressed: isRating ? null : () => onRate(index.toDouble()),
+            icon: Icon(
+              index <= roundedRating ? Icons.star : Icons.star_border,
+              color: AppTheme.gold,
+              size: 18,
+            ),
+          ),
+      ],
     );
   }
 }
