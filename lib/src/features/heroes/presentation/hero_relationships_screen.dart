@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -311,9 +312,15 @@ class _RelationshipCard extends StatelessWidget {
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _HeroNamePill(name: relationship.sourceHeroName),
+                _HeroNamePill(
+                  name: relationship.sourceHeroName,
+                  heroId: relationship.sourceHeroId,
+                ),
                 const Icon(Icons.sync_alt, color: AppTheme.muted, size: 18),
-                _HeroNamePill(name: relationship.targetHeroName),
+                _HeroNamePill(
+                  name: relationship.targetHeroName,
+                  heroId: relationship.targetHeroId,
+                ),
               ],
             ),
             if (counterpart != null && counterpart.isNotEmpty) ...[
@@ -340,13 +347,15 @@ class _RelationshipCard extends StatelessWidget {
 }
 
 class _HeroNamePill extends StatelessWidget {
-  const _HeroNamePill({required this.name});
+  const _HeroNamePill({required this.name, required this.heroId});
 
   final String name;
+  final String heroId;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final trimmedHeroId = heroId.trim();
+    final pill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.cyan.withValues(alpha: 0.12),
@@ -358,6 +367,20 @@ class _HeroNamePill extends StatelessWidget {
           color: AppTheme.cyan,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+
+    if (trimmedHeroId.isEmpty) {
+      return pill;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => context.go('/heroes/$trimmedHeroId'),
+        child: pill,
       ),
     );
   }
