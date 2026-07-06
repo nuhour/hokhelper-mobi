@@ -33,7 +33,9 @@ class _FakeCommunityRepository extends CommunityRepository {
   String? deletedPostId;
   String? likedPostId;
   final requestedPostPages = <int>[];
+  final requestedLeakPages = <int>[];
   List<CommunityPostSummary> Function(int page, int pageSize)? loadPostsPage;
+  List<LeakPostSummary> Function(int page, int pageSize)? loadLeaksPage;
 
   @override
   Future<List<CommunityPostSummary>> loadPosts(
@@ -43,6 +45,20 @@ class _FakeCommunityRepository extends CommunityRepository {
   }) async {
     requestedPostPages.add(page);
     final loader = loadPostsPage;
+    if (loader == null) {
+      return const [];
+    }
+    return loader(page, pageSize);
+  }
+
+  @override
+  Future<List<LeakPostSummary>> loadLeaks(
+    int regionId, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    requestedLeakPages.add(page);
+    final loader = loadLeaksPage;
     if (loader == null) {
       return const [];
     }
@@ -497,6 +513,67 @@ void main() {
 
     expect(repository.requestedPostPages, [1, 2]);
     expect(find.text('Paged post 31'), findsOneWidget);
+  });
+
+  testWidgets('loads more leak posts after the first page', (tester) async {
+    final repository = _FakeCommunityRepository();
+    repository.loadLeaksPage = (page, pageSize) {
+      final startId = ((page - 1) * pageSize) + 1;
+      final count = page == 1 ? pageSize : 1;
+      return List.generate(count, (index) {
+        final id = startId + index;
+        return LeakPostSummary(
+          id: '$id',
+          title: 'Paged leak $id',
+          content: 'Leak page $page item $id.',
+          category: 'skin',
+          platform: 'youtube',
+          authorName: 'Scout',
+          authorHandle: '@scout',
+          authorAvatarUrl: '',
+          mediaUrl: '',
+          mediaType: 'image',
+          publishedAt: '2026-07-05T10:00:00Z',
+          likeCount: 0,
+          viewCount: id,
+          keywords: const ['Lam'],
+        );
+      });
+    };
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paged leak 1'), findsOneWidget);
+    expect(find.text('Paged leak 31'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Load more'),
+      900,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final loadMore = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Load more'),
+    );
+    await tester.runAsync(() async {
+      loadMore.onPressed!();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedLeakPages, [1, 2]);
+    expect(find.text('Paged leak 31'), findsOneWidget);
   });
 
   testWidgets('creates community posts from the mobile posts tab', (

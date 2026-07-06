@@ -52,12 +52,16 @@ class CommunityRepository {
     await apiClient.postJson('/community/posts/$postId/delete', body: {});
   }
 
-  Future<List<LeakPostSummary>> loadLeaks(int regionId) async {
+  Future<List<LeakPostSummary>> loadLeaks(
+    int regionId, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
     final json = await apiClient.getJson(
       '/leak/posts',
       query: {
-        'page': 1,
-        'pageSize': 30,
+        'page': page,
+        'pageSize': pageSize,
         'region_id': regionId,
         'category': 'all',
       },

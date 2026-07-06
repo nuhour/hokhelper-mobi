@@ -19,6 +19,7 @@ final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
 });
 
 const _communityPostsPageSize = 30;
+const _leakPostsPageSize = 30;
 
 final communityPostsRegionProvider = FutureProvider<int>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
@@ -35,10 +36,15 @@ final communityPostsProvider = FutureProvider<List<CommunityPostSummary>>((
 });
 
 final leakPostsProvider = FutureProvider<List<LeakPostSummary>>((ref) async {
-  final settings = await ref.watch(appSettingsControllerProvider.future);
+  final regionId = await ref.watch(leakPostsRegionProvider.future);
   return ref
       .watch(communityRepositoryProvider)
-      .loadLeaks(settings.region.regionId);
+      .loadLeaks(regionId, pageSize: _leakPostsPageSize);
+});
+
+final leakPostsRegionProvider = FutureProvider<int>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return settings.region.regionId;
 });
 
 enum CommunityInitialView { hot, myPosts, likedPosts }
@@ -573,22 +579,33 @@ class _PostsEmptyState extends StatelessWidget {
   }
 }
 
-class _LeaksTab extends ConsumerWidget {
+class _LeaksTab extends ConsumerStatefulWidget {
   const _LeaksTab({required this.value, required this.initialQuery});
 
   final AsyncValue<List<LeakPostSummary>> value;
   final String? initialQuery;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LeaksTab> createState() => _LeaksTabState();
+}
+
+class _LeaksTabState extends ConsumerState<_LeaksTab> {
+  final _extraLeaks = <LeakPostSummary>[];
+  var _nextLeaksPage = 2;
+  var _hasMoreLeaks = true;
+  var _isLoadingMoreLeaks = false;
+
+  @override
+  Widget build(BuildContext context) {
     return AppAsyncView<List<LeakPostSummary>>(
-      value: value,
+      value: widget.value,
       retry: () => ref.invalidate(leakPostsProvider),
       data: (leaks) {
-        final query = initialQuery?.trim() ?? '';
+        final query = widget.initialQuery?.trim() ?? '';
+        final allLeaks = [...leaks, ..._extraLeaks];
         final visibleLeaks = query.isEmpty
-            ? leaks
-            : leaks
+            ? allLeaks
+            : allLeaks
                   .where((leak) => _matchesQuery(leak, query))
                   .toList(growable: false);
 
@@ -603,7 +620,10 @@ class _LeaksTab extends ConsumerWidget {
         }
 
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(leakPostsProvider.future),
+          onRefresh: () async {
+            _resetLoadedPages();
+            return ref.refresh(leakPostsProvider.future);
+          },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
@@ -618,6 +638,26 @@ class _LeaksTab extends ConsumerWidget {
               for (final leak in visibleLeaks) ...[
                 _LeakCard(leak: leak),
                 const SizedBox(height: 12),
+              ],
+              if (_canLoadMoreLeaks(leaks)) ...[
+                const SizedBox(height: 4),
+                Center(
+                  child: FilledButton.icon(
+                    onPressed: _isLoadingMoreLeaks
+                        ? null
+                        : () => _loadMoreLeaks(context),
+                    icon: _isLoadingMoreLeaks
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more, size: 18),
+                    label: Text(
+                      _isLoadingMoreLeaks ? 'Loading...' : 'Load more',
+                    ),
+                  ),
+                ),
               ],
             ],
           ),
@@ -637,6 +677,53 @@ class _LeaksTab extends ConsumerWidget {
       leak.authorHandle,
       ...leak.keywords,
     ].any((value) => value.toLowerCase().contains(needle));
+  }
+
+  bool _canLoadMoreLeaks(List<LeakPostSummary> firstPageLeaks) {
+    return _hasMoreLeaks && firstPageLeaks.length >= _leakPostsPageSize;
+  }
+
+  Future<void> _loadMoreLeaks(BuildContext context) async {
+    if (_isLoadingMoreLeaks || !_hasMoreLeaks) {
+      return;
+    }
+    setState(() => _isLoadingMoreLeaks = true);
+    try {
+      final regionId = await ref.read(leakPostsRegionProvider.future);
+      final nextLeaks = await ref
+          .read(communityRepositoryProvider)
+          .loadLeaks(
+            regionId,
+            page: _nextLeaksPage,
+            pageSize: _leakPostsPageSize,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _extraLeaks.addAll(nextLeaks);
+        _nextLeaksPage += 1;
+        _hasMoreLeaks = nextLeaks.length >= _leakPostsPageSize;
+        _isLoadingMoreLeaks = false;
+      });
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _isLoadingMoreLeaks = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to load more leaks')),
+      );
+    }
+  }
+
+  void _resetLoadedPages() {
+    _extraLeaks.clear();
+    _nextLeaksPage = 2;
+    _hasMoreLeaks = true;
+    _isLoadingMoreLeaks = false;
   }
 }
 

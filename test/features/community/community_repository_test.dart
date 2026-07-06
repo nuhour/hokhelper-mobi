@@ -165,6 +165,20 @@ void main() {
     expect(leaks.single.keywords, ['Lam', 'skin']);
   });
 
+  test('loads leak posts with requested page parameters', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    await repository.loadLeaks(3, page: 2, pageSize: 12);
+
+    expect(apiClient.getQueries['/leak/posts'], {
+      'page': 2,
+      'pageSize': 12,
+      'region_id': 3,
+      'category': 'all',
+    });
+  });
+
   test('toggles community post like with web-compatible endpoint', () async {
     final apiClient = _FakeApiClient();
     final repository = CommunityRepository(apiClient: apiClient);
