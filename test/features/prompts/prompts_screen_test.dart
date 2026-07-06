@@ -17,6 +17,9 @@ class _FakePromptsRepository extends PromptsRepository {
   String? updatedPromptId;
   PromptDraft? updatedDraft;
   String? deletedPromptId;
+  String? generatedPromptId;
+  int? generatedCount;
+  String? generatedContent;
 
   @override
   Future<PromptLikeResult> toggleLike(String promptId) async {
@@ -66,6 +69,26 @@ class _FakePromptsRepository extends PromptsRepository {
   @override
   Future<void> deletePrompt(String promptId) async {
     deletedPromptId = promptId;
+  }
+
+  @override
+  Future<PromptGenerationQuota> loadGenerationQuota() async {
+    return const PromptGenerationQuota(used: 1, total: 5);
+  }
+
+  @override
+  Future<PromptGenerateResult> generateImages({
+    required String promptId,
+    int count = 1,
+    String? customContent,
+  }) async {
+    generatedPromptId = promptId;
+    generatedCount = count;
+    generatedContent = customContent;
+    return const PromptGenerateResult(
+      images: ['https://example.test/generated-1.png'],
+      quota: PromptGenerationQuota(used: 2, total: 5),
+    );
   }
 }
 
@@ -496,5 +519,58 @@ void main() {
     expect(repository.deletedPromptId, '7');
     expect(find.text('Cyber skin concept'), findsNothing);
     expect(find.text('Prompt deleted'), findsOneWidget);
+  });
+
+  testWidgets('generates prompt images from a prompt card', (tester) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Image generation'), findsOneWidget);
+    expect(find.text('4 / 5 left'), findsOneWidget);
+    expect(
+      find.text('Create a neon Honor of Kings skin splash art.'),
+      findsWidgets,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Generate image'));
+    await tester.pumpAndSettle();
+
+    expect(repository.generatedPromptId, '7');
+    expect(repository.generatedCount, 1);
+    expect(
+      repository.generatedContent,
+      'Create a neon Honor of Kings skin splash art.',
+    );
+    expect(find.text('3 / 5 left'), findsOneWidget);
+    expect(find.bySemanticsLabel('Generated image 1'), findsOneWidget);
   });
 }

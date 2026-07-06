@@ -153,6 +153,8 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                             canManage: _action == PromptListAction.myPrompts,
                             onEdit: () => _openEditSheet(context, prompt),
                             onDelete: () => _confirmDelete(context, prompt),
+                            onGenerate: () =>
+                                _openGenerateSheet(context, prompt),
                           ),
                         ],
                       );
@@ -291,6 +293,236 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
         const SnackBar(content: Text('Failed to delete prompt')),
       );
     }
+  }
+
+  Future<void> _openGenerateSheet(
+    BuildContext context,
+    PromptSummary prompt,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _PromptGenerationSheet(prompt: prompt),
+    );
+  }
+}
+
+class _PromptGenerationSheet extends ConsumerStatefulWidget {
+  const _PromptGenerationSheet({required this.prompt});
+
+  final PromptSummary prompt;
+
+  @override
+  ConsumerState<_PromptGenerationSheet> createState() =>
+      _PromptGenerationSheetState();
+}
+
+class _PromptGenerationSheetState
+    extends ConsumerState<_PromptGenerationSheet> {
+  late final TextEditingController _contentController;
+  late Future<PromptGenerationQuota> _quotaFuture;
+  PromptGenerationQuota? _quota;
+  List<String> _images = const [];
+  var _generating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentController = TextEditingController(text: widget.prompt.content);
+    _quotaFuture = ref.read(promptsRepositoryProvider).loadGenerationQuota();
+  }
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.78,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Image generation',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _generating
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              FutureBuilder<PromptGenerationQuota>(
+                future: _quotaFuture,
+                builder: (context, snapshot) {
+                  final quota = snapshot.data ?? _quota;
+                  if (quota == null) {
+                    return const LinearProgressIndicator();
+                  }
+                  _quota = quota;
+                  return _QuotaPanel(quota: quota);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _contentController,
+                minLines: 4,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Prompt content',
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _generating || (_quota?.remaining ?? 1) <= 0
+                      ? null
+                      : _generate,
+                  icon: _generating
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome),
+                  label: const Text('Generate image'),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Expanded(
+                child: _images.isEmpty
+                    ? const Center(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.image_outlined,
+                                color: AppTheme.muted,
+                                size: 28,
+                              ),
+                              SizedBox(height: 6),
+                              Text(
+                                'No generated images yet',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppTheme.muted,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : GridView.builder(
+                        itemCount: _images.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                            ),
+                        itemBuilder: (context, index) {
+                          return AppImage(
+                            url: _images[index],
+                            borderRadius: 14,
+                            semanticLabel: 'Generated image ${index + 1}',
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generate() async {
+    setState(() => _generating = true);
+    try {
+      final result = await ref
+          .read(promptsRepositoryProvider)
+          .generateImages(
+            promptId: widget.prompt.id,
+            count: 1,
+            customContent: _contentController.text,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _images = result.images;
+        _quota = result.quota;
+        _quotaFuture = Future.value(result.quota);
+        _generating = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _generating = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to generate image')),
+      );
+    }
+  }
+}
+
+class _QuotaPanel extends StatelessWidget {
+  const _QuotaPanel({required this.quota});
+
+  final PromptGenerationQuota quota;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.bolt_outlined, color: AppTheme.gold),
+            const SizedBox(width: 10),
+            Text(
+              '${quota.remaining} / ${quota.total} left',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -512,12 +744,14 @@ class _PromptCard extends ConsumerStatefulWidget {
     this.canManage = false,
     this.onEdit,
     this.onDelete,
+    this.onGenerate,
   });
 
   final PromptSummary prompt;
   final bool canManage;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onGenerate;
 
   @override
   ConsumerState<_PromptCard> createState() => _PromptCardState();
@@ -668,6 +902,11 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                     icon: const Icon(Icons.copy_outlined, size: 16),
                     label: const Text('Copy'),
                   ),
+                OutlinedButton.icon(
+                  onPressed: widget.onGenerate,
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('Generate'),
+                ),
                 if (widget.canManage) ...[
                   OutlinedButton.icon(
                     onPressed: widget.onEdit,

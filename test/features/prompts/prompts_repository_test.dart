@@ -24,6 +24,12 @@ class _FakeApiClient extends ApiClient {
   }) async {
     getPath = path;
     getQuery = query;
+    if (path == '/prompt/quota') {
+      return const {
+        'success': true,
+        'result': {'quota_used': 2, 'quota_total': 5},
+      };
+    }
     return const {
       'success': true,
       'result': {
@@ -83,6 +89,19 @@ class _FakeApiClient extends ApiClient {
     }
     if (path == '/prompt/7/delete') {
       return const {'success': true, 'result': {}};
+    }
+    if (path == '/prompt/generate') {
+      return const {
+        'success': true,
+        'result': {
+          'images': [
+            'https://example.test/generated-1.png',
+            {'generated': 'https://example.test/generated-2.png'},
+          ],
+          'quota_used': 3,
+          'quota_total': 5,
+        },
+      };
     }
     if (path.endsWith('/like')) {
       return const {
@@ -233,5 +252,42 @@ void main() {
 
     expect(apiClient.postPath, '/prompt/7/delete');
     expect(apiClient.postBody, isEmpty);
+  });
+
+  test('loads prompt image generation quota', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final quota = await repository.loadGenerationQuota();
+
+    expect(apiClient.getPath, '/prompt/quota');
+    expect(quota.used, 2);
+    expect(quota.total, 5);
+    expect(quota.remaining, 3);
+  });
+
+  test('generates prompt images with hokx text mode payload', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final result = await repository.generateImages(
+      promptId: '7',
+      count: 2,
+      customContent: 'Create a HOK splash art.',
+    );
+
+    expect(apiClient.postPath, '/prompt/generate');
+    expect(apiClient.postBody, {
+      'prompt_id': '7',
+      'mode': 'text',
+      'count': 2,
+      'custom_content': 'Create a HOK splash art.',
+    });
+    expect(result.images, [
+      'https://example.test/generated-1.png',
+      'https://example.test/generated-2.png',
+    ]);
+    expect(result.quota.used, 3);
+    expect(result.quota.remaining, 2);
   });
 }

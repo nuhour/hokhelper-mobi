@@ -86,6 +86,76 @@ class PromptsRepository {
   Future<void> deletePrompt(String promptId) async {
     await apiClient.postJson('/prompt/$promptId/delete', body: {});
   }
+
+  Future<PromptGenerationQuota> loadGenerationQuota() async {
+    final json = await apiClient.getJson('/prompt/quota');
+    final result = json['result'];
+    final map = result is Map ? result : const <String, Object?>{};
+    return PromptGenerationQuota.fromJson(map);
+  }
+
+  Future<PromptGenerateResult> generateImages({
+    required String promptId,
+    int count = 1,
+    String? customContent,
+  }) async {
+    final body = <String, Object?>{
+      'prompt_id': promptId,
+      'mode': 'text',
+      'count': count,
+    };
+    final content = customContent?.trim();
+    if (content != null && content.isNotEmpty) {
+      body['custom_content'] = content;
+    }
+    final json = await apiClient.postJson('/prompt/generate', body: body);
+    final result = json['result'];
+    final map = result is Map ? result : const <String, Object?>{};
+    return PromptGenerateResult.fromJson(map);
+  }
+}
+
+class PromptGenerationQuota {
+  const PromptGenerationQuota({required this.used, required this.total});
+
+  final int used;
+  final int total;
+
+  int get remaining => (total - used).clamp(0, 1 << 31);
+
+  factory PromptGenerationQuota.fromJson(Map<dynamic, dynamic> json) {
+    return PromptGenerationQuota(
+      used: _readInt(json['quota_used'] ?? json['used']),
+      total: _readInt(json['quota_total'] ?? json['total'], fallback: 5),
+    );
+  }
+}
+
+class PromptGenerateResult {
+  const PromptGenerateResult({required this.images, required this.quota});
+
+  final List<String> images;
+  final PromptGenerationQuota quota;
+
+  factory PromptGenerateResult.fromJson(Map<dynamic, dynamic> json) {
+    final rawImages = json['images'];
+    final images = rawImages is List
+        ? rawImages
+              .map((image) {
+                if (image is Map) {
+                  return image['generated'] ?? image['url'] ?? image['image'];
+                }
+                return image;
+              })
+              .map((image) => image?.toString() ?? '')
+              .where((image) => image.isNotEmpty)
+              .toList(growable: false)
+        : const <String>[];
+    return PromptGenerateResult(
+      images: images,
+      quota: PromptGenerationQuota.fromJson(json),
+    );
+  }
 }
 
 class PromptDraft {
@@ -166,9 +236,9 @@ bool _readBool(Object? value) {
   return text == 'true' || text == '1';
 }
 
-int _readInt(Object? value) {
+int _readInt(Object? value, {int fallback = 0}) {
   if (value is int) {
     return value;
   }
-  return int.tryParse(value?.toString() ?? '') ?? 0;
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
 }
