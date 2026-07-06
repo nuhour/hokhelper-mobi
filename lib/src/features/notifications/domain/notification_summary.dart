@@ -17,6 +17,7 @@ class NotificationSummary {
     required this.createdAt,
     required this.actorName,
     required this.actorAvatar,
+    required this.actorId,
   });
 
   final int id;
@@ -29,6 +30,7 @@ class NotificationSummary {
   final String createdAt;
   final String actorName;
   final String actorAvatar;
+  final int actorId;
 
   factory NotificationSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -48,6 +50,7 @@ class NotificationSummary {
       createdAt: _readString(map['created_at'] ?? map['createdAt']),
       actorName: firstName.isNotEmpty ? firstName : username,
       actorAvatar: _readString(actorMap['avatar'] ?? actorMap['avatar_url']),
+      actorId: _readInt(actorMap['id']),
     );
   }
 
@@ -63,6 +66,7 @@ class NotificationSummary {
       createdAt: createdAt,
       actorName: actorName,
       actorAvatar: actorAvatar,
+      actorId: actorId,
     );
   }
 }

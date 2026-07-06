@@ -144,6 +144,11 @@ class _SignedInNotifications extends ConsumerWidget {
                         return _NotificationCard(
                           notification: page.rows[index],
                           onMarkRead: () => _markRead(ref, page.rows[index].id),
+                          onView: (cardContext) => _viewNotification(
+                            cardContext,
+                            ref,
+                            page.rows[index],
+                          ),
                         );
                       },
                     ),
@@ -170,20 +175,62 @@ class _SignedInNotifications extends ConsumerWidget {
     ref.invalidate(notificationsProvider);
   }
 
+  Future<void> _viewNotification(
+    BuildContext context,
+    WidgetRef ref,
+    NotificationSummary notification,
+  ) async {
+    final destination = _resolveNotificationDestination(notification);
+    final router = GoRouter.of(context);
+    if (!notification.isRead) {
+      await ref.read(notificationsRepositoryProvider).markRead([
+        notification.id,
+      ]);
+    }
+
+    if (destination == null) {
+      ref.invalidate(notificationsProvider);
+      return;
+    }
+    router.go(destination);
+    ref.invalidate(notificationsProvider);
+  }
+
   Future<void> _markAllRead(WidgetRef ref) async {
     await ref.read(notificationsRepositoryProvider).markAllRead();
     ref.invalidate(notificationsProvider);
   }
 }
 
+String? _resolveNotificationDestination(NotificationSummary notification) {
+  final classifier =
+      '${notification.targetType} ${notification.title} ${notification.content}'
+          .toLowerCase();
+  final isLike =
+      classifier.contains('like') ||
+      classifier.contains('liked') ||
+      classifier.contains('点赞');
+  if (isLike && notification.actorId > 0) {
+    return '/profile/${notification.actorId}';
+  }
+
+  final link = notification.link.trim();
+  if (!link.startsWith('/')) {
+    return null;
+  }
+  return link;
+}
+
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({
     required this.notification,
     required this.onMarkRead,
+    required this.onView,
   });
 
   final NotificationSummary notification;
   final VoidCallback onMarkRead;
+  final void Function(BuildContext context) onView;
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +309,7 @@ class _NotificationCard extends StatelessWidget {
                       ),
                       if (notification.link.isNotEmpty)
                         TextButton(
-                          onPressed: () => _openLink(context),
+                          onPressed: () => onView(context),
                           child: const Text('View'),
                         ),
                       if (!notification.isRead)
@@ -279,14 +326,6 @@ class _NotificationCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _openLink(BuildContext context) {
-    final link = notification.link.trim();
-    if (!link.startsWith('/')) {
-      return;
-    }
-    context.push(link);
   }
 }
 

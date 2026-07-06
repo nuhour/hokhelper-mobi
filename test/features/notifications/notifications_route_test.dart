@@ -82,6 +82,7 @@ void main() {
                   createdAt: '2026-07-03T08:30:00Z',
                   actorName: 'Coach',
                   actorAvatar: '',
+                  actorId: 7,
                 ),
               ],
             );

@@ -97,6 +97,7 @@ void main() {
     expect(apiClient.lastQuery?['pageSize'], 50);
     expect(page.total, 2);
     expect(page.rows.first.id, 10);
+    expect(page.rows.first.actorId, 7);
     expect(page.rows.first.actorName, 'Coach');
     expect(page.rows.first.link, '/community/post/99');
     expect(page.rows.first.isRead, isFalse);

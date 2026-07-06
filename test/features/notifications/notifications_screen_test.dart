@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
@@ -44,6 +45,7 @@ class _FakeNotificationsRepository extends NotificationsRepository {
             createdAt: '2026-07-03T08:30:00Z',
             actorName: 'Coach',
             actorAvatar: '',
+            actorId: 7,
           ),
           NotificationSummary(
             id: 11,
@@ -56,6 +58,7 @@ class _FakeNotificationsRepository extends NotificationsRepository {
             createdAt: '2026-07-02T08:30:00Z',
             actorName: '',
             actorAvatar: '',
+            actorId: 0,
           ),
         ],
       ),
@@ -156,5 +159,75 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.markedAll, isTrue);
+  });
+
+  testWidgets('opens like notifications at actor profile after marking read', (
+    tester,
+  ) async {
+    final repository = _FakeNotificationsRepository();
+    repository.page = const NotificationPage(
+      total: 1,
+      rows: [
+        NotificationSummary(
+          id: 12,
+          type: 'social',
+          targetType: 'community_post_like',
+          title: 'Like',
+          content: 'Arthur liked your post',
+          link: '/community/post/201',
+          isRead: false,
+          createdAt: '2026-07-04T08:30:00Z',
+          actorName: 'Arthur',
+          actorAvatar: '',
+          actorId: 77,
+        ),
+      ],
+    );
+    final router = GoRouter(
+      initialLocation: '/notifications',
+      routes: [
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/profile/:userId',
+          builder: (context, state) =>
+              Scaffold(body: Text('Profile ${state.pathParameters['userId']}')),
+        ),
+        GoRoute(
+          path: '/community/post/:postId',
+          builder: (context, state) =>
+              Scaffold(body: Text('Post ${state.pathParameters['postId']}')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(
+              const AuthUser(
+                id: 42,
+                username: 'lam',
+                email: 'lam@example.test',
+                displayName: 'Lam',
+              ),
+            ),
+          ),
+          notificationsRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'View'));
+    await tester.pumpAndSettle();
+
+    expect(repository.markedIds, [12]);
+    expect(router.routeInformationProvider.value.uri.path, '/profile/77');
+    expect(find.text('Profile 77'), findsOneWidget);
   });
 }
