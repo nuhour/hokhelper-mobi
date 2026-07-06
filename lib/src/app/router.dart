@@ -310,13 +310,19 @@ GoRouter createAppRouter() {
           GoRoute(
             path: 'teams/:teamId',
             builder: (context, state) {
-              return const EsportsScreen(initialTab: EsportsInitialTab.teams);
+              return EsportsScreen(
+                initialTab: EsportsInitialTab.teams,
+                initialTeamId: state.pathParameters['teamId'],
+              );
             },
           ),
           GoRoute(
             path: 'players/:playerId',
             builder: (context, state) {
-              return const EsportsScreen(initialTab: EsportsInitialTab.players);
+              return EsportsScreen(
+                initialTab: EsportsInitialTab.players,
+                initialPlayerId: state.pathParameters['playerId'],
+              );
             },
           ),
           GoRoute(

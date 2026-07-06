@@ -54,9 +54,16 @@ EsportsInitialTab esportsInitialTabFromRoute(String? value) {
 }
 
 class EsportsScreen extends ConsumerWidget {
-  const EsportsScreen({super.key, this.initialTab = EsportsInitialTab.matches});
+  const EsportsScreen({
+    super.key,
+    this.initialTab = EsportsInitialTab.matches,
+    this.initialTeamId,
+    this.initialPlayerId,
+  });
 
   final EsportsInitialTab initialTab;
+  final String? initialTeamId;
+  final String? initialPlayerId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -109,8 +116,14 @@ class EsportsScreen extends ConsumerWidget {
           body: TabBarView(
             children: [
               _MatchesTab(value: ref.watch(esportsMatchesProvider)),
-              _TeamsTab(value: ref.watch(esportsTeamsProvider)),
-              _PlayersTab(value: ref.watch(esportsPlayersProvider)),
+              _TeamsTab(
+                value: ref.watch(esportsTeamsProvider),
+                focusedTeamId: initialTeamId,
+              ),
+              _PlayersTab(
+                value: ref.watch(esportsPlayersProvider),
+                focusedPlayerId: initialPlayerId,
+              ),
             ],
           ),
         ),
@@ -152,9 +165,10 @@ class _MatchesTab extends ConsumerWidget {
 }
 
 class _TeamsTab extends ConsumerWidget {
-  const _TeamsTab({required this.value});
+  const _TeamsTab({required this.value, required this.focusedTeamId});
 
   final AsyncValue<List<EsportsTeamSummary>> value;
+  final String? focusedTeamId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -169,13 +183,18 @@ class _TeamsTab extends ConsumerWidget {
             message: 'Pull to refresh and try again.',
           );
         }
+        final focusedTeam = _findTeam(teams, focusedTeamId);
+        final cards = [
+          if (focusedTeam != null) _FocusedTeamCard(team: focusedTeam),
+          ...teams.map((team) => _TeamCard(team: team)),
+        ];
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsTeamsProvider.future),
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            itemBuilder: (context, index) => _TeamCard(team: teams[index]),
+            itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemCount: teams.length,
+            itemCount: cards.length,
           ),
         );
       },
@@ -184,9 +203,10 @@ class _TeamsTab extends ConsumerWidget {
 }
 
 class _PlayersTab extends ConsumerWidget {
-  const _PlayersTab({required this.value});
+  const _PlayersTab({required this.value, required this.focusedPlayerId});
 
   final AsyncValue<List<EsportsPlayerSummary>> value;
+  final String? focusedPlayerId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -201,14 +221,18 @@ class _PlayersTab extends ConsumerWidget {
             message: 'Pull to refresh and try again.',
           );
         }
+        final focusedPlayer = _findPlayer(players, focusedPlayerId);
+        final cards = [
+          if (focusedPlayer != null) _FocusedPlayerCard(player: focusedPlayer),
+          ...players.map((player) => _PlayerCard(player: player)),
+        ];
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsPlayersProvider.future),
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            itemBuilder: (context, index) =>
-                _PlayerCard(player: players[index]),
+            itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemCount: players.length,
+            itemCount: cards.length,
           ),
         );
       },
@@ -300,6 +324,218 @@ class _MatchCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _FocusedTeamCard extends StatelessWidget {
+  const _FocusedTeamCard({required this.team});
+
+  final EsportsTeamSummary team;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      accentColor: AppTheme.gold,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _FocusLabel(label: 'Focused Team'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              AppImage(
+                url: team.logoUrl,
+                width: 62,
+                height: 62,
+                borderRadius: 16,
+                semanticLabel: team.name,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      team.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      team.leagueName.isEmpty
+                          ? 'League unknown'
+                          : team.leagueName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _FocusMetric(label: 'Record', value: team.recordText),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _FocusMetric(label: 'Win Rate', value: team.winRateText),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FocusedPlayerCard extends StatelessWidget {
+  const _FocusedPlayerCard({required this.player});
+
+  final EsportsPlayerSummary player;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      accentColor: AppTheme.cyan,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _FocusLabel(label: 'Focused Player'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              AppImage(
+                url: player.avatarUrl,
+                width: 62,
+                height: 62,
+                borderRadius: 16,
+                semanticLabel: player.name,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      player.teamName.isEmpty ? 'Free Agent' : player.teamName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (player.role.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        player.role,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.gold),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _FocusMetric(label: 'Grade', value: player.gradeText),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _FocusMetric(label: 'KDA', value: player.kdaText),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _FocusMetric(
+                  label: 'Win Rate',
+                  value: player.winRateText,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FocusLabel extends StatelessWidget {
+  const _FocusLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: AppTheme.gold,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0,
+      ),
+    );
+  }
+}
+
+class _FocusMetric extends StatelessWidget {
+  const _FocusMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppTheme.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -487,21 +723,58 @@ class _TeamIdentity extends StatelessWidget {
 }
 
 class _PanelCard extends StatelessWidget {
-  const _PanelCard({required this.child});
+  const _PanelCard({required this.child, this.accentColor});
 
   final Widget child;
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(
+          color: (accentColor ?? Colors.white).withValues(
+            alpha: accentColor == null ? 0.08 : 0.28,
+          ),
+        ),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );
   }
+}
+
+EsportsTeamSummary? _findTeam(
+  List<EsportsTeamSummary> teams,
+  String? focusedTeamId,
+) {
+  final id = focusedTeamId?.trim();
+  if (id == null || id.isEmpty) {
+    return null;
+  }
+  for (final team in teams) {
+    if (team.id == id) {
+      return team;
+    }
+  }
+  return null;
+}
+
+EsportsPlayerSummary? _findPlayer(
+  List<EsportsPlayerSummary> players,
+  String? focusedPlayerId,
+) {
+  final id = focusedPlayerId?.trim();
+  if (id == null || id.isEmpty) {
+    return null;
+  }
+  for (final player in players) {
+    if (player.id == id) {
+      return player;
+    }
+  }
+  return null;
 }
 
 class _Pill extends StatelessWidget {

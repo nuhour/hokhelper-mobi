@@ -22,7 +22,9 @@ void main() {
 
     expect(find.text('Esports'), findsOneWidget);
     expect(find.text('Fly'), findsOneWidget);
-    expect(find.text('Clash Lane'), findsOneWidget);
+    expect(find.text('Focused Player'), findsOneWidget);
+    expect(find.text('Clash Lane'), findsWidgets);
+    expect(find.text('76.0%'), findsOneWidget);
     expect(find.text('KPL Spring'), findsNothing);
   });
 
@@ -40,7 +42,9 @@ void main() {
 
     expect(find.text('Esports'), findsOneWidget);
     expect(find.text('Chongqing Wolves'), findsOneWidget);
-    expect(find.text('12W / 3L'), findsOneWidget);
+    expect(find.text('Focused Team'), findsOneWidget);
+    expect(find.text('KPL Spring'), findsOneWidget);
+    expect(find.text('12W / 3L'), findsWidgets);
     expect(find.text('4 - 3'), findsNothing);
   });
 
@@ -57,6 +61,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/esports/teams/1');
+    expect(find.text('Focused Team'), findsOneWidget);
     expect(find.text('Chongqing Wolves'), findsOneWidget);
     expect(find.text('4 - 3'), findsNothing);
   });
@@ -79,6 +84,7 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/esports/players/8',
     );
+    expect(find.text('Focused Player'), findsOneWidget);
     expect(find.text('Fly'), findsOneWidget);
     expect(find.text('KPL Spring'), findsNothing);
   });
