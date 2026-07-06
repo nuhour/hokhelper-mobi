@@ -162,6 +162,8 @@ void main() {
       expect(apiClient.getQuery?['action'], 'explore');
       expect(apiClient.getQuery?['page'], 1);
       expect(apiClient.getQuery?['pageSize'], 20);
+      expect(apiClient.getQuery?['sort'], '-hot');
+      expect(apiClient.getQuery?['order'], 'desc');
       expect(jsonDecode(apiClient.getQuery?['filterRules'] as String), [
         {'field': 'region_id', 'op': 'eq', 'value': 2},
       ]);
@@ -180,6 +182,18 @@ void main() {
       expect(schemes.single.cloneCount, 3);
     },
   );
+
+  test('loads latest public build schemes with hokx sort parameter', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    await repository.loadPublicSchemes(2, sort: BuildSchemeSort.latest);
+
+    expect(apiClient.getPath, '/build/schemes');
+    expect(apiClient.getQuery?['action'], 'explore');
+    expect(apiClient.getQuery?['sort'], '-updated_at');
+    expect(apiClient.getQuery?['order'], 'desc');
+  });
 
   test(
     'loads my build slots for a hero with region and hero filters',

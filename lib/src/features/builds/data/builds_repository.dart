@@ -4,18 +4,32 @@ import '../../../core/network/api_client.dart';
 import '../domain/build_editor_asset.dart';
 import '../domain/build_scheme_summary.dart';
 
+enum BuildSchemeSort {
+  popular('-hot'),
+  latest('-updated_at');
+
+  const BuildSchemeSort(this.backendValue);
+
+  final String backendValue;
+}
+
 class BuildsRepository {
   const BuildsRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
-  Future<List<BuildSchemeSummary>> loadPublicSchemes(int regionId) async {
+  Future<List<BuildSchemeSummary>> loadPublicSchemes(
+    int regionId, {
+    BuildSchemeSort sort = BuildSchemeSort.popular,
+  }) async {
     final json = await apiClient.getJson(
       '/build/schemes',
       query: {
         'action': 'explore',
         'page': 1,
         'pageSize': 20,
+        'sort': sort.backendValue,
+        'order': 'desc',
         'filterRules': jsonEncode([
           {'field': 'region_id', 'op': 'eq', 'value': regionId},
         ]),

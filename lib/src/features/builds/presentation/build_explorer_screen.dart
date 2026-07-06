@@ -17,13 +17,24 @@ final buildsRepositoryProvider = Provider<BuildsRepository>((ref) {
   return BuildsRepository(apiClient: ref.watch(apiClientProvider));
 });
 
+final publicBuildSchemesRegionProvider = FutureProvider<int>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return settings.region.regionId;
+});
+
+final publicBuildSchemeSortProvider = StateProvider<BuildSchemeSort>((ref) {
+  return BuildSchemeSort.popular;
+});
+
 final publicBuildSchemesProvider = FutureProvider<List<BuildSchemeSummary>>((
   ref,
 ) async {
-  final settings = await ref.watch(appSettingsControllerProvider.future);
-  return ref
-      .watch(buildsRepositoryProvider)
-      .loadPublicSchemes(settings.region.regionId);
+  final regionId = await ref.watch(publicBuildSchemesRegionProvider.future);
+  final sort = ref.watch(publicBuildSchemeSortProvider);
+  return ref.watch(buildsRepositoryProvider).loadPublicSchemes(
+        regionId,
+        sort: sort,
+      );
 });
 
 class BuildExplorerScreen extends ConsumerWidget {
@@ -32,6 +43,7 @@ class BuildExplorerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final schemesValue = ref.watch(publicBuildSchemesProvider);
+    final selectedSort = ref.watch(publicBuildSchemeSortProvider);
 
     return AppAsyncView<List<BuildSchemeSummary>>(
       value: schemesValue,
@@ -55,6 +67,37 @@ class BuildExplorerScreen extends ConsumerWidget {
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Popular'),
+                            selected: selectedSort == BuildSchemeSort.popular,
+                            avatar: const Icon(Icons.trending_up, size: 16),
+                            onSelected: (_) {
+                              ref
+                                  .read(
+                                    publicBuildSchemeSortProvider.notifier,
+                                  )
+                                  .state = BuildSchemeSort.popular;
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Latest'),
+                            selected: selectedSort == BuildSchemeSort.latest,
+                            avatar: const Icon(Icons.schedule, size: 16),
+                            onSelected: (_) {
+                              ref
+                                  .read(
+                                    publicBuildSchemeSortProvider.notifier,
+                                  )
+                                  .state = BuildSchemeSort.latest;
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),

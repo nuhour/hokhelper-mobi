@@ -15,6 +15,28 @@ class _FakeBuildsRepository extends BuildsRepository {
   int? favoritedSchemeId;
   int? clonedSchemeId;
   int? clonedSlotIndex;
+  BuildSchemeSort? loadedSort;
+
+  @override
+  Future<List<BuildSchemeSummary>> loadPublicSchemes(
+    int regionId, {
+    BuildSchemeSort sort = BuildSchemeSort.popular,
+  }) async {
+    loadedSort = sort;
+    return const [
+      BuildSchemeSummary(
+        id: 7,
+        title: 'Burst jungle',
+        heroName: 'Lam',
+        authorName: 'coach',
+        equipmentIcons: [],
+        likeCount: 12,
+        favoriteCount: 5,
+        cloneCount: 3,
+        isPublic: true,
+      ),
+    ];
+  }
 
   @override
   Future<void> likeBuildScheme(int schemeId) async {
@@ -248,5 +270,31 @@ void main() {
     expect(clipboardCall, isNotNull);
     expect(clipboardCall!.arguments, {'text': '/tools/build-sim?scheme=7'});
     expect(find.text('Build link copied'), findsOneWidget);
+  });
+
+  testWidgets('switches public build explorer sorting like hokx', (
+    tester,
+  ) async {
+    final repository = _FakeBuildsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildsRepositoryProvider.overrideWithValue(repository),
+          publicBuildSchemesRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BuildExplorerScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedSort, BuildSchemeSort.popular);
+    expect(find.text('Popular'), findsOneWidget);
+    expect(find.text('Latest'), findsOneWidget);
+
+    await tester.tap(find.text('Latest'));
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedSort, BuildSchemeSort.latest);
   });
 }
