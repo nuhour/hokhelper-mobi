@@ -169,6 +169,49 @@ void main() {
     expect(find.text('KPL Spring'), findsNothing);
   });
 
+  testWidgets('tools esports tab changes preserve the tools route namespace', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/esports');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Teams'));
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/teams',
+    );
+
+    await tester.tap(find.text('Players'));
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/players',
+    );
+
+    await tester.tap(find.text('Stats'));
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/stats',
+    );
+
+    await tester.tap(find.text('Matches'));
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/schedule',
+    );
+  });
+
   testWidgets('esports tab changes synchronize the web route', (tester) async {
     final router = createAppRouter();
     router.go('/esports?season=2026');

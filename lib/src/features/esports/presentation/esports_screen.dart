@@ -155,7 +155,10 @@ class EsportsScreen extends ConsumerWidget {
       _ => 'schedule',
     };
     final currentUri = router.routeInformationProvider.value.uri;
-    final nextUri = Uri(path: '/esports/$tabPath');
+    final routeBase = currentUri.path.startsWith('/tools/esports')
+        ? '/tools/esports'
+        : '/esports';
+    final nextUri = Uri(path: '$routeBase/$tabPath');
     if (nextUri == currentUri) {
       return;
     }
