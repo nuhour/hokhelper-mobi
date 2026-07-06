@@ -67,6 +67,8 @@ class _FakeNotificationsRepository extends NotificationsRepository {
   NotificationPage page;
   List<int>? markedIds;
   bool markedAll = false;
+  final requestedPages = <int>[];
+  NotificationPage Function(int page)? loadPage;
 
   @override
   Future<NotificationPage> loadNotifications({
@@ -75,6 +77,11 @@ class _FakeNotificationsRepository extends NotificationsRepository {
     String type = '',
     bool unreadOnly = false,
   }) async {
+    requestedPages.add(page);
+    final pageLoader = loadPage;
+    if (pageLoader != null && page > 1) {
+      return pageLoader(page);
+    }
     return this.page;
   }
 
@@ -229,6 +236,89 @@ void main() {
     expect(repository.markedIds, [12]);
     expect(router.routeInformationProvider.value.uri.path, '/profile/77');
     expect(find.text('Profile 77'), findsOneWidget);
+  });
+
+  testWidgets('loads more notifications after the first page', (tester) async {
+    final repository = _FakeNotificationsRepository();
+    var pageTwoRequested = false;
+    repository.page = NotificationPage(
+      total: 51,
+      rows: List.generate(
+        50,
+        (index) => NotificationSummary(
+          id: index + 1,
+          type: 'system',
+          targetType: 'notice',
+          title: 'Notification ${index + 1}',
+          content: 'First page item ${index + 1}',
+          link: '',
+          isRead: true,
+          createdAt: '2026-07-05T08:30:00Z',
+          actorName: '',
+          actorAvatar: '',
+          actorId: 0,
+        ),
+        growable: false,
+      ),
+    );
+
+    repository.loadPage = (page) {
+      pageTwoRequested = page == 2;
+      return NotificationPage(
+        total: 51,
+        rows: [
+          NotificationSummary(
+            id: 51,
+            type: 'system',
+            targetType: 'notice',
+            title: 'Notification 51',
+            content: 'Second page item',
+            link: '',
+            isRead: true,
+            createdAt: '2026-07-05T08:31:00Z',
+            actorName: '',
+            actorAvatar: '',
+            actorId: 0,
+          ),
+        ],
+      );
+    };
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(
+              const AuthUser(
+                id: 42,
+                username: 'lam',
+                email: 'lam@example.test',
+                displayName: 'Lam',
+              ),
+            ),
+          ),
+          notificationsRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: Scaffold(body: NotificationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notification 1'), findsOneWidget);
+    expect(find.text('Notification 51'), findsNothing);
+
+    final loadMoreButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Load more'),
+    );
+    await tester.runAsync(() async {
+      loadMoreButton.onPressed!();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+
+    expect(pageTwoRequested, isTrue);
+    expect(repository.requestedPages, [1, 2]);
+    expect(find.text('Notification 51'), findsOneWidget);
   });
 
   testWidgets('opens external notification links in the mobile link route', (

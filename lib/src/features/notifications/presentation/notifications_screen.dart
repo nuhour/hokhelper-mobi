@@ -23,6 +23,8 @@ final notificationsProvider = FutureProvider<NotificationPage>((ref) {
   return ref.watch(notificationsRepositoryProvider).loadNotifications();
 });
 
+const _notificationsPageSize = 50;
+
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
@@ -75,15 +77,28 @@ class _SignedOutNotifications extends StatelessWidget {
   }
 }
 
-class _SignedInNotifications extends ConsumerWidget {
+class _SignedInNotifications extends ConsumerStatefulWidget {
   const _SignedInNotifications();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SignedInNotifications> createState() =>
+      _SignedInNotificationsState();
+}
+
+class _SignedInNotificationsState
+    extends ConsumerState<_SignedInNotifications> {
+  final _extraNotifications = <NotificationSummary>[];
+  var _nextPage = 2;
+  var _isLoadingMore = false;
+  var _hasMore = true;
+
+  @override
+  Widget build(BuildContext context) {
     final notificationsValue = ref.watch(notificationsProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
+        _resetLoadedPages();
         ref.invalidate(notificationsProvider);
         await ref.read(notificationsProvider.future);
       },
@@ -95,7 +110,8 @@ class _SignedInNotifications extends ConsumerWidget {
             value: notificationsValue,
             retry: () => ref.invalidate(notificationsProvider),
             data: (page) {
-              final unreadCount = page.rows
+              final notifications = [...page.rows, ..._extraNotifications];
+              final unreadCount = notifications
                   .where((notification) => !notification.isRead)
                   .length;
               return Column(
@@ -109,9 +125,7 @@ class _SignedInNotifications extends ConsumerWidget {
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
-                        onPressed: page.rows.isEmpty
-                            ? null
-                            : () => _markAllRead(ref),
+                        onPressed: notifications.isEmpty ? null : _markAllRead,
                         icon: const Icon(Icons.done_all, size: 18),
                         label: const Text('Mark all read'),
                       ),
@@ -126,7 +140,7 @@ class _SignedInNotifications extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  if (page.rows.isEmpty)
+                  if (notifications.isEmpty)
                     const AppEmptyState(
                       icon: Icons.notifications_none_outlined,
                       title: 'No notifications yet',
@@ -137,21 +151,39 @@ class _SignedInNotifications extends ConsumerWidget {
                     ListView.separated(
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
-                      itemCount: page.rows.length,
+                      itemCount: notifications.length,
                       separatorBuilder: (context, index) =>
                           const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         return _NotificationCard(
-                          notification: page.rows[index],
-                          onMarkRead: () => _markRead(ref, page.rows[index].id),
+                          notification: notifications[index],
+                          onMarkRead: () => _markRead(notifications[index].id),
                           onView: (cardContext) => _viewNotification(
                             cardContext,
-                            ref,
-                            page.rows[index],
+                            notifications[index],
                           ),
                         );
                       },
                     ),
+                  if (_hasMore && notifications.length < page.total) ...[
+                    const SizedBox(height: 16),
+                    Center(
+                      child: FilledButton.icon(
+                        onPressed: _isLoadingMore ? null : _loadMore,
+                        icon: _isLoadingMore
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.expand_more),
+                        label: Text(
+                          _isLoadingMore ? 'Loading...' : 'Load more',
+                        ),
+                      ),
+                    ),
+                  ],
                   if (page.total > 0) ...[
                     const SizedBox(height: 14),
                     Text(
@@ -170,14 +202,14 @@ class _SignedInNotifications extends ConsumerWidget {
     );
   }
 
-  Future<void> _markRead(WidgetRef ref, int id) async {
+  Future<void> _markRead(int id) async {
     await ref.read(notificationsRepositoryProvider).markRead([id]);
+    _resetLoadedPages();
     ref.invalidate(notificationsProvider);
   }
 
   Future<void> _viewNotification(
     BuildContext context,
-    WidgetRef ref,
     NotificationSummary notification,
   ) async {
     final destination = _resolveNotificationDestination(notification);
@@ -189,16 +221,59 @@ class _SignedInNotifications extends ConsumerWidget {
     }
 
     if (destination == null) {
+      _resetLoadedPages();
       ref.invalidate(notificationsProvider);
       return;
     }
     router.go(destination);
+    _resetLoadedPages();
     ref.invalidate(notificationsProvider);
   }
 
-  Future<void> _markAllRead(WidgetRef ref) async {
+  Future<void> _markAllRead() async {
     await ref.read(notificationsRepositoryProvider).markAllRead();
+    _resetLoadedPages();
     ref.invalidate(notificationsProvider);
+  }
+
+  void _resetLoadedPages() {
+    _extraNotifications.clear();
+    _nextPage = 2;
+    _hasMore = true;
+    _isLoadingMore = false;
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) {
+      return;
+    }
+
+    setState(() => _isLoadingMore = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final nextPage = await ref
+          .read(notificationsRepositoryProvider)
+          .loadNotifications(page: _nextPage, pageSize: _notificationsPageSize);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _nextPage += 1;
+        _extraNotifications.addAll(nextPage.rows);
+        _hasMore = nextPage.rows.length >= _notificationsPageSize;
+        _isLoadingMore = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isLoadingMore = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to load more notifications: $error')),
+      );
+    }
   }
 }
 
