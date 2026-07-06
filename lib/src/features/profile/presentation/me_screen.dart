@@ -283,7 +283,7 @@ class _FavoriteShortcuts extends StatelessWidget {
             _FavoriteShortcutTile(
               icon: Icons.forum_outlined,
               label: 'Posts',
-              route: '/community?view=likes',
+              route: '/content/community?tab=likes',
             ),
             SizedBox(height: 8),
             _FavoriteShortcutTile(

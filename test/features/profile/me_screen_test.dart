@@ -138,6 +138,12 @@ Widget _buildMeScreenRouter(AuthUser user, UserProfile profile) {
     routes: [
       GoRoute(path: '/me', builder: (context, state) => const MeScreen()),
       GoRoute(
+        path: '/content/community',
+        builder: (context, state) => Scaffold(
+          body: Text('Community ${state.uri.queryParameters['tab']}'),
+        ),
+      ),
+      GoRoute(
         path: '/tools/prompts',
         builder: (context, state) =>
             Scaffold(body: Text('Prompts ${state.uri.queryParameters['tab']}')),
@@ -253,6 +259,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Prompts favorites'), findsOneWidget);
+  });
+
+  testWidgets('signed-in profile opens liked posts on mobile community tab', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+
+    await tester.pumpWidget(_buildMeScreenRouter(user, _profile));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Posts').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Posts').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Community likes'), findsOneWidget);
   });
 
   testWidgets('signed-in profile opens hokx points rules from level badge', (
