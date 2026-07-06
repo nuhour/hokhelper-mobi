@@ -20,8 +20,32 @@ class _FakeApiClient extends ApiClient {
     String path, {
     Map<String, dynamic>? query,
   }) async {
-    queries['$path:${query?['dimension'] ?? query?['equip_id'] ?? ''}:${query?['view'] ?? ''}'] =
+    queries['$path:${query?['dimension'] ?? query?['equip_id'] ?? query?['hero_id'] ?? ''}:${query?['view'] ?? ''}'] =
         query;
+
+    if (path == '/stats/hero-combos' && query?['hero_id'] == 199) {
+      return const {
+        'success': true,
+        'data': {
+          'hero_id': 199,
+          'hero': {
+            'id': 199,
+            'name': 'Lam',
+            'avatar_url': 'https://example.test/lam.png',
+          },
+          'hero_equip_stats': [
+            {
+              'equip_id': 88,
+              'equip_name': 'Doomsday',
+              'equip_icon_url': 'https://example.test/doomsday.png',
+              'pick_rate': 0.42,
+              'win_rate': 0.57,
+              'quantity': 8900,
+            },
+          ],
+        },
+      };
+    }
 
     if (path == '/stats/hero-combos' && query?['equip_id'] == 88) {
       return const {
@@ -279,6 +303,29 @@ void main() {
       expect(detail.heroes.single.name, 'Lam');
       expect(detail.heroes.single.pickRateText, '42.0%');
       expect(detail.heroes.single.matchesText, '8900 matches');
+    },
+  );
+
+  test(
+    'loads focused hero equipment usage from hero combos endpoint',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = StatsRepository(apiClient: apiClient);
+
+      final detail = await repository.loadHeroDetail(
+        heroId: '199',
+        regionCode: 'en',
+      );
+
+      expect(apiClient.queries['/stats/hero-combos:199:'], {
+        'hero_id': 199,
+        'baseline': 'peak_1000',
+        'region': 'en',
+      });
+      expect(detail.heroName, 'Lam');
+      expect(detail.equips.single.name, 'Doomsday');
+      expect(detail.equips.single.pickRateText, '42.0%');
+      expect(detail.equips.single.matchesText, '8900 matches');
     },
   );
 }

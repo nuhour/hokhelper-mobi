@@ -168,6 +168,83 @@ class StatsEquipHeroRow {
   }
 }
 
+class StatsHeroDetail {
+  const StatsHeroDetail({
+    required this.heroId,
+    required this.heroName,
+    required this.heroAvatarUrl,
+    required this.equips,
+  });
+
+  final String heroId;
+  final String heroName;
+  final String heroAvatarUrl;
+  final List<StatsHeroEquipRow> equips;
+
+  factory StatsHeroDetail.fromJson(Object? value) {
+    final json = _asMap(value);
+    final hero = _asMap(json['hero']);
+    final rows = json['hero_equip_stats'] is List
+        ? List<Object?>.from(json['hero_equip_stats'] as List)
+        : const <Object?>[];
+    return StatsHeroDetail(
+      heroId: _readString(json, const ['hero_id', 'id']).isNotEmpty
+          ? _readString(json, const ['hero_id', 'id'])
+          : _readString(hero, const ['id', 'hero_id']),
+      heroName: _readString(hero, const ['name', 'hero_name']).isNotEmpty
+          ? _readString(hero, const ['name', 'hero_name'])
+          : _readString(json, const ['hero_name', 'name']),
+      heroAvatarUrl:
+          _readString(hero, const ['avatar_url', 'icon_url']).isNotEmpty
+          ? _readString(hero, const ['avatar_url', 'icon_url'])
+          : _readString(json, const ['hero_avatar_url', 'avatar_url']),
+      equips: rows.map(StatsHeroEquipRow.fromJson).toList(growable: false),
+    );
+  }
+}
+
+class StatsHeroEquipRow {
+  const StatsHeroEquipRow({
+    required this.id,
+    required this.name,
+    required this.iconUrl,
+    required this.pickRate,
+    required this.winRate,
+    required this.matches,
+  });
+
+  final String id;
+  final String name;
+  final String iconUrl;
+  final double pickRate;
+  final double winRate;
+  final int matches;
+
+  String get pickRateText => _formatPercent(pickRate);
+  String get winRateText => _formatPercent(winRate);
+  String get matchesText => '$matches matches';
+
+  factory StatsHeroEquipRow.fromJson(Object? value) {
+    final json = _asMap(value);
+    final equip = _asMap(json['equip']);
+    return StatsHeroEquipRow(
+      id: _readString(json, const ['equip_id', 'id']).isNotEmpty
+          ? _readString(json, const ['equip_id', 'id'])
+          : _readString(equip, const ['id', 'equip_id']),
+      name: _readString(json, const ['equip_name', 'name']).isNotEmpty
+          ? _readString(json, const ['equip_name', 'name'])
+          : _readString(equip, const ['name', 'equip_name']),
+      iconUrl:
+          _readString(json, const ['equip_icon_url', 'icon_url']).isNotEmpty
+          ? _readString(json, const ['equip_icon_url', 'icon_url'])
+          : _readString(equip, const ['icon_url', 'equip_icon_url']),
+      pickRate: _readRate(json, const ['pick_rate', 'pickRate']),
+      winRate: _readRate(json, const ['win_rate', 'winRate']),
+      matches: _readInt(json, const ['quantity', 'matches', 'match_count']),
+    );
+  }
+}
+
 class StatsComboRow {
   const StatsComboRow({
     required this.heroAName,

@@ -188,6 +188,64 @@ void main() {
     expect(find.text('8900 matches'), findsOneWidget);
   });
 
+  testWidgets('focused hero entry renders equipment usage detail', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider.overrideWith((ref, entry) async {
+            return const StatsDashboard(
+              heroes: [
+                StatsHeroRow(
+                  id: '199',
+                  name: 'Lam',
+                  avatarUrl: '',
+                  winRate: 0.561,
+                  pickRate: 0.18,
+                  banRate: 0.07,
+                  score: 91.4,
+                ),
+              ],
+            );
+          }),
+          statsHeroDetailProvider('199').overrideWith((ref) async {
+            return const StatsHeroDetail(
+              heroId: '199',
+              heroName: 'Lam',
+              heroAvatarUrl: '',
+              equips: [
+                StatsHeroEquipRow(
+                  id: '88',
+                  name: 'Doomsday',
+                  iconUrl: '',
+                  pickRate: 0.42,
+                  winRate: 0.57,
+                  matches: 8900,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: StatsScreen(
+              initialEntry: StatsEntry.tierRank,
+              initialHeroId: '199',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hero Build Usage'), findsOneWidget);
+    expect(find.text('Lam'), findsWidgets);
+    expect(find.text('Doomsday'), findsOneWidget);
+    expect(find.text('42.0% pick'), findsOneWidget);
+    expect(find.text('8900 matches'), findsOneWidget);
+  });
+
   testWidgets('home core entry highlights overview stats', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

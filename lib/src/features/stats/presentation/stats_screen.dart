@@ -40,6 +40,16 @@ final statsEquipDetailProvider =
           );
     });
 
+final statsHeroDetailProvider = FutureProvider.family<StatsHeroDetail, String>((
+  ref,
+  heroId,
+) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(statsRepositoryProvider)
+      .loadHeroDetail(heroId: heroId, regionCode: settings.region.languageCode);
+});
+
 enum StatsEntry {
   overview,
   homeCore,
@@ -72,11 +82,13 @@ class StatsScreen extends ConsumerWidget {
   const StatsScreen({
     this.initialEntry = StatsEntry.overview,
     this.initialEquipId,
+    this.initialHeroId,
     super.key,
   });
 
   final StatsEntry initialEntry;
   final String? initialEquipId;
+  final String? initialHeroId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,6 +127,10 @@ class StatsScreen extends ConsumerWidget {
                 )
               else ...[
                 ..._buildSections(dashboard),
+                if (_showsHeroDetail) ...[
+                  const SizedBox(height: 18),
+                  _HeroDetailSection(heroId: initialHeroId!),
+                ],
                 if (initialEntry == StatsEntry.equipRank &&
                     initialEquipId != null &&
                     initialEquipId!.isNotEmpty) ...[
@@ -213,6 +229,44 @@ class StatsScreen extends ConsumerWidget {
         focusedEquipId.isNotEmpty &&
         equip.id == focusedEquipId;
   }
+
+  bool get _showsHeroDetail {
+    final heroId = initialHeroId;
+    return heroId != null &&
+        heroId.isNotEmpty &&
+        (initialEntry == StatsEntry.tierRank ||
+            initialEntry == StatsEntry.powerRank ||
+            initialEntry == StatsEntry.homeCore);
+  }
+}
+
+class _HeroDetailSection extends ConsumerWidget {
+  const _HeroDetailSection({required this.heroId});
+
+  final String heroId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value = ref.watch(statsHeroDetailProvider(heroId));
+    return AppAsyncView<StatsHeroDetail>(
+      value: value,
+      retry: () => ref.invalidate(statsHeroDetailProvider(heroId)),
+      data: (detail) {
+        if (detail.equips.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return _StatsSection(
+          title: 'Hero Build Usage',
+          icon: Icons.construction_outlined,
+          focusLabel: detail.heroName,
+          children: [
+            for (final equip in detail.equips.take(8))
+              _HeroEquipUsageCard(equip: equip),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _EquipDetailSection extends ConsumerWidget {
@@ -288,6 +342,56 @@ class _StatsSection extends StatelessWidget {
         const SizedBox(height: 10),
         ...children.expand((child) => [child, const SizedBox(height: 10)]),
       ],
+    );
+  }
+}
+
+class _HeroEquipUsageCard extends StatelessWidget {
+  const _HeroEquipUsageCard({required this.equip});
+
+  final StatsHeroEquipRow equip;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      child: Row(
+        children: [
+          AppImage(
+            url: equip.iconUrl,
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            semanticLabel: equip.name,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  equip.name.isEmpty ? 'Equipment' : equip.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricPill(label: '${equip.pickRateText} pick'),
+                    _MetricPill(label: '${equip.winRateText} WR'),
+                    _MetricPill(label: equip.matchesText),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

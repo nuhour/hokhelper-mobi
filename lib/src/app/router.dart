@@ -735,6 +735,7 @@ GoRouter createAppRouter() {
                         state.uri.queryParameters['entry'],
                       ),
                       initialEquipId: state.uri.queryParameters['equip_id'],
+                      initialHeroId: state.uri.queryParameters['hero_id'],
                     ),
                   ),
                 ],
