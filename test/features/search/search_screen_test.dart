@@ -5,6 +5,7 @@ import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/search/data/search_repository.dart';
 import 'package:hok_helper_mobile/src/features/search/presentation/search_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,12 +34,7 @@ class _FakeSearchRepository extends SearchRepository {
       'result': {
         'data': {
           'heroes': [
-            {
-              'id': 166,
-              'name': 'Arthur',
-              'subtitle': 'Paladin captain',
-              'url': '/heroes/166',
-            },
+            {'id': 166, 'name': 'Arthur', 'subtitle': 'Paladin captain'},
           ],
           'builds': [
             {
@@ -63,7 +59,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [searchRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          searchRepositoryProvider.overrideWithValue(repository),
+          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
+            return {
+              'hero': {'id': int.tryParse(heroId) ?? 166, 'name': 'Arthur'},
+            };
+          }),
+        ],
         child: HokHelperApp(router: router),
       ),
     );
@@ -74,6 +77,12 @@ void main() {
     expect(repository.requestedRegionId, 2);
     expect(find.text('Heroes'), findsOneWidget);
     expect(find.text('Arthur'), findsOneWidget);
+
+    await tester.tap(find.text('Arthur'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/heroes/166');
+    expect(find.text('Hero #166'), findsOneWidget);
   });
 
   testWidgets('search route submits global query and renders grouped results', (
@@ -86,7 +95,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [searchRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          searchRepositoryProvider.overrideWithValue(repository),
+          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
+            return {
+              'hero': {'id': int.tryParse(heroId) ?? 166, 'name': 'Arthur'},
+            };
+          }),
+        ],
         child: HokHelperApp(router: router),
       ),
     );

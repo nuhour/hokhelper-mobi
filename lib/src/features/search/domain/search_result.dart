@@ -27,7 +27,7 @@ class SearchResultItem {
   final String subtitle;
   final String url;
 
-  factory SearchResultItem.fromJson(Object? value) {
+  factory SearchResultItem.fromJson(Object? value, {String groupKey = ''}) {
     final json = value is Map<String, dynamic>
         ? value
         : value is Map
@@ -43,7 +43,7 @@ class SearchResultItem {
       subtitle: _readString(
         json['subtitle'] ?? json['description'] ?? json['summary'],
       ),
-      url: _readString(json['url'] ?? json['path'] ?? json['href']),
+      url: _readUrl(json, groupKey),
     );
   }
 }
@@ -65,7 +65,10 @@ List<SearchResultGroup> parseSearchResultGroups(Map<String, dynamic> json) {
     }
 
     final items = value
-        .map(SearchResultItem.fromJson)
+        .map(
+          (item) =>
+              SearchResultItem.fromJson(item, groupKey: entry.key.toString()),
+        )
         .where((item) => item.title.isNotEmpty)
         .toList(growable: false);
     if (items.isEmpty) {
@@ -81,4 +84,45 @@ List<SearchResultGroup> parseSearchResultGroups(Map<String, dynamic> json) {
 String _readString(Object? value, {String fallback = ''}) {
   final text = value?.toString() ?? '';
   return text.trim().isEmpty ? fallback : text.trim();
+}
+
+String _readUrl(Map<String, dynamic> json, String groupKey) {
+  final explicitUrl = _readString(json['url'] ?? json['path'] ?? json['href']);
+  if (explicitUrl.isNotEmpty) {
+    return explicitUrl;
+  }
+
+  return switch (groupKey) {
+    'heroes' => _idPath('/hero-gallery', json['id'] ?? json['hero_id']),
+    'skins' => _idPath('/skin-gallery', json['id'] ?? json['skin_id']),
+    'equips' => _equipStatsPath(json['equip_id'] ?? json['id']),
+    'posts' => _idPath('/community/post', json['id'] ?? json['post_id']),
+    'teams' => _idPath('/esports/teams', json['id'] ?? json['team_id']),
+    'pro_players' => _idPath(
+      '/esports/players',
+      json['player_id'] ?? json['id'],
+      encode: true,
+    ),
+    'leaks' => _readString(json['source_url'] ?? json['sourceUrl']),
+    _ => '',
+  };
+}
+
+String _idPath(String prefix, Object? id, {bool encode = false}) {
+  final value = _readString(id);
+  if (value.isEmpty) {
+    return '';
+  }
+  return '$prefix/${encode ? Uri.encodeComponent(value) : value}';
+}
+
+String _equipStatsPath(Object? equipId) {
+  final value = _readString(equipId);
+  if (value.isEmpty) {
+    return '';
+  }
+  return Uri(
+    path: '/stats',
+    queryParameters: {'entry': 'equip_rank', 'equip_id': value},
+  ).toString();
 }
