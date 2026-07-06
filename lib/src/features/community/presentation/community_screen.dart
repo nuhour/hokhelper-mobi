@@ -948,14 +948,9 @@ class _PostCardState extends ConsumerState<_PostCard> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    post.authorName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  child: _PostAuthorName(
+                    authorId: post.authorId,
+                    authorName: post.authorName,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1045,6 +1040,49 @@ class _PostCardState extends ConsumerState<_PostCard> {
         const SnackBar(content: Text('Failed to like post')),
       );
     }
+  }
+}
+
+class _PostAuthorName extends StatelessWidget {
+  const _PostAuthorName({required this.authorId, required this.authorName});
+
+  final int authorId;
+  final String authorName;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: AppTheme.text,
+      fontWeight: FontWeight.w800,
+    );
+
+    if (authorId <= 0) {
+      return Text(
+        authorName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textStyle,
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: () => context.go('/profile/$authorId'),
+        style: TextButton.styleFrom(
+          foregroundColor: AppTheme.text,
+          minimumSize: Size.zero,
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          textStyle: textStyle,
+        ),
+        child: Text(
+          authorName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
   }
 }
 
