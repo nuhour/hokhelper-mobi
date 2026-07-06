@@ -519,6 +519,17 @@ class _EquipStatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
+      onTap: equip.id.isEmpty
+          ? null
+          : () => context.go(
+              Uri(
+                path: '/tools/stats',
+                queryParameters: {
+                  'entry': 'equip_rank',
+                  'equip_id': equip.id,
+                },
+              ).toString(),
+            ),
       child: Row(
         children: [
           AppImage(
