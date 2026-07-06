@@ -71,6 +71,45 @@ void main() {
     expect(repository.requestedSearch, 'Lam');
   });
 
+  testWidgets('hero cards preserve list query when opening detail route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    final repository = _FakeHeroesRepository();
+    router.go('/hero-gallery?q=Lam');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroesRepositoryProvider.overrideWithValue(repository),
+          heroGalleryRegionProvider.overrideWith((ref) async => 2),
+          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
+            return {
+              'hero': {'id': int.tryParse(heroId) ?? 1, 'name': 'Lam'},
+            };
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Shark Rider'));
+    await tester.tap(find.text('Shark Rider'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/heroes/1');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['q'],
+      'Lam',
+    );
+  });
+
   testWidgets('web hero history tab deep link focuses mobile history', (
     tester,
   ) async {

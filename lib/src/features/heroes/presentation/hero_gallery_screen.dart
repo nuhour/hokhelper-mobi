@@ -367,9 +367,7 @@ class _HeroCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: detailRouteId == null
-            ? null
-            : () => context.go('/heroes/$detailRouteId'),
+        onTap: detailRouteId == null ? null : () => _openDetail(context),
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -415,6 +413,17 @@ class _HeroCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _openDetail(BuildContext context) {
+    final detailRouteId = hero.detailRouteId;
+    if (detailRouteId == null) {
+      return;
+    }
+    final router = GoRouter.of(context);
+    final currentUri = router.routeInformationProvider.value.uri;
+    final nextUri = currentUri.replace(path: '/heroes/$detailRouteId');
+    router.go(nextUri.toString());
   }
 }
 
