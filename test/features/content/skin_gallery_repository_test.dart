@@ -159,4 +159,31 @@ void main() {
       ],
     });
   });
+
+  test('loads skin gallery with web-compatible search and filters', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    await repository.loadSkins(
+      2,
+      search: 'lam',
+      minRating: 4.5,
+      lanePosition: 0,
+    );
+
+    expect(apiClient.postCalls, ['/skin/list']);
+    expect(apiClient.lastBody, {
+      'page': 1,
+      'pageSize': 20,
+      'sort': 'id',
+      'order': 'desc',
+      'filterRules': [
+        {'field': 'region_id', 'op': 'eq', 'value': 2},
+        {'field': 'name', 'op': 'contains', 'value': 'lam', 'ig': true},
+        {'field': 'hero_name', 'op': 'contains', 'value': 'lam', 'ig': true},
+        {'field': 'rating', 'op': 'gte', 'value': 4.5},
+        {'field': 'hero_position', 'op': 'eq', 'value': 0},
+      ],
+    });
+  });
 }

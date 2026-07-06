@@ -3,8 +3,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
+import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
+
+class _RouteSkinRepository extends ContentRepository {
+  _RouteSkinRepository(this.skins)
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  final List<ContentItemSummary> skins;
+
+  @override
+  Future<List<ContentItemSummary>> loadSkins(
+    int regionId, {
+    int page = 1,
+    int pageSize = 20,
+    String sort = 'id',
+    String order = 'desc',
+    String search = '',
+    double minRating = 0,
+    int? lanePosition,
+  }) async {
+    return skins;
+  }
+}
 
 void main() {
   testWidgets('web skin gallery route preserves search query', (tester) async {
@@ -14,8 +46,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          skinGalleryProvider.overrideWith((ref) async {
-            return const [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteSkinRepository(const [
               ContentItemSummary(
                 id: 1001,
                 kind: ContentKind.skin,
@@ -38,8 +70,9 @@ void main() {
                 ratingCount: 4,
                 viewCount: 0,
               ),
-            ];
-          }),
+            ]),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: HokHelperApp(router: router),
       ),
@@ -65,8 +98,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          skinGalleryProvider.overrideWith((ref) async {
-            return const [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteSkinRepository(const [
               ContentItemSummary(
                 id: 1001,
                 kind: ContentKind.skin,
@@ -103,8 +136,9 @@ void main() {
                 viewCount: 0,
                 heroPosition: 0,
               ),
-            ];
-          }),
+            ]),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: HokHelperApp(router: router),
       ),

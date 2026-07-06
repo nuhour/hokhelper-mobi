@@ -10,8 +10,60 @@ import 'package:hok_helper_mobile/src/features/content/domain/skin_detail.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
 
+const _basicSkins = [
+  ContentItemSummary(
+    id: 1001,
+    kind: ContentKind.skin,
+    title: 'Crimson Hunter',
+    heroName: 'Lam',
+    imageUrl: 'https://example.test/portrait.jpg',
+    subtitle: 'Hunter Series',
+    rating: 4.5,
+    ratingCount: 12,
+    viewCount: 0,
+  ),
+  ContentItemSummary(
+    id: 1002,
+    kind: ContentKind.skin,
+    title: 'Moonlight Tune',
+    heroName: 'Angela',
+    imageUrl: '',
+    subtitle: 'Music Series',
+    rating: 3.5,
+    ratingCount: 4,
+    viewCount: 0,
+  ),
+];
+
+const _laneSkins = [
+  ContentItemSummary(
+    id: 1001,
+    kind: ContentKind.skin,
+    title: 'Crimson Hunter',
+    heroName: 'Lam',
+    imageUrl: '',
+    subtitle: 'Hunter Series',
+    rating: 4.5,
+    ratingCount: 12,
+    viewCount: 0,
+    heroPosition: 0,
+  ),
+  ContentItemSummary(
+    id: 1002,
+    kind: ContentKind.skin,
+    title: 'Moonlight Tune',
+    heroName: 'Angela',
+    imageUrl: '',
+    subtitle: 'Music Series',
+    rating: 4.2,
+    ratingCount: 4,
+    viewCount: 0,
+    heroPosition: 1,
+  ),
+];
+
 class _FakeSkinRepository extends ContentRepository {
-  _FakeSkinRepository()
+  _FakeSkinRepository({this.skins = const [_defaultSkin]})
     : super(
         apiClient: ApiClient(
           config: const AppConfig(
@@ -21,10 +73,26 @@ class _FakeSkinRepository extends ContentRepository {
         ),
       );
 
+  static const _defaultSkin = ContentItemSummary(
+    id: 1001,
+    kind: ContentKind.skin,
+    title: 'Crimson Hunter',
+    heroName: 'Lam',
+    imageUrl: 'https://example.test/portrait.jpg',
+    subtitle: 'Hunter Series',
+    rating: 4.5,
+    ratingCount: 12,
+    viewCount: 0,
+  );
+
+  final List<ContentItemSummary> skins;
   int? ratedSkinId;
   double? submittedRating;
   String? requestedSkinSort;
   String? requestedSkinOrder;
+  String? requestedSkinSearch;
+  double? requestedMinRating;
+  int? requestedLanePosition;
 
   @override
   Future<List<ContentItemSummary>> loadSkins(
@@ -33,22 +101,16 @@ class _FakeSkinRepository extends ContentRepository {
     int pageSize = 20,
     String sort = 'id',
     String order = 'desc',
+    String search = '',
+    double minRating = 0,
+    int? lanePosition,
   }) async {
     requestedSkinSort = sort;
     requestedSkinOrder = order;
-    return const [
-      ContentItemSummary(
-        id: 1001,
-        kind: ContentKind.skin,
-        title: 'Crimson Hunter',
-        heroName: 'Lam',
-        imageUrl: 'https://example.test/portrait.jpg',
-        subtitle: 'Hunter Series',
-        rating: 4.5,
-        ratingCount: 12,
-        viewCount: 0,
-      ),
-    ];
+    requestedSkinSearch = search;
+    requestedMinRating = minRating;
+    requestedLanePosition = lanePosition;
+    return skins;
   }
 
   @override
@@ -95,6 +157,9 @@ class _PagedSkinRepository extends ContentRepository {
     int pageSize = 20,
     String sort = 'id',
     String order = 'desc',
+    String search = '',
+    double minRating = 0,
+    int? lanePosition,
   }) async {
     requestedPages.add(page);
     final startId = (page - 1) * pageSize + 1;
@@ -128,32 +193,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          skinGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 1001,
-                kind: ContentKind.skin,
-                title: 'Crimson Hunter',
-                heroName: 'Lam',
-                imageUrl: 'https://example.test/portrait.jpg',
-                subtitle: 'Hunter Series',
-                rating: 4.5,
-                ratingCount: 12,
-                viewCount: 0,
-              ),
-              ContentItemSummary(
-                id: 1002,
-                kind: ContentKind.skin,
-                title: 'Moonlight Tune',
-                heroName: 'Angela',
-                imageUrl: '',
-                subtitle: 'Music Series',
-                rating: 3.5,
-                ratingCount: 4,
-                viewCount: 0,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeSkinRepository(skins: _basicSkins),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
           skinDetailProvider(1001).overrideWith((ref) async {
             return const SkinDetail(
               id: 1001,
@@ -198,32 +241,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          skinGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 1001,
-                kind: ContentKind.skin,
-                title: 'Crimson Hunter',
-                heroName: 'Lam',
-                imageUrl: '',
-                subtitle: 'Hunter Series',
-                rating: 4.5,
-                ratingCount: 12,
-                viewCount: 0,
-              ),
-              ContentItemSummary(
-                id: 1002,
-                kind: ContentKind.skin,
-                title: 'Moonlight Tune',
-                heroName: 'Angela',
-                imageUrl: '',
-                subtitle: 'Music Series',
-                rating: 3.5,
-                ratingCount: 4,
-                viewCount: 0,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeSkinRepository(skins: _basicSkins),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
           home: Scaffold(body: SkinGalleryScreen(initialSearchQuery: 'Lam')),
@@ -241,32 +262,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          skinGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 1001,
-                kind: ContentKind.skin,
-                title: 'Crimson Hunter',
-                heroName: 'Lam',
-                imageUrl: '',
-                subtitle: 'Hunter Series',
-                rating: 4.5,
-                ratingCount: 12,
-                viewCount: 0,
-              ),
-              ContentItemSummary(
-                id: 1002,
-                kind: ContentKind.skin,
-                title: 'Moonlight Tune',
-                heroName: 'Angela',
-                imageUrl: '',
-                subtitle: 'Music Series',
-                rating: 3.5,
-                ratingCount: 4,
-                viewCount: 0,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeSkinRepository(skins: _basicSkins),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
       ),
@@ -290,34 +289,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          skinGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 1001,
-                kind: ContentKind.skin,
-                title: 'Crimson Hunter',
-                heroName: 'Lam',
-                imageUrl: '',
-                subtitle: 'Hunter Series',
-                rating: 4.5,
-                ratingCount: 12,
-                viewCount: 0,
-                heroPosition: 0,
-              ),
-              ContentItemSummary(
-                id: 1002,
-                kind: ContentKind.skin,
-                title: 'Moonlight Tune',
-                heroName: 'Angela',
-                imageUrl: '',
-                subtitle: 'Music Series',
-                rating: 4.2,
-                ratingCount: 4,
-                viewCount: 0,
-                heroPosition: 1,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeSkinRepository(skins: _laneSkins),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
       ),
@@ -343,46 +318,49 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          skinGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 1001,
-                kind: ContentKind.skin,
-                title: 'Crimson Hunter',
-                heroName: 'Lam',
-                imageUrl: '',
-                subtitle: 'Hunter Series',
-                rating: 4.5,
-                ratingCount: 12,
-                viewCount: 0,
-                heroPosition: 0,
-              ),
-              ContentItemSummary(
-                id: 1002,
-                kind: ContentKind.skin,
-                title: 'Moonlight Tune',
-                heroName: 'Angela',
-                imageUrl: '',
-                subtitle: 'Music Series',
-                rating: 4.6,
-                ratingCount: 4,
-                viewCount: 0,
-                heroPosition: 1,
-              ),
-              ContentItemSummary(
-                id: 1003,
-                kind: ContentKind.skin,
-                title: 'Low Rank Skin',
-                heroName: 'Lam',
-                imageUrl: '',
-                subtitle: 'Classic Series',
-                rating: 3.5,
-                ratingCount: 2,
-                viewCount: 0,
-                heroPosition: 0,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeSkinRepository(
+              skins: const [
+                ContentItemSummary(
+                  id: 1001,
+                  kind: ContentKind.skin,
+                  title: 'Crimson Hunter',
+                  heroName: 'Lam',
+                  imageUrl: '',
+                  subtitle: 'Hunter Series',
+                  rating: 4.5,
+                  ratingCount: 12,
+                  viewCount: 0,
+                  heroPosition: 0,
+                ),
+                ContentItemSummary(
+                  id: 1002,
+                  kind: ContentKind.skin,
+                  title: 'Moonlight Tune',
+                  heroName: 'Angela',
+                  imageUrl: '',
+                  subtitle: 'Music Series',
+                  rating: 4.6,
+                  ratingCount: 4,
+                  viewCount: 0,
+                  heroPosition: 1,
+                ),
+                ContentItemSummary(
+                  id: 1003,
+                  kind: ContentKind.skin,
+                  title: 'Low Rank Skin',
+                  heroName: 'Lam',
+                  imageUrl: '',
+                  subtitle: 'Classic Series',
+                  rating: 3.5,
+                  ratingCount: 2,
+                  viewCount: 0,
+                  heroPosition: 0,
+                ),
+              ],
+            ),
+          ),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -423,6 +401,34 @@ void main() {
 
     expect(repository.requestedSkinSort, 'rating');
     expect(repository.requestedSkinOrder, 'desc');
+  });
+
+  testWidgets('requests skins with hokx-compatible search and filters', (
+    tester,
+  ) async {
+    final repository = _FakeSkinRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Lam');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, '4.5+'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Clash'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedSkinSearch, 'Lam');
+    expect(repository.requestedMinRating, 4.5);
+    expect(repository.requestedLanePosition, 0);
   });
 
   testWidgets('switches skin cards between poster and splash art', (

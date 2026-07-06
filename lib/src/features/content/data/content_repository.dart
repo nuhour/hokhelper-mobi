@@ -17,11 +17,22 @@ class ContentRepository {
     int pageSize = 20,
     String sort = 'id',
     String order = 'desc',
+    String search = '',
+    double minRating = 0,
+    int? lanePosition,
   }) async {
+    final filterRules = _skinFilterRules(
+      regionId,
+      search: search,
+      minRating: minRating,
+      lanePosition: lanePosition,
+    );
     final json = await apiClient.postJson(
       '/skin/list',
       body: {
-        ..._pagedRegionBody(regionId, page: page, pageSize: pageSize),
+        'page': page,
+        'pageSize': pageSize,
+        'filterRules': filterRules,
         'sort': sort,
         'order': order == 'asc' ? 'asc' : 'desc',
       },
@@ -166,6 +177,30 @@ class ContentRepository {
         {'field': 'region_id', 'op': 'eq', 'value': regionId},
       ],
     };
+  }
+
+  List<Map<String, Object>> _skinFilterRules(
+    int regionId, {
+    String search = '',
+    double minRating = 0,
+    int? lanePosition,
+  }) {
+    final trimmedSearch = search.trim();
+    return [
+      {'field': 'region_id', 'op': 'eq', 'value': regionId},
+      if (trimmedSearch.isNotEmpty) ...[
+        {'field': 'name', 'op': 'contains', 'value': trimmedSearch, 'ig': true},
+        {
+          'field': 'hero_name',
+          'op': 'contains',
+          'value': trimmedSearch,
+          'ig': true,
+        },
+      ],
+      if (minRating > 0) {'field': 'rating', 'op': 'gte', 'value': minRating},
+      if (lanePosition != null)
+        {'field': 'hero_position', 'op': 'eq', 'value': lanePosition},
+    ];
   }
 
   List<Object?> _readRows(Map<String, dynamic> json) {

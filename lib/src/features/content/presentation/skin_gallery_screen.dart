@@ -43,6 +43,9 @@ final skinGalleryQueryProvider =
             pageSize: _skinGalleryPageSize,
             sort: query.sort.apiValue,
             order: 'desc',
+            search: query.search,
+            minRating: query.minRating,
+            lanePosition: query.lanePosition,
           );
     });
 
@@ -54,19 +57,35 @@ final skinDetailProvider = FutureProvider.family<SkinDetail, int>((
 });
 
 class _SkinGalleryQuery {
-  const _SkinGalleryQuery({this.sort = _SkinSort.latest});
+  const _SkinGalleryQuery({
+    this.sort = _SkinSort.latest,
+    this.search = '',
+    this.minRating = 0,
+    this.lanePosition,
+  });
 
   final _SkinSort sort;
+  final String search;
+  final double minRating;
+  final int? lanePosition;
 
-  bool get isDefault => sort == _SkinSort.latest;
+  bool get isDefault =>
+      sort == _SkinSort.latest &&
+      search.trim().isEmpty &&
+      minRating <= 0 &&
+      lanePosition == null;
 
   @override
   bool operator ==(Object other) {
-    return other is _SkinGalleryQuery && other.sort == sort;
+    return other is _SkinGalleryQuery &&
+        other.sort == sort &&
+        other.search == search &&
+        other.minRating == minRating &&
+        other.lanePosition == lanePosition;
   }
 
   @override
-  int get hashCode => sort.hashCode;
+  int get hashCode => Object.hash(sort, search, minRating, lanePosition);
 }
 
 class SkinGalleryScreen extends ConsumerStatefulWidget {
@@ -124,7 +143,12 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final galleryQuery = _SkinGalleryQuery(sort: _sort);
+    final galleryQuery = _SkinGalleryQuery(
+      sort: _sort,
+      search: _query,
+      minRating: _minRating,
+      lanePosition: _lanePosition,
+    );
     final galleryValue = ref.watch(skinGalleryQueryProvider(galleryQuery));
     final initialSkinId = widget.initialSkinId;
 
@@ -160,7 +184,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
             const SizedBox(height: 18),
             TextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: (value) => setState(() {
+                _query = value;
+                _resetLoadedPages();
+              }),
               style: const TextStyle(color: AppTheme.text),
               decoration: InputDecoration(
                 hintText: 'Search skin or hero',
@@ -171,7 +198,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                         tooltip: 'Clear',
                         onPressed: () {
                           _searchController.clear();
-                          setState(() => _query = '');
+                          setState(() {
+                            _query = '';
+                            _resetLoadedPages();
+                          });
                         },
                         icon: const Icon(Icons.close, color: AppTheme.muted),
                       ),
@@ -223,12 +253,18 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
             const SizedBox(height: 12),
             _RatingFilterBar(
               minRating: _minRating,
-              onChanged: (value) => setState(() => _minRating = value),
+              onChanged: (value) => setState(() {
+                _minRating = value;
+                _resetLoadedPages();
+              }),
             ),
             const SizedBox(height: 10),
             _LaneFilterBar(
               lanePosition: _lanePosition,
-              onChanged: (value) => setState(() => _lanePosition = value),
+              onChanged: (value) => setState(() {
+                _lanePosition = value;
+                _resetLoadedPages();
+              }),
             ),
             if ((widget.initialMinRating ?? 0) > 0 ||
                 widget.initialLanePosition != null) ...[
@@ -402,6 +438,9 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
             pageSize: _skinGalleryPageSize,
             sort: _sort.apiValue,
             order: 'desc',
+            search: _query,
+            minRating: _minRating,
+            lanePosition: _lanePosition,
           );
 
       if (!mounted) {
