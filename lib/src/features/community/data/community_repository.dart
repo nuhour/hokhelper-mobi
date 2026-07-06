@@ -10,12 +10,16 @@ class CommunityRepository {
 
   final ApiClient apiClient;
 
-  Future<List<CommunityPostSummary>> loadPosts(int regionId) async {
+  Future<List<CommunityPostSummary>> loadPosts(
+    int regionId, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
     final json = await apiClient.getJson(
       '/community/posts',
       query: {
-        'page': 1,
-        'pageSize': 30,
+        'page': page,
+        'pageSize': pageSize,
         'sort': 'hot',
         'filterRules': jsonEncode([
           {'field': 'region_id', 'op': 'eq', 'value': regionId},

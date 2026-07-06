@@ -18,13 +18,20 @@ final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
   return CommunityRepository(apiClient: ref.watch(apiClientProvider));
 });
 
+const _communityPostsPageSize = 30;
+
+final communityPostsRegionProvider = FutureProvider<int>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return settings.region.regionId;
+});
+
 final communityPostsProvider = FutureProvider<List<CommunityPostSummary>>((
   ref,
 ) async {
-  final settings = await ref.watch(appSettingsControllerProvider.future);
+  final regionId = await ref.watch(communityPostsRegionProvider.future);
   return ref
       .watch(communityRepositoryProvider)
-      .loadPosts(settings.region.regionId);
+      .loadPosts(regionId, pageSize: _communityPostsPageSize);
 });
 
 final leakPostsProvider = FutureProvider<List<LeakPostSummary>>((ref) async {
@@ -135,9 +142,13 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   final _contentController = TextEditingController();
   final _titleController = TextEditingController();
   final _createdPosts = <CommunityPostSummary>[];
+  final _extraPosts = <CommunityPostSummary>[];
   final _deletedPostIds = <String>{};
   var _isCreateOpen = false;
   var _createSubmitting = false;
+  var _nextPostsPage = 2;
+  var _hasMorePosts = true;
+  var _isLoadingMorePosts = false;
 
   @override
   void dispose() {
@@ -154,7 +165,8 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
       retry: () => ref.invalidate(communityPostsProvider),
       data: (posts) {
         final tag = widget.initialTag?.trim() ?? '';
-        final allPosts = _mergeCreatedPosts(posts)
+        final combinedPosts = [...posts, ..._extraPosts];
+        final allPosts = _mergeCreatedPosts(combinedPosts)
             .where((post) => !_deletedPostIds.contains(post.id))
             .toList(growable: false);
         final modePosts = switch (widget.initialView) {
@@ -175,7 +187,10 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
                   .toList(growable: false);
 
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(communityPostsProvider.future),
+          onRefresh: () async {
+            _resetLoadedPages();
+            return ref.refresh(communityPostsProvider.future);
+          },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
@@ -226,11 +241,78 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
                   ),
                   const SizedBox(height: 12),
                 ],
+              if (_canLoadMorePosts(posts)) ...[
+                const SizedBox(height: 4),
+                Center(
+                  child: FilledButton.icon(
+                    onPressed: _isLoadingMorePosts
+                        ? null
+                        : () => _loadMorePosts(context),
+                    icon: _isLoadingMorePosts
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more, size: 18),
+                    label: Text(
+                      _isLoadingMorePosts ? 'Loading...' : 'Load more',
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );
       },
     );
+  }
+
+  bool _canLoadMorePosts(List<CommunityPostSummary> firstPagePosts) {
+    return _hasMorePosts && firstPagePosts.length >= _communityPostsPageSize;
+  }
+
+  Future<void> _loadMorePosts(BuildContext context) async {
+    if (_isLoadingMorePosts || !_hasMorePosts) {
+      return;
+    }
+    setState(() => _isLoadingMorePosts = true);
+    try {
+      final regionId = await ref.read(communityPostsRegionProvider.future);
+      final nextPosts = await ref
+          .read(communityRepositoryProvider)
+          .loadPosts(
+            regionId,
+            page: _nextPostsPage,
+            pageSize: _communityPostsPageSize,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _extraPosts.addAll(nextPosts);
+        _nextPostsPage += 1;
+        _hasMorePosts = nextPosts.length >= _communityPostsPageSize;
+        _isLoadingMorePosts = false;
+      });
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _isLoadingMorePosts = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to load more posts')),
+      );
+    }
+  }
+
+  void _resetLoadedPages() {
+    _extraPosts.clear();
+    _nextPostsPage = 2;
+    _hasMorePosts = true;
+    _isLoadingMorePosts = false;
   }
 
   Future<void> _createPost(BuildContext context) async {

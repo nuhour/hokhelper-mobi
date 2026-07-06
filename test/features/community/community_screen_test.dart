@@ -32,6 +32,22 @@ class _FakeCommunityRepository extends CommunityRepository {
   String? createdTitle;
   String? deletedPostId;
   String? likedPostId;
+  final requestedPostPages = <int>[];
+  List<CommunityPostSummary> Function(int page, int pageSize)? loadPostsPage;
+
+  @override
+  Future<List<CommunityPostSummary>> loadPosts(
+    int regionId, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    requestedPostPages.add(page);
+    final loader = loadPostsPage;
+    if (loader == null) {
+      return const [];
+    }
+    return loader(page, pageSize);
+  }
 
   @override
   Future<CommunityPostSummary> createPost({
@@ -424,6 +440,63 @@ void main() {
     expect(repository.likedPostId, '101');
     expect(find.text('19 likes · 7 comments'), findsOneWidget);
     expect(find.text('Post liked'), findsOneWidget);
+  });
+
+  testWidgets('loads more community posts after the first page', (
+    tester,
+  ) async {
+    final repository = _FakeCommunityRepository();
+    repository.loadPostsPage = (page, pageSize) {
+      final startId = ((page - 1) * pageSize) + 1;
+      final count = page == 1 ? pageSize : 1;
+      return List.generate(count, (index) {
+        final id = startId + index;
+        return CommunityPostSummary(
+          id: '$id',
+          title: 'Paged post $id',
+          preview: 'Community post page $page item $id.',
+          authorName: 'Coach',
+          authorAvatarUrl: '',
+          tags: const ['Guide'],
+          createdAt: '2026-07-05T10:00:00Z',
+          viewCount: id,
+          likeCount: 0,
+          commentCount: 0,
+        );
+      });
+    };
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsRegionProvider.overrideWith((ref) async => 2),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CommunityScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paged post 1'), findsOneWidget);
+    expect(find.text('Paged post 31'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Load more'),
+      900,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final loadMore = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Load more'),
+    );
+    await tester.runAsync(() async {
+      loadMore.onPressed!();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPostPages, [1, 2]);
+    expect(find.text('Paged post 31'), findsOneWidget);
   });
 
   testWidgets('creates community posts from the mobile posts tab', (

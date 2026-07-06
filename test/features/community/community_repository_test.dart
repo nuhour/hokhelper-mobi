@@ -129,6 +129,20 @@ void main() {
     expect(posts.single.metricText, '18 likes · 7 comments');
   });
 
+  test('loads community posts with requested page parameters', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    await repository.loadPosts(2, page: 2, pageSize: 15);
+
+    expect(apiClient.getQueries['/community/posts'], {
+      'page': 2,
+      'pageSize': 15,
+      'sort': 'hot',
+      'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
+    });
+  });
+
   test('loads leak posts with region and all-category query', () async {
     final apiClient = _FakeApiClient();
     final repository = CommunityRepository(apiClient: apiClient);
