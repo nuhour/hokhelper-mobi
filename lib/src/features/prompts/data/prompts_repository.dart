@@ -94,6 +94,13 @@ class PromptsRepository {
     return PromptGenerationQuota.fromJson(map);
   }
 
+  Future<bool> loadGenerationEnabled() async {
+    final json = await apiClient.getJson('/prompt/generate/config');
+    final result = json['result'];
+    final map = result is Map ? result : const <String, Object?>{};
+    return _readBool(map['enabled']);
+  }
+
   Future<PromptGenerateResult> generateImages({
     required String promptId,
     int count = 1,

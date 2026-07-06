@@ -299,6 +299,39 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     BuildContext context,
     PromptSummary prompt,
   ) async {
+    try {
+      final enabled = await ref
+          .read(promptsRepositoryProvider)
+          .loadGenerationEnabled();
+      if (!enabled) {
+        if (!context.mounted) {
+          return;
+        }
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Prompt generation is temporarily unavailable'),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Prompt generation is temporarily unavailable'),
+        ),
+      );
+      return;
+    }
+    if (!context.mounted) {
+      return;
+    }
     final updated = await showModalBottomSheet<PromptSummary>(
       context: context,
       isScrollControlled: true,

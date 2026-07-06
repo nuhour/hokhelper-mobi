@@ -24,6 +24,12 @@ class _FakeApiClient extends ApiClient {
   }) async {
     getPath = path;
     getQuery = query;
+    if (path == '/prompt/generate/config') {
+      return const {
+        'success': true,
+        'result': {'enabled': false},
+      };
+    }
     if (path == '/prompt/quota') {
       return const {
         'success': true,
@@ -288,6 +294,16 @@ void main() {
     expect(quota.used, 2);
     expect(quota.total, 5);
     expect(quota.remaining, 3);
+  });
+
+  test('loads prompt generation enabled config', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final enabled = await repository.loadGenerationEnabled();
+
+    expect(apiClient.getPath, '/prompt/generate/config');
+    expect(enabled, isFalse);
   });
 
   test('generates prompt images with hokx text mode payload', () async {

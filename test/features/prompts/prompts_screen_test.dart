@@ -11,9 +11,11 @@ import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_scre
 class _FakePromptsRepository extends PromptsRepository {
   _FakePromptsRepository({
     this.initialQuota = const PromptGenerationQuota(used: 1, total: 5),
+    this.generationEnabled = true,
   }) : super(apiClient: _NoopApiClient());
 
   final PromptGenerationQuota initialQuota;
+  final bool generationEnabled;
 
   String? likedPromptId;
   String? favoritedPromptId;
@@ -82,6 +84,11 @@ class _FakePromptsRepository extends PromptsRepository {
   @override
   Future<PromptGenerationQuota> loadGenerationQuota() async {
     return initialQuota;
+  }
+
+  @override
+  Future<bool> loadGenerationEnabled() async {
+    return generationEnabled;
   }
 
   @override
@@ -613,6 +620,48 @@ void main() {
     );
     expect(find.text('3 / 5 left'), findsOneWidget);
     expect(find.bySemanticsLabel('Generated image 1'), findsOneWidget);
+  });
+
+  testWidgets('blocks prompt generation when backend config disables it', (
+    tester,
+  ) async {
+    final repository = _FakePromptsRepository(generationEnabled: false);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Image generation'), findsNothing);
+    expect(
+      find.text('Prompt generation is temporarily unavailable'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('sets a generated prompt image as cover', (tester) async {
