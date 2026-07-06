@@ -184,4 +184,66 @@ void main() {
     expect(find.text('Use hero roles and stats together.'), findsOneWidget);
     expect(find.text('Back to Hok World Hub'), findsOneWidget);
   });
+
+  testWidgets('top-level topic routes mirror hokx generic topics', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/pro-guides');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          topicArticlesProvider(('pro-guides', 12)).overrideWith((ref) async {
+            return const [
+              TopicArticleSummary(
+                id: 21,
+                slug: 'draft-guide',
+                topicKey: 'pro-guides',
+                locale: 'en',
+                title: 'Draft Guide',
+                excerpt: 'Pick order notes for ranked play.',
+                seoDescription: 'Drafting for mobile players.',
+                coverImageUrl: '',
+                tags: ['Guide'],
+                sortOrder: 1,
+                publishedAt: '2026-07-05 10:00:00',
+                updatedAt: '',
+              ),
+            ];
+          }),
+          topicArticleProvider('draft-guide').overrideWith((ref) async {
+            return const TopicArticleDetail(
+              id: 21,
+              slug: 'draft-guide',
+              topicKey: 'pro-guides',
+              locale: 'en',
+              title: 'Draft Guide',
+              excerpt: 'Pick order notes for ranked play.',
+              content: '## First rotation\nSecure flexible heroes first.',
+              seoTitle: 'Draft Guide | HOK Helper',
+              seoDescription: 'Drafting for mobile players.',
+              coverImageUrl: '',
+              tags: ['Guide'],
+              availableLocales: ['en'],
+              publishedAt: '2026-07-05 10:00:00',
+              updatedAt: '',
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pro Guides'), findsOneWidget);
+    expect(find.text('Draft Guide'), findsOneWidget);
+
+    router.go('/pro-guides/draft-guide');
+    await tester.pumpAndSettle();
+
+    expect(find.text('First rotation'), findsOneWidget);
+    expect(find.text('Secure flexible heroes first.'), findsOneWidget);
+    expect(find.text('Back to Pro Guides Hub'), findsOneWidget);
+  });
 }

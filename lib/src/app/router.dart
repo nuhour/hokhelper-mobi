@@ -712,6 +712,25 @@ GoRouter createAppRouter() {
           ),
         ],
       ),
+      GoRoute(
+        path: '/:topicKey',
+        builder: (context, state) {
+          return TopicHubScreen(
+            topicKey: state.pathParameters['topicKey'] ?? '',
+          );
+        },
+        routes: [
+          GoRoute(
+            path: ':slug',
+            builder: (context, state) {
+              return TopicArticleScreen(
+                topicKey: state.pathParameters['topicKey'] ?? '',
+                slug: state.pathParameters['slug'] ?? '',
+              );
+            },
+          ),
+        ],
+      ),
     ],
   );
 }
