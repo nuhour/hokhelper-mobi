@@ -164,4 +164,91 @@ void main() {
     expect(find.text('Public Profile'), findsOneWidget);
     expect(find.text('Community guide author'), findsOneWidget);
   });
+
+  testWidgets('community post author avatars open public profile routes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async {
+            return const [
+              CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorId: 77,
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 2,
+              ),
+            ];
+          }),
+          leakPostsProvider.overrideWith(
+            (ref) async => const <LeakPostSummary>[],
+          ),
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorId: 77,
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 2,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [],
+            );
+          }),
+          publicUserProfileProvider(77).overrideWith((ref) async {
+            return const UserProfile(
+              id: 77,
+              username: 'coach',
+              displayName: 'Coach',
+              email: 'coach@example.test',
+              avatar: '',
+              level: 6,
+              points: 900,
+              xpTotal: 900,
+              xpCurrentLevel: 180,
+              xpToNextLevel: 720,
+              levelProgress: 20,
+              levelCap: false,
+              bio: 'Community guide author',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 12,
+                following: 3,
+                followers: 9,
+                likes: 21,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.image_not_supported_outlined).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Public Profile'), findsOneWidget);
+    expect(find.text('Community guide author'), findsOneWidget);
+    expect(find.text('Comments'), findsNothing);
+  });
 }

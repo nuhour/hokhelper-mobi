@@ -939,12 +939,10 @@ class _PostCardState extends ConsumerState<_PostCard> {
           children: [
             Row(
               children: [
-                AppImage(
-                  url: post.authorAvatarUrl,
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  semanticLabel: post.authorName,
+                _PostAuthorAvatar(
+                  authorAvatarUrl: post.authorAvatarUrl,
+                  authorId: post.authorId,
+                  authorName: post.authorName,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1040,6 +1038,39 @@ class _PostCardState extends ConsumerState<_PostCard> {
         const SnackBar(content: Text('Failed to like post')),
       );
     }
+  }
+}
+
+class _PostAuthorAvatar extends StatelessWidget {
+  const _PostAuthorAvatar({
+    required this.authorAvatarUrl,
+    required this.authorId,
+    required this.authorName,
+  });
+
+  final String authorAvatarUrl;
+  final int authorId;
+  final String authorName;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = AppImage(
+      url: authorAvatarUrl,
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      semanticLabel: authorName,
+    );
+
+    if (authorId <= 0) {
+      return avatar;
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.go('/profile/$authorId'),
+      child: avatar,
+    );
   }
 }
 
