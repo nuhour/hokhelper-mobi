@@ -165,12 +165,24 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
               },
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: Text(_submitting ? 'Submitting...' : 'Submit'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _submitting
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _submitting ? null : _submit,
+                    child: Text(_submitting ? 'Submitting...' : 'Submit'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -185,16 +197,32 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
 
     setState(() => _submitting = true);
     final settings = ref.read(appSettingsControllerProvider);
-    await ref
-        .read(eventAssistanceRepositoryProvider)
-        .submitText(
-          text: _controller.text.trim(),
-          regionId: settings.value?.region.regionId ?? 1,
-        );
-    ref.invalidate(eventAssistanceRecordsProvider);
+    try {
+      await ref
+          .read(eventAssistanceRepositoryProvider)
+          .submitText(
+            text: _controller.text.trim(),
+            regionId: settings.value?.region.regionId ?? 1,
+          );
+      ref.invalidate(eventAssistanceRecordsProvider);
 
-    if (mounted) {
+      if (!mounted) {
+        return;
+      }
       Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to submit assistance text')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 }

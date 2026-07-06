@@ -11,7 +11,7 @@ class EventAssistanceRepository {
   }) async {
     final json = await apiClient.getJson(
       '/activity/records',
-      query: {'page': 1, 'pageSize': 50, 'region_id': regionId},
+      query: {'page': 1, 'pageSize': 80, 'region_id': regionId},
     );
     return _readRows(json).map(EventAssistanceRecord.fromJson).toList();
   }

@@ -70,7 +70,7 @@ void main() {
     final records = await repository.loadRecords(regionId: 2);
 
     expect(apiClient.getPath, '/activity/records');
-    expect(apiClient.getQuery, {'page': 1, 'pageSize': 50, 'region_id': 2});
+    expect(apiClient.getQuery, {'page': 1, 'pageSize': 80, 'region_id': 2});
     expect(records, hasLength(1));
     expect(records.single.id, '77');
     expect(records.single.content, 'Need one player for Friday event team.');

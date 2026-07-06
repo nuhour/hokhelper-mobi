@@ -9,7 +9,7 @@ import 'package:hok_helper_mobile/src/features/activity/domain/event_assistance_
 import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
 
 class _FakeRepository extends EventAssistanceRepository {
-  _FakeRepository()
+  _FakeRepository({this.throwOnSubmit = false})
     : super(
         apiClient: ApiClient(
           config: const AppConfig(
@@ -19,6 +19,7 @@ class _FakeRepository extends EventAssistanceRepository {
         ),
       );
 
+  final bool throwOnSubmit;
   String? submittedText;
   int? submittedRegionId;
   String? reportedRecordId;
@@ -28,6 +29,9 @@ class _FakeRepository extends EventAssistanceRepository {
     required String text,
     required int regionId,
   }) async {
+    if (throwOnSubmit) {
+      throw StateError('submit failed');
+    }
     submittedText = text;
     submittedRegionId = regionId;
     return EventAssistanceRecord(
@@ -105,6 +109,57 @@ void main() {
 
     expect(repository.submittedText, 'Join my activity code ABCD.');
     expect(repository.submittedRegionId, 1);
+  });
+
+  testWidgets('cancels the share sheet without publishing', (tester) async {
+    final repository = _FakeRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRepositoryProvider.overrideWithValue(repository),
+          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Share Text'));
+    await tester.pumpAndSettle();
+    expect(find.text('Share Assistance Text'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Share Assistance Text'), findsNothing);
+    expect(repository.submittedText, isNull);
+  });
+
+  testWidgets('keeps share sheet open and shows feedback on submit failure', (
+    tester,
+  ) async {
+    final repository = _FakeRepository(throwOnSubmit: true);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRepositoryProvider.overrideWithValue(repository),
+          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Share Text'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Join failed activity.');
+    await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Share Assistance Text'), findsOneWidget);
+    expect(find.text('Failed to submit assistance text'), findsOneWidget);
   });
 
   testWidgets('copies and reports event assistance records', (tester) async {
