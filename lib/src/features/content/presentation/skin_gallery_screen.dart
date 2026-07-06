@@ -287,14 +287,23 @@ class _SkinCard extends StatelessWidget {
   }
 }
 
-class _SkinDetailSheet extends ConsumerWidget {
+class _SkinDetailSheet extends ConsumerStatefulWidget {
   const _SkinDetailSheet({required this.skinId});
 
   final int skinId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailValue = ref.watch(skinDetailProvider(skinId));
+  ConsumerState<_SkinDetailSheet> createState() => _SkinDetailSheetState();
+}
+
+class _SkinDetailSheetState extends ConsumerState<_SkinDetailSheet> {
+  var _isRating = false;
+  double? _ratingOverride;
+  int? _ratingCountOverride;
+
+  @override
+  Widget build(BuildContext context) {
+    final detailValue = ref.watch(skinDetailProvider(widget.skinId));
 
     return DraggableScrollableSheet(
       expand: false,
@@ -321,20 +330,66 @@ class _SkinDetailSheet extends ConsumerWidget {
             const SizedBox(height: 14),
             AppAsyncView<SkinDetail>(
               value: detailValue,
-              retry: () => ref.invalidate(skinDetailProvider(skinId)),
-              data: (detail) => _SkinDetailContent(detail: detail),
+              retry: () => ref.invalidate(skinDetailProvider(widget.skinId)),
+              data: (detail) => _SkinDetailContent(
+                detail: detail,
+                rating: _ratingOverride ?? detail.rating,
+                ratingCount: _ratingCountOverride ?? detail.ratingCount,
+                isRating: _isRating,
+                onRate: _rateSkin,
+              ),
             ),
           ],
         );
       },
     );
   }
+
+  Future<void> _rateSkin(double rating) async {
+    if (_isRating) {
+      return;
+    }
+
+    setState(() => _isRating = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final result = await ref
+          .read(contentRepositoryProvider)
+          .rateSkin(widget.skinId, rating);
+      setState(() {
+        _ratingOverride = result.rating;
+        _ratingCountOverride = result.ratingCount;
+      });
+      ref.invalidate(skinGalleryProvider);
+      ref.invalidate(skinDetailProvider(widget.skinId));
+      messenger.showSnackBar(const SnackBar(content: Text('Rating submitted')));
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to submit rating: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRating = false);
+      }
+    }
+  }
 }
 
 class _SkinDetailContent extends StatelessWidget {
-  const _SkinDetailContent({required this.detail});
+  const _SkinDetailContent({
+    required this.detail,
+    required this.rating,
+    required this.ratingCount,
+    required this.isRating,
+    required this.onRate,
+  });
 
   final SkinDetail detail;
+  final double rating;
+  final int ratingCount;
+  final bool isRating;
+  final ValueChanged<double> onRate;
 
   @override
   Widget build(BuildContext context) {
@@ -391,10 +446,12 @@ class _SkinDetailContent extends StatelessWidget {
               _DetailChip(label: detail.seriesName),
             if (detail.regionName.isNotEmpty)
               _DetailChip(label: detail.regionName),
-            _DetailChip(label: detail.rating.toStringAsFixed(1)),
-            _DetailChip(label: '${detail.ratingCount} ratings'),
+            _DetailChip(label: rating.toStringAsFixed(1)),
+            _DetailChip(label: '$ratingCount ratings'),
           ],
         ),
+        const SizedBox(height: 14),
+        _SkinRatingControl(rating: rating, isRating: isRating, onRate: onRate),
         if (detail.linkUrl.isNotEmpty) ...[
           const SizedBox(height: 18),
           Text(
@@ -431,6 +488,55 @@ class _DetailChip extends StatelessWidget {
             color: AppTheme.gold,
             fontWeight: FontWeight.w800,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkinRatingControl extends StatelessWidget {
+  const _SkinRatingControl({
+    required this.rating,
+    required this.isRating,
+    required this.onRate,
+  });
+
+  final double rating;
+  final bool isRating;
+  final ValueChanged<double> onRate;
+
+  @override
+  Widget build(BuildContext context) {
+    final roundedRating = rating.round();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Rate this skin',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            for (var index = 1; index <= 5; index++)
+              IconButton(
+                tooltip: 'Rate skin $index stars',
+                onPressed: isRating ? null : () => onRate(index.toDouble()),
+                icon: Icon(
+                  index <= roundedRating ? Icons.star : Icons.star_border,
+                  color: AppTheme.gold,
+                ),
+              ),
+          ],
         ),
       ),
     );

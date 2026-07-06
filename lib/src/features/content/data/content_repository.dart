@@ -29,6 +29,15 @@ class ContentRepository {
     return SkinDetail.fromJson(json['result'] ?? json);
   }
 
+  Future<SkinRatingResult> rateSkin(int skinId, double rating) async {
+    final normalizedRating = (rating.clamp(0.5, 5) * 2).round() / 2;
+    final json = await apiClient.postJson(
+      '/skin/$skinId/rate',
+      body: {'rating': normalizedRating},
+    );
+    return SkinRatingResult.fromJson(json['result'] ?? json);
+  }
+
   Future<List<ContentItemSummary>> loadCgs(
     int regionId, {
     int pageSize = 20,
@@ -146,6 +155,21 @@ class CgRatingResult {
   factory CgRatingResult.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     return CgRatingResult(
+      rating: _readDouble(map['avg_rating'] ?? map['rating']),
+      ratingCount: _readInt(map['rating_count'] ?? map['ratingCount']),
+    );
+  }
+}
+
+class SkinRatingResult {
+  const SkinRatingResult({required this.rating, required this.ratingCount});
+
+  final double rating;
+  final int ratingCount;
+
+  factory SkinRatingResult.fromJson(Object? json) {
+    final map = json is Map ? json : const <String, Object?>{};
+    return SkinRatingResult(
       rating: _readDouble(map['avg_rating'] ?? map['rating']),
       ratingCount: _readInt(map['rating_count'] ?? map['ratingCount']),
     );

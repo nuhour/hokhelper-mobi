@@ -13,13 +13,24 @@ class _FakeApiClient extends ApiClient {
       );
 
   final postCalls = <String>[];
+  final postBodies = <Object?>[];
   final getCalls = <String>[];
   Object? lastBody;
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postCalls.add(path);
+    postBodies.add(body);
     lastBody = body;
+    if (path.endsWith('/rate')) {
+      return const {
+        'success': true,
+        'avg_rating': 5,
+        'rating_count': 13,
+        'action': 'created',
+      };
+    }
+
     return const {
       'success': true,
       'result': {
@@ -85,4 +96,19 @@ void main() {
     expect(detail.seriesName, 'Hunter Series');
     expect(detail.linkUrl, 'https://example.test/skin/1001');
   });
+
+  test(
+    'rates skins with web-compatible payload and parses updated metrics',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = ContentRepository(apiClient: apiClient);
+
+      final result = await repository.rateSkin(1001, 5);
+
+      expect(apiClient.postCalls, ['/skin/1001/rate']);
+      expect(apiClient.postBodies.single, {'rating': 5.0});
+      expect(result.rating, 5);
+      expect(result.ratingCount, 13);
+    },
+  );
 }
