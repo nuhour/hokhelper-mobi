@@ -11,7 +11,14 @@ import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_scre
 class _FakePromptsRepository extends PromptsRepository {
   _FakePromptsRepository() : super(apiClient: _NoopApiClient());
 
+  String? likedPromptId;
   String? favoritedPromptId;
+
+  @override
+  Future<PromptLikeResult> toggleLike(String promptId) async {
+    likedPromptId = promptId;
+    return const PromptLikeResult(isLiked: true, likeCount: 13);
+  }
 
   @override
   Future<PromptFavoriteResult> toggleFavorite(String promptId) async {
@@ -251,5 +258,43 @@ void main() {
     expect(repository.favoritedPromptId, '7');
     expect(find.text('6'), findsOneWidget);
     expect(find.text('Prompt favorited'), findsOneWidget);
+  });
+
+  testWidgets('likes prompt cards through the backend', (tester) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Like'));
+    await tester.pumpAndSettle();
+
+    expect(repository.likedPromptId, '7');
+    expect(find.text('13'), findsOneWidget);
+    expect(find.text('Prompt liked'), findsOneWidget);
   });
 }

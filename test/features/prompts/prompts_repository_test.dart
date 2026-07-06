@@ -51,6 +51,12 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postPath = path;
     postBody = body;
+    if (path.endsWith('/like')) {
+      return const {
+        'success': true,
+        'result': {'is_liked': true, 'likes': 13},
+      };
+    }
     return const {
       'success': true,
       'result': {'is_favorited': true, 'favorites': 6},
@@ -114,5 +120,17 @@ void main() {
     expect(apiClient.postBody, isEmpty);
     expect(result.isFavorited, isTrue);
     expect(result.favoriteCount, 6);
+  });
+
+  test('toggles prompt like with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final result = await repository.toggleLike('7');
+
+    expect(apiClient.postPath, '/prompt/7/like');
+    expect(apiClient.postBody, isEmpty);
+    expect(result.isLiked, isTrue);
+    expect(result.likeCount, 13);
   });
 }

@@ -10,6 +10,7 @@ class PromptSummary {
     required this.favoriteCount,
     required this.isPublic,
     this.isFavorited = false,
+    this.isLiked = false,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class PromptSummary {
   final int favoriteCount;
   final bool isPublic;
   final bool isFavorited;
+  final bool isLiked;
 
   factory PromptSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -44,6 +46,7 @@ class PromptSummary {
       favoriteCount: _readInt(map['favorites'] ?? map['favorite_count']),
       isPublic: map['is_public'] != false && map['public'] != false,
       isFavorited: _readBool(map['is_favorited']),
+      isLiked: _readBool(map['is_liked']),
     );
   }
 }

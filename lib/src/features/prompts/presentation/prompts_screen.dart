@@ -202,18 +202,26 @@ class _PromptCard extends ConsumerStatefulWidget {
 }
 
 class _PromptCardState extends ConsumerState<_PromptCard> {
+  late var _likeCount = widget.prompt.likeCount;
+  late var _isLiked = widget.prompt.isLiked;
   late var _favoriteCount = widget.prompt.favoriteCount;
   late var _isFavorited = widget.prompt.isFavorited;
+  var _likeSubmitting = false;
   var _favoriteSubmitting = false;
 
   @override
   void didUpdateWidget(covariant _PromptCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.prompt.id != widget.prompt.id ||
+        oldWidget.prompt.likeCount != widget.prompt.likeCount ||
+        oldWidget.prompt.isLiked != widget.prompt.isLiked ||
         oldWidget.prompt.favoriteCount != widget.prompt.favoriteCount ||
         oldWidget.prompt.isFavorited != widget.prompt.isFavorited) {
+      _likeCount = widget.prompt.likeCount;
+      _isLiked = widget.prompt.isLiked;
       _favoriteCount = widget.prompt.favoriteCount;
       _isFavorited = widget.prompt.isFavorited;
+      _likeSubmitting = false;
       _favoriteSubmitting = false;
     }
   }
@@ -308,10 +316,20 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
               runSpacing: 8,
               children: [
                 _MetricChip(
-                  icon: Icons.favorite_border,
-                  value: prompt.likeCount,
+                  icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                  value: _likeCount,
                 ),
                 _MetricChip(icon: Icons.bookmark_border, value: _favoriteCount),
+                OutlinedButton.icon(
+                  onPressed: _likeSubmitting
+                      ? null
+                      : () => _likePrompt(context),
+                  icon: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    size: 16,
+                  ),
+                  label: const Text('Like'),
+                ),
                 OutlinedButton.icon(
                   onPressed: _favoriteSubmitting
                       ? null
@@ -344,6 +362,40 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(const SnackBar(content: Text('Prompt copied')));
+  }
+
+  Future<void> _likePrompt(BuildContext context) async {
+    setState(() => _likeSubmitting = true);
+    try {
+      final result = await ref
+          .read(promptsRepositoryProvider)
+          .toggleLike(widget.prompt.id);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _isLiked = result.isLiked;
+        _likeCount = result.likeCount;
+        _likeSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(result.isLiked ? 'Prompt liked' : 'Prompt unliked'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _likeSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to like prompt')),
+      );
+    }
   }
 
   Future<void> _favoritePrompt(BuildContext context) async {

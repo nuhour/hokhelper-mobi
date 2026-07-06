@@ -56,6 +56,13 @@ class PromptsRepository {
     final map = result is Map ? result : const <String, Object?>{};
     return PromptFavoriteResult.fromJson(map);
   }
+
+  Future<PromptLikeResult> toggleLike(String promptId) async {
+    final json = await apiClient.postJson('/prompt/$promptId/like', body: {});
+    final result = json['result'];
+    final map = result is Map ? result : const <String, Object?>{};
+    return PromptLikeResult.fromJson(map);
+  }
 }
 
 class PromptFavoriteResult {
@@ -71,6 +78,20 @@ class PromptFavoriteResult {
     return PromptFavoriteResult(
       isFavorited: _readBool(json['is_favorited']),
       favoriteCount: _readInt(json['favorites'] ?? json['favorite_count']),
+    );
+  }
+}
+
+class PromptLikeResult {
+  const PromptLikeResult({required this.isLiked, required this.likeCount});
+
+  final bool isLiked;
+  final int likeCount;
+
+  factory PromptLikeResult.fromJson(Map<dynamic, dynamic> json) {
+    return PromptLikeResult(
+      isLiked: _readBool(json['is_liked']),
+      likeCount: _readInt(json['likes'] ?? json['like_count']),
     );
   }
 }
