@@ -45,7 +45,7 @@ class _FakeSearchRepository extends SearchRepository {
               'id': 9,
               'name': 'Arthur Clash Build',
               'subtitle': 'Warrior sustain setup',
-              'url': '/tools/builds',
+              'url': '/about',
             },
           ],
         },
@@ -84,5 +84,12 @@ void main() {
     expect(find.text('Paladin captain'), findsOneWidget);
     expect(find.text('Builds'), findsOneWidget);
     expect(find.text('Arthur Clash Build'), findsOneWidget);
+
+    await tester.tap(find.text('Arthur Clash Build'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/about');
+    expect(find.text('About HOK Helper'), findsOneWidget);
+    expect(find.text('Global Community Intel'), findsOneWidget);
   });
 }

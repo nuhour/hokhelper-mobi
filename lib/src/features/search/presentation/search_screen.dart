@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/regions.dart';
 import '../../../core/providers/core_providers.dart';
@@ -175,37 +176,79 @@ class _SearchResultTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(Icons.chevron_right, color: AppTheme.gold, size: 20),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
+    final canOpen = item.url.trim().isNotEmpty;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: canOpen ? () => _openSearchResult(context, item.url) : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                item.title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w800,
+              const Icon(Icons.chevron_right, color: AppTheme.gold, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (item.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        item.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (item.subtitle.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  item.subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                ),
+              if (canOpen) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.open_in_new, color: AppTheme.muted, size: 16),
               ],
             ],
           ),
         ),
-      ],
+      ),
     );
   }
+}
+
+void _openSearchResult(BuildContext context, String url) {
+  final target = _normalizeSearchTarget(url);
+  if (target.startsWith('/')) {
+    context.go(target);
+    return;
+  }
+
+  context.push(
+    Uri(path: '/external-link', queryParameters: {'url': target}).toString(),
+  );
+}
+
+String _normalizeSearchTarget(String url) {
+  final trimmed = url.trim();
+  if (trimmed.startsWith('#/')) {
+    return trimmed.substring(1);
+  }
+  final parsed = Uri.tryParse(trimmed);
+  if (parsed == null || !parsed.hasScheme) {
+    return trimmed;
+  }
+  if (parsed.fragment.startsWith('/')) {
+    return parsed.fragment;
+  }
+  return trimmed;
 }
