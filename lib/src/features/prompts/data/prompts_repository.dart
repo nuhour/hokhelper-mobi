@@ -37,20 +37,23 @@ class PromptsRepository {
     PromptListSort sort = PromptListSort.hot,
   }) async {
     final searchValue = search.trim();
-    final json = await apiClient.getJson(
-      '/prompt',
-      query: {
-        'action': action.backendValue,
-        'page': 1,
-        'pageSize': 30,
-        if (searchValue.isNotEmpty) 'search': searchValue,
-        'sort': sort.backendValue,
-        'order': 'desc',
-        'filterRules': jsonEncode([
-          {'field': 'is_public', 'op': 'eq', 'value': true},
-        ]),
-      },
-    );
+    final filterRules = action == PromptListAction.explore
+        ? jsonEncode([
+            {'field': 'is_public', 'op': 'eq', 'value': true},
+          ])
+        : null;
+    final query = <String, dynamic>{
+      'action': action.backendValue,
+      'page': 1,
+      'pageSize': 30,
+      if (searchValue.isNotEmpty) 'search': searchValue,
+      'sort': sort.backendValue,
+      'order': 'desc',
+    };
+    if (filterRules != null) {
+      query['filterRules'] = filterRules;
+    }
+    final json = await apiClient.getJson('/prompt', query: query);
     final result = json['result'];
     final rows = result is Map ? result['prompts'] : json['prompts'];
     if (rows is! List) {

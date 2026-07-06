@@ -196,6 +196,17 @@ void main() {
     expect(prompts.single.title, 'Cyber skin concept');
   });
 
+  test('loads my prompts without public-only filter', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    await repository.loadPrompts(action: PromptListAction.myPrompts);
+
+    expect(apiClient.getPath, '/prompt');
+    expect(apiClient.getQuery?['action'], 'myPrompts');
+    expect(apiClient.getQuery?.containsKey('filterRules'), isFalse);
+  });
+
   test(
     'loads prompts with hokx-compatible search and latest sorting',
     () async {
