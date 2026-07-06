@@ -141,11 +141,12 @@ class CommunityScreen extends ConsumerWidget {
                           color: AppTheme.panel,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const TabBar(
+                        child: TabBar(
                           indicatorSize: TabBarIndicatorSize.tab,
                           dividerColor: Colors.transparent,
                           labelColor: AppTheme.gold,
                           unselectedLabelColor: AppTheme.muted,
+                          onTap: (index) => _syncRouteWithTab(context, index),
                           tabs: [
                             Tab(text: 'Posts'),
                             Tab(text: 'Leaks'),
@@ -170,6 +171,24 @@ class CommunityScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _syncRouteWithTab(BuildContext context, int index) {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      return;
+    }
+    final nextUri = index == 1
+        ? Uri(
+            path: '/content/community',
+            queryParameters: const {'tab': 'leaks'},
+          )
+        : Uri(path: '/content/community');
+    final currentUri = router.routeInformationProvider.value.uri;
+    if (nextUri == currentUri) {
+      return;
+    }
+    router.go(nextUri.toString());
   }
 }
 
