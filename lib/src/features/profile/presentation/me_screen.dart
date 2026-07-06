@@ -406,7 +406,7 @@ class _MeFollowUserTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = user.displayName.isNotEmpty ? user.displayName : user.username;
     final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
-    return DecoratedBox(
+    final tile = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panelAlt,
         borderRadius: BorderRadius.circular(14),
@@ -462,6 +462,17 @@ class _MeFollowUserTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (user.id <= 0 || user.isSelf) {
+      return tile;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(context).pop();
+        context.go('/profile/${user.id}');
+      },
+      child: tile,
     );
   }
 }

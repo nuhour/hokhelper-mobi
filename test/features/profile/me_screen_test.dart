@@ -388,6 +388,53 @@ void main() {
     expect(find.text('Mid lane'), findsOneWidget);
   });
 
+  testWidgets('signed-in profile follow list users open public profiles', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final repository = _FakeProfileRepository(_profile);
+    final router = GoRouter(
+      initialLocation: '/me',
+      routes: [
+        GoRoute(path: '/me', builder: (context, state) => const MeScreen()),
+        GoRoute(
+          path: '/profile/:userId',
+          builder: (context, state) =>
+              Scaffold(body: Text('Profile ${state.pathParameters['userId']}')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController(user)),
+          profileRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Following'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Arthur'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/profile/77');
+    expect(find.text('Profile 77'), findsOneWidget);
+  });
+
   testWidgets('signed-in profile opens hokx points rules from level badge', (
     tester,
   ) async {
