@@ -41,6 +41,8 @@ class _FakeProfileRepository extends ProfileRepository {
   Map<String, dynamic>? updatedSocialLinks;
   String? oldPassword;
   String? newPassword;
+  int? loadedFollowingUserId;
+  int? loadedFollowersUserId;
 
   @override
   Future<UserProfile> loadProfile({int? userId}) async {
@@ -88,6 +90,50 @@ class _FakeProfileRepository extends ProfileRepository {
   }) async {
     this.oldPassword = oldPassword;
     this.newPassword = newPassword;
+  }
+
+  @override
+  Future<ProfileFollowList> loadFollowing({int? userId, int page = 1}) async {
+    loadedFollowingUserId = userId;
+    return const ProfileFollowList(
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+      users: [
+        ProfileFollowUser(
+          id: 77,
+          username: 'arthur',
+          displayName: 'Arthur',
+          avatar: '',
+          bio: 'Clash lane',
+          isFollowing: true,
+          isSelf: false,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<ProfileFollowList> loadFollowers({int? userId, int page = 1}) async {
+    loadedFollowersUserId = userId;
+    return const ProfileFollowList(
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+      users: [
+        ProfileFollowUser(
+          id: 88,
+          username: 'angela',
+          displayName: 'Angela',
+          avatar: '',
+          bio: 'Mid lane',
+          isFollowing: false,
+          isSelf: false,
+        ),
+      ],
+    );
   }
 }
 
@@ -301,6 +347,45 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Community my'), findsOneWidget);
+  });
+
+  testWidgets('signed-in profile opens following and followers from stats', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final repository = _FakeProfileRepository(_profile);
+
+    await tester.pumpWidget(_buildMeScreenWithRepository(user, repository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Following'));
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedFollowingUserId, 42);
+    expect(find.text('Following users'), findsOneWidget);
+    expect(find.text('Arthur'), findsOneWidget);
+    expect(find.text('Clash lane'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Followers'));
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedFollowersUserId, 42);
+    expect(find.text('Followers'), findsWidgets);
+    expect(find.text('Angela'), findsOneWidget);
+    expect(find.text('Mid lane'), findsOneWidget);
   });
 
   testWidgets('signed-in profile opens hokx points rules from level badge', (
