@@ -84,6 +84,26 @@ class _FakeApiClient extends ApiClient {
           ],
         },
       },
+      '/esports/stats/list' => const {
+        'success': true,
+        'result': {
+          'total': 1,
+          'data': [
+            {
+              'id': 'stat-1',
+              'league_name': 'KPL Spring',
+              'hero': {
+                'hero_name': 'Luban No.7',
+                'hero_icon': 'https://example.test/luban.png',
+              },
+              'player': {'player_name': 'Fly', 'position': 'Clash Lane'},
+              'team': {'name': 'Wolves'},
+              'stats': {'rank': 1, 'winRate': 0.662, 'kda': 5.4},
+              'stats_keys': ['winRate', 'kda'],
+            },
+          ],
+        },
+      },
       _ => throw StateError('Unexpected path $path'),
     };
   }
@@ -149,5 +169,27 @@ void main() {
     expect(players.single.gradeText, '91.5');
     expect(players.single.kdaText, '6.8');
     expect(players.single.winRateText, '76.0%');
+  });
+
+  test('loads esports stats sorted by win rate', () async {
+    final apiClient = _FakeApiClient();
+    final repository = EsportsRepository(apiClient: apiClient);
+
+    final stats = await repository.loadStats();
+
+    expect(apiClient.postBodies['/esports/stats/list'], {
+      'page': 1,
+      'pageSize': 40,
+      'sort': 'winRate',
+      'order': 'desc',
+      'rank_type': 1,
+    });
+    expect(stats, hasLength(1));
+    expect(stats.single.objectName, 'Luban No.7');
+    expect(stats.single.subtitle, 'Wolves · Fly');
+    expect(stats.single.leagueName, 'KPL Spring');
+    expect(stats.single.rank, 1);
+    expect(stats.single.metrics.first.label, 'Win Rate');
+    expect(stats.single.metrics.first.value, '66.2%');
   });
 }

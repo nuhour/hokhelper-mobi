@@ -4,6 +4,7 @@ import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_stat_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
 
@@ -88,6 +89,29 @@ void main() {
     expect(find.text('Fly'), findsOneWidget);
     expect(find.text('KPL Spring'), findsNothing);
   });
+
+  testWidgets('esports stats route opens the stats tab', (tester) async {
+    final router = createAppRouter();
+    router.go('/esports/stats');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('Esports Stats'), findsOneWidget);
+    expect(find.text('Hero rankings and player performance'), findsOneWidget);
+    expect(find.text('Luban No.7'), findsOneWidget);
+    expect(find.text('Wolves · Fly'), findsOneWidget);
+    expect(find.text('Win Rate'), findsOneWidget);
+    expect(find.text('66.2%'), findsOneWidget);
+    expect(find.text('KPL Spring'), findsOneWidget);
+    expect(find.text('4 - 3'), findsNothing);
+  });
 }
 
 List<Override> _esportsOverrides() {
@@ -136,6 +160,22 @@ List<Override> _esportsOverrides() {
           grade: 91.5,
           kda: 6.8,
           winRate: 0.76,
+        ),
+      ];
+    }),
+    esportsStatsProvider.overrideWith((ref) async {
+      return const [
+        EsportsStatSummary(
+          id: 'stat-1',
+          rank: 1,
+          objectName: 'Luban No.7',
+          subtitle: 'Wolves · Fly',
+          imageUrl: '',
+          leagueName: 'KPL Spring',
+          metrics: [
+            EsportsStatMetric(label: 'Win Rate', value: '66.2%'),
+            EsportsStatMetric(label: 'KDA', value: '5.4'),
+          ],
         ),
       ];
     }),

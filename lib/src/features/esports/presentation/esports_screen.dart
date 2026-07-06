@@ -10,6 +10,7 @@ import '../../../core/widgets/app_section_header.dart';
 import '../data/esports_repository.dart';
 import '../domain/esports_match_summary.dart';
 import '../domain/esports_player_summary.dart';
+import '../domain/esports_stat_summary.dart';
 import '../domain/esports_team_summary.dart';
 
 final esportsRepositoryProvider = Provider<EsportsRepository>((ref) {
@@ -30,15 +31,21 @@ final esportsPlayersProvider = FutureProvider<List<EsportsPlayerSummary>>((
   return ref.watch(esportsRepositoryProvider).loadPlayers();
 });
 
+final esportsStatsProvider = FutureProvider<List<EsportsStatSummary>>((ref) {
+  return ref.watch(esportsRepositoryProvider).loadStats();
+});
+
 enum EsportsInitialTab {
   matches,
+  stats,
   teams,
   players;
 
   int get tabIndex => switch (this) {
     EsportsInitialTab.matches => 0,
-    EsportsInitialTab.teams => 1,
-    EsportsInitialTab.players => 2,
+    EsportsInitialTab.stats => 1,
+    EsportsInitialTab.teams => 2,
+    EsportsInitialTab.players => 3,
   };
 }
 
@@ -46,7 +53,7 @@ EsportsInitialTab esportsInitialTabFromRoute(String? value) {
   return switch ((value ?? '').trim().toLowerCase()) {
     'teams' => EsportsInitialTab.teams,
     'players' => EsportsInitialTab.players,
-    'stats' => EsportsInitialTab.teams,
+    'stats' => EsportsInitialTab.stats,
     'schedule' => EsportsInitialTab.matches,
     'matches' => EsportsInitialTab.matches,
     _ => EsportsInitialTab.matches,
@@ -68,7 +75,7 @@ class EsportsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       initialIndex: initialTab.tabIndex,
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -96,12 +103,14 @@ class EsportsScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const TabBar(
+                          isScrollable: true,
                           indicatorSize: TabBarIndicatorSize.tab,
                           dividerColor: Colors.transparent,
                           labelColor: AppTheme.gold,
                           unselectedLabelColor: AppTheme.muted,
                           tabs: [
                             Tab(text: 'Matches'),
+                            Tab(text: 'Stats'),
                             Tab(text: 'Teams'),
                             Tab(text: 'Players'),
                           ],
@@ -116,6 +125,7 @@ class EsportsScreen extends ConsumerWidget {
           body: TabBarView(
             children: [
               _MatchesTab(value: ref.watch(esportsMatchesProvider)),
+              _StatsTab(value: ref.watch(esportsStatsProvider)),
               _TeamsTab(
                 value: ref.watch(esportsTeamsProvider),
                 focusedTeamId: initialTeamId,
@@ -157,6 +167,50 @@ class _MatchesTab extends ConsumerWidget {
             itemBuilder: (context, index) => _MatchCard(match: matches[index]),
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemCount: matches.length,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StatsTab extends ConsumerWidget {
+  const _StatsTab({required this.value});
+
+  final AsyncValue<List<EsportsStatSummary>> value;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppAsyncView<List<EsportsStatSummary>>(
+      value: value,
+      retry: () => ref.invalidate(esportsStatsProvider),
+      data: (stats) {
+        if (stats.isEmpty) {
+          return const AppEmptyState(
+            icon: Icons.leaderboard_outlined,
+            title: 'No stats data',
+            message: 'Pull to refresh and try again.',
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(esportsStatsProvider.future),
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _StatsIntroCard(),
+                    const SizedBox(height: 12),
+                    _StatCard(stat: stats[index]),
+                  ],
+                );
+              }
+              return _StatCard(stat: stats[index]);
+            },
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemCount: stats.length,
           ),
         );
       },
@@ -324,6 +378,178 @@ class _MatchCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _StatsIntroCard extends StatelessWidget {
+  const _StatsIntroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      accentColor: AppTheme.gold,
+      child: Row(
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppTheme.gold.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(10),
+              child: Icon(
+                Icons.leaderboard_outlined,
+                color: AppTheme.gold,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Esports Stats',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Hero rankings and player performance',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.stat});
+
+  final EsportsStatSummary stat;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '#${stat.rank}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.gold,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 10),
+              AppImage(
+                url: stat.imageUrl,
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                semanticLabel: stat.objectName,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stat.objectName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (stat.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        stat.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (stat.leagueName.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _Pill(label: stat.leagueName),
+              ],
+            ],
+          ),
+          if (stat.metrics.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: stat.metrics
+                  .map((metric) => _StatMetricChip(metric: metric))
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatMetricChip extends StatelessWidget {
+  const _StatMetricChip({required this.metric});
+
+  final EsportsStatMetric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              metric.label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              metric.value,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
