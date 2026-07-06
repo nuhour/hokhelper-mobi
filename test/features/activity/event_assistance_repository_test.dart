@@ -96,4 +96,14 @@ void main() {
     expect(record.content, 'Join my activity code ABCD.');
     expect(record.reportedLabel, 'Active');
   });
+
+  test('reports assistance record with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = EventAssistanceRepository(apiClient: apiClient);
+
+    await repository.reportRecord('77');
+
+    expect(apiClient.postPath, '/activity/records/77/report');
+    expect(apiClient.postBody, isEmpty);
+  });
 }

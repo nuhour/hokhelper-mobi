@@ -28,6 +28,10 @@ class EventAssistanceRepository {
     return EventAssistanceRecord.fromJson(result);
   }
 
+  Future<void> reportRecord(String recordId) async {
+    await apiClient.postJson('/activity/records/$recordId/report', body: {});
+  }
+
   List<Object?> _readRows(Map<String, dynamic> json) {
     final result = json['result'];
     final rows = result is Map

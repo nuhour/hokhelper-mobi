@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
@@ -20,6 +21,7 @@ class _FakeRepository extends EventAssistanceRepository {
 
   String? submittedText;
   int? submittedRegionId;
+  String? reportedRecordId;
 
   @override
   Future<EventAssistanceRecord> submitText({
@@ -40,9 +42,21 @@ class _FakeRepository extends EventAssistanceRepository {
       updatedAt: '2026-07-04T09:00:00Z',
     );
   }
+
+  @override
+  Future<void> reportRecord(String recordId) async {
+    reportedRecordId = recordId;
+  }
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+
   testWidgets('renders event assistance records and submits text', (
     tester,
   ) async {
@@ -91,5 +105,57 @@ void main() {
 
     expect(repository.submittedText, 'Join my activity code ABCD.');
     expect(repository.submittedRegionId, 1);
+  });
+
+  testWidgets('copies and reports event assistance records', (tester) async {
+    final repository = _FakeRepository();
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRepositoryProvider.overrideWithValue(repository),
+          eventAssistanceRecordsProvider.overrideWith((ref) async {
+            return const [
+              EventAssistanceRecord(
+                id: '77',
+                regionId: 1,
+                content: 'Need one player for Friday event team.',
+                eventTime: '2026-07-03T12:00:00Z',
+                isReported: false,
+                rawText: 'Need one player for Friday event team.',
+                sharedBy: 'captain',
+                createdAt: '2026-07-03T12:00:00Z',
+                updatedAt: '2026-07-03T12:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Copy'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall?.arguments, {
+      'text': 'Need one player for Friday event team.',
+    });
+    expect(find.text('Copied to clipboard'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Report'));
+    await tester.pumpAndSettle();
+
+    expect(repository.reportedRecordId, '77');
+    expect(find.text('Reported'), findsOneWidget);
+    expect(find.text('Record reported'), findsOneWidget);
   });
 }

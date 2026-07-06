@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -198,13 +199,32 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
   }
 }
 
-class _RecordCard extends StatelessWidget {
+class _RecordCard extends ConsumerStatefulWidget {
   const _RecordCard({required this.record});
 
   final EventAssistanceRecord record;
 
   @override
+  ConsumerState<_RecordCard> createState() => _RecordCardState();
+}
+
+class _RecordCardState extends ConsumerState<_RecordCard> {
+  var _reporting = false;
+  late var _isReported = widget.record.isReported;
+
+  @override
+  void didUpdateWidget(covariant _RecordCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.record.id != widget.record.id ||
+        oldWidget.record.isReported != widget.record.isReported) {
+      _isReported = widget.record.isReported;
+      _reporting = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final record = widget.record;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
@@ -235,7 +255,7 @@ class _RecordCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _Pill(label: record.reportedLabel),
+                _Pill(label: _isReported ? 'Reported' : 'Active'),
               ],
             ),
             const SizedBox(height: 12),
@@ -258,10 +278,72 @@ class _RecordCard extends StatelessWidget {
                 ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
               ),
             ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _copyRecord(context, record.content),
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: const Text('Copy'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton.outlined(
+                  tooltip: 'Report',
+                  onPressed: _reporting || _isReported
+                      ? null
+                      : () => _reportRecord(context, record.id),
+                  icon: _reporting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.flag_outlined),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _copyRecord(BuildContext context, String content) async {
+    await Clipboard.setData(ClipboardData(text: content));
+    if (!context.mounted) {
+      return;
+    }
+    _showRecordSnackBar(context, 'Copied to clipboard');
+  }
+
+  Future<void> _reportRecord(BuildContext context, String recordId) async {
+    setState(() => _reporting = true);
+    try {
+      await ref.read(eventAssistanceRepositoryProvider).reportRecord(recordId);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _isReported = true;
+        _reporting = false;
+      });
+      _showRecordSnackBar(context, 'Record reported');
+      ref.invalidate(eventAssistanceRecordsProvider);
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _reporting = false);
+      _showRecordSnackBar(context, 'Failed to report record');
+    }
+  }
+
+  void _showRecordSnackBar(BuildContext context, String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
