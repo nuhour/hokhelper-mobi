@@ -91,6 +91,22 @@ String _targetWithQuery(String path, Uri uri) {
   return query.isEmpty ? path : '$path?$query';
 }
 
+double? _initialMinRating(Uri uri) {
+  final rating = double.tryParse(uri.queryParameters['min_rating'] ?? '');
+  if (rating == null || rating <= 0) {
+    return null;
+  }
+  return rating;
+}
+
+int? _initialLanePosition(Uri uri) {
+  return int.tryParse(
+    uri.queryParameters['position'] ??
+        uri.queryParameters['hero_position'] ??
+        '',
+  );
+}
+
 String _localizedTargetWithQuery(Uri uri, List<String> segments) {
   final path = segments.isEmpty ? '/' : '/${segments.join('/')}';
   return _targetWithQuery(path, uri);
@@ -328,6 +344,8 @@ GoRouter createAppRouter() {
           return null;
         },
         builder: (context, state) => SkinGalleryScreen(
+          initialMinRating: _initialMinRating(state.uri),
+          initialLanePosition: _initialLanePosition(state.uri),
           initialSearchQuery: state.uri.queryParameters['q'],
         ),
         routes: [
@@ -338,6 +356,8 @@ GoRouter createAppRouter() {
                 initialSkinId: int.tryParse(
                   state.pathParameters['skinId'] ?? '',
                 ),
+                initialMinRating: _initialMinRating(state.uri),
+                initialLanePosition: _initialLanePosition(state.uri),
                 initialSearchQuery: state.uri.queryParameters['q'],
               );
             },
@@ -589,6 +609,8 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'skins',
                     builder: (context, state) => SkinGalleryScreen(
+                      initialMinRating: _initialMinRating(state.uri),
+                      initialLanePosition: _initialLanePosition(state.uri),
                       initialSearchQuery: state.uri.queryParameters['q'],
                     ),
                   ),

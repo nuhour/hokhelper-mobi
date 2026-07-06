@@ -37,11 +37,15 @@ final skinDetailProvider = FutureProvider.family<SkinDetail, int>((
 class SkinGalleryScreen extends ConsumerStatefulWidget {
   const SkinGalleryScreen({
     this.initialSkinId,
+    this.initialMinRating,
+    this.initialLanePosition,
     this.initialSearchQuery,
     super.key,
   });
 
   final int? initialSkinId;
+  final double? initialMinRating;
+  final int? initialLanePosition;
   final String? initialSearchQuery;
 
   @override
@@ -70,6 +74,11 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       _query = initialQuery;
       _searchController.text = initialQuery;
     }
+    final initialMinRating = widget.initialMinRating;
+    if (initialMinRating != null && initialMinRating > 0) {
+      _minRating = initialMinRating.clamp(0, 5).toDouble();
+    }
+    _lanePosition = widget.initialLanePosition;
   }
 
   @override
@@ -183,6 +192,14 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
               lanePosition: _lanePosition,
               onChanged: (value) => setState(() => _lanePosition = value),
             ),
+            if ((widget.initialMinRating ?? 0) > 0 ||
+                widget.initialLanePosition != null) ...[
+              const SizedBox(height: 12),
+              _FocusedSkinFilterBanner(
+                minRating: _minRating,
+                lanePosition: _lanePosition,
+              ),
+            ],
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
               value: galleryValue,
@@ -414,6 +431,72 @@ class _LaneFilterOption {
 
   final String label;
   final int? value;
+}
+
+class _FocusedSkinFilterBanner extends StatelessWidget {
+  const _FocusedSkinFilterBanner({
+    required this.minRating,
+    required this.lanePosition,
+  });
+
+  final double minRating;
+  final int? lanePosition;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = <String>[
+      if (minRating > 0) '${minRating.toStringAsFixed(1)}+ rating',
+      if (lanePosition != null) _lanePositionLabel(lanePosition),
+    ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.filter_alt_outlined, color: AppTheme.gold),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Focused skin filters',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            if (labels.isNotEmpty)
+              Flexible(
+                child: Text(
+                  labels.join(' · '),
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppTheme.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _lanePositionLabel(int? value) {
+  return switch (value) {
+    0 => 'Clash',
+    1 => 'Mid',
+    2 => 'Farm',
+    3 => 'Jungle',
+    4 => 'Support',
+    _ => 'All lanes',
+  };
 }
 
 class _RatingFilterBar extends StatelessWidget {
