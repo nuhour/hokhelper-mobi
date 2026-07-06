@@ -65,6 +65,13 @@ class ContentRepository {
     return rows.map(CgCommentSummary.fromJson).toList(growable: false);
   }
 
+  Future<void> createCgComment(int cgId, String content) async {
+    await apiClient.postJson(
+      '/cg/$cgId/comments',
+      body: {'content': content.trim()},
+    );
+  }
+
   Future<List<PatchNoteSummary>> loadPatchNotes(int regionId) async {
     final json = await apiClient.getJson(
       '/community/posts',

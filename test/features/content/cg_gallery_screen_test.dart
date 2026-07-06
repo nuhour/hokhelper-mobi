@@ -1,14 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/cg_detail.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/cg_gallery_screen.dart';
+import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
+
+class _FakeContentRepository extends ContentRepository {
+  _FakeContentRepository()
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  int? submittedCgId;
+  String? submittedComment;
+
+  @override
+  Future<List<ContentItemSummary>> loadCgs(
+    int regionId, {
+    int pageSize = 20,
+  }) async {
+    return const [
+      ContentItemSummary(
+        id: 501,
+        kind: ContentKind.cg,
+        title: 'Lam Cinematic',
+        heroName: 'Lam',
+        imageUrl: 'https://example.test/lam-cover.jpg',
+        subtitle: 'Playable video',
+        rating: 4.8,
+        ratingCount: 17,
+        viewCount: 2300,
+      ),
+    ];
+  }
+
+  @override
+  Future<CgDetail> loadCgDetail(int cgId) async {
+    return const CgDetail(
+      id: 501,
+      title: 'Lam Cinematic',
+      heroName: 'Lam',
+      coverUrl: 'https://example.test/lam-cover.jpg',
+      playUrl: 'https://example.test/lam.mp4',
+      viewCount: 2300,
+      rating: 4.8,
+      ratingCount: 17,
+    );
+  }
+
+  @override
+  Future<List<CgCommentSummary>> loadCgComments(int cgId) async {
+    return const [
+      CgCommentSummary(
+        id: 9,
+        authorName: 'coach',
+        authorAvatarUrl: '',
+        content: 'Great cinematic.',
+        createdAt: '2026-07-03T08:30:00Z',
+      ),
+    ];
+  }
+
+  @override
+  Future<void> createCgComment(int cgId, String content) async {
+    submittedCgId = cgId;
+    submittedComment = content;
+  }
+}
 
 void main() {
   testWidgets('renders cg gallery, filters, and opens cg detail', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -127,5 +204,48 @@ void main() {
     expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
     expect(find.text('Lam Cinematic'), findsOneWidget);
     expect(find.text('Angela Trailer'), findsNothing);
+  });
+
+  testWidgets('posts comments from the cg detail sheet', (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _FakeContentRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          cgGalleryProvider.overrideWith(
+            (ref) =>
+                ref.watch(contentRepositoryProvider).loadCgs(2, pageSize: 60),
+          ),
+          cgDetailProvider(501).overrideWith(
+            (ref) => ref.watch(contentRepositoryProvider).loadCgDetail(501),
+          ),
+          cgCommentsProvider(501).overrideWith(
+            (ref) => ref.watch(contentRepositoryProvider).loadCgComments(501),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Lam Cinematic'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.bySemanticsLabel('Write a comment'),
+      'Fresh take.',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Post comment'));
+    await tester.pumpAndSettle();
+
+    expect(repository.submittedCgId, 501);
+    expect(repository.submittedComment, 'Fresh take.');
+    expect(find.text('Comment posted'), findsOneWidget);
   });
 }

@@ -13,13 +13,22 @@ class _FakeApiClient extends ApiClient {
       );
 
   final postCalls = <String>[];
+  final postBodies = <Object?>[];
   final getCalls = <String>[];
   Object? lastBody;
 
   @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postCalls.add(path);
+    postBodies.add(body);
     lastBody = body;
+    if (path.endsWith('/comments')) {
+      return const {
+        'success': true,
+        'data': {'id': 12},
+      };
+    }
+
     return const {
       'success': true,
       'result': {
@@ -104,5 +113,15 @@ void main() {
     expect(detail.rating, 4.8);
     expect(comments.single.authorName, 'coach');
     expect(comments.single.content, 'Great cinematic.');
+  });
+
+  test('creates cg comments with web-compatible payload', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    await repository.createCgComment(501, 'Nice trailer.');
+
+    expect(apiClient.postCalls, ['/cg/501/comments']);
+    expect(apiClient.postBodies.single, {'content': 'Nice trailer.'});
   });
 }

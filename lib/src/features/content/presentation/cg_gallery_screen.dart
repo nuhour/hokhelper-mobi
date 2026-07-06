@@ -302,15 +302,29 @@ class _CgCard extends StatelessWidget {
   }
 }
 
-class _CgDetailSheet extends ConsumerWidget {
+class _CgDetailSheet extends ConsumerStatefulWidget {
   const _CgDetailSheet({required this.cgId});
 
   final int cgId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailValue = ref.watch(cgDetailProvider(cgId));
-    final commentsValue = ref.watch(cgCommentsProvider(cgId));
+  ConsumerState<_CgDetailSheet> createState() => _CgDetailSheetState();
+}
+
+class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
+  final _commentController = TextEditingController();
+  var _isPosting = false;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detailValue = ref.watch(cgDetailProvider(widget.cgId));
+    final commentsValue = ref.watch(cgCommentsProvider(widget.cgId));
 
     return DraggableScrollableSheet(
       expand: false,
@@ -337,7 +351,7 @@ class _CgDetailSheet extends ConsumerWidget {
             const SizedBox(height: 14),
             AppAsyncView<CgDetail>(
               value: detailValue,
-              retry: () => ref.invalidate(cgDetailProvider(cgId)),
+              retry: () => ref.invalidate(cgDetailProvider(widget.cgId)),
               data: (detail) => _CgDetailContent(detail: detail),
             ),
             const SizedBox(height: 22),
@@ -349,9 +363,15 @@ class _CgDetailSheet extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 10),
+            _CgCommentComposer(
+              controller: _commentController,
+              isPosting: _isPosting,
+              onSubmit: _postComment,
+            ),
+            const SizedBox(height: 14),
             AppAsyncView<List<CgCommentSummary>>(
               value: commentsValue,
-              retry: () => ref.invalidate(cgCommentsProvider(cgId)),
+              retry: () => ref.invalidate(cgCommentsProvider(widget.cgId)),
               data: (comments) {
                 if (comments.isEmpty) {
                   return const AppEmptyState(
@@ -374,6 +394,90 @@ class _CgDetailSheet extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+
+  Future<void> _postComment() async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty || _isPosting) {
+      return;
+    }
+
+    setState(() => _isPosting = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await ref
+          .read(contentRepositoryProvider)
+          .createCgComment(widget.cgId, content);
+      _commentController.clear();
+      ref.invalidate(cgCommentsProvider(widget.cgId));
+      messenger.showSnackBar(const SnackBar(content: Text('Comment posted')));
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to post comment: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isPosting = false);
+      }
+    }
+  }
+}
+
+class _CgCommentComposer extends StatelessWidget {
+  const _CgCommentComposer({
+    required this.controller,
+    required this.isPosting,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final bool isPosting;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              minLines: 2,
+              maxLines: 4,
+              enabled: !isPosting,
+              textInputAction: TextInputAction.newline,
+              decoration: const InputDecoration(
+                labelText: 'Write a comment',
+                hintText: 'Share your thoughts on this CG...',
+              ),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: isPosting ? null : onSubmit,
+                icon: isPosting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                label: const Text('Post comment'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
