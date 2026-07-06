@@ -630,6 +630,9 @@ GoRouter createAppRouter() {
                         builder: (context, state) {
                           return BpSchemeDetailScreen(
                             schemeId: state.pathParameters['schemeId'] ?? '',
+                            initialGameIndex: int.tryParse(
+                              state.uri.queryParameters['gameIndex'] ?? '',
+                            ),
                           );
                         },
                       ),

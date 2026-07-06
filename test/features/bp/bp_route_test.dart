@@ -10,7 +10,7 @@ void main() {
     tester,
   ) async {
     final router = createAppRouter();
-    router.go('/tools/bp-simulator/12');
+    router.go('/tools/bp-simulator/12?gameIndex=1');
 
     await tester.pumpWidget(
       ProviderScope(
@@ -44,6 +44,7 @@ void main() {
     expect(find.text('Wolves vs AG'), findsOneWidget);
     expect(find.text('BO7'), findsOneWidget);
     expect(find.text('Game 3 · Step 4'), findsOneWidget);
+    expect(find.text('Focused game: Game 2'), findsOneWidget);
     expect(find.text('2 bans · 2 picks'), findsOneWidget);
   });
 }

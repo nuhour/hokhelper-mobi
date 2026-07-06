@@ -15,9 +15,14 @@ final bpSchemeDetailProvider = FutureProvider.family<BpSchemeSummary, String>((
 });
 
 class BpSchemeDetailScreen extends ConsumerWidget {
-  const BpSchemeDetailScreen({required this.schemeId, super.key});
+  const BpSchemeDetailScreen({
+    required this.schemeId,
+    this.initialGameIndex,
+    super.key,
+  });
 
   final String schemeId;
+  final int? initialGameIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,7 +51,10 @@ class BpSchemeDetailScreen extends ConsumerWidget {
             AppAsyncView<BpSchemeSummary>(
               value: value,
               retry: () => ref.invalidate(bpSchemeDetailProvider(schemeId)),
-              data: (scheme) => _BpSchemeDetailCard(scheme: scheme),
+              data: (scheme) => _BpSchemeDetailCard(
+                scheme: scheme,
+                initialGameIndex: initialGameIndex,
+              ),
             ),
           ],
         ),
@@ -56,9 +64,10 @@ class BpSchemeDetailScreen extends ConsumerWidget {
 }
 
 class _BpSchemeDetailCard extends StatelessWidget {
-  const _BpSchemeDetailCard({required this.scheme});
+  const _BpSchemeDetailCard({required this.scheme, this.initialGameIndex});
 
   final BpSchemeSummary scheme;
+  final int? initialGameIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +116,11 @@ class _BpSchemeDetailCard extends StatelessWidget {
                 _MetricBadge(label: scheme.progressText),
                 _MetricBadge(label: scheme.historyCountText),
                 _MetricBadge(label: scheme.phaseSummaryText),
+                if (initialGameIndex != null && initialGameIndex! >= 0)
+                  _MetricBadge(
+                    label: 'Focused game: Game ${initialGameIndex! + 1}',
+                    isPrimary: true,
+                  ),
               ],
             ),
             const SizedBox(height: 18),
