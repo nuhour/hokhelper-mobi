@@ -159,6 +159,30 @@ void main() {
             entry: null,
             equipId: null,
           ),
+          '/en/hero-gallery?hero_id=101': (
+            path: '/heroes/101',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/zh/tools/build-sim?hero_id=101&scheme=22': (
+            path: '/tools/build-sim',
+            tab: null,
+            entry: null,
+            equipId: null,
+          ),
+          '/id/community/leaks': (
+            path: '/content/community',
+            tab: 'leaks',
+            entry: null,
+            equipId: null,
+          ),
+          '/en/prompts?tab=favorites': (
+            path: '/tools/prompts',
+            tab: 'favorites',
+            entry: null,
+            equipId: null,
+          ),
         };
 
     for (final entry in aliases.entries) {

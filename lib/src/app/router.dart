@@ -91,6 +91,44 @@ String _targetWithQuery(String path, Uri uri) {
   return query.isEmpty ? path : '$path?$query';
 }
 
+String _localizedTargetWithQuery(Uri uri, List<String> segments) {
+  final path = segments.isEmpty ? '/' : '/${segments.join('/')}';
+  return _targetWithQuery(path, uri);
+}
+
+List<GoRoute> _localizedPathRedirects() {
+  return [
+    for (final locale in const ['en', 'zh', 'id']) ...[
+      GoRoute(
+        path: '/$locale',
+        redirect: (context, state) =>
+            _localizedTargetWithQuery(state.uri, const []),
+      ),
+      GoRoute(
+        path: '/$locale/:s1',
+        redirect: (context, state) => _localizedTargetWithQuery(state.uri, [
+          state.pathParameters['s1'] ?? '',
+        ]),
+      ),
+      GoRoute(
+        path: '/$locale/:s1/:s2',
+        redirect: (context, state) => _localizedTargetWithQuery(state.uri, [
+          state.pathParameters['s1'] ?? '',
+          state.pathParameters['s2'] ?? '',
+        ]),
+      ),
+      GoRoute(
+        path: '/$locale/:s1/:s2/:s3',
+        redirect: (context, state) => _localizedTargetWithQuery(state.uri, [
+          state.pathParameters['s1'] ?? '',
+          state.pathParameters['s2'] ?? '',
+          state.pathParameters['s3'] ?? '',
+        ]),
+      ),
+    ],
+  ];
+}
+
 PlayerLeaderboardRankType? _playerLeaderboardRankType(Uri uri) {
   final rankType = uri.queryParameters['rank_type']?.trim().toLowerCase();
   return switch (rankType) {
@@ -111,6 +149,7 @@ GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: '/',
     routes: [
+      ..._localizedPathRedirects(),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/register',
