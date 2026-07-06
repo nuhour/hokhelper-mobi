@@ -57,9 +57,15 @@ class CgCommentsQuery {
 }
 
 class CgGalleryScreen extends ConsumerStatefulWidget {
-  const CgGalleryScreen({this.initialCgId, this.initialSearchQuery, super.key});
+  const CgGalleryScreen({
+    this.initialCgId,
+    this.initialHeroId,
+    this.initialSearchQuery,
+    super.key,
+  });
 
   final int? initialCgId;
+  final int? initialHeroId;
   final String? initialSearchQuery;
 
   @override
@@ -169,6 +175,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
               onSelectionChanged: (value) =>
                   setState(() => _sort = value.first),
             ),
+            if (widget.initialHeroId != null) ...[
+              const SizedBox(height: 12),
+              _FocusedHeroBanner(heroId: widget.initialHeroId!),
+            ],
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
               value: galleryValue,
@@ -229,8 +239,12 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
 
   List<ContentItemSummary> _filterAndSort(List<ContentItemSummary> items) {
     final normalizedQuery = _query.trim().toLowerCase();
+    final initialHeroId = widget.initialHeroId;
     final filtered = items
         .where((cg) {
+          if (initialHeroId != null && cg.heroId != initialHeroId) {
+            return false;
+          }
           if (normalizedQuery.isEmpty) {
             return true;
           }
@@ -301,6 +315,48 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
         SnackBar(content: Text('Failed to load more CGs: $error')),
       );
     }
+  }
+}
+
+class _FocusedHeroBanner extends StatelessWidget {
+  const _FocusedHeroBanner({required this.heroId});
+
+  final int heroId;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.person_search_outlined, color: AppTheme.gold),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Focused hero CGs',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Text(
+              '#$heroId',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

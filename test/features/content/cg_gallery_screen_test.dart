@@ -280,6 +280,51 @@ void main() {
     expect(find.text('Angela Trailer'), findsNothing);
   });
 
+  testWidgets('filters cgs from initial hero id query', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cgGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 501,
+                kind: ContentKind.cg,
+                title: 'Lam Cinematic',
+                heroName: 'Lam',
+                heroId: 199,
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 4.8,
+                ratingCount: 17,
+                viewCount: 2300,
+              ),
+              ContentItemSummary(
+                id: 502,
+                kind: ContentKind.cg,
+                title: 'Angela Trailer',
+                heroName: 'Angela',
+                heroId: 111,
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 3.9,
+                ratingCount: 6,
+                viewCount: 900,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CgGalleryScreen(initialHeroId: 199)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Focused hero CGs'), findsOneWidget);
+    expect(find.text('Lam Cinematic'), findsOneWidget);
+    expect(find.text('Angela Trailer'), findsNothing);
+  });
+
   testWidgets('loads more cgs after the first gallery page', (tester) async {
     final repository = _PagedCgRepository();
 

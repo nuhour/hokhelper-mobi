@@ -55,4 +55,57 @@ void main() {
     expect(find.text('Lam Cinematic'), findsOneWidget);
     expect(find.text('Angela Trailer'), findsNothing);
   });
+
+  testWidgets('web cg gallery route preserves hero filter query', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/cg?hero_id=199');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cgGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 501,
+                kind: ContentKind.cg,
+                title: 'Lam Cinematic',
+                heroName: 'Lam',
+                heroId: 199,
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 4.8,
+                ratingCount: 17,
+                viewCount: 2300,
+              ),
+              ContentItemSummary(
+                id: 502,
+                kind: ContentKind.cg,
+                title: 'Angela Trailer',
+                heroName: 'Angela',
+                heroId: 111,
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 3.9,
+                ratingCount: 6,
+                viewCount: 900,
+              ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/cg');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['hero_id'],
+      '199',
+    );
+    expect(find.text('Focused hero CGs'), findsOneWidget);
+    expect(find.text('Lam Cinematic'), findsOneWidget);
+    expect(find.text('Angela Trailer'), findsNothing);
+  });
 }

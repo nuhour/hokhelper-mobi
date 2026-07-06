@@ -346,14 +346,21 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/cg',
-        builder: (context, state) =>
-            CgGalleryScreen(initialSearchQuery: state.uri.queryParameters['q']),
+        builder: (context, state) => CgGalleryScreen(
+          initialHeroId: int.tryParse(
+            state.uri.queryParameters['hero_id'] ?? '',
+          ),
+          initialSearchQuery: state.uri.queryParameters['q'],
+        ),
         routes: [
           GoRoute(
             path: ':cgId',
             builder: (context, state) {
               return CgGalleryScreen(
                 initialCgId: int.tryParse(state.pathParameters['cgId'] ?? ''),
+                initialHeroId: int.tryParse(
+                  state.uri.queryParameters['hero_id'] ?? '',
+                ),
                 initialSearchQuery: state.uri.queryParameters['q'],
               );
             },

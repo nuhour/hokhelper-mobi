@@ -12,6 +12,7 @@ class ContentItemSummary {
     required this.ratingCount,
     required this.viewCount,
     this.landscapeImageUrl = '',
+    this.heroId,
     this.heroPosition,
   });
 
@@ -25,6 +26,7 @@ class ContentItemSummary {
   final int ratingCount;
   final int viewCount;
   final String landscapeImageUrl;
+  final int? heroId;
   final int? heroPosition;
 
   factory ContentItemSummary.skinFromJson(Object? json) {
@@ -47,6 +49,7 @@ class ContentItemSummary {
       rating: _readDouble(map['rating']),
       ratingCount: _readInt(map['rating_count'] ?? map['ratingCount']),
       viewCount: 0,
+      heroId: _readOptionalInt(map['hero_id'] ?? map['heroId']),
       heroPosition: _readOptionalInt(
         map['hero_position'] ?? map['heroPosition'] ?? map['position'],
       ),
@@ -71,6 +74,7 @@ class ContentItemSummary {
       rating: _readDouble(map['rating']),
       ratingCount: _readInt(map['rating_count']),
       viewCount: _readInt(map['view_count']),
+      heroId: _readOptionalInt(map['hero_id'] ?? map['heroId']),
       heroPosition: null,
     );
   }
