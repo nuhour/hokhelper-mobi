@@ -43,6 +43,7 @@ class _FakeApiClient extends ApiClient {
           {
             'id': 'c1',
             'content': 'Great route.',
+            'author_id': 77,
             'author_name': 'Lam',
             'author_avatar': '',
             'created_at': '2026-07-03T09:00:00Z',
@@ -80,6 +81,7 @@ void main() {
     expect(detail.post.likeCount, 18);
     expect(detail.isLiked, isTrue);
     expect(detail.comments, hasLength(2));
+    expect(detail.comments.first.authorId, 77);
     expect(detail.comments.first.authorName, 'Lam');
     expect(detail.comments.last.parentId, 'c1');
     expect(detail.comments.last.parentAuthorName, 'Lam');

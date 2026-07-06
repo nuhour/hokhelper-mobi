@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/community/data/community_repository.dart';
@@ -8,6 +9,8 @@ import 'package:hok_helper_mobile/src/features/community/domain/community_post_d
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_post_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
+import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
+import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
 
 class _FakeCommunityRepository extends CommunityRepository {
   _FakeCommunityRepository() : super(apiClient: _NoopApiClient());
@@ -51,6 +54,30 @@ class _NoopApiClient extends ApiClient {
           apiPrefix: '',
         ),
       );
+}
+
+GoRouter _buildDetailRouter() {
+  return GoRouter(
+    initialLocation: '/content/community/post/99',
+    routes: [
+      GoRoute(
+        path: '/content/community/post/:postId',
+        builder: (context, state) {
+          return CommunityPostDetailScreen(
+            postId: state.pathParameters['postId'] ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: '/profile/:userId',
+        builder: (context, state) {
+          return PublicProfileScreen(
+            userId: int.tryParse(state.pathParameters['userId'] ?? '') ?? 0,
+          );
+        },
+      ),
+    ],
+  );
 }
 
 void main() {
@@ -212,5 +239,82 @@ void main() {
     expect(find.text('Try invading red after mid.'), findsOneWidget);
     expect(find.text('3 comments'), findsOneWidget);
     expect(find.text('Comment posted'), findsOneWidget);
+  });
+
+  testWidgets('opens comment authors from the mobile detail screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 1,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [
+                CommunityCommentSummary(
+                  id: 'c1',
+                  content: 'Great route.',
+                  authorId: 77,
+                  authorName: 'Lam',
+                  authorAvatarUrl: '',
+                  createdAt: '2026-07-03T09:00:00Z',
+                  likeCount: 3,
+                  parentId: '',
+                  parentAuthorName: '',
+                ),
+              ],
+            );
+          }),
+          publicUserProfileProvider(77).overrideWith((ref) async {
+            return const UserProfile(
+              id: 77,
+              username: 'lam',
+              displayName: 'Lam',
+              email: 'lam@example.test',
+              avatar: '',
+              level: 7,
+              points: 1200,
+              xpTotal: 1400,
+              xpCurrentLevel: 260,
+              xpToNextLevel: 740,
+              levelProgress: 26,
+              levelCap: false,
+              bio: 'Comment strategist',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 3,
+                following: 4,
+                followers: 5,
+                likes: 6,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: _buildDetailRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Lam'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Public Profile'), findsOneWidget);
+    expect(find.text('Comment strategist'), findsOneWidget);
   });
 }

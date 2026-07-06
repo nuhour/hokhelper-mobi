@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -331,14 +332,9 @@ class _CommentCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    comment.authorName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  child: _CommentAuthorName(
+                    authorId: comment.authorId,
+                    authorName: comment.authorName,
                   ),
                 ),
                 if (comment.likeCount > 0)
@@ -363,6 +359,52 @@ class _CommentCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommentAuthorName extends StatelessWidget {
+  const _CommentAuthorName({
+    required this.authorId,
+    required this.authorName,
+  });
+
+  final int authorId;
+  final String authorName;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: AppTheme.text,
+      fontWeight: FontWeight.w800,
+    );
+
+    if (authorId <= 0) {
+      return Text(
+        authorName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textStyle,
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: () => context.go('/profile/$authorId'),
+        style: TextButton.styleFrom(
+          foregroundColor: AppTheme.text,
+          minimumSize: Size.zero,
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          textStyle: textStyle,
+        ),
+        child: Text(
+          authorName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

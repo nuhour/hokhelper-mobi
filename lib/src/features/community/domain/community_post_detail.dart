@@ -36,6 +36,7 @@ class CommunityCommentSummary {
   const CommunityCommentSummary({
     required this.id,
     required this.content,
+    this.authorId = 0,
     required this.authorName,
     required this.authorAvatarUrl,
     required this.createdAt,
@@ -46,6 +47,7 @@ class CommunityCommentSummary {
 
   final String id;
   final String content;
+  final int authorId;
   final String authorName;
   final String authorAvatarUrl;
   final String createdAt;
@@ -59,6 +61,7 @@ class CommunityCommentSummary {
     return CommunityCommentSummary(
       id: _readString(map['id']),
       content: _readString(map['content']),
+      authorId: _readInt(map['author_id'] ?? map['authorId']),
       authorName: _readString(map['author_name'], fallback: 'Player'),
       authorAvatarUrl: _readString(map['author_avatar']),
       createdAt: _readString(map['created_at']),
