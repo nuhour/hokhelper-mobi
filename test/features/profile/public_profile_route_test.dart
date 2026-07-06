@@ -1,9 +1,61 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
+import 'package:hok_helper_mobile/src/features/profile/data/profile_repository.dart';
 import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
+import 'package:hok_helper_mobile/src/features/profile/presentation/me_screen.dart';
 import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
+
+class _FakeProfileRepository extends ProfileRepository {
+  _FakeProfileRepository() : super(apiClient: _NoopApiClient());
+
+  int? followedUserId;
+  int? likedUserId;
+
+  @override
+  Future<ProfileFollowResult> followUser(int userId) async {
+    followedUserId = userId;
+    return ProfileFollowResult(isFollowing: true, targetUserId: userId);
+  }
+
+  @override
+  Future<ProfileLikeResult> toggleProfileLike(int userId) async {
+    likedUserId = userId;
+    return ProfileLikeResult(
+      isLiked: true,
+      likesCount: 7,
+      targetUserId: userId,
+    );
+  }
+}
+
+class _TestAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async {
+    return const AuthUser(
+      id: 7,
+      username: 'viewer',
+      email: 'viewer@example.test',
+      displayName: 'Viewer',
+    );
+  }
+}
 
 void main() {
   testWidgets('profile user id route renders public profile details', (
@@ -56,5 +108,74 @@ void main() {
     expect(find.text('Following'), findsOneWidget);
     expect(find.text('Edit profile'), findsNothing);
     expect(find.text('Logout'), findsNothing);
+  });
+
+  testWidgets('signed-in users can follow and like public profiles', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/profile/42');
+    final repository = _FakeProfileRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
+          profileRepositoryProvider.overrideWithValue(repository),
+          publicUserProfileProvider(42).overrideWith((ref) async {
+            return const UserProfile(
+              id: 42,
+              username: 'lam',
+              displayName: 'Lam',
+              email: 'lam@example.test',
+              avatar: '',
+              level: 7,
+              points: 1200,
+              xpTotal: 1400,
+              xpCurrentLevel: 260,
+              xpToNextLevel: 740,
+              levelProgress: 26,
+              levelCap: false,
+              bio: 'Jungle main',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 3,
+                following: 4,
+                followers: 5,
+                likes: 4,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final followButton = find.widgetWithText(OutlinedButton, 'Follow');
+    await tester.ensureVisible(followButton);
+    await tester.tap(followButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.followedUserId, 42);
+    expect(find.widgetWithText(OutlinedButton, 'Following'), findsOneWidget);
+    expect(find.text('6'), findsOneWidget);
+
+    final likeButton = find.widgetWithText(OutlinedButton, 'Like');
+    await tester.ensureVisible(likeButton);
+    await tester.tap(likeButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.likedUserId, 42);
+    expect(find.widgetWithText(OutlinedButton, 'Liked'), findsOneWidget);
+    expect(find.text('7'), findsOneWidget);
   });
 }

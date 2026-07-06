@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../domain/user_profile.dart';
 import 'me_screen.dart';
 
@@ -22,6 +23,7 @@ class PublicProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileValue = ref.watch(publicUserProfileProvider(userId));
+    final signedInUser = ref.watch(authControllerProvider).valueOrNull;
 
     return Material(
       color: AppTheme.bg,
@@ -39,7 +41,10 @@ class PublicProfileScreen extends ConsumerWidget {
             AppAsyncView<UserProfile>(
               value: profileValue,
               retry: () => ref.invalidate(publicUserProfileProvider(userId)),
-              data: (profile) => _PublicProfileCard(profile: profile),
+              data: (profile) => _PublicProfileCard(
+                profile: profile,
+                canInteract: signedInUser != null && !profile.isSelf,
+              ),
             ),
           ],
         ),
@@ -48,10 +53,46 @@ class PublicProfileScreen extends ConsumerWidget {
   }
 }
 
-class _PublicProfileCard extends StatelessWidget {
-  const _PublicProfileCard({required this.profile});
+class _PublicProfileCard extends ConsumerStatefulWidget {
+  const _PublicProfileCard({required this.profile, required this.canInteract});
 
   final UserProfile profile;
+  final bool canInteract;
+
+  @override
+  ConsumerState<_PublicProfileCard> createState() => _PublicProfileCardState();
+}
+
+class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
+  late bool _isFollowing;
+  late bool _isLiked;
+  late int _followers;
+  late int _likes;
+  bool _followUpdating = false;
+  bool _likeUpdating = false;
+
+  UserProfile get profile => widget.profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromProfile();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PublicProfileCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profile.id != widget.profile.id) {
+      _syncFromProfile();
+    }
+  }
+
+  void _syncFromProfile() {
+    _isFollowing = widget.profile.isFollowing;
+    _isLiked = widget.profile.isLiked;
+    _followers = widget.profile.stats.followers;
+    _likes = widget.profile.stats.likes;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +162,14 @@ class _PublicProfileCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            _StatsGrid(stats: profile.stats),
+            _StatsGrid(
+              stats: ProfileStats(
+                posts: profile.stats.posts,
+                following: profile.stats.following,
+                followers: _followers,
+                likes: _likes,
+              ),
+            ),
             if (profile.bio.isNotEmpty) ...[
               const SizedBox(height: 18),
               Text(
@@ -150,25 +198,109 @@ class _PublicProfileCard extends StatelessWidget {
               runSpacing: 10,
               children: [
                 _StatePill(
-                  icon: profile.isFollowing
+                  icon: _isFollowing
                       ? Icons.check_circle_outline
                       : Icons.person_add_alt_1_outlined,
-                  label: profile.isFollowing
-                      ? 'Already following'
-                      : 'Not following',
+                  label: _isFollowing ? 'Already following' : 'Not following',
                 ),
                 _StatePill(
-                  icon: profile.isLiked
+                  icon: _isLiked
                       ? Icons.favorite
                       : Icons.favorite_border_outlined,
-                  label: profile.isLiked ? 'Liked' : 'Not liked',
+                  label: _isLiked ? 'Liked' : 'Not liked',
                 ),
               ],
             ),
+            if (widget.canInteract) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _followUpdating ? null : _toggleFollow,
+                    icon: Icon(
+                      _isFollowing
+                          ? Icons.check_circle_outline
+                          : Icons.person_add_alt_1_outlined,
+                      size: 18,
+                    ),
+                    label: Text(_isFollowing ? 'Following' : 'Follow'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _likeUpdating ? null : _toggleLike,
+                    icon: Icon(
+                      _isLiked
+                          ? Icons.favorite
+                          : Icons.favorite_border_outlined,
+                      size: 18,
+                    ),
+                    label: Text(_isLiked ? 'Liked' : 'Like'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _toggleFollow() async {
+    if (_followUpdating || profile.id <= 0) {
+      return;
+    }
+    setState(() {
+      _followUpdating = true;
+    });
+    try {
+      final result = _isFollowing
+          ? await ref.read(profileRepositoryProvider).unfollowUser(profile.id)
+          : await ref.read(profileRepositoryProvider).followUser(profile.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        final wasFollowing = _isFollowing;
+        _isFollowing = result.isFollowing;
+        if (wasFollowing != _isFollowing) {
+          _followers = (_followers + (_isFollowing ? 1 : -1)).clamp(0, 1 << 31);
+        }
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _followUpdating = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    if (_likeUpdating || profile.id <= 0) {
+      return;
+    }
+    setState(() {
+      _likeUpdating = true;
+    });
+    try {
+      final result = await ref
+          .read(profileRepositoryProvider)
+          .toggleProfileLike(profile.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLiked = result.isLiked;
+        _likes = result.likesCount;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _likeUpdating = false;
+        });
+      }
+    }
   }
 }
 

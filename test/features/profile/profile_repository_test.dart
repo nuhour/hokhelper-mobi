@@ -147,5 +147,44 @@ void main() {
         'new_password': 'NewPass1!',
       });
     });
+
+    test('follows and unfollows users with hokx request fields', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {'is_following': true, 'target_user_id': 99},
+      });
+      final repository = ProfileRepository(apiClient: apiClient);
+
+      final followed = await repository.followUser(99);
+
+      expect(apiClient.postPath, '/user/follow');
+      expect(apiClient.postBody, {'target_user_id': 99});
+      expect(followed.isFollowing, isTrue);
+
+      apiClient.response['result'] = {
+        'is_following': false,
+        'target_user_id': 99,
+      };
+      final unfollowed = await repository.unfollowUser(99);
+
+      expect(apiClient.postPath, '/user/unfollow');
+      expect(apiClient.postBody, {'target_user_id': 99});
+      expect(unfollowed.isFollowing, isFalse);
+    });
+
+    test('toggles profile likes with hokx request fields', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {'is_liked': true, 'likes_count': 7, 'target_user_id': 99},
+      });
+      final repository = ProfileRepository(apiClient: apiClient);
+
+      final result = await repository.toggleProfileLike(99);
+
+      expect(apiClient.postPath, '/user/profile/like');
+      expect(apiClient.postBody, {'target_user_id': 99});
+      expect(result.isLiked, isTrue);
+      expect(result.likesCount, 7);
+    });
   });
 }
