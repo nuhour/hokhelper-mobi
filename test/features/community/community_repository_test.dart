@@ -89,6 +89,9 @@ class _FakeApiClient extends ApiClient {
         'comment_count': 0,
       };
     }
+    if (path.endsWith('/delete')) {
+      return const {'message': 'deleted'};
+    }
     if (path.endsWith('/comments')) {
       return const {
         'id': 'c3',
@@ -198,5 +201,15 @@ void main() {
     expect(post.title, 'Mobile macro notes');
     expect(post.preview, 'Rotate after clearing mid and protect river vision.');
     expect(post.tags, ['Guide', 'Macro']);
+  });
+
+  test('deletes community posts with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    await repository.deletePost('101');
+
+    expect(apiClient.postPath, '/community/posts/101/delete');
+    expect(apiClient.postBody, isEmpty);
   });
 }

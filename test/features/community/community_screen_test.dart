@@ -30,6 +30,7 @@ class _FakeCommunityRepository extends CommunityRepository {
   int? createdRegionId;
   List<String>? createdTags;
   String? createdTitle;
+  String? deletedPostId;
   String? likedPostId;
 
   @override
@@ -62,6 +63,11 @@ class _FakeCommunityRepository extends CommunityRepository {
   Future<CommunityLikeResult> togglePostLike(String postId) async {
     likedPostId = postId;
     return const CommunityLikeResult(isLiked: true, likeCount: 19);
+  }
+
+  @override
+  Future<void> deletePost(String postId) async {
+    deletedPostId = postId;
   }
 }
 
@@ -465,5 +471,49 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Post created'), findsOneWidget);
+  });
+
+  testWidgets('deletes own community posts from my posts mode', (tester) async {
+    final repository = _FakeCommunityRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsProvider.overrideWith((ref) async {
+            return const [
+              CommunityPostSummary(
+                id: '201',
+                title: 'My roaming notes',
+                preview: 'Rotate after clearing mid.',
+                authorId: 42,
+                authorName: 'Lam',
+                authorAvatarUrl: '',
+                tags: ['Roam'],
+                createdAt: '2026-07-03T10:00:00Z',
+                viewCount: 45,
+                likeCount: 6,
+                commentCount: 2,
+              ),
+            ];
+          }),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CommunityScreen(initialView: CommunityInitialView.myPosts),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedPostId, '201');
+    expect(find.text('My roaming notes'), findsNothing);
+    expect(find.text('Post deleted'), findsOneWidget);
   });
 }

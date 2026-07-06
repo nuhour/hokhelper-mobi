@@ -135,6 +135,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   final _contentController = TextEditingController();
   final _titleController = TextEditingController();
   final _createdPosts = <CommunityPostSummary>[];
+  final _deletedPostIds = <String>{};
   var _isCreateOpen = false;
   var _createSubmitting = false;
 
@@ -153,7 +154,9 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
       retry: () => ref.invalidate(communityPostsProvider),
       data: (posts) {
         final tag = widget.initialTag?.trim() ?? '';
-        final allPosts = _mergeCreatedPosts(posts);
+        final allPosts = _mergeCreatedPosts(posts)
+            .where((post) => !_deletedPostIds.contains(post.id))
+            .toList(growable: false);
         final modePosts = switch (widget.initialView) {
           CommunityInitialView.myPosts =>
             allPosts
@@ -215,7 +218,12 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
                 _PostsEmptyState(tag: tag, initialView: widget.initialView)
               else
                 for (final post in visiblePosts) ...[
-                  _PostCard(post: post),
+                  _PostCard(
+                    onDelete: widget.initialView == CommunityInitialView.myPosts
+                        ? () => _deletePost(context, post.id)
+                        : null,
+                    post: post,
+                  ),
                   const SizedBox(height: 12),
                 ],
             ],
@@ -264,6 +272,31 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(content: Text('Failed to create post')),
+      );
+    }
+  }
+
+  Future<void> _deletePost(BuildContext context, String postId) async {
+    try {
+      await ref.read(communityRepositoryProvider).deletePost(postId);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _deletedPostIds.add(postId);
+        _createdPosts.removeWhere((post) => post.id == postId);
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Post deleted')));
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to delete post')),
       );
     }
   }
@@ -526,9 +559,10 @@ class _LeaksTab extends ConsumerWidget {
 }
 
 class _PostCard extends ConsumerStatefulWidget {
-  const _PostCard({required this.post});
+  const _PostCard({required this.post, this.onDelete});
 
   final CommunityPostSummary post;
+  final VoidCallback? onDelete;
 
   @override
   ConsumerState<_PostCard> createState() => _PostCardState();
@@ -624,6 +658,12 @@ class _PostCardState extends ConsumerState<_PostCard> {
                   ),
                   label: const Text('Like'),
                 ),
+                if (widget.onDelete != null)
+                  OutlinedButton.icon(
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Delete'),
+                  ),
                 ...post.tags.take(3).map((tag) => _Pill(label: tag)),
               ],
             ),
