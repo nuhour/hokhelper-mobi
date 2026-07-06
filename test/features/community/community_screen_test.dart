@@ -275,4 +275,54 @@ void main() {
     expect(find.text('My roaming notes'), findsOneWidget);
     expect(find.text('Someone else draft'), findsNothing);
   });
+
+  testWidgets('liked posts mode filters posts to liked items', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async {
+            return const [
+              CommunityPostSummary(
+                id: '401',
+                title: 'Liked build notes',
+                preview: 'A strong jungle opening.',
+                authorName: 'Coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-04T10:00:00Z',
+                viewCount: 45,
+                likeCount: 6,
+                commentCount: 2,
+                isLiked: true,
+              ),
+              CommunityPostSummary(
+                id: '402',
+                title: 'Unliked draft',
+                preview: 'Pick front line first.',
+                authorName: 'Scout',
+                authorAvatarUrl: '',
+                tags: ['Draft'],
+                createdAt: '2026-07-04T11:00:00Z',
+                viewCount: 99,
+                likeCount: 12,
+                commentCount: 4,
+              ),
+            ];
+          }),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CommunityScreen(initialView: CommunityInitialView.likedPosts),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Liked Posts'), findsOneWidget);
+    expect(find.text('Showing posts you liked on HOK Helper.'), findsOneWidget);
+    expect(find.text('Liked build notes'), findsOneWidget);
+    expect(find.text('Unliked draft'), findsNothing);
+  });
 }

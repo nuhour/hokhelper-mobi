@@ -34,7 +34,7 @@ final leakPostsProvider = FutureProvider<List<LeakPostSummary>>((ref) async {
       .loadLeaks(settings.region.regionId);
 });
 
-enum CommunityInitialView { hot, myPosts }
+enum CommunityInitialView { hot, myPosts, likedPosts }
 
 class CommunityScreen extends ConsumerWidget {
   const CommunityScreen({
@@ -135,14 +135,17 @@ class _PostsTab extends ConsumerWidget {
       retry: () => ref.invalidate(communityPostsProvider),
       data: (posts) {
         final tag = initialTag?.trim() ?? '';
-        final modePosts = initialView == CommunityInitialView.myPosts
-            ? posts
-                  .where(
-                    (post) =>
-                        post.authorId > 0 && post.authorId == authUser?.id,
-                  )
-                  .toList(growable: false)
-            : posts;
+        final modePosts = switch (initialView) {
+          CommunityInitialView.myPosts =>
+            posts
+                .where(
+                  (post) => post.authorId > 0 && post.authorId == authUser?.id,
+                )
+                .toList(growable: false),
+          CommunityInitialView.likedPosts =>
+            posts.where((post) => post.isLiked).toList(growable: false),
+          CommunityInitialView.hot => posts,
+        };
         final visiblePosts = tag.isEmpty
             ? modePosts
             : modePosts
@@ -156,11 +159,15 @@ class _PostsTab extends ConsumerWidget {
                 ? 'No matching posts'
                 : initialView == CommunityInitialView.myPosts
                 ? 'No posts from you yet'
+                : initialView == CommunityInitialView.likedPosts
+                ? 'No liked posts yet'
                 : 'No community posts found',
             message: tag.isNotEmpty
                 ? 'No posts matched "$tag" in this region.'
                 : initialView == CommunityInitialView.myPosts
                 ? 'Create or sync a community post on HOK Helper first.'
+                : initialView == CommunityInitialView.likedPosts
+                ? 'Like posts on HOK Helper to collect them here.'
                 : 'Pull to refresh or switch region in settings.',
           );
         }
@@ -175,6 +182,14 @@ class _PostsTab extends ConsumerWidget {
                   icon: Icons.person_outline,
                   label: 'My Posts',
                   message: 'Showing posts authored by your signed-in account.',
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (initialView == CommunityInitialView.likedPosts) ...[
+                const _ModePill(
+                  icon: Icons.favorite_border,
+                  label: 'Liked Posts',
+                  message: 'Showing posts you liked on HOK Helper.',
                 ),
                 const SizedBox(height: 12),
               ],

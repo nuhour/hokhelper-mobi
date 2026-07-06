@@ -11,6 +11,7 @@ class CommunityPostSummary {
     required this.viewCount,
     required this.likeCount,
     required this.commentCount,
+    this.isLiked = false,
   });
 
   final String id;
@@ -24,6 +25,7 @@ class CommunityPostSummary {
   final int viewCount;
   final int likeCount;
   final int commentCount;
+  final bool isLiked;
 
   String get metricText => '$likeCount likes · $commentCount comments';
 
@@ -42,8 +44,17 @@ class CommunityPostSummary {
       viewCount: _readInt(map['view_count']),
       likeCount: _readInt(map['like_count']),
       commentCount: _readInt(map['comment_count']),
+      isLiked: _readBool(map['is_liked']),
     );
   }
+}
+
+bool _readBool(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  final text = value?.toString().toLowerCase() ?? '';
+  return text == 'true' || text == '1';
 }
 
 List<String> _readStringList(Object? value) {

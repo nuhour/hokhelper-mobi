@@ -56,8 +56,9 @@ String _communityLeaksTarget(Uri uri) {
 
 String _communityTarget(Uri uri) {
   final queryParameters = <String, String>{};
-  if (uri.queryParameters['view'] == 'my') {
-    queryParameters['tab'] = 'my';
+  final view = uri.queryParameters['view'];
+  if (view == 'my' || view == 'likes') {
+    queryParameters['tab'] = view!;
   }
   final tag = uri.queryParameters['tag']?.trim();
   if (tag != null && tag.isNotEmpty) {
@@ -443,9 +444,11 @@ GoRouter createAppRouter() {
                     builder: (context, state) {
                       final tab = state.uri.queryParameters['tab'];
                       final initialTabIndex = tab == 'leaks' ? 1 : 0;
-                      final initialView = tab == 'my'
-                          ? CommunityInitialView.myPosts
-                          : CommunityInitialView.hot;
+                      final initialView = switch (tab) {
+                        'my' => CommunityInitialView.myPosts,
+                        'likes' => CommunityInitialView.likedPosts,
+                        _ => CommunityInitialView.hot,
+                      };
                       return CommunityScreen(
                         initialTabIndex: initialTabIndex,
                         initialView: initialView,
