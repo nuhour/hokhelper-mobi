@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
+import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/hero_trend_row.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
@@ -22,6 +23,11 @@ GoRouter _buildRouter() {
             state.uri.queryParameters['hero_id'] ?? '',
           ),
         ),
+      ),
+      GoRoute(
+        path: '/heroes/:heroId',
+        builder: (context, state) =>
+            HeroDetailScreen(heroId: state.pathParameters['heroId']!),
       ),
     ],
   );
@@ -115,5 +121,46 @@ void main() {
     final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
     final lamTopLeft = tester.getTopLeft(find.text('Lam'));
     expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
+  });
+
+  testWidgets('hero trend cards open hero detail routes', (tester) async {
+    final router = _buildRouter();
+    router.go('/trends');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroGalleryProvider.overrideWith((ref) async => const []),
+          heroTrendsProvider.overrideWith((ref) async {
+            return const [
+              HeroTrendRow(
+                id: 199,
+                name: 'Lam',
+                avatarUrl: '',
+                winRate: 56.1,
+                mvpScore: 13.8,
+                mvpRate: 22.5,
+                dmgShare: 31.4,
+                takeDmgShare: 28.7,
+                ecoShare: 24.1,
+              ),
+            ];
+          }),
+          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
+            return {
+              'hero': {'id': int.tryParse(heroId) ?? 199, 'name': 'Lam'},
+            };
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Lam'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/heroes/199');
+    expect(find.text('Hero #199'), findsOneWidget);
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -166,82 +167,90 @@ class _HeroTrendCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        onTap: () => context.go('/heroes/${hero.id}'),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _RankBadge(rank: rank),
-                const SizedBox(width: 12),
-                AppImage(
-                  url: hero.avatarUrl,
-                  width: 48,
-                  height: 48,
-                  borderRadius: 14,
-                  aspectRatio: 1,
-                  semanticLabel: hero.name,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hero.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleMedium?.copyWith(
-                          color: AppTheme.text,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                Row(
+                  children: [
+                    _RankBadge(rank: rank),
+                    const SizedBox(width: 12),
+                    AppImage(
+                      url: hero.avatarUrl,
+                      width: 48,
+                      height: 48,
+                      borderRadius: 14,
+                      aspectRatio: 1,
+                      semanticLabel: hero.name,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (isFocused)
-                            const _MetricPill(
-                              label: 'Focused hero',
-                              color: AppTheme.gold,
+                          Text(
+                            hero.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w900,
                             ),
-                          _MetricPill(label: 'Score ${hero.mvpScoreText}'),
-                          _MetricPill(label: '${hero.winRateText} win'),
-                          _MetricPill(label: '${hero.mvpRateText} MVP'),
+                          ),
+                          const SizedBox(height: 5),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (isFocused)
+                                const _MetricPill(
+                                  label: 'Focused hero',
+                                  color: AppTheme.gold,
+                                ),
+                              _MetricPill(label: 'Score ${hero.mvpScoreText}'),
+                              _MetricPill(label: '${hero.winRateText} win'),
+                              _MetricPill(label: '${hero.mvpRateText} MVP'),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _ShareBar(
+                  label: '${hero.dmgShareText} damage',
+                  value: hero.dmgShare,
+                  color: Colors.redAccent,
+                ),
+                const SizedBox(height: 8),
+                _ShareBar(
+                  label: '${hero.takeDmgShareText} taken',
+                  value: hero.takeDmgShare,
+                  color: Colors.lightBlueAccent,
+                ),
+                const SizedBox(height: 8),
+                _ShareBar(
+                  label: '${hero.ecoShareText} economy',
+                  value: hero.ecoShare,
+                  color: AppTheme.gold,
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            _ShareBar(
-              label: '${hero.dmgShareText} damage',
-              value: hero.dmgShare,
-              color: Colors.redAccent,
-            ),
-            const SizedBox(height: 8),
-            _ShareBar(
-              label: '${hero.takeDmgShareText} taken',
-              value: hero.takeDmgShare,
-              color: Colors.lightBlueAccent,
-            ),
-            const SizedBox(height: 8),
-            _ShareBar(
-              label: '${hero.ecoShareText} economy',
-              value: hero.ecoShare,
-              color: AppTheme.gold,
-            ),
-          ],
+          ),
         ),
       ),
     );
