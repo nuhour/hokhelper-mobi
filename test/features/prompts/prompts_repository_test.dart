@@ -159,7 +159,7 @@ void main() {
     expect(apiClient.getQuery, {
       'action': 'explore',
       'page': 1,
-      'pageSize': 20,
+      'pageSize': 30,
       'sort': '-hot',
       'order': 'desc',
       'filterRules': '[{"field":"is_public","op":"eq","value":true}]',
@@ -191,10 +191,32 @@ void main() {
     expect(apiClient.getPath, '/prompt');
     expect(apiClient.getQuery?['action'], 'favorites');
     expect(apiClient.getQuery?['page'], 1);
-    expect(apiClient.getQuery?['pageSize'], 20);
+    expect(apiClient.getQuery?['pageSize'], 30);
     expect(apiClient.getQuery?['sort'], '-hot');
     expect(prompts.single.title, 'Cyber skin concept');
   });
+
+  test(
+    'loads prompts with hokx-compatible search and latest sorting',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = PromptsRepository(apiClient: apiClient);
+
+      await repository.loadPrompts(
+        action: PromptListAction.explore,
+        search: 'skin',
+        sort: PromptListSort.latest,
+      );
+
+      expect(apiClient.getPath, '/prompt');
+      expect(apiClient.getQuery?['action'], 'explore');
+      expect(apiClient.getQuery?['page'], 1);
+      expect(apiClient.getQuery?['pageSize'], 30);
+      expect(apiClient.getQuery?['search'], 'skin');
+      expect(apiClient.getQuery?['sort'], '-updated_at');
+      expect(apiClient.getQuery?['order'], 'desc');
+    },
+  );
 
   test('toggles prompt favorite with web-compatible endpoint', () async {
     final apiClient = _FakeApiClient();

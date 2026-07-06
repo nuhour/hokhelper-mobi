@@ -30,6 +30,33 @@ class _FakePromptsRepository extends PromptsRepository {
   String? setCoverImageData;
   String? rechargePlanId;
   String? rechargePaymentMethod;
+  PromptListAction? loadedAction;
+  String? loadedSearch;
+  PromptListSort? loadedSort;
+
+  @override
+  Future<List<PromptSummary>> loadPrompts({
+    required PromptListAction action,
+    String search = '',
+    PromptListSort sort = PromptListSort.hot,
+  }) async {
+    loadedAction = action;
+    loadedSearch = search;
+    loadedSort = sort;
+    return const [
+      PromptSummary(
+        id: '7',
+        title: 'Cyber skin concept',
+        content: 'Create a neon Honor of Kings skin splash art.',
+        tags: ['skin', 'cyber'],
+        imageUrl: '',
+        authorName: 'artist',
+        likeCount: 12,
+        favoriteCount: 5,
+        isPublic: true,
+      ),
+    ];
+  }
 
   @override
   Future<PromptLikeResult> toggleLike(String promptId) async {
@@ -195,6 +222,32 @@ void main() {
     expect(find.text('skin'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
+  });
+
+  testWidgets('searches and sorts prompt explorer like the hokx portal', (
+    tester,
+  ) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [promptsRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search prompts'),
+      'skin',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Latest'));
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedAction, PromptListAction.explore);
+    expect(repository.loadedSearch, 'skin');
+    expect(repository.loadedSort, PromptListSort.latest);
   });
 
   testWidgets('opens favorites tab from the initial action', (tester) async {

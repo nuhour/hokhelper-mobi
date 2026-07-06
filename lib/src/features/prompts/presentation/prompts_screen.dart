@@ -24,12 +24,58 @@ final promptListProvider =
       return ref.watch(promptsRepositoryProvider).loadPrompts(action: action);
     });
 
+final promptListQueryProvider =
+    FutureProvider.family<List<PromptSummary>, PromptListQuery>((ref, query) {
+      if (query.isDefault) {
+        return ref.watch(promptListProvider(query.action).future);
+      }
+      return ref
+          .watch(promptsRepositoryProvider)
+          .loadPrompts(
+            action: query.action,
+            search: query.search,
+            sort: query.sort,
+          );
+    });
+
 extension PromptListActionLabel on PromptListAction {
   String get label => switch (this) {
     PromptListAction.explore => 'Explore',
     PromptListAction.myPrompts => 'My Prompts',
     PromptListAction.favorites => 'Favorites',
   };
+}
+
+extension PromptListSortLabel on PromptListSort {
+  String get label => switch (this) {
+    PromptListSort.hot => 'Hot',
+    PromptListSort.latest => 'Latest',
+  };
+}
+
+class PromptListQuery {
+  const PromptListQuery({
+    required this.action,
+    this.search = '',
+    this.sort = PromptListSort.hot,
+  });
+
+  final PromptListAction action;
+  final String search;
+  final PromptListSort sort;
+
+  bool get isDefault => search.trim().isEmpty && sort == PromptListSort.hot;
+
+  @override
+  bool operator ==(Object other) {
+    return other is PromptListQuery &&
+        other.action == action &&
+        other.search == search &&
+        other.sort == sort;
+  }
+
+  @override
+  int get hashCode => Object.hash(action, search, sort);
 }
 
 PromptListAction promptListActionFromRoute(String? value) {
@@ -56,29 +102,44 @@ class PromptsScreen extends ConsumerStatefulWidget {
 
 class _PromptsScreenState extends ConsumerState<PromptsScreen> {
   late PromptListAction _action;
+  late final TextEditingController _searchController;
   final _createdPrompts = <PromptSummary>[];
   final _updatedPrompts = <String, PromptSummary>{};
   final _deletedPromptIds = <String>{};
+  String _search = '';
+  PromptListSort _sort = PromptListSort.hot;
 
   @override
   void initState() {
     super.initState();
     _action = widget.initialAction;
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final promptsValue = ref.watch(promptListProvider(_action));
+    final query = PromptListQuery(
+      action: _action,
+      search: _search,
+      sort: _sort,
+    );
+    final promptsValue = ref.watch(promptListQueryProvider(query));
 
     return AppAsyncView<List<PromptSummary>>(
       value: promptsValue,
-      retry: () => ref.invalidate(promptListProvider(_action)),
+      retry: () => ref.invalidate(promptListQueryProvider(query)),
       data: (prompts) {
         final visiblePrompts = _visiblePrompts(
           _mergePromptChanges([..._createdPrompts, ...prompts]),
         );
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(promptListProvider(_action).future),
+          onRefresh: () => ref.refresh(promptListQueryProvider(query).future),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -118,6 +179,51 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                           selected: {_action},
                           onSelectionChanged: (selection) {
                             setState(() => _action = selection.single);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _searchController,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          labelText: 'Search prompts',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _search.isEmpty
+                              ? null
+                              : IconButton(
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _search = '');
+                                  },
+                                  icon: const Icon(Icons.close),
+                                  tooltip: 'Clear search',
+                                ),
+                        ),
+                        onChanged: (value) {
+                          setState(() => _search = value.trim());
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SegmentedButton<PromptListSort>(
+                          segments: PromptListSort.values
+                              .map(
+                                (sort) => ButtonSegment(
+                                  value: sort,
+                                  icon: Icon(
+                                    sort == PromptListSort.hot
+                                        ? Icons.local_fire_department_outlined
+                                        : Icons.schedule,
+                                  ),
+                                  label: Text(sort.label),
+                                ),
+                              )
+                              .toList(growable: false),
+                          selected: {_sort},
+                          onSelectionChanged: (selection) {
+                            setState(() => _sort = selection.single);
                           },
                         ),
                       ),
@@ -200,6 +306,18 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     return rows;
   }
 
+  PromptListQuery get _currentQuery =>
+      PromptListQuery(action: _action, search: _search, sort: _sort);
+
+  void _invalidatePromptList(PromptListAction action) {
+    ref.invalidate(promptListProvider(action));
+    ref.invalidate(
+      promptListQueryProvider(
+        PromptListQuery(action: action, search: _search, sort: _sort),
+      ),
+    );
+  }
+
   Future<void> _openCreateSheet(BuildContext context) async {
     final created = await showModalBottomSheet<PromptSummary>(
       context: context,
@@ -218,7 +336,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       _createdPrompts.insert(0, created);
       _action = PromptListAction.myPrompts;
     });
-    ref.invalidate(promptListProvider(PromptListAction.myPrompts));
+    _invalidatePromptList(PromptListAction.myPrompts);
   }
 
   Future<void> _openEditSheet(
@@ -246,7 +364,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
         _createdPrompts[createdIndex] = updated;
       }
     });
-    ref.invalidate(promptListProvider(PromptListAction.myPrompts));
+    _invalidatePromptList(PromptListAction.myPrompts);
   }
 
   Future<void> _confirmDelete(
@@ -284,7 +402,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
         _createdPrompts.removeWhere((row) => row.id == prompt.id);
         _updatedPrompts.remove(prompt.id);
       });
-      ref.invalidate(promptListProvider(PromptListAction.myPrompts));
+      _invalidatePromptList(PromptListAction.myPrompts);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(const SnackBar(content: Text('Prompt deleted')));
     } catch (_) {
@@ -353,6 +471,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
         _createdPrompts[createdIndex] = updated;
       }
     });
+    ref.invalidate(promptListQueryProvider(_currentQuery));
     ref.invalidate(promptListProvider(_action));
   }
 }

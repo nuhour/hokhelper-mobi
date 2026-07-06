@@ -13,6 +13,15 @@ enum PromptListAction {
   final String backendValue;
 }
 
+enum PromptListSort {
+  hot('-hot'),
+  latest('-updated_at');
+
+  const PromptListSort(this.backendValue);
+
+  final String backendValue;
+}
+
 class PromptsRepository {
   const PromptsRepository({required this.apiClient});
 
@@ -24,14 +33,18 @@ class PromptsRepository {
 
   Future<List<PromptSummary>> loadPrompts({
     required PromptListAction action,
+    String search = '',
+    PromptListSort sort = PromptListSort.hot,
   }) async {
+    final searchValue = search.trim();
     final json = await apiClient.getJson(
       '/prompt',
       query: {
         'action': action.backendValue,
         'page': 1,
-        'pageSize': 20,
-        'sort': '-hot',
+        'pageSize': 30,
+        if (searchValue.isNotEmpty) 'search': searchValue,
+        'sort': sort.backendValue,
         'order': 'desc',
         'filterRules': jsonEncode([
           {'field': 'is_public', 'op': 'eq', 'value': true},
