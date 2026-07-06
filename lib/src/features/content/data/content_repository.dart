@@ -129,6 +129,19 @@ class ContentRepository {
         .toList(growable: false);
   }
 
+  Future<PatchNoteSummary> loadPatchNoteDetail(
+    int noteId, {
+    required int regionId,
+  }) async {
+    final json = await apiClient.getJson(
+      '/community/posts/$noteId',
+      query: {'region_id': regionId},
+    );
+    final result = json['result'];
+    final resultMap = result is Map ? result : json;
+    return PatchNoteSummary.fromJson(resultMap['post'] ?? resultMap);
+  }
+
   Map<String, Object> _pagedRegionBody(
     int regionId, {
     int page = 1,

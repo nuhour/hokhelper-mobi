@@ -22,6 +22,29 @@ class _FakeApiClient extends ApiClient {
   }) async {
     getPath = path;
     getQuery = query;
+    if (path == '/community/posts/31') {
+      return const {
+        'success': true,
+        'result': {
+          'post': {
+            'id': 31,
+            'title': 'Version 1.2.3 Patch Notes',
+            'content':
+                'Complete balance notes with item, lane, and hero details.',
+            'content_preview': 'Lam and Angela adjusted.',
+            'tags': ['Patch Notes', 'Balance'],
+            'hero_histories': [
+              {
+                'hero_id': 42,
+                'hero_name': 'Lam',
+                'avatar_url': 'https://example.test/lam.png',
+                'change_type': 'buff',
+              },
+            ],
+          },
+        },
+      };
+    }
     return const {
       'success': true,
       'result': {
@@ -91,5 +114,22 @@ void main() {
     expect(apiClient.getQuery?['pageSize'], 40);
     expect(apiClient.getQuery?['sort'], 'new');
     expect(apiClient.getQuery?['filterRules'], contains('"value":3'));
+  });
+
+  test('loads patch note detail content from community post detail', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    final note = await repository.loadPatchNoteDetail(31, regionId: 2);
+
+    expect(apiClient.getPath, '/community/posts/31');
+    expect(apiClient.getQuery?['region_id'], 2);
+    expect(
+      note.content,
+      'Complete balance notes with item, lane, and hero details.',
+    );
+    expect(note.preview, 'Lam and Angela adjusted.');
+    expect(note.heroChanges, hasLength(1));
+    expect(note.heroChanges.single.heroName, 'Lam');
   });
 }

@@ -302,13 +302,59 @@ class _PatchTimelineCard extends StatelessWidget {
   }
 }
 
-class _PatchDetailSheet extends StatelessWidget {
+class _PatchDetailSheet extends ConsumerStatefulWidget {
   const _PatchDetailSheet({required this.note});
 
   final PatchNoteSummary note;
 
   @override
+  ConsumerState<_PatchDetailSheet> createState() => _PatchDetailSheetState();
+}
+
+class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
+  PatchNoteSummary? _detailNote;
+  var _isLoadingDetail = false;
+  var _detailFailed = false;
+
+  PatchNoteSummary get _visibleNote => _detailNote ?? widget.note;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDetail();
+  }
+
+  Future<void> _loadDetail() async {
+    setState(() {
+      _isLoadingDetail = true;
+      _detailFailed = false;
+    });
+    try {
+      final regionId = await ref.read(patchNotesRegionProvider.future);
+      final detail = await ref
+          .read(contentRepositoryProvider)
+          .loadPatchNoteDetail(widget.note.id, regionId: regionId);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _detailNote = detail;
+        _isLoadingDetail = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLoadingDetail = false;
+        _detailFailed = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final note = _visibleNote;
     return SafeArea(
       top: false,
       child: DraggableScrollableSheet(
@@ -364,6 +410,29 @@ class _PatchDetailSheet extends StatelessWidget {
                     color: AppTheme.text,
                     height: 1.45,
                   ),
+                ),
+              ],
+              if (_isLoadingDetail) ...[
+                const SizedBox(height: 12),
+                const Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Loading full patch details...',
+                      style: TextStyle(color: AppTheme.muted),
+                    ),
+                  ],
+                ),
+              ],
+              if (_detailFailed) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Failed to load full patch details.',
+                  style: TextStyle(color: AppTheme.muted),
                 ),
               ],
               const SizedBox(height: 24),

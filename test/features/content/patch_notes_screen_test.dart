@@ -20,6 +20,7 @@ class _PagedPatchRepository extends ContentRepository {
       );
 
   final requestedPages = <int>[];
+  int? requestedDetailId;
 
   @override
   Future<List<PatchNoteSummary>> loadPatchNotes(
@@ -51,6 +52,69 @@ class _PagedPatchRepository extends ContentRepository {
         ],
       );
     }, growable: false);
+  }
+
+  @override
+  Future<PatchNoteSummary> loadPatchNoteDetail(
+    int noteId, {
+    required int regionId,
+  }) async {
+    requestedDetailId = noteId;
+    return PatchNoteSummary(
+      id: noteId,
+      version: '1.2.$noteId',
+      title: 'Version 1.2.$noteId Patch Notes',
+      date: '2026-07-01',
+      preview: 'List preview only.',
+      content: 'Complete patch detail body loaded after opening the note.',
+      changeCount: 1,
+      tags: const ['Patch Notes'],
+      heroChanges: [
+        PatchHeroChange(
+          heroId: noteId,
+          heroName: 'Hero $noteId',
+          avatarUrl: '',
+          changeType: 'buff',
+        ),
+      ],
+    );
+  }
+}
+
+class _StaticPatchRepository extends ContentRepository {
+  _StaticPatchRepository()
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  @override
+  Future<PatchNoteSummary> loadPatchNoteDetail(
+    int noteId, {
+    required int regionId,
+  }) async {
+    return PatchNoteSummary(
+      id: noteId,
+      version: '1.2.4',
+      title: 'Version 1.2.4 Patch Notes',
+      date: '2026-07-02',
+      preview: 'Arthur adjusted.',
+      content: 'Arthur changes only.',
+      changeCount: 1,
+      tags: const ['Patch Notes'],
+      heroChanges: const [
+        PatchHeroChange(
+          heroId: 10,
+          heroName: 'Arthur',
+          avatarUrl: '',
+          changeType: 'adjust',
+        ),
+      ],
+    );
   }
 }
 
@@ -107,6 +171,8 @@ void main() {
               ),
             ];
           }),
+          contentRepositoryProvider.overrideWithValue(_StaticPatchRepository()),
+          patchNotesRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(home: Scaffold(body: PatchNotesScreen())),
       ),
@@ -164,5 +230,29 @@ void main() {
 
     expect(repository.requestedPages, [1, 2]);
     expect(find.text('Version 1.2.121 Patch Notes'), findsOneWidget);
+  });
+
+  testWidgets('loads full patch note body when opening detail', (tester) async {
+    final repository = _PagedPatchRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          patchNotesRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PatchNotesScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Version 1.2.1 Patch Notes'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedDetailId, 1);
+    expect(
+      find.text('Complete patch detail body loaded after opening the note.'),
+      findsOneWidget,
+    );
   });
 }
