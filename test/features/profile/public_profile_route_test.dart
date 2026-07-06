@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
@@ -223,6 +224,67 @@ void main() {
     expect(repository.likedUserId, 42);
     expect(find.widgetWithText(OutlinedButton, 'Liked'), findsOneWidget);
     expect(find.text('7'), findsOneWidget);
+  });
+
+  testWidgets('copies public profile share links', (tester) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    final router = createAppRouter();
+    router.go('/profile/42');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          publicUserProfileProvider(42).overrideWith((ref) async {
+            return const UserProfile(
+              id: 42,
+              username: 'lam',
+              displayName: 'Lam',
+              email: 'lam@example.test',
+              avatar: '',
+              level: 7,
+              points: 1200,
+              xpTotal: 1400,
+              xpCurrentLevel: 260,
+              xpToNextLevel: 740,
+              levelProgress: 26,
+              levelCap: false,
+              bio: 'Jungle main',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 3,
+                following: 4,
+                followers: 5,
+                likes: 6,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall, isNotNull);
+    expect(clipboardCall!.arguments, {'text': '/profile/42'});
+    expect(find.text('Profile link copied'), findsOneWidget);
   });
 
   testWidgets('profile stats open following and followers lists', (

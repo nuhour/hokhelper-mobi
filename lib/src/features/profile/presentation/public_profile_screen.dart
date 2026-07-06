@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -26,9 +27,9 @@ class PublicProfileScreen extends ConsumerWidget {
     final profileValue = ref.watch(publicUserProfileProvider(userId));
     final signedInUser = ref.watch(authControllerProvider).valueOrNull;
 
-    return Material(
-      color: AppTheme.bg,
-      child: RefreshIndicator(
+    return Scaffold(
+      backgroundColor: AppTheme.bg,
+      body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(publicUserProfileProvider(userId));
           await ref.read(publicUserProfileProvider(userId).future);
@@ -214,6 +215,11 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
                       : Icons.favorite_border_outlined,
                   label: _isLiked ? 'Liked' : 'Not liked',
                 ),
+                OutlinedButton.icon(
+                  onPressed: () => _shareProfile(context),
+                  icon: const Icon(Icons.ios_share_outlined, size: 18),
+                  label: const Text('Share'),
+                ),
               ],
             ),
             if (widget.canInteract) ...[
@@ -306,6 +312,18 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
         });
       }
     }
+  }
+
+  Future<void> _shareProfile(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: '/profile/${profile.id}'));
+    if (!mounted || !context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Profile link copied')),
+    );
   }
 
   void _showFollowList(BuildContext context, ProfileFollowListType type) {
