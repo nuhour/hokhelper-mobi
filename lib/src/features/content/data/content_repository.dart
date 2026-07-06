@@ -47,10 +47,14 @@ class ContentRepository {
     return CgDetail.fromJson(json['result'] ?? json);
   }
 
-  Future<List<CgCommentSummary>> loadCgComments(int cgId) async {
+  Future<List<CgCommentSummary>> loadCgComments(
+    int cgId, {
+    String order = 'desc',
+  }) async {
+    final normalizedOrder = order == 'asc' ? 'asc' : 'desc';
     final json = await apiClient.getJson(
       '/cg/$cgId/comments',
-      query: {'page': 1, 'pageSize': 50, 'order': 'desc'},
+      query: {'page': 1, 'pageSize': 50, 'order': normalizedOrder},
     );
     final data = json['data'];
     final result = json['result'];

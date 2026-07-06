@@ -22,12 +22,32 @@ final cgDetailProvider = FutureProvider.family<CgDetail, int>((ref, cgId) {
   return ref.watch(contentRepositoryProvider).loadCgDetail(cgId);
 });
 
-final cgCommentsProvider = FutureProvider.family<List<CgCommentSummary>, int>((
-  ref,
-  cgId,
-) {
-  return ref.watch(contentRepositoryProvider).loadCgComments(cgId);
-});
+final cgCommentsProvider =
+    FutureProvider.family<List<CgCommentSummary>, Object>((ref, query) {
+      final commentsQuery = query is CgCommentsQuery
+          ? query
+          : CgCommentsQuery(query as int);
+      return ref
+          .watch(contentRepositoryProvider)
+          .loadCgComments(commentsQuery.cgId, order: commentsQuery.order);
+    });
+
+class CgCommentsQuery {
+  const CgCommentsQuery(this.cgId, {this.order = 'desc'});
+
+  final int cgId;
+  final String order;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CgCommentsQuery &&
+        other.cgId == cgId &&
+        other.order == order;
+  }
+
+  @override
+  int get hashCode => Object.hash(cgId, order);
+}
 
 class CgGalleryScreen extends ConsumerStatefulWidget {
   const CgGalleryScreen({this.initialCgId, this.initialSearchQuery, super.key});
@@ -315,6 +335,7 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
   final _commentController = TextEditingController();
   var _isPosting = false;
   var _isRating = false;
+  var _commentOrder = 'desc';
   int? _viewCountOverride;
   double? _ratingOverride;
   int? _ratingCountOverride;
@@ -333,8 +354,9 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final commentsQuery = CgCommentsQuery(widget.cgId, order: _commentOrder);
     final detailValue = ref.watch(cgDetailProvider(widget.cgId));
-    final commentsValue = ref.watch(cgCommentsProvider(widget.cgId));
+    final commentsValue = ref.watch(cgCommentsProvider(commentsQuery));
 
     return DraggableScrollableSheet(
       expand: false,
@@ -380,6 +402,11 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
               ),
             ),
             const SizedBox(height: 10),
+            _CgCommentOrderSelector(
+              order: _commentOrder,
+              onChanged: (order) => setState(() => _commentOrder = order),
+            ),
+            const SizedBox(height: 10),
             _CgCommentComposer(
               controller: _commentController,
               isPosting: _isPosting,
@@ -388,7 +415,7 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
             const SizedBox(height: 14),
             AppAsyncView<List<CgCommentSummary>>(
               value: commentsValue,
-              retry: () => ref.invalidate(cgCommentsProvider(widget.cgId)),
+              retry: () => ref.invalidate(cgCommentsProvider(commentsQuery)),
               data: (comments) {
                 if (comments.isEmpty) {
                   return const AppEmptyState(
@@ -428,7 +455,9 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
           .read(contentRepositoryProvider)
           .createCgComment(widget.cgId, content);
       _commentController.clear();
-      ref.invalidate(cgCommentsProvider(widget.cgId));
+      ref.invalidate(
+        cgCommentsProvider(CgCommentsQuery(widget.cgId, order: _commentOrder)),
+      );
       messenger.showSnackBar(const SnackBar(content: Text('Comment posted')));
     } catch (error) {
       messenger.showSnackBar(
@@ -541,6 +570,35 @@ class _CgCommentComposer extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CgCommentOrderSelector extends StatelessWidget {
+  const _CgCommentOrderSelector({required this.order, required this.onChanged});
+
+  final String order;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ChoiceChip(
+          label: const Text('Newest first'),
+          selected: order == 'desc',
+          onSelected: (_) => onChanged('desc'),
+          avatar: const Icon(Icons.south, size: 16),
+        ),
+        ChoiceChip(
+          label: const Text('Oldest first'),
+          selected: order == 'asc',
+          onSelected: (_) => onChanged('asc'),
+          avatar: const Icon(Icons.north, size: 16),
+        ),
+      ],
     );
   }
 }

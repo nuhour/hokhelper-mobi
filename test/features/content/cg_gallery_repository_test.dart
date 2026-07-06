@@ -15,6 +15,7 @@ class _FakeApiClient extends ApiClient {
   final postCalls = <String>[];
   final postBodies = <Object?>[];
   final getCalls = <String>[];
+  final getQueries = <Map<String, dynamic>?>[];
   Object? lastBody;
 
   @override
@@ -67,6 +68,7 @@ class _FakeApiClient extends ApiClient {
     Map<String, dynamic>? query,
   }) async {
     getCalls.add(path);
+    getQueries.add(query);
     if (path.endsWith('/comments')) {
       return const {
         'success': true,
@@ -124,6 +126,20 @@ void main() {
     expect(detail.rating, 4.8);
     expect(comments.single.authorName, 'coach');
     expect(comments.single.content, 'Great cinematic.');
+  });
+
+  test('loads cg comments with requested web-compatible order', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    await repository.loadCgComments(501, order: 'asc');
+
+    expect(apiClient.getCalls, ['/cg/501/comments']);
+    expect(apiClient.getQueries.single, {
+      'page': 1,
+      'pageSize': 50,
+      'order': 'asc',
+    });
   });
 
   test('creates cg comments with web-compatible payload', () async {

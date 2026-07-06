@@ -25,6 +25,7 @@ class _FakeContentRepository extends ContentRepository {
   int? viewedCgId;
   int? ratedCgId;
   double? submittedRating;
+  final commentOrders = <String>[];
 
   @override
   Future<List<ContentItemSummary>> loadCgs(
@@ -61,7 +62,22 @@ class _FakeContentRepository extends ContentRepository {
   }
 
   @override
-  Future<List<CgCommentSummary>> loadCgComments(int cgId) async {
+  Future<List<CgCommentSummary>> loadCgComments(
+    int cgId, {
+    String order = 'desc',
+  }) async {
+    commentOrders.add(order);
+    if (order == 'asc') {
+      return const [
+        CgCommentSummary(
+          id: 8,
+          authorName: 'oldest',
+          authorAvatarUrl: '',
+          content: 'First reaction.',
+          createdAt: '2026-07-02T08:30:00Z',
+        ),
+      ];
+    }
     return const [
       CgCommentSummary(
         id: 9,
@@ -143,7 +159,9 @@ void main() {
               ratingCount: 17,
             );
           }),
-          cgCommentsProvider(501).overrideWith((ref) async {
+          cgCommentsProvider(const CgCommentsQuery(501)).overrideWith((
+            ref,
+          ) async {
             return const [
               CgCommentSummary(
                 id: 9,
@@ -241,7 +259,7 @@ void main() {
           cgDetailProvider(501).overrideWith(
             (ref) => ref.watch(contentRepositoryProvider).loadCgDetail(501),
           ),
-          cgCommentsProvider(501).overrideWith(
+          cgCommentsProvider(const CgCommentsQuery(501)).overrideWith(
             (ref) => ref.watch(contentRepositoryProvider).loadCgComments(501),
           ),
         ],
@@ -286,7 +304,7 @@ void main() {
           cgDetailProvider(501).overrideWith(
             (ref) => ref.watch(contentRepositoryProvider).loadCgDetail(501),
           ),
-          cgCommentsProvider(501).overrideWith(
+          cgCommentsProvider(const CgCommentsQuery(501)).overrideWith(
             (ref) => ref.watch(contentRepositoryProvider).loadCgComments(501),
           ),
         ],
@@ -306,5 +324,45 @@ void main() {
     expect(repository.ratedCgId, 501);
     expect(repository.submittedRating, 5);
     expect(find.text('Rating submitted'), findsOneWidget);
+  });
+
+  testWidgets('switches cg comments between newest and oldest order', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _FakeContentRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          cgGalleryProvider.overrideWith(
+            (ref) =>
+                ref.watch(contentRepositoryProvider).loadCgs(2, pageSize: 60),
+          ),
+          cgDetailProvider(501).overrideWith(
+            (ref) => ref.watch(contentRepositoryProvider).loadCgDetail(501),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Lam Cinematic'));
+    await tester.pumpAndSettle();
+
+    expect(repository.commentOrders, contains('desc'));
+    expect(find.text('Great cinematic.'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Oldest first'));
+    await tester.pumpAndSettle();
+
+    expect(repository.commentOrders, contains('asc'));
+    expect(find.text('First reaction.'), findsOneWidget);
   });
 }
