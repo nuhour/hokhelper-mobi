@@ -5,10 +5,93 @@ import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/builds/domain/build_editor_asset.dart';
 import 'package:hok_helper_mobile/src/features/builds/domain/build_scheme_summary.dart';
+import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_simulator_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
 
 void main() {
+  testWidgets('build explorer card opens focused build simulator route', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+
+    router.go('/tools/builds');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          publicBuildSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 42,
+                title: 'Shared route build',
+                heroName: 'Angela',
+                authorName: 'sharer',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 8,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+            ];
+          }),
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '166',
+                heroId: '166',
+                name: 'Angela',
+                avatar: '',
+                title: 'Blazing Mage',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 42,
+                title: 'Shared route build',
+                heroName: 'Angela',
+                authorName: 'sharer',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 8,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+            ];
+          }),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            return const [null, null, null];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(
+              equips: [],
+              runes: [],
+              summonerSkills: [],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Shared route build'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['scheme'],
+      '42',
+    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shared build'), findsOneWidget);
+    expect(find.text('Shared route build'), findsOneWidget);
+  });
+
   testWidgets('build simulator route focuses hero from hokx hero_id query', (
     tester,
   ) async {

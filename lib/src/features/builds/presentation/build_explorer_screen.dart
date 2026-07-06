@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -97,73 +98,79 @@ class BuildSchemeCard extends StatelessWidget {
     final theme = Theme.of(context);
     final heroName = scheme.heroName.isEmpty ? 'Any hero' : scheme.heroName;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+    return Material(
+      color: AppTheme.panel,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.go('/tools/build-sim?scheme=${scheme.id}'),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        scheme.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: AppTheme.text,
-                          fontWeight: FontWeight.w800,
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            scheme.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$heroName · ${scheme.authorName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.muted,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$heroName · ${scheme.authorName}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppTheme.muted,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    _PublicBadge(isPublic: scheme.isPublic),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                _PublicBadge(isPublic: scheme.isPublic),
+                const SizedBox(height: 14),
+                _EquipmentStrip(icons: scheme.equipmentIcons),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricChip(
+                      icon: Icons.thumb_up_outlined,
+                      value: scheme.likeCount,
+                    ),
+                    _MetricChip(
+                      icon: Icons.star_border_rounded,
+                      value: scheme.favoriteCount,
+                    ),
+                    _MetricChip(
+                      icon: Icons.copy_all_outlined,
+                      value: scheme.cloneCount,
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-            _EquipmentStrip(icons: scheme.equipmentIcons),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MetricChip(
-                  icon: Icons.thumb_up_outlined,
-                  value: scheme.likeCount,
-                ),
-                _MetricChip(
-                  icon: Icons.star_border_rounded,
-                  value: scheme.favoriteCount,
-                ),
-                _MetricChip(
-                  icon: Icons.copy_all_outlined,
-                  value: scheme.cloneCount,
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
