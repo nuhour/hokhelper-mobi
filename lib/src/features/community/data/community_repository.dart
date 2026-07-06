@@ -57,6 +57,22 @@ class CommunityRepository {
     return CommunityLikeResult.fromJson(json);
   }
 
+  Future<CommunityCommentSummary> createComment(
+    String postId, {
+    required String content,
+    String? parentId,
+  }) async {
+    final body = <String, Object?>{'content': content};
+    if (parentId != null && parentId.isNotEmpty) {
+      body['parent'] = parentId;
+    }
+    final json = await apiClient.postJson(
+      '/community/posts/$postId/comments',
+      body: body,
+    );
+    return CommunityCommentSummary.fromJson(json);
+  }
+
   List<Object?> _readRows(Map<String, dynamic> json) {
     final result = json['result'];
     final rows = result is Map

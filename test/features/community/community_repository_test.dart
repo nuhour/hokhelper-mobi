@@ -72,6 +72,17 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postPath = path;
     postBody = body;
+    if (path.endsWith('/comments')) {
+      return const {
+        'id': 'c3',
+        'content': 'Try invading red after mid.',
+        'author_name': 'Lam',
+        'author_avatar': 'https://example.test/lam.png',
+        'created_at': '2026-07-03T10:00:00Z',
+        'like_count': 0,
+        'parent': null,
+      };
+    }
     return const {'liked': true, 'like_count': 19};
   }
 }
@@ -130,5 +141,21 @@ void main() {
     expect(apiClient.postBody, isNull);
     expect(result.isLiked, isTrue);
     expect(result.likeCount, 19);
+  });
+
+  test('creates community comments with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final comment = await repository.createComment(
+      '101',
+      content: 'Try invading red after mid.',
+    );
+
+    expect(apiClient.postPath, '/community/posts/101/comments');
+    expect(apiClient.postBody, {'content': 'Try invading red after mid.'});
+    expect(comment.id, 'c3');
+    expect(comment.content, 'Try invading red after mid.');
+    expect(comment.authorName, 'Lam');
   });
 }

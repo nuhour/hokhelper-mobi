@@ -66,19 +66,34 @@ class _PostDetailBody extends ConsumerStatefulWidget {
 }
 
 class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
+  late var _comments = widget.detail.comments;
+  late var _commentCount = widget.detail.post.commentCount;
   late var _likeCount = widget.detail.post.likeCount;
   late var _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
+  final _commentController = TextEditingController();
+  var _commentSubmitting = false;
   var _likeSubmitting = false;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant _PostDetailBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.detail.post.id != widget.detail.post.id ||
+        oldWidget.detail.post.commentCount != widget.detail.post.commentCount ||
+        oldWidget.detail.comments != widget.detail.comments ||
         oldWidget.detail.post.likeCount != widget.detail.post.likeCount ||
         oldWidget.detail.isLiked != widget.detail.isLiked ||
         oldWidget.detail.post.isLiked != widget.detail.post.isLiked) {
+      _comments = widget.detail.comments;
+      _commentCount = widget.detail.post.commentCount;
       _likeCount = widget.detail.post.likeCount;
       _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
+      _commentSubmitting = false;
       _likeSubmitting = false;
     }
   }
@@ -165,7 +180,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                   children: [
                     _MetricChip(label: '${post.viewCount} views'),
                     _MetricChip(label: '$_likeCount likes'),
-                    _MetricChip(label: '${post.commentCount} comments'),
+                    _MetricChip(label: '$_commentCount comments'),
                     if (_isLiked) const _MetricChip(label: 'Liked'),
                     OutlinedButton.icon(
                       onPressed: _likeSubmitting
@@ -185,6 +200,12 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           ),
         ),
         const SizedBox(height: 22),
+        _CommentComposer(
+          controller: _commentController,
+          isSubmitting: _commentSubmitting,
+          onSubmit: () => _createComment(context),
+        ),
+        const SizedBox(height: 22),
         Text(
           'Comments',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -193,24 +214,59 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           ),
         ),
         const SizedBox(height: 12),
-        if (detail.comments.isEmpty)
+        if (_comments.isEmpty)
           const AppEmptyState(
             icon: Icons.chat_bubble_outline,
             title: 'No comments yet',
-            message: 'Be the first to join this discussion on web.',
+            message: 'Be the first to join this discussion.',
           )
         else
           ListView.separated(
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
-            itemCount: detail.comments.length,
+            itemCount: _comments.length,
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              return _CommentCard(comment: detail.comments[index]);
+              return _CommentCard(comment: _comments[index]);
             },
           ),
       ],
     );
+  }
+
+  Future<void> _createComment(BuildContext context) async {
+    final content = _commentController.text.trim();
+    if (content.isEmpty) {
+      return;
+    }
+    setState(() => _commentSubmitting = true);
+    try {
+      final comment = await ref
+          .read(communityRepositoryProvider)
+          .createComment(widget.detail.post.id, content: content);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      _commentController.clear();
+      setState(() {
+        _comments = [..._comments, comment];
+        _commentCount += 1;
+        _commentSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Comment posted')));
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _commentSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to post comment')),
+      );
+    }
   }
 
   Future<void> _likePost(BuildContext context) async {
@@ -304,6 +360,56 @@ class _CommentCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppTheme.text,
                 height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommentComposer extends StatelessWidget {
+  const _CommentComposer({
+    required this.controller,
+    required this.isSubmitting,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final bool isSubmitting;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              minLines: 2,
+              maxLines: 4,
+              textInputAction: TextInputAction.newline,
+              decoration: const InputDecoration(
+                hintText: 'Write a comment...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: isSubmitting ? null : onSubmit,
+                icon: const Icon(Icons.send_outlined, size: 16),
+                label: const Text('Post'),
               ),
             ),
           ],

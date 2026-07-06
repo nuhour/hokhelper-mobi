@@ -12,7 +12,29 @@ import 'package:hok_helper_mobile/src/features/community/presentation/community_
 class _FakeCommunityRepository extends CommunityRepository {
   _FakeCommunityRepository() : super(apiClient: _NoopApiClient());
 
+  String? commentedPostId;
+  String? commentContent;
   String? likedPostId;
+
+  @override
+  Future<CommunityCommentSummary> createComment(
+    String postId, {
+    required String content,
+    String? parentId,
+  }) async {
+    commentedPostId = postId;
+    commentContent = content;
+    return CommunityCommentSummary(
+      id: 'c3',
+      content: content,
+      authorName: 'Lam',
+      authorAvatarUrl: '',
+      createdAt: '2026-07-03T10:00:00Z',
+      likeCount: 0,
+      parentId: parentId ?? '',
+      parentAuthorName: '',
+    );
+  }
 
   @override
   Future<CommunityLikeResult> togglePostLike(String postId) async {
@@ -142,5 +164,53 @@ void main() {
     expect(find.text('19 likes'), findsOneWidget);
     expect(find.text('Liked'), findsOneWidget);
     expect(find.text('Post liked'), findsOneWidget);
+  });
+
+  testWidgets('creates comments from the mobile detail screen', (tester) async {
+    final repository = _FakeCommunityRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 2,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityPostDetailScreen(postId: '99')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      'Try invading red after mid.',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Post'));
+    await tester.pumpAndSettle();
+
+    expect(repository.commentedPostId, '99');
+    expect(repository.commentContent, 'Try invading red after mid.');
+    expect(find.text('Try invading red after mid.'), findsOneWidget);
+    expect(find.text('3 comments'), findsOneWidget);
+    expect(find.text('Comment posted'), findsOneWidget);
   });
 }
