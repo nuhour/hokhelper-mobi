@@ -29,11 +29,14 @@ final cgsProvider = FutureProvider<List<ContentItemSummary>>((ref) async {
   return ref.watch(contentRepositoryProvider).loadCgs(settings.region.regionId);
 });
 
-final patchNotesProvider = FutureProvider<List<PatchNoteSummary>>((ref) async {
+final patchNotesRegionProvider = FutureProvider<int>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
-  return ref
-      .watch(contentRepositoryProvider)
-      .loadPatchNotes(settings.region.regionId);
+  return settings.region.regionId;
+});
+
+final patchNotesProvider = FutureProvider<List<PatchNoteSummary>>((ref) async {
+  final regionId = await ref.watch(patchNotesRegionProvider.future);
+  return ref.watch(contentRepositoryProvider).loadPatchNotes(regionId);
 });
 
 class ContentScreen extends ConsumerWidget {

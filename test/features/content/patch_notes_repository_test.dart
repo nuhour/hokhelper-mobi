@@ -79,4 +79,17 @@ void main() {
     expect(notes.single.heroChanges.last.heroName, 'Angela');
     expect(notes.single.heroChanges.last.changeType, 'nerf');
   });
+
+  test('loads later patch note pages with backend-compatible query', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    await repository.loadPatchNotes(3, page: 2, pageSize: 40);
+
+    expect(apiClient.getPath, '/community/posts');
+    expect(apiClient.getQuery?['page'], 2);
+    expect(apiClient.getQuery?['pageSize'], 40);
+    expect(apiClient.getQuery?['sort'], 'new');
+    expect(apiClient.getQuery?['filterRules'], contains('"value":3'));
+  });
 }

@@ -106,12 +106,16 @@ class ContentRepository {
     return CgRatingResult.fromJson(json['result'] ?? json);
   }
 
-  Future<List<PatchNoteSummary>> loadPatchNotes(int regionId) async {
+  Future<List<PatchNoteSummary>> loadPatchNotes(
+    int regionId, {
+    int page = 1,
+    int pageSize = 120,
+  }) async {
     final json = await apiClient.getJson(
       '/community/posts',
       query: {
-        'page': 1,
-        'pageSize': 120,
+        'page': page,
+        'pageSize': pageSize,
         'sort': 'new',
         'filterRules': jsonEncode([
           {'field': 'region_id', 'op': 'eq', 'value': regionId},

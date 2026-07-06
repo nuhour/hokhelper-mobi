@@ -9,6 +9,8 @@ import '../../../core/widgets/app_section_header.dart';
 import '../domain/patch_note_summary.dart';
 import 'content_screen.dart';
 
+const _patchNotesPageSize = 120;
+
 class PatchNotesScreen extends ConsumerStatefulWidget {
   const PatchNotesScreen({super.key});
 
@@ -18,7 +20,11 @@ class PatchNotesScreen extends ConsumerStatefulWidget {
 
 class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
   final _heroFilterController = TextEditingController();
+  final _extraNotes = <PatchNoteSummary>[];
   String _heroFilter = '';
+  var _nextPage = 2;
+  var _hasMoreNotes = true;
+  var _isLoadingMoreNotes = false;
 
   @override
   void dispose() {
@@ -34,6 +40,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
       color: AppTheme.bg,
       child: RefreshIndicator(
         onRefresh: () async {
+          _resetLoadedPages();
           ref.invalidate(patchNotesProvider);
           await ref.read(patchNotesProvider.future);
         },
@@ -74,7 +81,8 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
               value: patchNotesValue,
               retry: () => ref.invalidate(patchNotesProvider),
               data: (items) {
-                final filteredItems = _filterByHero(items, _heroFilter);
+                final allItems = [...items, ..._extraNotes];
+                final filteredItems = _filterByHero(allItems, _heroFilter);
                 if (filteredItems.isEmpty) {
                   return AppEmptyState(
                     icon: Icons.newspaper_outlined,
@@ -87,19 +95,43 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
                   );
                 }
 
-                return ListView.separated(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: filteredItems.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    return _PatchTimelineCard(
-                      note: filteredItems[index],
-                      onTap: () =>
-                          _showPatchDetail(context, filteredItems[index]),
-                    );
-                  },
+                return Column(
+                  children: [
+                    ListView.separated(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: filteredItems.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 14),
+                      itemBuilder: (context, index) {
+                        return _PatchTimelineCard(
+                          note: filteredItems[index],
+                          onTap: () =>
+                              _showPatchDetail(context, filteredItems[index]),
+                        );
+                      },
+                    ),
+                    if (_hasMoreNotes && items.length >= _patchNotesPageSize)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: FilledButton.icon(
+                          onPressed: _isLoadingMoreNotes
+                              ? null
+                              : _loadMorePatchNotes,
+                          icon: _isLoadingMoreNotes
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label: Text(
+                            _isLoadingMoreNotes ? 'Loading...' : 'Load more',
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -139,6 +171,52 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
         return _PatchDetailSheet(note: note);
       },
     );
+  }
+
+  void _resetLoadedPages() {
+    _extraNotes.clear();
+    _nextPage = 2;
+    _hasMoreNotes = true;
+    _isLoadingMoreNotes = false;
+  }
+
+  Future<void> _loadMorePatchNotes() async {
+    if (_isLoadingMoreNotes || !_hasMoreNotes) {
+      return;
+    }
+
+    setState(() => _isLoadingMoreNotes = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final regionId = await ref.read(patchNotesRegionProvider.future);
+      final nextItems = await ref
+          .read(contentRepositoryProvider)
+          .loadPatchNotes(
+            regionId,
+            page: _nextPage,
+            pageSize: _patchNotesPageSize,
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _nextPage += 1;
+        _extraNotes.addAll(nextItems);
+        _hasMoreNotes = nextItems.length >= _patchNotesPageSize;
+        _isLoadingMoreNotes = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isLoadingMoreNotes = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to load more patch notes: $error')),
+      );
+    }
   }
 }
 
