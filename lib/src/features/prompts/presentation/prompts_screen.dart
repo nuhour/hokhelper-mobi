@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -292,12 +293,28 @@ class _PromptCard extends StatelessWidget {
                   icon: Icons.bookmark_border,
                   value: prompt.favoriteCount,
                 ),
+                if (prompt.content.isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () => _copyPrompt(context),
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: const Text('Copy'),
+                  ),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _copyPrompt(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: prompt.content));
+    if (!context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(const SnackBar(content: Text('Prompt copied')));
   }
 }
 

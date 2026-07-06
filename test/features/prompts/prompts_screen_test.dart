@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/features/prompts/data/prompts_repository.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+
   testWidgets('renders prompt explorer cards', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -136,5 +144,50 @@ void main() {
     expect(find.text('Shared prompt target'), findsOneWidget);
     expect(find.text('Prompt shared from the hokx portal.'), findsOneWidget);
     expect(find.text('sharer'), findsOneWidget);
+  });
+
+  testWidgets('copies prompt content to clipboard', (tester) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Copy'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall?.arguments, {
+      'text': 'Create a neon Honor of Kings skin splash art.',
+    });
+    expect(find.text('Prompt copied'), findsOneWidget);
   });
 }
