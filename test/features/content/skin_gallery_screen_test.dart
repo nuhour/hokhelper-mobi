@@ -182,6 +182,55 @@ void main() {
     expect(find.text('Moonlight Tune'), findsNothing);
   });
 
+  testWidgets('filters skins by minimum rating', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          skinGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 1001,
+                kind: ContentKind.skin,
+                title: 'Crimson Hunter',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Hunter Series',
+                rating: 4.5,
+                ratingCount: 12,
+                viewCount: 0,
+              ),
+              ContentItemSummary(
+                id: 1002,
+                kind: ContentKind.skin,
+                title: 'Moonlight Tune',
+                heroName: 'Angela',
+                imageUrl: '',
+                subtitle: 'Music Series',
+                rating: 3.5,
+                ratingCount: 4,
+                viewCount: 0,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '4+'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Crimson Hunter'), findsOneWidget);
+    expect(find.text('Moonlight Tune'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'All ratings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Crimson Hunter'), findsOneWidget);
+    expect(find.text('Moonlight Tune'), findsOneWidget);
+  });
+
   testWidgets('rates skins from the detail sheet', (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1;

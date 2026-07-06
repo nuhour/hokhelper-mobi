@@ -45,6 +45,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   _SkinSort _sort = _SkinSort.latest;
+  double _minRating = 0;
   int? _openedInitialSkinId;
   int? _ratingSkinId;
 
@@ -140,6 +141,11 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
               onSelectionChanged: (value) =>
                   setState(() => _sort = value.first),
             ),
+            const SizedBox(height: 12),
+            _RatingFilterBar(
+              minRating: _minRating,
+              onChanged: (value) => setState(() => _minRating = value),
+            ),
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
               value: galleryValue,
@@ -186,6 +192,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     final normalizedQuery = _query.trim().toLowerCase();
     final filtered = items
         .where((skin) {
+          if (skin.rating < _minRating) {
+            return false;
+          }
+
           if (normalizedQuery.isEmpty) {
             return true;
           }
@@ -239,6 +249,55 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       }
     }
   }
+}
+
+class _RatingFilterBar extends StatelessWidget {
+  const _RatingFilterBar({required this.minRating, required this.onChanged});
+
+  final double minRating;
+  final ValueChanged<double> onChanged;
+
+  static const _options = [
+    _RatingFilterOption(label: 'All ratings', value: 0),
+    _RatingFilterOption(label: '4+', value: 4),
+    _RatingFilterOption(label: '4.5+', value: 4.5),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final option in _options)
+          ChoiceChip(
+            label: Text(option.label),
+            selected: minRating == option.value,
+            onSelected: (_) => onChanged(option.value),
+            avatar: option.value == 0
+                ? const Icon(Icons.filter_alt_off, size: 16)
+                : const Icon(Icons.star, size: 16),
+            labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: minRating == option.value ? AppTheme.bg : AppTheme.text,
+              fontWeight: FontWeight.w800,
+            ),
+            selectedColor: AppTheme.gold,
+            backgroundColor: AppTheme.panel,
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _RatingFilterOption {
+  const _RatingFilterOption({required this.label, required this.value});
+
+  final String label;
+  final double value;
 }
 
 class _SkinCard extends StatelessWidget {
