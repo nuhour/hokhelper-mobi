@@ -113,6 +113,20 @@ class PromptsRepository {
     final map = result is Map ? result : const <String, Object?>{};
     return PromptGenerateResult.fromJson(map);
   }
+
+  Future<PromptSummary> setPromptImage({
+    required String promptId,
+    required String imageData,
+  }) async {
+    final json = await apiClient.postJson(
+      '/prompt/$promptId/set-image',
+      body: {'image_data': imageData},
+    );
+    final result = json['result'];
+    final map = result is Map ? result : json;
+    final prompt = map['prompt'];
+    return PromptSummary.fromJson(prompt ?? map);
+  }
 }
 
 class PromptGenerationQuota {

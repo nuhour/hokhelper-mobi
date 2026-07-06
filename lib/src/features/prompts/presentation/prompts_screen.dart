@@ -299,7 +299,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     BuildContext context,
     PromptSummary prompt,
   ) async {
-    await showModalBottomSheet<void>(
+    final updated = await showModalBottomSheet<PromptSummary>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.panel,
@@ -308,6 +308,19 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       ),
       builder: (_) => _PromptGenerationSheet(prompt: prompt),
     );
+    if (updated == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _updatedPrompts[updated.id] = updated;
+      final createdIndex = _createdPrompts.indexWhere(
+        (prompt) => prompt.id == updated.id,
+      );
+      if (createdIndex >= 0) {
+        _createdPrompts[createdIndex] = updated;
+      }
+    });
+    ref.invalidate(promptListProvider(_action));
   }
 }
 
@@ -328,6 +341,7 @@ class _PromptGenerationSheetState
   PromptGenerationQuota? _quota;
   List<String> _images = const [];
   var _generating = false;
+  String? _settingCoverUrl;
 
   @override
   void initState() {
@@ -446,10 +460,47 @@ class _PromptGenerationSheetState
                               crossAxisSpacing: 10,
                             ),
                         itemBuilder: (context, index) {
-                          return AppImage(
-                            url: _images[index],
-                            borderRadius: 14,
-                            semanticLabel: 'Generated image ${index + 1}',
+                          final imageUrl = _images[index];
+                          final isSettingCover = _settingCoverUrl == imageUrl;
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              AppImage(
+                                url: imageUrl,
+                                borderRadius: 14,
+                                semanticLabel: 'Generated image ${index + 1}',
+                              ),
+                              Positioned(
+                                left: 8,
+                                right: 8,
+                                top: 8,
+                                child: OutlinedButton.icon(
+                                  onPressed: _settingCoverUrl == null
+                                      ? () => _setCover(imageUrl)
+                                      : null,
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: AppTheme.panel.withValues(
+                                      alpha: 0.92,
+                                    ),
+                                    foregroundColor: AppTheme.text,
+                                    side: const BorderSide(
+                                      color: AppTheme.muted,
+                                    ),
+                                    minimumSize: const Size.fromHeight(34),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  icon: isSettingCover
+                                      ? const SizedBox.square(
+                                          dimension: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.image, size: 16),
+                                  label: const Text('Set cover'),
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),
@@ -489,6 +540,33 @@ class _PromptGenerationSheetState
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(content: Text('Failed to generate image')),
+      );
+    }
+  }
+
+  Future<void> _setCover(String imageUrl) async {
+    setState(() => _settingCoverUrl = imageUrl);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final updated = await ref
+          .read(promptsRepositoryProvider)
+          .setPromptImage(promptId: widget.prompt.id, imageData: imageUrl);
+      if (!mounted) {
+        return;
+      }
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Prompt cover updated')),
+      );
+      Navigator.of(context).pop(updated);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _settingCoverUrl = null);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to set prompt cover')),
       );
     }
   }

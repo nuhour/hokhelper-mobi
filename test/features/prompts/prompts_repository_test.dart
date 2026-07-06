@@ -103,6 +103,24 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/prompt/7/set-image') {
+      return const {
+        'success': true,
+        'result': {
+          'prompt': {
+            'id': '7',
+            'title': 'Cyber skin concept',
+            'content': 'Create a neon Honor of Kings skin splash art.',
+            'tags': ['skin', 'cyber'],
+            'is_public': true,
+            'image_url': 'https://example.test/generated-1.png',
+            'author_name': 'artist',
+            'likes': 12,
+            'favorites': 5,
+          },
+        },
+      };
+    }
     if (path.endsWith('/like')) {
       return const {
         'success': true,
@@ -289,5 +307,22 @@ void main() {
     ]);
     expect(result.quota.used, 3);
     expect(result.quota.remaining, 2);
+  });
+
+  test('sets generated prompt image as prompt cover', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final updated = await repository.setPromptImage(
+      promptId: '7',
+      imageData: 'https://example.test/generated-1.png',
+    );
+
+    expect(apiClient.postPath, '/prompt/7/set-image');
+    expect(apiClient.postBody, {
+      'image_data': 'https://example.test/generated-1.png',
+    });
+    expect(updated.id, '7');
+    expect(updated.imageUrl, 'https://example.test/generated-1.png');
   });
 }

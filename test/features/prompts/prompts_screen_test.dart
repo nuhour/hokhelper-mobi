@@ -20,6 +20,8 @@ class _FakePromptsRepository extends PromptsRepository {
   String? generatedPromptId;
   int? generatedCount;
   String? generatedContent;
+  String? setCoverPromptId;
+  String? setCoverImageData;
 
   @override
   Future<PromptLikeResult> toggleLike(String promptId) async {
@@ -88,6 +90,26 @@ class _FakePromptsRepository extends PromptsRepository {
     return const PromptGenerateResult(
       images: ['https://example.test/generated-1.png'],
       quota: PromptGenerationQuota(used: 2, total: 5),
+    );
+  }
+
+  @override
+  Future<PromptSummary> setPromptImage({
+    required String promptId,
+    required String imageData,
+  }) async {
+    setCoverPromptId = promptId;
+    setCoverImageData = imageData;
+    return PromptSummary(
+      id: promptId,
+      title: 'Cyber skin concept',
+      content: 'Create a neon Honor of Kings skin splash art.',
+      tags: const ['skin', 'cyber'],
+      imageUrl: imageData,
+      authorName: 'artist',
+      likeCount: 12,
+      favoriteCount: 5,
+      isPublic: true,
     );
   }
 }
@@ -572,5 +594,55 @@ void main() {
     );
     expect(find.text('3 / 5 left'), findsOneWidget);
     expect(find.bySemanticsLabel('Generated image 1'), findsOneWidget);
+  });
+
+  testWidgets('sets a generated prompt image as cover', (tester) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Generate image'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.widgetWithText(OutlinedButton, 'Set cover'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Set cover'));
+    await tester.pumpAndSettle();
+
+    expect(repository.setCoverPromptId, '7');
+    expect(
+      repository.setCoverImageData,
+      'https://example.test/generated-1.png',
+    );
+    expect(find.text('Prompt cover updated'), findsOneWidget);
   });
 }
