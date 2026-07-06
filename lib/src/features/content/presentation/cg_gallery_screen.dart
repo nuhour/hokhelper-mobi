@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -357,6 +358,13 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
   }
 
   void _openDetail(BuildContext context, int cgId) {
+    final router = GoRouter.maybeOf(context);
+    final listPath = router == null
+        ? null
+        : _cgGalleryListPath(router.routeInformationProvider.value.uri);
+    if (router != null && listPath != null) {
+      _syncDetailRoute(router: router, listPath: listPath, cgId: cgId);
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -366,7 +374,30 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => _CgDetailSheet(cgId: cgId),
+    ).whenComplete(() {
+      if (mounted && router != null && listPath != null) {
+        _syncDetailRoute(router: router, listPath: listPath, cgId: null);
+      }
+    });
+  }
+
+  String _cgGalleryListPath(Uri uri) {
+    return uri.path.startsWith('/content/cgs') ? '/content/cgs' : '/cg';
+  }
+
+  void _syncDetailRoute({
+    required GoRouter router,
+    required String listPath,
+    required int? cgId,
+  }) {
+    final currentUri = router.routeInformationProvider.value.uri;
+    final nextUri = currentUri.replace(
+      path: cgId == null ? listPath : '$listPath/$cgId',
     );
+    if (nextUri == currentUri) {
+      return;
+    }
+    router.go(nextUri.toString());
   }
 
   void _resetLoadedPages() {

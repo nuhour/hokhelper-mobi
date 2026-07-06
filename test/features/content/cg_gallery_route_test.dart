@@ -6,6 +6,7 @@ import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/cg_detail.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/cg_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
@@ -34,6 +35,28 @@ class _RouteCgRepository extends ContentRepository {
     int? heroId,
   }) async {
     return cgs;
+  }
+
+  @override
+  Future<CgDetail> loadCgDetail(int cgId) async {
+    return CgDetail(
+      id: cgId,
+      title: 'Lam Cinematic',
+      heroName: 'Lam',
+      coverUrl: '',
+      playUrl: 'https://example.test/cg/$cgId.mp4',
+      viewCount: 2300,
+      rating: 4.8,
+      ratingCount: 17,
+    );
+  }
+
+  @override
+  Future<List<CgCommentSummary>> loadCgComments(
+    int cgId, {
+    String order = 'desc',
+  }) async {
+    return const [];
   }
 }
 
@@ -140,5 +163,62 @@ void main() {
     expect(find.text('Focused hero CGs'), findsOneWidget);
     expect(find.text('Lam Cinematic'), findsOneWidget);
     expect(find.text('Angela Trailer'), findsNothing);
+  });
+
+  testWidgets('cg detail sheet synchronizes the web detail route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/cg?q=Lam');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteCgRepository(const [
+              ContentItemSummary(
+                id: 501,
+                kind: ContentKind.cg,
+                title: 'Lam Cinematic',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 4.8,
+                ratingCount: 17,
+                viewCount: 2300,
+              ),
+            ]),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Lam Cinematic'));
+    await tester.tap(find.text('Lam Cinematic'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/cg/501');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['q'],
+      'Lam',
+    );
+    expect(find.text('CG Detail'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('CG Detail'))).pop();
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/cg');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['q'],
+      'Lam',
+    );
   });
 }
