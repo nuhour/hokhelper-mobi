@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -192,6 +193,11 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                       ),
                       label: const Text('Like'),
                     ),
+                    OutlinedButton.icon(
+                      onPressed: () => _sharePost(context),
+                      icon: const Icon(Icons.ios_share_outlined, size: 16),
+                      label: const Text('Share'),
+                    ),
                     ...post.tags.take(4).map((tag) => _MetricChip(label: tag)),
                   ],
                 ),
@@ -300,6 +306,18 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
       );
     }
   }
+
+  Future<void> _sharePost(BuildContext context) async {
+    await Clipboard.setData(
+      ClipboardData(text: '/community/post/${widget.detail.post.id}'),
+    );
+    if (!mounted || !context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(const SnackBar(content: Text('Post link copied')));
+  }
 }
 
 class _CommentCard extends StatelessWidget {
@@ -334,11 +352,10 @@ class _CommentCard extends StatelessWidget {
                   child: _AuthorNameButton(
                     authorId: comment.authorId,
                     authorName: comment.authorName,
-                    textStyle: Theme.of(context).textTheme.labelLarge
-                        ?.copyWith(
-                          color: AppTheme.text,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 if (comment.likeCount > 0)
@@ -402,11 +419,7 @@ class _AuthorNameButton extends StatelessWidget {
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           textStyle: textStyle,
         ),
-        child: Text(
-          authorName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        child: Text(authorName, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

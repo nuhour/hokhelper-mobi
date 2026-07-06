@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -193,6 +194,60 @@ void main() {
     expect(find.text('Post liked'), findsOneWidget);
   });
 
+  testWidgets('copies community post share links from the detail screen', (
+    tester,
+  ) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 2,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityPostDetailScreen(postId: '99')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall, isNotNull);
+    expect(clipboardCall!.arguments, {'text': '/community/post/99'});
+    expect(find.text('Post link copied'), findsOneWidget);
+  });
+
   testWidgets('creates comments from the mobile detail screen', (tester) async {
     final repository = _FakeCommunityRepository();
 
@@ -311,6 +366,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.drag(find.byType(ListView).first, const Offset(0, -140));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lam'));
     await tester.pumpAndSettle();
 
