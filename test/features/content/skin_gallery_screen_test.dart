@@ -23,13 +23,19 @@ class _FakeSkinRepository extends ContentRepository {
 
   int? ratedSkinId;
   double? submittedRating;
+  String? requestedSkinSort;
+  String? requestedSkinOrder;
 
   @override
   Future<List<ContentItemSummary>> loadSkins(
     int regionId, {
     int page = 1,
     int pageSize = 20,
+    String sort = 'id',
+    String order = 'desc',
   }) async {
+    requestedSkinSort = sort;
+    requestedSkinOrder = order;
     return const [
       ContentItemSummary(
         id: 1001,
@@ -87,6 +93,8 @@ class _PagedSkinRepository extends ContentRepository {
     int regionId, {
     int page = 1,
     int pageSize = 20,
+    String sort = 'id',
+    String order = 'desc',
   }) async {
     requestedPages.add(page);
     final startId = (page - 1) * pageSize + 1;
@@ -392,6 +400,29 @@ void main() {
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsNothing);
     expect(find.text('Low Rank Skin'), findsNothing);
+  });
+
+  testWidgets('requests skins with hokx-compatible sort params', (
+    tester,
+  ) async {
+    final repository = _FakeSkinRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          skinGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Rating'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedSkinSort, 'rating');
+    expect(repository.requestedSkinOrder, 'desc');
   });
 
   testWidgets('switches skin cards between poster and splash art', (

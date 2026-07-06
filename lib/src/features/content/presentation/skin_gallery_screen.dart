@@ -27,12 +27,47 @@ final skinGalleryProvider = FutureProvider<List<ContentItemSummary>>((
       .loadSkins(regionId, pageSize: _skinGalleryPageSize);
 });
 
+final skinGalleryQueryProvider =
+    FutureProvider.family<List<ContentItemSummary>, _SkinGalleryQuery>((
+      ref,
+      query,
+    ) async {
+      if (query.isDefault) {
+        return ref.watch(skinGalleryProvider.future);
+      }
+      final regionId = await ref.watch(skinGalleryRegionProvider.future);
+      return ref
+          .watch(contentRepositoryProvider)
+          .loadSkins(
+            regionId,
+            pageSize: _skinGalleryPageSize,
+            sort: query.sort.apiValue,
+            order: 'desc',
+          );
+    });
+
 final skinDetailProvider = FutureProvider.family<SkinDetail, int>((
   ref,
   skinId,
 ) {
   return ref.watch(contentRepositoryProvider).loadSkinDetail(skinId);
 });
+
+class _SkinGalleryQuery {
+  const _SkinGalleryQuery({this.sort = _SkinSort.latest});
+
+  final _SkinSort sort;
+
+  bool get isDefault => sort == _SkinSort.latest;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _SkinGalleryQuery && other.sort == sort;
+  }
+
+  @override
+  int get hashCode => sort.hashCode;
+}
 
 class SkinGalleryScreen extends ConsumerStatefulWidget {
   const SkinGalleryScreen({
@@ -89,7 +124,8 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final galleryValue = ref.watch(skinGalleryProvider);
+    final galleryQuery = _SkinGalleryQuery(sort: _sort);
+    final galleryValue = ref.watch(skinGalleryQueryProvider(galleryQuery));
     final initialSkinId = widget.initialSkinId;
 
     if (initialSkinId != null && _openedInitialSkinId != initialSkinId) {
@@ -106,8 +142,8 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       child: RefreshIndicator(
         onRefresh: () async {
           _resetLoadedPages();
-          ref.invalidate(skinGalleryProvider);
-          await ref.read(skinGalleryProvider.future);
+          ref.invalidate(skinGalleryQueryProvider(galleryQuery));
+          await ref.read(skinGalleryQueryProvider(galleryQuery).future);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -179,8 +215,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                 ),
               ],
               selected: {_sort},
-              onSelectionChanged: (value) =>
-                  setState(() => _sort = value.first),
+              onSelectionChanged: (value) => setState(() {
+                _sort = value.first;
+                _resetLoadedPages();
+              }),
             ),
             const SizedBox(height: 12),
             _RatingFilterBar(
@@ -203,7 +241,8 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
               value: galleryValue,
-              retry: () => ref.invalidate(skinGalleryProvider),
+              retry: () =>
+                  ref.invalidate(skinGalleryQueryProvider(galleryQuery)),
               data: (items) {
                 final allItems = [...items, ..._extraSkins];
                 final skins = _filterAndSort(allItems);
@@ -357,7 +396,13 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       final regionId = await ref.read(skinGalleryRegionProvider.future);
       final nextItems = await ref
           .read(contentRepositoryProvider)
-          .loadSkins(regionId, page: _nextPage, pageSize: _skinGalleryPageSize);
+          .loadSkins(
+            regionId,
+            page: _nextPage,
+            pageSize: _skinGalleryPageSize,
+            sort: _sort.apiValue,
+            order: 'desc',
+          );
 
       if (!mounted) {
         return;
@@ -935,6 +980,14 @@ class _SkinRatingControl extends StatelessWidget {
   }
 }
 
-enum _SkinSort { latest, name, rating }
+enum _SkinSort {
+  latest('id'),
+  name('name'),
+  rating('rating');
+
+  const _SkinSort(this.apiValue);
+
+  final String apiValue;
+}
 
 enum _SkinViewMode { poster, splash }

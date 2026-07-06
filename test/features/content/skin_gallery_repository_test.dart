@@ -127,10 +127,36 @@ void main() {
       expect(apiClient.lastBody, {
         'page': 2,
         'pageSize': 30,
+        'sort': 'id',
+        'order': 'desc',
         'filterRules': [
           {'field': 'region_id', 'op': 'eq', 'value': 2},
         ],
       });
     },
   );
+
+  test('loads skin gallery with web-compatible sort and order', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    await repository.loadSkins(
+      2,
+      page: 1,
+      pageSize: 12,
+      sort: 'rating',
+      order: 'desc',
+    );
+
+    expect(apiClient.postCalls, ['/skin/list']);
+    expect(apiClient.lastBody, {
+      'page': 1,
+      'pageSize': 12,
+      'sort': 'rating',
+      'order': 'desc',
+      'filterRules': [
+        {'field': 'region_id', 'op': 'eq', 'value': 2},
+      ],
+    });
+  });
 }

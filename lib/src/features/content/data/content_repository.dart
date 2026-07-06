@@ -15,10 +15,16 @@ class ContentRepository {
     int regionId, {
     int page = 1,
     int pageSize = 20,
+    String sort = 'id',
+    String order = 'desc',
   }) async {
     final json = await apiClient.postJson(
       '/skin/list',
-      body: _pagedRegionBody(regionId, page: page, pageSize: pageSize),
+      body: {
+        ..._pagedRegionBody(regionId, page: page, pageSize: pageSize),
+        'sort': sort,
+        'order': order == 'asc' ? 'asc' : 'desc',
+      },
     );
     return _readRows(
       json,
