@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -365,78 +366,98 @@ class _HeroRankingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    final heroRouteId = _heroRouteId(
+      externalHeroId: entry.externalHeroId,
+      heroId: entry.heroId,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+        onTap: heroRouteId.isEmpty
+            ? null
+            : () => context.go('/heroes/$heroRouteId'),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _RankBadge(rank: rank),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        entry.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: AppTheme.text,
-                              fontWeight: FontWeight.w800,
-                            ),
+                Row(
+                  children: [
+                    _RankBadge(rank: rank),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            entry.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: AppTheme.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            entry.mainJob.isEmpty ? 'Hero' : entry.mainJob,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.muted),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        entry.mainJob.isEmpty ? 'Hero' : entry.mainJob,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                    ],
-                  ),
+                    ),
+                    _PrimaryRate(value: entry.winRate),
+                  ],
                 ),
-                _PrimaryRate(value: entry.winRate),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricChip(
+                      label: 'Pick',
+                      value: _formatPercent(entry.pickRate),
+                    ),
+                    _MetricChip(
+                      label: 'Ban',
+                      value: _formatPercent(entry.banRate),
+                    ),
+                    _MetricChip(
+                      label: 'MVP',
+                      value: _formatPercent(entry.mvpRate),
+                    ),
+                    _MetricChip(
+                      label: 'K',
+                      value: entry.avgKills.toStringAsFixed(1),
+                    ),
+                    _MetricChip(
+                      label: 'A',
+                      value: entry.avgAssists.toStringAsFixed(1),
+                    ),
+                    _MetricChip(
+                      label: 'Grade',
+                      value: entry.avgGrade.toStringAsFixed(1),
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MetricChip(
-                  label: 'Pick',
-                  value: _formatPercent(entry.pickRate),
-                ),
-                _MetricChip(label: 'Ban', value: _formatPercent(entry.banRate)),
-                _MetricChip(label: 'MVP', value: _formatPercent(entry.mvpRate)),
-                _MetricChip(
-                  label: 'K',
-                  value: entry.avgKills.toStringAsFixed(1),
-                ),
-                _MetricChip(
-                  label: 'A',
-                  value: entry.avgAssists.toStringAsFixed(1),
-                ),
-                _MetricChip(
-                  label: 'Grade',
-                  value: entry.avgGrade.toStringAsFixed(1),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -595,69 +616,86 @@ class _TierListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    final heroRouteId = _heroRouteId(
+      externalHeroId: entry.externalHeroId,
+      heroId: entry.heroId,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+        onTap: heroRouteId.isEmpty
+            ? null
+            : () => context.go('/heroes/$heroRouteId'),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _TierBadge(label: entry.tier),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        entry.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: AppTheme.text,
-                              fontWeight: FontWeight.w800,
-                            ),
+                Row(
+                  children: [
+                    _TierBadge(label: entry.tier),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            entry.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: AppTheme.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            entry.mainJob.isEmpty
+                                ? 'Hero'
+                                : 'Lane ${entry.mainJob}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.muted),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        entry.mainJob.isEmpty
-                            ? 'Hero'
-                            : 'Lane ${entry.mainJob}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                    ],
-                  ),
+                    ),
+                    _RankBadge(rank: entry.position > 0 ? entry.position : rank),
+                  ],
                 ),
-                _RankBadge(rank: entry.position > 0 ? entry.position : rank),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricChip(
+                      label: 'Score',
+                      value: entry.score.toStringAsFixed(1),
+                    ),
+                    _MetricChip(
+                      label: 'Win',
+                      value: _formatPercent(entry.winRate),
+                    ),
+                    if (entry.externalHeroId.isNotEmpty)
+                      _MetricChip(label: 'Hero ID', value: entry.externalHeroId),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MetricChip(
-                  label: 'Score',
-                  value: entry.score.toStringAsFixed(1),
-                ),
-                _MetricChip(label: 'Win', value: _formatPercent(entry.winRate)),
-                if (entry.externalHeroId.isNotEmpty)
-                  _MetricChip(label: 'Hero ID', value: entry.externalHeroId),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -828,6 +866,14 @@ class _MetricChip extends StatelessWidget {
 
 String _formatPercent(double value) {
   return '${(value * 100).toStringAsFixed(1)}%';
+}
+
+String _heroRouteId({required String externalHeroId, required int heroId}) {
+  final external = externalHeroId.trim();
+  if (external.isNotEmpty) {
+    return external;
+  }
+  return heroId > 0 ? heroId.toString() : '';
 }
 
 String _formatScore(double value) {
