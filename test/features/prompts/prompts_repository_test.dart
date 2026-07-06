@@ -51,6 +51,21 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postPath = path;
     postBody = body;
+    if (path == '/prompt') {
+      return const {
+        'success': true,
+        'result': {
+          'prompt': {
+            'id': '10',
+            'title': 'Mobile prompt',
+            'content': 'Generate a clean HOK hero portrait.',
+            'tags': ['portrait', 'mobile', 'Lang:en'],
+            'is_public': true,
+            'author_name': 'me',
+          },
+        },
+      };
+    }
     if (path.endsWith('/like')) {
       return const {
         'success': true,
@@ -132,5 +147,33 @@ void main() {
     expect(apiClient.postBody, isEmpty);
     expect(result.isLiked, isTrue);
     expect(result.likeCount, 13);
+  });
+
+  test('creates prompt with hokx request fields', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    final created = await repository.createPrompt(
+      const PromptDraft(
+        title: 'Mobile prompt',
+        content: 'Generate a clean HOK hero portrait.',
+        tags: ['portrait', 'mobile'],
+        isPublic: true,
+        language: 'en',
+      ),
+    );
+
+    expect(apiClient.postPath, '/prompt');
+    expect(apiClient.postBody, {
+      'title': 'Mobile prompt',
+      'content': 'Generate a clean HOK hero portrait.',
+      'tags': ['portrait', 'mobile', 'Lang:en'],
+      'is_public': true,
+      'source_image_url': '',
+      'effect_image_url': '',
+      'language': 'en',
+    });
+    expect(created.id, '10');
+    expect(created.title, 'Mobile prompt');
   });
 }

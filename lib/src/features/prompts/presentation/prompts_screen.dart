@@ -56,6 +56,7 @@ class PromptsScreen extends ConsumerStatefulWidget {
 
 class _PromptsScreenState extends ConsumerState<PromptsScreen> {
   late PromptListAction _action;
+  final _createdPrompts = <PromptSummary>[];
 
   @override
   void initState() {
@@ -71,7 +72,10 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       value: promptsValue,
       retry: () => ref.invalidate(promptListProvider(_action)),
       data: (prompts) {
-        final visiblePrompts = _visiblePrompts(prompts);
+        final visiblePrompts = _visiblePrompts([
+          ..._createdPrompts,
+          ...prompts,
+        ]);
         return RefreshIndicator(
           onRefresh: () => ref.refresh(promptListProvider(_action).future),
           child: CustomScrollView(
@@ -83,7 +87,14 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const AppSectionHeader(title: 'Prompts'),
+                      AppSectionHeader(
+                        title: 'Prompts',
+                        action: FilledButton.icon(
+                          onPressed: () => _openCreateSheet(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create'),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         'Explore public AI prompt templates from the community.',
@@ -113,7 +124,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                   ),
                 ),
               ),
-              if (prompts.isEmpty)
+              if (visiblePrompts.isEmpty)
                 const SliverFillRemaining(
                   hasScrollBody: false,
                   child: AppEmptyState(
@@ -167,6 +178,192 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     final focused = prompts[focusedIndex];
     final rest = prompts.where((prompt) => prompt.id != initialPromptId);
     return [focused, ...rest].toList(growable: false);
+  }
+
+  Future<void> _openCreateSheet(BuildContext context) async {
+    final created = await showModalBottomSheet<PromptSummary>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _PromptEditorSheet(),
+    );
+    if (created == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _createdPrompts.removeWhere((prompt) => prompt.id == created.id);
+      _createdPrompts.insert(0, created);
+      _action = PromptListAction.myPrompts;
+    });
+    ref.invalidate(promptListProvider(PromptListAction.myPrompts));
+  }
+}
+
+class _PromptEditorSheet extends ConsumerStatefulWidget {
+  const _PromptEditorSheet();
+
+  @override
+  ConsumerState<_PromptEditorSheet> createState() => _PromptEditorSheetState();
+}
+
+class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _contentController = TextEditingController();
+  final _tagsController = TextEditingController();
+  var _isPublic = true;
+  var _submitting = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    _tagsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Create prompt',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _submitting
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Close',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(labelText: 'Title'),
+                  textInputAction: TextInputAction.next,
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    return text.isEmpty ? 'Title is required' : null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _contentController,
+                  decoration: const InputDecoration(
+                    labelText: 'Prompt content',
+                    alignLabelWithHint: true,
+                  ),
+                  minLines: 4,
+                  maxLines: 8,
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    return text.isEmpty ? 'Prompt content is required' : null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _tagsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Tags',
+                    hintText: 'skin, build, hero',
+                  ),
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile.adaptive(
+                  value: _isPublic,
+                  onChanged: _submitting
+                      ? null
+                      : (value) => setState(() => _isPublic = value),
+                  title: const Text('Public'),
+                  subtitle: const Text('Visible in Explore after publishing'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _submitting ? null : _save,
+                    icon: _submitting
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: const Text('Save prompt'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      final tags = _tagsController.text
+          .split(',')
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toList(growable: false);
+      final created = await ref
+          .read(promptsRepositoryProvider)
+          .createPrompt(
+            PromptDraft(
+              title: _titleController.text,
+              content: _contentController.text,
+              tags: tags,
+              isPublic: _isPublic,
+              language: 'en',
+            ),
+          );
+      if (!mounted) {
+        return;
+      }
+      final navigator = Navigator.of(context);
+      final messenger = ScaffoldMessenger.of(context);
+      navigator.pop(created);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Prompt created')));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _submitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to create prompt')),
+      );
+    }
   }
 }
 

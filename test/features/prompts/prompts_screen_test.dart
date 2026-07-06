@@ -13,6 +13,7 @@ class _FakePromptsRepository extends PromptsRepository {
 
   String? likedPromptId;
   String? favoritedPromptId;
+  PromptDraft? createdDraft;
 
   @override
   Future<PromptLikeResult> toggleLike(String promptId) async {
@@ -24,6 +25,22 @@ class _FakePromptsRepository extends PromptsRepository {
   Future<PromptFavoriteResult> toggleFavorite(String promptId) async {
     favoritedPromptId = promptId;
     return const PromptFavoriteResult(isFavorited: true, favoriteCount: 6);
+  }
+
+  @override
+  Future<PromptSummary> createPrompt(PromptDraft draft) async {
+    createdDraft = draft;
+    return PromptSummary(
+      id: '10',
+      title: draft.title,
+      content: draft.content,
+      tags: draft.tags,
+      imageUrl: '',
+      authorName: 'me',
+      likeCount: 0,
+      favoriteCount: 0,
+      isPublic: draft.isPublic,
+    );
   }
 }
 
@@ -296,5 +313,57 @@ void main() {
     expect(repository.likedPromptId, '7');
     expect(find.text('13'), findsOneWidget);
     expect(find.text('Prompt liked'), findsOneWidget);
+  });
+
+  testWidgets('creates a prompt from the mobile prompt form', (tester) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [];
+          }),
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
+            ref,
+          ) async {
+            return const [];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Title'),
+      'Mobile prompt',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Prompt content'),
+      'Generate a clean HOK hero portrait.',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Tags'),
+      'portrait, mobile',
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save prompt'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdDraft?.title, 'Mobile prompt');
+    expect(
+      repository.createdDraft?.content,
+      'Generate a clean HOK hero portrait.',
+    );
+    expect(repository.createdDraft?.tags, ['portrait', 'mobile']);
+    expect(find.text('Mobile prompt'), findsOneWidget);
+    expect(find.text('Prompt created'), findsOneWidget);
   });
 }

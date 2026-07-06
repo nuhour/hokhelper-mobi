@@ -63,6 +63,53 @@ class PromptsRepository {
     final map = result is Map ? result : const <String, Object?>{};
     return PromptLikeResult.fromJson(map);
   }
+
+  Future<PromptSummary> createPrompt(PromptDraft draft) async {
+    final json = await apiClient.postJson('/prompt', body: draft.toJson());
+    final result = json['result'];
+    final map = result is Map ? result : json;
+    final prompt = map['prompt'];
+    return PromptSummary.fromJson(prompt ?? map);
+  }
+}
+
+class PromptDraft {
+  const PromptDraft({
+    required this.title,
+    required this.content,
+    required this.tags,
+    required this.isPublic,
+    this.language = 'en',
+    this.sourceImageUrl = '',
+    this.effectImageUrl = '',
+  });
+
+  final String title;
+  final String content;
+  final List<String> tags;
+  final bool isPublic;
+  final String language;
+  final String sourceImageUrl;
+  final String effectImageUrl;
+
+  Map<String, Object?> toJson() {
+    final normalizedTags = <String>{
+      ...tags.map((tag) => tag.trim()).where((tag) => tag.isNotEmpty),
+    };
+    final lang = language.trim();
+    if (lang.isNotEmpty) {
+      normalizedTags.add('Lang:$lang');
+    }
+    return {
+      'title': title.trim(),
+      'content': content.trim(),
+      'tags': normalizedTags.toList(growable: false),
+      'is_public': isPublic,
+      'source_image_url': sourceImageUrl.trim(),
+      'effect_image_url': effectImageUrl.trim(),
+      'language': lang,
+    };
+  }
 }
 
 class PromptFavoriteResult {
