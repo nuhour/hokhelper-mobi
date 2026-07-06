@@ -191,6 +191,8 @@ class _ProfileCard extends ConsumerWidget {
                   ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
                 ),
               ],
+              const SizedBox(height: 18),
+              const _FavoriteShortcuts(),
             ],
             const SizedBox(height: 24),
             Wrap(
@@ -244,6 +246,104 @@ class _ProfileCard extends ConsumerWidget {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => const _ChangePasswordSheet(),
+    );
+  }
+}
+
+class _FavoriteShortcuts extends StatelessWidget {
+  const _FavoriteShortcuts();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'My Favorites',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Column(
+          children: const [
+            _FavoriteShortcutTile(
+              icon: Icons.forum_outlined,
+              label: 'Posts',
+              route: '/community?view=likes',
+            ),
+            SizedBox(height: 8),
+            _FavoriteShortcutTile(
+              icon: Icons.bolt_outlined,
+              label: 'Builds',
+              route: '/tools/build-sim?filter=favorites',
+            ),
+            SizedBox(height: 8),
+            _FavoriteShortcutTile(
+              icon: Icons.auto_awesome_outlined,
+              label: 'Prompts',
+              route: '/tools/prompts?tab=favorites',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FavoriteShortcutTile extends StatelessWidget {
+  const _FavoriteShortcutTile({
+    required this.icon,
+    required this.label,
+    required this.route,
+  });
+
+  final IconData icon;
+  final String label;
+  final String route;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push(route),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panelAlt,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, color: AppTheme.gold, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppTheme.muted,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

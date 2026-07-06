@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
@@ -131,6 +132,28 @@ Widget _buildMeScreenWithRepository(
   );
 }
 
+Widget _buildMeScreenRouter(AuthUser user, UserProfile profile) {
+  final router = GoRouter(
+    initialLocation: '/me',
+    routes: [
+      GoRoute(path: '/me', builder: (context, state) => const MeScreen()),
+      GoRoute(
+        path: '/tools/prompts',
+        builder: (context, state) =>
+            Scaffold(body: Text('Prompts ${state.uri.queryParameters['tab']}')),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [
+      authControllerProvider.overrideWith(() => _TestAuthController(user)),
+      currentUserProfileProvider.overrideWith((ref) async => profile),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
 const _profile = UserProfile(
   id: 42,
   username: 'lam',
@@ -200,10 +223,36 @@ void main() {
     expect(find.text('LV.7'), findsOneWidget);
     expect(find.text('1,200 XP'), findsOneWidget);
     expect(find.text('Jungle main'), findsOneWidget);
-    expect(find.text('Posts'), findsOneWidget);
+    expect(find.text('Posts'), findsWidgets);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Followers'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
+  });
+
+  testWidgets('signed-in profile exposes hokx favorite shortcuts', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+
+    await tester.pumpWidget(_buildMeScreenRouter(user, _profile));
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Favorites'), findsOneWidget);
+    expect(find.text('Posts'), findsWidgets);
+    expect(find.text('Builds'), findsOneWidget);
+    expect(find.text('Prompts'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Prompts'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Prompts'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Prompts favorites'), findsOneWidget);
   });
 
   testWidgets('profile editor saves updated mobile profile fields', (
