@@ -25,9 +25,11 @@ class CommunityRepository {
     int page = 1,
     int pageSize = 30,
     String search = '',
+    String tag = '',
     CommunityPostSort sort = CommunityPostSort.newest,
   }) async {
     final trimmedSearch = search.trim();
+    final trimmedTag = tag.trim();
     final json = await apiClient.getJson(
       '/community/posts',
       query: {
@@ -35,6 +37,7 @@ class CommunityRepository {
         'pageSize': pageSize,
         'sort': sort.backendValue,
         if (trimmedSearch.isNotEmpty) 'search': trimmedSearch,
+        if (trimmedTag.isNotEmpty) 'tag': trimmedTag,
         'filterRules': jsonEncode([
           {'field': 'region_id', 'op': 'eq', 'value': regionId},
         ]),

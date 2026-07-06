@@ -3,8 +3,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/community/data/community_repository.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
+
+class _RouteCommunityRepository extends CommunityRepository {
+  _RouteCommunityRepository(this.posts)
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  final List<CommunityPostSummary> posts;
+
+  @override
+  Future<List<CommunityPostSummary>> loadPosts(
+    int regionId, {
+    int page = 1,
+    int pageSize = 30,
+    String search = '',
+    String tag = '',
+    CommunityPostSort sort = CommunityPostSort.newest,
+  }) async {
+    return posts;
+  }
+}
 
 void main() {
   testWidgets('web community route preserves tag query', (tester) async {
@@ -14,8 +43,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          communityPostsProvider.overrideWith((ref) async {
-            return const [
+          communityRepositoryProvider.overrideWithValue(
+            _RouteCommunityRepository(const [
               CommunityPostSummary(
                 id: '301',
                 title: 'Patch update notes',
@@ -40,8 +69,9 @@ void main() {
                 likeCount: 12,
                 commentCount: 4,
               ),
-            ];
-          }),
+            ]),
+          ),
+          communityPostsRegionProvider.overrideWith((ref) async => 2),
           leakPostsProvider.overrideWith((ref) async => const []),
         ],
         child: HokHelperApp(router: router),

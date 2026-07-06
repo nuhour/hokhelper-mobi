@@ -33,6 +33,7 @@ class _FakeCommunityRepository extends CommunityRepository {
   String? deletedPostId;
   String? likedPostId;
   String? requestedPostSearch;
+  String? requestedPostTag;
   CommunityPostSort? requestedPostSort;
   final requestedPostPages = <int>[];
   final requestedLeakPages = <int>[];
@@ -45,10 +46,12 @@ class _FakeCommunityRepository extends CommunityRepository {
     int page = 1,
     int pageSize = 30,
     String search = '',
+    String tag = '',
     CommunityPostSort sort = CommunityPostSort.newest,
   }) async {
     requestedPostPages.add(page);
     requestedPostSearch = search;
+    requestedPostTag = tag;
     requestedPostSort = sort;
     final loader = loadPostsPage;
     if (loader == null) {
@@ -277,37 +280,41 @@ void main() {
   });
 
   testWidgets('filters posts from initial tag query', (tester) async {
+    final repository = _FakeCommunityRepository();
+    repository.loadPostsPage = (page, pageSize) {
+      return const [
+        CommunityPostSummary(
+          id: '301',
+          title: 'Patch update notes',
+          preview: 'Lam receives jungle tuning.',
+          authorName: 'Analyst',
+          authorAvatarUrl: '',
+          tags: ['Update', 'Patch'],
+          createdAt: '2026-07-03T10:00:00Z',
+          viewCount: 45,
+          likeCount: 6,
+          commentCount: 2,
+        ),
+        CommunityPostSummary(
+          id: '302',
+          title: 'General draft chat',
+          preview: 'Pick front line first.',
+          authorName: 'Coach',
+          authorAvatarUrl: '',
+          tags: ['Draft'],
+          createdAt: '2026-07-03T11:00:00Z',
+          viewCount: 99,
+          likeCount: 12,
+          commentCount: 4,
+        ),
+      ];
+    };
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          communityPostsProvider.overrideWith((ref) async {
-            return const [
-              CommunityPostSummary(
-                id: '301',
-                title: 'Patch update notes',
-                preview: 'Lam receives jungle tuning.',
-                authorName: 'Analyst',
-                authorAvatarUrl: '',
-                tags: ['Update', 'Patch'],
-                createdAt: '2026-07-03T10:00:00Z',
-                viewCount: 45,
-                likeCount: 6,
-                commentCount: 2,
-              ),
-              CommunityPostSummary(
-                id: '302',
-                title: 'General draft chat',
-                preview: 'Pick front line first.',
-                authorName: 'Coach',
-                authorAvatarUrl: '',
-                tags: ['Draft'],
-                createdAt: '2026-07-03T11:00:00Z',
-                viewCount: 99,
-                likeCount: 12,
-                commentCount: 4,
-              ),
-            ];
-          }),
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsRegionProvider.overrideWith((ref) async => 2),
           leakPostsProvider.overrideWith((ref) async => const []),
         ],
         child: const MaterialApp(
@@ -321,6 +328,7 @@ void main() {
     expect(find.text('Showing posts tagged "update".'), findsOneWidget);
     expect(find.text('Patch update notes'), findsOneWidget);
     expect(find.text('General draft chat'), findsNothing);
+    expect(repository.requestedPostTag, 'update');
   });
 
   testWidgets('my posts mode filters posts to the signed-in author', (

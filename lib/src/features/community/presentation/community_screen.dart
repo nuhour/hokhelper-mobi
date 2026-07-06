@@ -50,6 +50,7 @@ final communityPostsQueryProvider =
             regionId,
             pageSize: _communityPostsPageSize,
             search: query.search,
+            tag: query.tag,
             sort: query.sort,
           );
     });
@@ -69,24 +70,29 @@ final leakPostsRegionProvider = FutureProvider<int>((ref) async {
 class CommunityPostsQuery {
   const CommunityPostsQuery({
     this.search = '',
+    this.tag = '',
     this.sort = CommunityPostSort.newest,
   });
 
   final String search;
+  final String tag;
   final CommunityPostSort sort;
 
   bool get isDefault =>
-      search.trim().isEmpty && sort == CommunityPostSort.newest;
+      search.trim().isEmpty &&
+      tag.trim().isEmpty &&
+      sort == CommunityPostSort.newest;
 
   @override
   bool operator ==(Object other) {
     return other is CommunityPostsQuery &&
         other.search == search &&
+        other.tag == tag &&
         other.sort == sort;
   }
 
   @override
-  int get hashCode => Object.hash(search, sort);
+  int get hashCode => Object.hash(search, tag, sort);
 }
 
 enum CommunityInitialView { hot, myPosts, likedPosts }
@@ -203,13 +209,13 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   @override
   Widget build(BuildContext context) {
     final authUser = ref.watch(authControllerProvider).valueOrNull;
-    final query = CommunityPostsQuery(search: _search, sort: _sort);
+    final tag = widget.initialTag?.trim() ?? '';
+    final query = CommunityPostsQuery(search: _search, tag: tag, sort: _sort);
     final postsValue = ref.watch(communityPostsQueryProvider(query));
     return AppAsyncView<List<CommunityPostSummary>>(
       value: postsValue,
       retry: () => ref.invalidate(communityPostsQueryProvider(query)),
       data: (posts) {
-        final tag = widget.initialTag?.trim() ?? '';
         final combinedPosts = [...posts, ..._extraPosts];
         final allPosts = _mergeCreatedPosts(combinedPosts)
             .where((post) => !_deletedPostIds.contains(post.id))
@@ -349,6 +355,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
             page: _nextPostsPage,
             pageSize: _communityPostsPageSize,
             search: _search,
+            tag: widget.initialTag?.trim() ?? '',
             sort: _sort,
           );
       if (!mounted) {

@@ -165,6 +165,21 @@ void main() {
     },
   );
 
+  test('loads community posts with hokx-compatible tag filter', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    await repository.loadPosts(2, tag: 'Update');
+
+    expect(apiClient.getQueries['/community/posts'], {
+      'page': 1,
+      'pageSize': 30,
+      'sort': 'new',
+      'tag': 'Update',
+      'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
+    });
+  });
+
   test('loads leak posts with region and all-category query', () async {
     final apiClient = _FakeApiClient();
     final repository = CommunityRepository(apiClient: apiClient);
