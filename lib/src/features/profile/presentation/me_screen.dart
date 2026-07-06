@@ -169,7 +169,10 @@ class _ProfileCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 18),
-              _StatsGrid(stats: profile!.stats),
+              _StatsGrid(
+                stats: profile!.stats,
+                onPostsTap: () => context.go('/content/community?tab=my'),
+              ),
               if (profile!.bio.isNotEmpty) ...[
                 const SizedBox(height: 18),
                 Text(
@@ -824,9 +827,10 @@ class _ProgressBar extends StatelessWidget {
 }
 
 class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.stats});
+  const _StatsGrid({required this.stats, this.onPostsTap});
 
   final ProfileStats stats;
+  final VoidCallback? onPostsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -840,7 +844,7 @@ class _StatsGrid extends StatelessWidget {
         childAspectRatio: 2.6,
       ),
       children: [
-        _StatTile(label: 'Posts', value: stats.posts),
+        _StatTile(label: 'Posts', value: stats.posts, onTap: onPostsTap),
         _StatTile(label: 'Following', value: stats.following),
         _StatTile(label: 'Followers', value: stats.followers),
         _StatTile(label: 'Likes', value: stats.likes),
@@ -850,16 +854,20 @@ class _StatsGrid extends StatelessWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
+  const _StatTile({required this.label, required this.value, this.onTap});
 
   final String label;
   final int value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final tile = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panelAlt,
+        border: onTap == null
+            ? null
+            : Border.all(color: AppTheme.gold.withValues(alpha: 0.24)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -888,6 +896,14 @@ class _StatTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (onTap == null) {
+      return tile;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: tile,
     );
   }
 }

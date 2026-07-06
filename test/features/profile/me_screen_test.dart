@@ -282,6 +282,27 @@ void main() {
     expect(find.text('Community likes'), findsOneWidget);
   });
 
+  testWidgets('signed-in profile stats posts open my community posts', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+
+    await tester.pumpWidget(_buildMeScreenRouter(user, _profile));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Posts').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Posts').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Community my'), findsOneWidget);
+  });
+
   testWidgets('signed-in profile opens hokx points rules from level badge', (
     tester,
   ) async {
