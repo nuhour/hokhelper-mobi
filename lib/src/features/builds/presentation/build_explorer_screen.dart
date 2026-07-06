@@ -99,7 +99,9 @@ class BuildSchemeCard extends ConsumerStatefulWidget {
 
 class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   late var _likeCount = widget.scheme.likeCount;
+  late var _favoriteCount = widget.scheme.favoriteCount;
   var _likeSubmitting = false;
+  var _favoriteSubmitting = false;
 
   @override
   void didUpdateWidget(covariant BuildSchemeCard oldWidget) {
@@ -108,6 +110,11 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
         oldWidget.scheme.likeCount != widget.scheme.likeCount) {
       _likeCount = widget.scheme.likeCount;
       _likeSubmitting = false;
+    }
+    if (oldWidget.scheme.id != widget.scheme.id ||
+        oldWidget.scheme.favoriteCount != widget.scheme.favoriteCount) {
+      _favoriteCount = widget.scheme.favoriteCount;
+      _favoriteSubmitting = false;
     }
   }
 
@@ -176,7 +183,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                     ),
                     _MetricChip(
                       icon: Icons.star_border_rounded,
-                      value: scheme.favoriteCount,
+                      value: _favoriteCount,
                     ),
                     _MetricChip(
                       icon: Icons.copy_all_outlined,
@@ -188,6 +195,13 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                           : () => _likeScheme(context),
                       icon: const Icon(Icons.thumb_up_outlined, size: 16),
                       label: const Text('Like'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _favoriteSubmitting
+                          ? null
+                          : () => _favoriteScheme(context),
+                      icon: const Icon(Icons.star_border_rounded, size: 16),
+                      label: const Text('Favorite'),
                     ),
                   ],
                 ),
@@ -224,6 +238,35 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(content: Text('Failed to like build')),
+      );
+    }
+  }
+
+  Future<void> _favoriteScheme(BuildContext context) async {
+    setState(() => _favoriteSubmitting = true);
+    try {
+      await ref
+          .read(buildsRepositoryProvider)
+          .favoriteBuildScheme(widget.scheme.id);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _favoriteCount += 1;
+        _favoriteSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Build favorited')));
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _favoriteSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to favorite build')),
       );
     }
   }

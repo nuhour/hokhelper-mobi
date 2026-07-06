@@ -11,10 +11,16 @@ class _FakeBuildsRepository extends BuildsRepository {
   _FakeBuildsRepository() : super(apiClient: _NoopApiClient());
 
   int? likedSchemeId;
+  int? favoritedSchemeId;
 
   @override
   Future<void> likeBuildScheme(int schemeId) async {
     likedSchemeId = schemeId;
+  }
+
+  @override
+  Future<void> favoriteBuildScheme(int schemeId) async {
+    favoritedSchemeId = schemeId;
   }
 }
 
@@ -100,5 +106,43 @@ void main() {
     expect(repository.likedSchemeId, 7);
     expect(find.text('13'), findsOneWidget);
     expect(find.text('Build liked'), findsOneWidget);
+  });
+
+  testWidgets('favorites public build schemes from explorer cards', (
+    tester,
+  ) async {
+    final repository = _FakeBuildsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildsRepositoryProvider.overrideWithValue(repository),
+          publicBuildSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 7,
+                title: 'Burst jungle',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 5,
+                cloneCount: 3,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BuildExplorerScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorite'));
+    await tester.pumpAndSettle();
+
+    expect(repository.favoritedSchemeId, 7);
+    expect(find.text('6'), findsOneWidget);
+    expect(find.text('Build favorited'), findsOneWidget);
   });
 }
