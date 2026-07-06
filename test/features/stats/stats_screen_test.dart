@@ -42,6 +42,14 @@ void main() {
               ],
             );
           }),
+          statsEquipDetailProvider('88').overrideWith((ref) async {
+            return const StatsEquipDetail(
+              equipId: '88',
+              equipName: 'Doomsday',
+              equipIconUrl: '',
+              heroes: [],
+            );
+          }),
         ],
         child: const MaterialApp(home: Scaffold(body: StatsScreen())),
       ),
@@ -110,12 +118,74 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    for (
+      var i = 0;
+      i < 10 && find.text('Focused equipment').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     expect(find.text('Focused equipment'), findsOneWidget);
     final equipTopLeft = tester.getTopLeft(find.text('Equipment Trends'));
     final heroTopLeft = tester.getTopLeft(find.text('Hero Trends'));
     expect(equipTopLeft.dy, lessThan(heroTopLeft.dy));
+  });
+
+  testWidgets('focused equipment entry renders hero usage detail', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider.overrideWith((ref, entry) async {
+            return const StatsDashboard(
+              equips: [
+                StatsEquipRow(
+                  id: '88',
+                  name: 'Doomsday',
+                  iconUrl: '',
+                  pickRate: 0.22,
+                  winRate: 0.53,
+                ),
+              ],
+            );
+          }),
+          statsEquipDetailProvider('88').overrideWith((ref) async {
+            return const StatsEquipDetail(
+              equipId: '88',
+              equipName: 'Doomsday',
+              equipIconUrl: '',
+              heroes: [
+                StatsEquipHeroRow(
+                  id: '199',
+                  name: 'Lam',
+                  avatarUrl: '',
+                  pickRate: 0.42,
+                  winRate: 0.57,
+                  matches: 8900,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: StatsScreen(
+              initialEntry: StatsEntry.equipRank,
+              initialEquipId: '88',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Equipment Hero Usage'), findsOneWidget);
+    expect(find.text('Doomsday'), findsWidgets);
+    expect(find.text('Lam'), findsOneWidget);
+    expect(find.text('42.0% pick'), findsOneWidget);
+    expect(find.text('8900 matches'), findsOneWidget);
   });
 
   testWidgets('home core entry highlights overview stats', (tester) async {

@@ -29,6 +29,17 @@ final statsDashboardProvider =
           );
     });
 
+final statsEquipDetailProvider =
+    FutureProvider.family<StatsEquipDetail, String>((ref, equipId) async {
+      final settings = await ref.watch(appSettingsControllerProvider.future);
+      return ref
+          .watch(statsRepositoryProvider)
+          .loadEquipDetail(
+            equipId: equipId,
+            regionCode: settings.region.languageCode,
+          );
+    });
+
 enum StatsEntry {
   overview,
   homeCore,
@@ -104,6 +115,12 @@ class StatsScreen extends ConsumerWidget {
                 )
               else ...[
                 ..._buildSections(dashboard),
+                if (initialEntry == StatsEntry.equipRank &&
+                    initialEquipId != null &&
+                    initialEquipId!.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  _EquipDetailSection(equipId: initialEquipId!),
+                ],
               ],
             ],
           ),
@@ -198,6 +215,35 @@ class StatsScreen extends ConsumerWidget {
   }
 }
 
+class _EquipDetailSection extends ConsumerWidget {
+  const _EquipDetailSection({required this.equipId});
+
+  final String equipId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value = ref.watch(statsEquipDetailProvider(equipId));
+    return AppAsyncView<StatsEquipDetail>(
+      value: value,
+      retry: () => ref.invalidate(statsEquipDetailProvider(equipId)),
+      data: (detail) {
+        if (detail.heroes.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return _StatsSection(
+          title: 'Equipment Hero Usage',
+          icon: Icons.groups_2_outlined,
+          focusLabel: detail.equipName,
+          children: [
+            for (final hero in detail.heroes.take(8))
+              _EquipHeroUsageCard(hero: hero),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _StatsSection extends StatelessWidget {
   const _StatsSection({
     required this.title,
@@ -242,6 +288,56 @@ class _StatsSection extends StatelessWidget {
         const SizedBox(height: 10),
         ...children.expand((child) => [child, const SizedBox(height: 10)]),
       ],
+    );
+  }
+}
+
+class _EquipHeroUsageCard extends StatelessWidget {
+  const _EquipHeroUsageCard({required this.hero});
+
+  final StatsEquipHeroRow hero;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      child: Row(
+        children: [
+          AppImage(
+            url: hero.avatarUrl,
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            semanticLabel: hero.name,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hero.name.isEmpty ? 'Hero' : hero.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricPill(label: '${hero.pickRateText} pick'),
+                    _MetricPill(label: '${hero.winRateText} WR'),
+                    _MetricPill(label: hero.matchesText),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

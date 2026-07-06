@@ -62,6 +62,20 @@ class StatsRepository {
         .toList(growable: false);
   }
 
+  Future<StatsEquipDetail> loadEquipDetail({
+    required String equipId,
+    required String regionCode,
+  }) async {
+    final parsedEquipId = int.tryParse(equipId);
+    final query = <String, dynamic>{
+      'equip_id': parsedEquipId,
+      'baseline': 'peak_1000',
+      'region': regionCode,
+    }..removeWhere((key, value) => value == null);
+    final json = await apiClient.getJson('/stats/hero-combos', query: query);
+    return StatsEquipDetail.fromJson(json['data'] ?? json['result'] ?? json);
+  }
+
   Future<List<T>> _loadRows<T>({
     required String dimension,
     required String view,

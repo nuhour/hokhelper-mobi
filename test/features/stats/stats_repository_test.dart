@@ -20,8 +20,32 @@ class _FakeApiClient extends ApiClient {
     String path, {
     Map<String, dynamic>? query,
   }) async {
-    queries['$path:${query?['dimension'] ?? ''}:${query?['view'] ?? ''}'] =
+    queries['$path:${query?['dimension'] ?? query?['equip_id'] ?? ''}:${query?['view'] ?? ''}'] =
         query;
+
+    if (path == '/stats/hero-combos' && query?['equip_id'] == 88) {
+      return const {
+        'success': true,
+        'data': {
+          'equip_id': 88,
+          'equip': {
+            'id': 88,
+            'name': 'Doomsday',
+            'icon_url': 'https://example.test/doomsday.png',
+          },
+          'hero_equip_stats': [
+            {
+              'hero_id': 199,
+              'hero_name': 'Lam',
+              'hero_avatar_url': 'https://example.test/lam.png',
+              'pick_rate': 0.42,
+              'win_rate': 0.57,
+              'quantity': 8900,
+            },
+          ],
+        },
+      };
+    }
 
     if (path == '/stats/table' && query?['dimension'] == 'hero_rank') {
       return const {
@@ -234,4 +258,27 @@ void main() {
     expect(dashboard.heroes.single.name, 'Arli');
     expect(dashboard.heroes.single.scoreText, '98.1');
   });
+
+  test(
+    'loads focused equipment hero usage from hero combos endpoint',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = StatsRepository(apiClient: apiClient);
+
+      final detail = await repository.loadEquipDetail(
+        equipId: '88',
+        regionCode: 'en',
+      );
+
+      expect(apiClient.queries['/stats/hero-combos:88:'], {
+        'equip_id': 88,
+        'baseline': 'peak_1000',
+        'region': 'en',
+      });
+      expect(detail.equipName, 'Doomsday');
+      expect(detail.heroes.single.name, 'Lam');
+      expect(detail.heroes.single.pickRateText, '42.0%');
+      expect(detail.heroes.single.matchesText, '8900 matches');
+    },
+  );
 }
