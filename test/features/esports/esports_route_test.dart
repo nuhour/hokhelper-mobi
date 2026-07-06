@@ -113,6 +113,62 @@ void main() {
     expect(find.text('4 - 3'), findsNothing);
   });
 
+  testWidgets('tools esports stats route opens the stats tab', (tester) async {
+    final router = createAppRouter();
+    router.go('/tools/esports/stats');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/stats',
+    );
+    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('Esports Stats'), findsOneWidget);
+    expect(find.text('Luban No.7'), findsOneWidget);
+    expect(find.text('4 - 3'), findsNothing);
+  });
+
+  testWidgets('tools esports team and player deep links open focused tabs', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/esports/teams/1');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/teams/1',
+    );
+    expect(find.text('Focused Team'), findsOneWidget);
+    expect(find.text('Chongqing Wolves'), findsOneWidget);
+    expect(find.text('4 - 3'), findsNothing);
+
+    router.go('/tools/esports/players/8');
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/players/8',
+    );
+    expect(find.text('Focused Player'), findsOneWidget);
+    expect(find.text('Fly'), findsOneWidget);
+    expect(find.text('KPL Spring'), findsNothing);
+  });
+
   testWidgets('esports tab changes synchronize the web route', (tester) async {
     final router = createAppRouter();
     router.go('/esports?season=2026');
