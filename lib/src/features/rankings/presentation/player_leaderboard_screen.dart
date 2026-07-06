@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -128,13 +129,18 @@ class _PlayerLeaderboardScreenState
                               .toList(growable: false),
                           selected: {rankType},
                           onSelectionChanged: (selection) {
+                            final nextRankType = selection.single;
                             ref
                                     .read(
                                       selectedPlayerLeaderboardRankTypeProvider
                                           .notifier,
                                     )
                                     .state =
-                                selection.single;
+                                nextRankType;
+                            _syncRouteQuery(
+                              rankType: nextRankType,
+                              regionId: selectedRegion,
+                            );
                           },
                         ),
                         const SizedBox(height: 12),
@@ -149,6 +155,10 @@ class _PlayerLeaderboardScreenState
                                     )
                                     .state =
                                 region;
+                            _syncRouteQuery(
+                              rankType: rankType,
+                              regionId: region,
+                            );
                           },
                         ),
                         const SizedBox(height: 12),
@@ -194,6 +204,39 @@ class _PlayerLeaderboardScreenState
         },
       ),
     );
+  }
+
+  void _syncRouteQuery({
+    required PlayerLeaderboardRankType rankType,
+    required int regionId,
+  }) {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      return;
+    }
+
+    final currentUri = router.routeInformationProvider.value.uri;
+    final queryParameters = Map<String, String>.from(
+      currentUri.queryParameters,
+    );
+    if (rankType == PlayerLeaderboardRankType.peak) {
+      queryParameters['rank_type'] = PlayerLeaderboardRankType.peak.apiValue;
+    } else {
+      queryParameters.remove('rank_type');
+    }
+    if (regionId > 0) {
+      queryParameters['region_id'] = '$regionId';
+    } else {
+      queryParameters.remove('region_id');
+    }
+
+    final nextUri = currentUri.replace(
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    );
+    if (nextUri == currentUri) {
+      return;
+    }
+    router.go(nextUri.toString());
   }
 }
 
