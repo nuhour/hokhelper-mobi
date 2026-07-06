@@ -13,6 +13,8 @@ class _FakeApiClient extends ApiClient {
       );
 
   final getQueries = <String, Map<String, dynamic>?>{};
+  String? postPath;
+  Object? postBody;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -65,6 +67,13 @@ class _FakeApiClient extends ApiClient {
       _ => throw StateError('Unexpected path $path'),
     };
   }
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    postPath = path;
+    postBody = body;
+    return const {'liked': true, 'like_count': 19};
+  }
 }
 
 void main() {
@@ -109,5 +118,17 @@ void main() {
     expect(leaks.single.authorLabel, 'leaker · @leaker');
     expect(leaks.single.metricText, '91 likes · 1200 views');
     expect(leaks.single.keywords, ['Lam', 'skin']);
+  });
+
+  test('toggles community post like with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final result = await repository.togglePostLike('101');
+
+    expect(apiClient.postPath, '/community/posts/101/like');
+    expect(apiClient.postBody, isNull);
+    expect(result.isLiked, isTrue);
+    expect(result.likeCount, 19);
   });
 }

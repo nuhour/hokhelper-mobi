@@ -56,13 +56,36 @@ class CommunityPostDetailScreen extends ConsumerWidget {
   }
 }
 
-class _PostDetailBody extends StatelessWidget {
+class _PostDetailBody extends ConsumerStatefulWidget {
   const _PostDetailBody({required this.detail});
 
   final CommunityPostDetail detail;
 
   @override
+  ConsumerState<_PostDetailBody> createState() => _PostDetailBodyState();
+}
+
+class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
+  late var _likeCount = widget.detail.post.likeCount;
+  late var _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
+  var _likeSubmitting = false;
+
+  @override
+  void didUpdateWidget(covariant _PostDetailBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.detail.post.id != widget.detail.post.id ||
+        oldWidget.detail.post.likeCount != widget.detail.post.likeCount ||
+        oldWidget.detail.isLiked != widget.detail.isLiked ||
+        oldWidget.detail.post.isLiked != widget.detail.post.isLiked) {
+      _likeCount = widget.detail.post.likeCount;
+      _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
+      _likeSubmitting = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final detail = widget.detail;
     final post = detail.post;
 
     return Column(
@@ -141,9 +164,19 @@ class _PostDetailBody extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _MetricChip(label: '${post.viewCount} views'),
-                    _MetricChip(label: '${post.likeCount} likes'),
+                    _MetricChip(label: '$_likeCount likes'),
                     _MetricChip(label: '${post.commentCount} comments'),
-                    if (detail.isLiked) const _MetricChip(label: 'Liked'),
+                    if (_isLiked) const _MetricChip(label: 'Liked'),
+                    OutlinedButton.icon(
+                      onPressed: _likeSubmitting
+                          ? null
+                          : () => _likePost(context),
+                      icon: Icon(
+                        _isLiked ? Icons.favorite : Icons.favorite_border,
+                        size: 16,
+                      ),
+                      label: const Text('Like'),
+                    ),
                     ...post.tags.take(4).map((tag) => _MetricChip(label: tag)),
                   ],
                 ),
@@ -178,6 +211,38 @@ class _PostDetailBody extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  Future<void> _likePost(BuildContext context) async {
+    setState(() => _likeSubmitting = true);
+    try {
+      final result = await ref
+          .read(communityRepositoryProvider)
+          .togglePostLike(widget.detail.post.id);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _isLiked = result.isLiked;
+        _likeCount = result.likeCount;
+        _likeSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(result.isLiked ? 'Post liked' : 'Post unliked')),
+      );
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _likeSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to like post')),
+      );
+    }
   }
 }
 

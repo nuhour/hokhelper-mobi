@@ -52,6 +52,11 @@ class CommunityRepository {
     return CommunityPostDetail.fromJson(result);
   }
 
+  Future<CommunityLikeResult> togglePostLike(String postId) async {
+    final json = await apiClient.postJson('/community/posts/$postId/like');
+    return CommunityLikeResult.fromJson(json);
+  }
+
   List<Object?> _readRows(Map<String, dynamic> json) {
     final result = json['result'];
     final rows = result is Map
@@ -62,4 +67,33 @@ class CommunityRepository {
     }
     return rows;
   }
+}
+
+class CommunityLikeResult {
+  const CommunityLikeResult({required this.isLiked, required this.likeCount});
+
+  final bool isLiked;
+  final int likeCount;
+
+  factory CommunityLikeResult.fromJson(Map<dynamic, dynamic> json) {
+    return CommunityLikeResult(
+      isLiked: _readBool(json['liked'] ?? json['is_liked']),
+      likeCount: _readInt(json['like_count']),
+    );
+  }
+}
+
+bool _readBool(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  final text = value?.toString().toLowerCase() ?? '';
+  return text == 'true' || text == '1' || text == 'yes';
+}
+
+int _readInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  return int.tryParse(value?.toString() ?? '') ?? 0;
 }

@@ -338,13 +338,35 @@ class _LeaksTab extends ConsumerWidget {
   }
 }
 
-class _PostCard extends StatelessWidget {
+class _PostCard extends ConsumerStatefulWidget {
   const _PostCard({required this.post});
 
   final CommunityPostSummary post;
 
   @override
+  ConsumerState<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends ConsumerState<_PostCard> {
+  late var _likeCount = widget.post.likeCount;
+  late var _isLiked = widget.post.isLiked;
+  var _likeSubmitting = false;
+
+  @override
+  void didUpdateWidget(covariant _PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id ||
+        oldWidget.post.likeCount != widget.post.likeCount ||
+        oldWidget.post.isLiked != widget.post.isLiked) {
+      _likeCount = widget.post.likeCount;
+      _isLiked = widget.post.isLiked;
+      _likeSubmitting = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final post = widget.post;
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => context.push('/content/community/post/${post.id}'),
@@ -404,7 +426,17 @@ class _PostCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _Pill(label: post.metricText),
+                _Pill(
+                  label: '$_likeCount likes · ${post.commentCount} comments',
+                ),
+                OutlinedButton.icon(
+                  onPressed: _likeSubmitting ? null : () => _likePost(context),
+                  icon: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    size: 16,
+                  ),
+                  label: const Text('Like'),
+                ),
                 ...post.tags.take(3).map((tag) => _Pill(label: tag)),
               ],
             ),
@@ -412,6 +444,38 @@ class _PostCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _likePost(BuildContext context) async {
+    setState(() => _likeSubmitting = true);
+    try {
+      final result = await ref
+          .read(communityRepositoryProvider)
+          .togglePostLike(widget.post.id);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _isLiked = result.isLiked;
+        _likeCount = result.likeCount;
+        _likeSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(result.isLiked ? 'Post liked' : 'Post unliked')),
+      );
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _likeSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to like post')),
+      );
+    }
   }
 }
 

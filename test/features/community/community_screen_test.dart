@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/community/data/community_repository.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_summary.dart';
@@ -17,6 +20,28 @@ class _TestAuthController extends AuthController {
       displayName: 'Lam',
     );
   }
+}
+
+class _FakeCommunityRepository extends CommunityRepository {
+  _FakeCommunityRepository() : super(apiClient: _NoopApiClient());
+
+  String? likedPostId;
+
+  @override
+  Future<CommunityLikeResult> togglePostLike(String postId) async {
+    likedPostId = postId;
+    return const CommunityLikeResult(isLiked: true, likeCount: 19);
+  }
+}
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
 }
 
 void main() {
@@ -324,5 +349,43 @@ void main() {
     expect(find.text('Showing posts you liked on HOK Helper.'), findsOneWidget);
     expect(find.text('Liked build notes'), findsOneWidget);
     expect(find.text('Unliked draft'), findsNothing);
+  });
+
+  testWidgets('likes community post cards through the backend', (tester) async {
+    final repository = _FakeCommunityRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsProvider.overrideWith((ref) async {
+            return const [
+              CommunityPostSummary(
+                id: '101',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave, then invade.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide', 'Jungle'],
+                createdAt: '2026-07-01T10:00:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 7,
+              ),
+            ];
+          }),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CommunityScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Like'));
+    await tester.pumpAndSettle();
+
+    expect(repository.likedPostId, '101');
+    expect(find.text('19 likes · 7 comments'), findsOneWidget);
+    expect(find.text('Post liked'), findsOneWidget);
   });
 }
