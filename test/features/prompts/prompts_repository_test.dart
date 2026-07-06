@@ -51,6 +51,7 @@ class _FakeApiClient extends ApiClient {
             'source_image_url': 'https://example.test/source.png',
             'effect_image_url': 'https://example.test/effect.png',
             'language': 'English',
+            'author_id': 77,
             'author_name': 'artist',
             'likes': 12,
             'favorites': 5,
@@ -175,6 +176,7 @@ void main() {
     expect(prompts.single.imageUrl, 'https://example.test/prompt.png');
     expect(prompts.single.sourceImageUrl, 'https://example.test/source.png');
     expect(prompts.single.effectImageUrl, 'https://example.test/effect.png');
+    expect(prompts.single.authorId, 77);
     expect(prompts.single.authorName, 'artist');
     expect(prompts.single.likeCount, 12);
     expect(prompts.single.favoriteCount, 5);

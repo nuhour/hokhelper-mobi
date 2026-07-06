@@ -5,6 +5,7 @@ class PromptSummary {
     required this.content,
     required this.tags,
     required this.imageUrl,
+    this.authorId = 0,
     required this.authorName,
     required this.likeCount,
     required this.favoriteCount,
@@ -20,6 +21,7 @@ class PromptSummary {
   final String content;
   final List<String> tags;
   final String imageUrl;
+  final int authorId;
   final String authorName;
   final int likeCount;
   final int favoriteCount;
@@ -44,6 +46,12 @@ class PromptSummary {
       ),
       sourceImageUrl: _readString(map['source_image_url']),
       effectImageUrl: _readString(map['effect_image_url'] ?? map['image_url']),
+      authorId: _readInt(
+        map['author_id'] ??
+            map['authorId'] ??
+            map['creator_id'] ??
+            map['creatorId'],
+      ),
       authorName: _readString(
         map['author_name'] ?? map['authorName'],
         fallback: 'Unknown creator',

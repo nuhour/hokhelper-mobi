@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -1383,13 +1384,9 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        prompt.authorName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppTheme.muted,
-                        ),
+                      _PromptAuthorName(
+                        authorId: prompt.authorId,
+                        authorName: prompt.authorName,
                       ),
                     ],
                   ),
@@ -1558,6 +1555,51 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
         const SnackBar(content: Text('Failed to favorite prompt')),
       );
     }
+  }
+}
+
+class _PromptAuthorName extends StatelessWidget {
+  const _PromptAuthorName({
+    required this.authorId,
+    required this.authorName,
+  });
+
+  final int authorId;
+  final String authorName;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted);
+
+    if (authorId <= 0) {
+      return Text(
+        authorName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textStyle,
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: () => context.go('/profile/$authorId'),
+        style: TextButton.styleFrom(
+          foregroundColor: AppTheme.muted,
+          minimumSize: Size.zero,
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          textStyle: textStyle,
+        ),
+        child: Text(
+          authorName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
   }
 }
 
