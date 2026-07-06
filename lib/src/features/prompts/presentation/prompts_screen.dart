@@ -941,6 +941,8 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _sourceImageController = TextEditingController();
+  final _effectImageController = TextEditingController();
   var _isPublic = true;
   var _submitting = false;
 
@@ -954,6 +956,8 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
       _tagsController.text = prompt.tags
           .where((tag) => !tag.startsWith('Lang:'))
           .join(', ');
+      _sourceImageController.text = prompt.sourceImageUrl;
+      _effectImageController.text = prompt.effectImageUrl;
       _isPublic = prompt.isPublic;
     }
   }
@@ -963,6 +967,8 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
     _titleController.dispose();
     _contentController.dispose();
     _tagsController.dispose();
+    _sourceImageController.dispose();
+    _effectImageController.dispose();
     super.dispose();
   }
 
@@ -1034,6 +1040,26 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                   textInputAction: TextInputAction.done,
                 ),
                 const SizedBox(height: 12),
+                TextFormField(
+                  controller: _sourceImageController,
+                  decoration: const InputDecoration(
+                    labelText: 'Source image URL',
+                    hintText: 'https://example.com/source.png',
+                  ),
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _effectImageController,
+                  decoration: const InputDecoration(
+                    labelText: 'Effect image URL',
+                    hintText: 'https://example.com/effect.png',
+                  ),
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 12),
                 SwitchListTile.adaptive(
                   value: _isPublic,
                   onChanged: _submitting
@@ -1082,6 +1108,8 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
         tags: tags,
         isPublic: _isPublic,
         language: 'en',
+        sourceImageUrl: _sourceImageController.text,
+        effectImageUrl: _effectImageController.text,
       );
       final editingPrompt = widget.prompt;
       final saved = editingPrompt == null

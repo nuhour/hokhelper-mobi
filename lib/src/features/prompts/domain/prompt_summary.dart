@@ -11,6 +11,8 @@ class PromptSummary {
     required this.isPublic,
     this.isFavorited = false,
     this.isLiked = false,
+    this.sourceImageUrl = '',
+    this.effectImageUrl = '',
   });
 
   final String id;
@@ -24,6 +26,8 @@ class PromptSummary {
   final bool isPublic;
   final bool isFavorited;
   final bool isLiked;
+  final String sourceImageUrl;
+  final String effectImageUrl;
 
   factory PromptSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -38,6 +42,8 @@ class PromptSummary {
             map['image_url'] ??
             map['source_image_url'],
       ),
+      sourceImageUrl: _readString(map['source_image_url']),
+      effectImageUrl: _readString(map['effect_image_url'] ?? map['image_url']),
       authorName: _readString(
         map['author_name'] ?? map['authorName'],
         fallback: 'Unknown creator',

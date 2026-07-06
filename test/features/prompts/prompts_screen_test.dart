@@ -449,7 +449,20 @@ void main() {
       find.widgetWithText(TextFormField, 'Tags'),
       'portrait, mobile',
     );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Source image URL'),
+      'https://example.test/source.png',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Effect image URL'),
+      'https://example.test/effect.png',
+    );
 
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Save prompt'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.widgetWithText(FilledButton, 'Save prompt'));
     await tester.pumpAndSettle();
 
@@ -459,6 +472,14 @@ void main() {
       'Generate a clean HOK hero portrait.',
     );
     expect(repository.createdDraft?.tags, ['portrait', 'mobile']);
+    expect(
+      repository.createdDraft?.sourceImageUrl,
+      'https://example.test/source.png',
+    );
+    expect(
+      repository.createdDraft?.effectImageUrl,
+      'https://example.test/effect.png',
+    );
     expect(find.text('Mobile prompt'), findsOneWidget);
     expect(find.text('Prompt created'), findsOneWidget);
   });
@@ -479,7 +500,9 @@ void main() {
                 title: 'Cyber skin concept',
                 content: 'Create a neon Honor of Kings skin splash art.',
                 tags: ['skin', 'cyber'],
-                imageUrl: '',
+                imageUrl: 'https://example.test/effect-old.png',
+                sourceImageUrl: 'https://example.test/source-old.png',
+                effectImageUrl: 'https://example.test/effect-old.png',
                 authorName: 'me',
                 likeCount: 12,
                 favoriteCount: 5,
@@ -513,12 +536,35 @@ void main() {
       find.widgetWithText(TextFormField, 'Tags'),
       'updated',
     );
+    expect(find.text('https://example.test/source-old.png'), findsOneWidget);
+    expect(find.text('https://example.test/effect-old.png'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Source image URL'),
+      'https://example.test/source-updated.png',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Effect image URL'),
+      'https://example.test/effect-updated.png',
+    );
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Save prompt'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.widgetWithText(FilledButton, 'Save prompt'));
     await tester.pumpAndSettle();
 
     expect(repository.updatedPromptId, '7');
     expect(repository.updatedDraft?.title, 'Updated prompt');
     expect(repository.updatedDraft?.tags, ['updated']);
+    expect(
+      repository.updatedDraft?.sourceImageUrl,
+      'https://example.test/source-updated.png',
+    );
+    expect(
+      repository.updatedDraft?.effectImageUrl,
+      'https://example.test/effect-updated.png',
+    );
     expect(find.text('Updated prompt'), findsOneWidget);
     expect(find.text('Prompt updated'), findsOneWidget);
   });

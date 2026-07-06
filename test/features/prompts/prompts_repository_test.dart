@@ -48,6 +48,8 @@ class _FakeApiClient extends ApiClient {
             'tags': ['skin', 'cyber'],
             'is_public': true,
             'display_image_url': 'https://example.test/prompt.png',
+            'source_image_url': 'https://example.test/source.png',
+            'effect_image_url': 'https://example.test/effect.png',
             'language': 'English',
             'author_name': 'artist',
             'likes': 12,
@@ -171,6 +173,8 @@ void main() {
     );
     expect(prompts.single.tags, ['skin', 'cyber']);
     expect(prompts.single.imageUrl, 'https://example.test/prompt.png');
+    expect(prompts.single.sourceImageUrl, 'https://example.test/source.png');
+    expect(prompts.single.effectImageUrl, 'https://example.test/effect.png');
     expect(prompts.single.authorName, 'artist');
     expect(prompts.single.likeCount, 12);
     expect(prompts.single.favoriteCount, 5);
