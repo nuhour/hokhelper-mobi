@@ -88,14 +88,33 @@ class BuildExplorerScreen extends ConsumerWidget {
   }
 }
 
-class BuildSchemeCard extends StatelessWidget {
+class BuildSchemeCard extends ConsumerStatefulWidget {
   const BuildSchemeCard({required this.scheme, super.key});
 
   final BuildSchemeSummary scheme;
 
   @override
+  ConsumerState<BuildSchemeCard> createState() => _BuildSchemeCardState();
+}
+
+class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
+  late var _likeCount = widget.scheme.likeCount;
+  var _likeSubmitting = false;
+
+  @override
+  void didUpdateWidget(covariant BuildSchemeCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scheme.id != widget.scheme.id ||
+        oldWidget.scheme.likeCount != widget.scheme.likeCount) {
+      _likeCount = widget.scheme.likeCount;
+      _likeSubmitting = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = widget.scheme;
     final heroName = scheme.heroName.isEmpty ? 'Any hero' : scheme.heroName;
 
     return Material(
@@ -153,7 +172,7 @@ class BuildSchemeCard extends StatelessWidget {
                   children: [
                     _MetricChip(
                       icon: Icons.thumb_up_outlined,
-                      value: scheme.likeCount,
+                      value: _likeCount,
                     ),
                     _MetricChip(
                       icon: Icons.star_border_rounded,
@@ -163,6 +182,13 @@ class BuildSchemeCard extends StatelessWidget {
                       icon: Icons.copy_all_outlined,
                       value: scheme.cloneCount,
                     ),
+                    OutlinedButton.icon(
+                      onPressed: _likeSubmitting
+                          ? null
+                          : () => _likeScheme(context),
+                      icon: const Icon(Icons.thumb_up_outlined, size: 16),
+                      label: const Text('Like'),
+                    ),
                   ],
                 ),
               ],
@@ -171,6 +197,35 @@ class BuildSchemeCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _likeScheme(BuildContext context) async {
+    setState(() => _likeSubmitting = true);
+    try {
+      await ref
+          .read(buildsRepositoryProvider)
+          .likeBuildScheme(widget.scheme.id);
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() {
+        _likeCount += 1;
+        _likeSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Build liked')));
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _likeSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to like build')),
+      );
+    }
   }
 }
 

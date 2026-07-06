@@ -222,6 +222,16 @@ void main() {
     expect(schemes.single.favoriteCount, 9);
   });
 
+  test('likes build schemes with hokx-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    await repository.likeBuildScheme(7);
+
+    expect(apiClient.postPath, '/build/schemes/like');
+    expect(apiClient.postBody, {'scheme_id': '7'});
+  });
+
   test('loads top equips with backend region filters', () async {
     final apiClient = _FakeApiClient();
     final repository = BuildsRepository(apiClient: apiClient);

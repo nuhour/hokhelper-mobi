@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/builds/data/builds_repository.dart';
 import 'package:hok_helper_mobile/src/features/builds/domain/build_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
+
+class _FakeBuildsRepository extends BuildsRepository {
+  _FakeBuildsRepository() : super(apiClient: _NoopApiClient());
+
+  int? likedSchemeId;
+
+  @override
+  Future<void> likeBuildScheme(int schemeId) async {
+    likedSchemeId = schemeId;
+  }
+}
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
 
 void main() {
   testWidgets('renders public build scheme summaries', (tester) async {
@@ -38,5 +62,43 @@ void main() {
     expect(find.text('12'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
+  });
+
+  testWidgets('likes public build schemes from explorer cards', (
+    tester,
+  ) async {
+    final repository = _FakeBuildsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildsRepositoryProvider.overrideWithValue(repository),
+          publicBuildSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 7,
+                title: 'Burst jungle',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 5,
+                cloneCount: 3,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BuildExplorerScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Like'));
+    await tester.pumpAndSettle();
+
+    expect(repository.likedSchemeId, 7);
+    expect(find.text('13'), findsOneWidget);
+    expect(find.text('Build liked'), findsOneWidget);
   });
 }

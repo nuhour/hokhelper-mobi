@@ -521,8 +521,8 @@ void main() {
     await tester.drag(find.byType(ListView).first, const Offset(0, -720));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Like'));
-    await tester.tap(find.text('Favorite'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Like').last);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorite').last);
     await tester.tap(find.text('Clone S2'));
     await tester.pumpAndSettle();
 
