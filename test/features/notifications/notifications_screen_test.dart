@@ -389,4 +389,72 @@ void main() {
     );
     expect(find.text('https://example.test/event?id=9'), findsOneWidget);
   });
+
+  testWidgets('opens portal hash notification links inside the app', (
+    tester,
+  ) async {
+    final repository = _FakeNotificationsRepository();
+    repository.page = const NotificationPage(
+      total: 1,
+      rows: [
+        NotificationSummary(
+          id: 14,
+          type: 'social',
+          targetType: 'community_post_comment',
+          title: 'Reply',
+          content: 'Coach replied to your post',
+          link: '#/content/community/post/99',
+          isRead: false,
+          createdAt: '2026-07-06T08:30:00Z',
+          actorName: 'Coach',
+          actorAvatar: '',
+          actorId: 7,
+        ),
+      ],
+    );
+    final router = GoRouter(
+      initialLocation: '/notifications',
+      routes: [
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/content/community/post/:postId',
+          builder: (context, state) =>
+              Scaffold(body: Text('Post ${state.pathParameters['postId']}')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(
+              const AuthUser(
+                id: 42,
+                username: 'lam',
+                email: 'lam@example.test',
+                displayName: 'Lam',
+              ),
+            ),
+          ),
+          notificationsRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'View'));
+    await tester.pumpAndSettle();
+
+    expect(repository.markedIds, [14]);
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/content/community/post/99',
+    );
+    expect(find.text('Post 99'), findsOneWidget);
+  });
 }

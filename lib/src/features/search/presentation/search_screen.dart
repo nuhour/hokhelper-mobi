@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/regions.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_section_header.dart';
@@ -227,28 +228,11 @@ class _SearchResultTile extends StatelessWidget {
 }
 
 void _openSearchResult(BuildContext context, String url) {
-  final target = _normalizeSearchTarget(url);
+  final target = normalizePortalLinkTarget(url);
   if (target.startsWith('/')) {
     context.go(target);
     return;
   }
 
-  context.push(
-    Uri(path: '/external-link', queryParameters: {'url': target}).toString(),
-  );
-}
-
-String _normalizeSearchTarget(String url) {
-  final trimmed = url.trim();
-  if (trimmed.startsWith('#/')) {
-    return trimmed.substring(1);
-  }
-  final parsed = Uri.tryParse(trimmed);
-  if (parsed == null || !parsed.hasScheme) {
-    return trimmed;
-  }
-  if (parsed.fragment.startsWith('/')) {
-    return parsed.fragment;
-  }
-  return trimmed;
+  context.push(externalLinkRoute(target));
 }

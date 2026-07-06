@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
+import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -289,12 +290,9 @@ String? _resolveNotificationDestination(NotificationSummary notification) {
     return '/profile/${notification.actorId}';
   }
 
-  final link = notification.link.trim();
+  final link = normalizePortalLinkTarget(notification.link);
   if (link.startsWith(RegExp('https?://', caseSensitive: false))) {
-    return Uri(
-      path: '/external-link',
-      queryParameters: {'url': link},
-    ).toString();
+    return externalLinkRoute(link);
   }
   if (!link.startsWith('/')) {
     return null;
