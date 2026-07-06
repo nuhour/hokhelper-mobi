@@ -318,6 +318,7 @@ class _NotificationCard extends StatelessWidget {
       _ when notification.targetType.contains('follow') => Icons.person_add_alt,
       _ => Icons.chat_bubble_outline,
     };
+    final displayText = _resolveNotificationText(notification);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -349,7 +350,7 @@ class _NotificationCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          notification.title,
+                          displayText.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall
@@ -367,7 +368,7 @@ class _NotificationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    notification.content,
+                    displayText.content,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(
@@ -458,6 +459,113 @@ class _UnreadDot extends StatelessWidget {
       child: const SizedBox(width: 8, height: 8),
     );
   }
+}
+
+class _NotificationDisplayText {
+  const _NotificationDisplayText({required this.title, required this.content});
+
+  final String title;
+  final String content;
+}
+
+_NotificationDisplayText _resolveNotificationText(
+  NotificationSummary notification,
+) {
+  final actorName = notification.actorName.trim().isNotEmpty
+      ? notification.actorName.trim()
+      : 'Someone';
+  final title = notification.title;
+  final content = notification.content;
+  final classifier = '${notification.targetType} $title $content'.toLowerCase();
+  final link = notification.link.toLowerCase();
+  final forceFallback = _containsChinese(title) || _containsChinese(content);
+  final sourceType = notification.targetType.toLowerCase();
+
+  if (notification.type == 'growth') {
+    final levelMatch = RegExp(
+      r'lv\.?\s*(\d+)|(\d+)',
+      caseSensitive: false,
+    ).firstMatch('$title $content');
+    final level = levelMatch?.group(1) ?? levelMatch?.group(2);
+    return _NotificationDisplayText(
+      title: 'Notification',
+      content: level == null
+          ? 'You reached a new level'
+          : 'You reached Lv.$level',
+    );
+  }
+
+  final isFollow =
+      sourceType.contains('follow') ||
+      _hasAny(classifier, const ['关注', 'follow', 'follower']);
+  if (isFollow) {
+    return _NotificationDisplayText(
+      title: 'Notification',
+      content: '$actorName followed you',
+    );
+  }
+
+  final isComment =
+      sourceType.contains('comment') ||
+      _hasAny(classifier, const ['评论', 'comment', 'reply', 'replied', '回复']);
+  if (isComment) {
+    return _NotificationDisplayText(
+      title: 'Notification',
+      content: '$actorName commented on your post',
+    );
+  }
+
+  final isFavorite =
+      sourceType.contains('favorite') ||
+      _hasAny(classifier, const ['收藏', 'favorite', 'favourite', 'saved']);
+  if (isFavorite) {
+    final item = _targetItemLabel(sourceType, link);
+    return _NotificationDisplayText(
+      title: 'Notification',
+      content: '$actorName favorited your $item',
+    );
+  }
+
+  final isLike =
+      sourceType.contains('like') ||
+      _hasAny(classifier, const ['点赞', 'like', 'liked']);
+  if (isLike) {
+    final item = _targetItemLabel(sourceType, link);
+    return _NotificationDisplayText(
+      title: 'Notification',
+      content: '$actorName liked your $item',
+    );
+  }
+
+  if (forceFallback) {
+    return const _NotificationDisplayText(title: 'Notification', content: '');
+  }
+
+  return _NotificationDisplayText(
+    title: title.isEmpty ? 'Notification' : title,
+    content: content,
+  );
+}
+
+bool _containsChinese(String value) {
+  return RegExp(r'[\u3400-\u9fff]').hasMatch(value);
+}
+
+bool _hasAny(String value, List<String> keywords) {
+  return keywords.any(value.contains);
+}
+
+String _targetItemLabel(String sourceType, String link) {
+  if (sourceType.contains('build') || link.contains('/tools/build-sim')) {
+    return 'build';
+  }
+  if (sourceType.contains('prompt') || link.contains('/tools/prompts')) {
+    return 'prompt';
+  }
+  if (sourceType.contains('post') || link.contains('/community/post/')) {
+    return 'post';
+  }
+  return 'content';
 }
 
 String _formatTime(String value) {

@@ -168,6 +168,55 @@ void main() {
     expect(repository.markedAll, isTrue);
   });
 
+  testWidgets('uses portal-style fallback text for Chinese notification rows', (
+    tester,
+  ) async {
+    final repository = _FakeNotificationsRepository();
+    repository.page = const NotificationPage(
+      total: 1,
+      rows: [
+        NotificationSummary(
+          id: 14,
+          type: 'social',
+          targetType: 'community_post_comment',
+          title: '评论通知',
+          content: '有人评论了你的帖子',
+          link: '/community/post/99',
+          isRead: false,
+          createdAt: '2026-07-03T08:30:00Z',
+          actorName: 'Coach',
+          actorAvatar: '',
+          actorId: 7,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(
+              const AuthUser(
+                id: 42,
+                username: 'lam',
+                email: 'lam@example.test',
+                displayName: 'Lam',
+              ),
+            ),
+          ),
+          notificationsRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: Scaffold(body: NotificationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notification'), findsOneWidget);
+    expect(find.text('Coach commented on your post'), findsOneWidget);
+    expect(find.text('评论通知'), findsNothing);
+    expect(find.text('有人评论了你的帖子'), findsNothing);
+  });
+
   testWidgets('opens like notifications at actor profile after marking read', (
     tester,
   ) async {
