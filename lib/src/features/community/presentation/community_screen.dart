@@ -41,12 +41,14 @@ class CommunityScreen extends ConsumerWidget {
     this.initialTabIndex = 0,
     this.initialView = CommunityInitialView.hot,
     this.initialLeakQuery,
+    this.initialPostTag,
     super.key,
   });
 
   final int initialTabIndex;
   final CommunityInitialView initialView;
   final String? initialLeakQuery;
+  final String? initialPostTag;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -100,6 +102,7 @@ class CommunityScreen extends ConsumerWidget {
               _PostsTab(
                 value: ref.watch(communityPostsProvider),
                 initialView: initialView,
+                initialTag: initialPostTag,
               ),
               _LeaksTab(
                 value: ref.watch(leakPostsProvider),
@@ -114,10 +117,15 @@ class CommunityScreen extends ConsumerWidget {
 }
 
 class _PostsTab extends ConsumerWidget {
-  const _PostsTab({required this.value, required this.initialView});
+  const _PostsTab({
+    required this.value,
+    required this.initialView,
+    required this.initialTag,
+  });
 
   final AsyncValue<List<CommunityPostSummary>> value;
   final CommunityInitialView initialView;
+  final String? initialTag;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -126,7 +134,8 @@ class _PostsTab extends ConsumerWidget {
       value: value,
       retry: () => ref.invalidate(communityPostsProvider),
       data: (posts) {
-        final visiblePosts = initialView == CommunityInitialView.myPosts
+        final tag = initialTag?.trim() ?? '';
+        final modePosts = initialView == CommunityInitialView.myPosts
             ? posts
                   .where(
                     (post) =>
@@ -134,14 +143,23 @@ class _PostsTab extends ConsumerWidget {
                   )
                   .toList(growable: false)
             : posts;
+        final visiblePosts = tag.isEmpty
+            ? modePosts
+            : modePosts
+                  .where((post) => _matchesTag(post, tag))
+                  .toList(growable: false);
 
         if (visiblePosts.isEmpty) {
           return AppEmptyState(
             icon: Icons.forum_outlined,
-            title: initialView == CommunityInitialView.myPosts
+            title: tag.isNotEmpty
+                ? 'No matching posts'
+                : initialView == CommunityInitialView.myPosts
                 ? 'No posts from you yet'
                 : 'No community posts found',
-            message: initialView == CommunityInitialView.myPosts
+            message: tag.isNotEmpty
+                ? 'No posts matched "$tag" in this region.'
+                : initialView == CommunityInitialView.myPosts
                 ? 'Create or sync a community post on HOK Helper first.'
                 : 'Pull to refresh or switch region in settings.',
           );
@@ -160,6 +178,14 @@ class _PostsTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
+              if (tag.isNotEmpty) ...[
+                _ModePill(
+                  icon: Icons.sell_outlined,
+                  label: 'Tag Filter',
+                  message: 'Showing posts tagged "$tag".',
+                ),
+                const SizedBox(height: 12),
+              ],
               for (final post in visiblePosts) ...[
                 _PostCard(post: post),
                 const SizedBox(height: 12),
@@ -169,6 +195,11 @@ class _PostsTab extends ConsumerWidget {
         );
       },
     );
+  }
+
+  bool _matchesTag(CommunityPostSummary post, String tag) {
+    final needle = tag.toLowerCase();
+    return post.tags.any((value) => value.toLowerCase() == needle);
   }
 }
 

@@ -176,6 +176,53 @@ void main() {
     expect(find.text('Angela animation leak'), findsNothing);
   });
 
+  testWidgets('filters posts from initial tag query', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async {
+            return const [
+              CommunityPostSummary(
+                id: '301',
+                title: 'Patch update notes',
+                preview: 'Lam receives jungle tuning.',
+                authorName: 'Analyst',
+                authorAvatarUrl: '',
+                tags: ['Update', 'Patch'],
+                createdAt: '2026-07-03T10:00:00Z',
+                viewCount: 45,
+                likeCount: 6,
+                commentCount: 2,
+              ),
+              CommunityPostSummary(
+                id: '302',
+                title: 'General draft chat',
+                preview: 'Pick front line first.',
+                authorName: 'Coach',
+                authorAvatarUrl: '',
+                tags: ['Draft'],
+                createdAt: '2026-07-03T11:00:00Z',
+                viewCount: 99,
+                likeCount: 12,
+                commentCount: 4,
+              ),
+            ];
+          }),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityScreen(initialPostTag: 'update')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tag Filter'), findsOneWidget);
+    expect(find.text('Showing posts tagged "update".'), findsOneWidget);
+    expect(find.text('Patch update notes'), findsOneWidget);
+    expect(find.text('General draft chat'), findsNothing);
+  });
+
   testWidgets('my posts mode filters posts to the signed-in author', (
     tester,
   ) async {

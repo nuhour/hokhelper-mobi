@@ -54,6 +54,24 @@ String _communityLeaksTarget(Uri uri) {
   ).toString();
 }
 
+String _communityTarget(Uri uri) {
+  final queryParameters = <String, String>{};
+  if (uri.queryParameters['view'] == 'my') {
+    queryParameters['tab'] = 'my';
+  }
+  final tag = uri.queryParameters['tag']?.trim();
+  if (tag != null && tag.isNotEmpty) {
+    queryParameters['tag'] = tag;
+  }
+  if (queryParameters.isEmpty) {
+    return '/content/community';
+  }
+  return Uri(
+    path: '/content/community',
+    queryParameters: queryParameters,
+  ).toString();
+}
+
 String _heroGalleryTarget(Uri uri) {
   final heroId = int.tryParse(uri.queryParameters['hero_id'] ?? '');
   if (heroId != null && heroId > 0) {
@@ -159,12 +177,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/community',
-        redirect: (context, state) {
-          if (state.uri.queryParameters['view'] == 'my') {
-            return '/content/community?tab=my';
-          }
-          return '/content/community';
-        },
+        redirect: (context, state) => _communityTarget(state.uri),
       ),
       GoRoute(
         path: '/leaks',
@@ -437,6 +450,7 @@ GoRouter createAppRouter() {
                         initialTabIndex: initialTabIndex,
                         initialView: initialView,
                         initialLeakQuery: state.uri.queryParameters['q'],
+                        initialPostTag: state.uri.queryParameters['tag'],
                       );
                     },
                     routes: [
