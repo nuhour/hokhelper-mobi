@@ -113,7 +113,9 @@ List<Override> _emptyToolOverrides() {
     esportsMatchesProvider.overrideWith((ref) async => const []),
     esportsTeamsProvider.overrideWith((ref) async => const []),
     esportsPlayersProvider.overrideWith((ref) async => const []),
-    statsDashboardProvider.overrideWith((ref) async => const StatsDashboard()),
+    statsDashboardProvider.overrideWith(
+      (ref, entry) async => const StatsDashboard(),
+    ),
   ];
 }
 
@@ -126,7 +128,7 @@ List<Override> _toolOverrides({
   Future<List<EsportsMatchSummary>> Function(Ref)? esportsMatches,
   Future<List<EsportsTeamSummary>> Function(Ref)? esportsTeams,
   Future<List<EsportsPlayerSummary>> Function(Ref)? esportsPlayers,
-  Future<StatsDashboard> Function(Ref)? statsDashboard,
+  Future<StatsDashboard> Function(Ref, StatsDashboardEntry)? statsDashboard,
 }) {
   return [
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
@@ -158,7 +160,7 @@ List<Override> _toolOverrides({
       esportsPlayers ?? (ref) async => const [],
     ),
     statsDashboardProvider.overrideWith(
-      statsDashboard ?? (ref) async => const StatsDashboard(),
+      statsDashboard ?? (ref, entry) async => const StatsDashboard(),
     ),
   ];
 }
@@ -525,7 +527,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: _toolOverrides(
-          statsDashboard: (ref) async {
+          statsDashboard: (ref, entry) async {
             return const StatsDashboard(
               heroes: [
                 StatsHeroRow(

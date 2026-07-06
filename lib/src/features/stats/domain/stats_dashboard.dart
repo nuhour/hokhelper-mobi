@@ -12,6 +12,8 @@ class StatsDashboard {
   bool get isEmpty => heroes.isEmpty && equips.isEmpty && combos.isEmpty;
 }
 
+enum StatsDashboardEntry { overview, homeCore, tierRank, powerRank, equipRank }
+
 class StatsHeroRow {
   const StatsHeroRow({
     required this.id,

@@ -7,17 +7,22 @@ class StatsRepository {
 
   final ApiClient apiClient;
 
-  Future<StatsDashboard> loadDashboard({required String regionCode}) async {
+  Future<StatsDashboard> loadDashboard({
+    required String regionCode,
+    StatsDashboardEntry entry = StatsDashboardEntry.overview,
+  }) async {
+    final heroTable = _heroTableFor(entry);
+    final equipView = _equipViewFor(entry);
     final results = await Future.wait([
       _loadRows(
-        dimension: 'hero_rank',
-        view: 'base',
+        dimension: heroTable.dimension,
+        view: heroTable.view,
         regionCode: regionCode,
         mapper: StatsHeroRow.fromJson,
       ),
       _loadRows(
         dimension: 'equip_rank',
-        view: 'base',
+        view: equipView,
         regionCode: regionCode,
         mapper: StatsEquipRow.fromJson,
       ),
@@ -94,4 +99,19 @@ class StatsRepository {
 
     return const [];
   }
+}
+
+({String dimension, String view}) _heroTableFor(StatsDashboardEntry entry) {
+  return switch (entry) {
+    StatsDashboardEntry.tierRank => (dimension: 'tier_rank', view: 'main'),
+    StatsDashboardEntry.powerRank => (dimension: 'power_rank', view: 'main'),
+    _ => (dimension: 'hero_rank', view: 'base'),
+  };
+}
+
+String _equipViewFor(StatsDashboardEntry entry) {
+  return switch (entry) {
+    StatsDashboardEntry.equipRank => 'main',
+    _ => 'base',
+  };
 }

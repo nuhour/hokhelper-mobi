@@ -9,7 +9,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          statsDashboardProvider.overrideWith((ref) async {
+          statsDashboardProvider.overrideWith((ref, entry) async {
             return const StatsDashboard(
               heroes: [
                 StatsHeroRow(
@@ -66,7 +66,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          statsDashboardProvider.overrideWith((ref) async {
+          statsDashboardProvider.overrideWith((ref, entry) async {
             return const StatsDashboard(
               heroes: [
                 StatsHeroRow(
@@ -122,7 +122,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          statsDashboardProvider.overrideWith((ref) async {
+          statsDashboardProvider.overrideWith((ref, entry) async {
             return const StatsDashboard(
               heroes: [
                 StatsHeroRow(
@@ -164,5 +164,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Focused home core stats'), findsOneWidget);
+  });
+
+  testWidgets('tier rank entry reaches the stats repository entry config', (
+    tester,
+  ) async {
+    var usedTierRankProvider = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider(StatsDashboardEntry.tierRank).overrideWith((
+            ref,
+          ) async {
+            usedTierRankProvider = true;
+            return const StatsDashboard(
+              heroes: [
+                StatsHeroRow(
+                  id: '133',
+                  name: 'Augran',
+                  avatarUrl: '',
+                  winRate: 0.62,
+                  pickRate: 0.16,
+                  banRate: 0.23,
+                  score: 96.8,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: StatsScreen(initialEntry: StatsEntry.tierRank)),
+        ),
+      ),
+    );
+    for (var i = 0; i < 10 && !usedTierRankProvider; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump();
+
+    expect(usedTierRankProvider, true);
+    expect(find.text('Focused tier rank'), findsOneWidget);
+    expect(find.text('Augran'), findsOneWidget);
   });
 }

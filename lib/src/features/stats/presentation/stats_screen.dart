@@ -15,12 +15,19 @@ final statsRepositoryProvider = Provider<StatsRepository>((ref) {
   return StatsRepository(apiClient: ref.watch(apiClientProvider));
 });
 
-final statsDashboardProvider = FutureProvider<StatsDashboard>((ref) async {
-  final settings = await ref.watch(appSettingsControllerProvider.future);
-  return ref
-      .watch(statsRepositoryProvider)
-      .loadDashboard(regionCode: settings.region.languageCode);
-});
+final statsDashboardProvider =
+    FutureProvider.family<StatsDashboard, StatsDashboardEntry>((
+      ref,
+      entry,
+    ) async {
+      final settings = await ref.watch(appSettingsControllerProvider.future);
+      return ref
+          .watch(statsRepositoryProvider)
+          .loadDashboard(
+            regionCode: settings.region.languageCode,
+            entry: entry,
+          );
+    });
 
 enum StatsEntry {
   overview,
@@ -38,6 +45,16 @@ enum StatsEntry {
       _ => StatsEntry.overview,
     };
   }
+
+  StatsDashboardEntry get dashboardEntry {
+    return switch (this) {
+      StatsEntry.homeCore => StatsDashboardEntry.homeCore,
+      StatsEntry.tierRank => StatsDashboardEntry.tierRank,
+      StatsEntry.powerRank => StatsDashboardEntry.powerRank,
+      StatsEntry.equipRank => StatsDashboardEntry.equipRank,
+      StatsEntry.overview => StatsDashboardEntry.overview,
+    };
+  }
 }
 
 class StatsScreen extends ConsumerWidget {
@@ -52,14 +69,17 @@ class StatsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final value = ref.watch(statsDashboardProvider);
+    final dashboardProvider = statsDashboardProvider(
+      initialEntry.dashboardEntry,
+    );
+    final value = ref.watch(dashboardProvider);
 
     return AppAsyncView<StatsDashboard>(
       value: value,
-      retry: () => ref.invalidate(statsDashboardProvider),
+      retry: () => ref.invalidate(dashboardProvider),
       data: (dashboard) {
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(statsDashboardProvider.future),
+          onRefresh: () => ref.refresh(dashboardProvider.future),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),

@@ -222,7 +222,7 @@ void main() {
             ),
             patchNotesProvider.overrideWith((ref) async => const []),
             statsDashboardProvider.overrideWith(
-              (ref) async => const StatsDashboard(),
+              (ref, entry) async => const StatsDashboard(),
             ),
             heroTrendsProvider.overrideWith((ref) async => const []),
             heroRankingProvider.overrideWith((ref) async => const []),
