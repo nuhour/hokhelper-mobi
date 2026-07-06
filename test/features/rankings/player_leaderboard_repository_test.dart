@@ -41,7 +41,13 @@ class _FakeApiClient extends ApiClient {
             'region': 44,
             'rank_type': 'rank',
             'best_heroes': [
-              {'hero_id': 131, 'play_cnt': 72, 'score': 99.1},
+              {
+                'hero_id': 131,
+                'hero_name': 'Diaochan',
+                'avatar_url': 'https://example.test/diaochan.png',
+                'play_cnt': 72,
+                'score': 99.1,
+              },
             ],
           },
         ],
@@ -80,6 +86,11 @@ void main() {
       expect(result.players.single.playerName, 'Top Mid');
       expect(result.players.single.rankStars, 112);
       expect(result.players.single.bestHeroes.single.heroId, 131);
+      expect(result.players.single.bestHeroes.single.heroName, 'Diaochan');
+      expect(
+        result.players.single.bestHeroes.single.avatarUrl,
+        'https://example.test/diaochan.png',
+      );
     },
   );
 }

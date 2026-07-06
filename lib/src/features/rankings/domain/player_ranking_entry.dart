@@ -1,11 +1,15 @@
 class PlayerBestHero {
   const PlayerBestHero({
     required this.heroId,
+    this.heroName = '',
+    this.avatarUrl = '',
     required this.playCount,
     required this.score,
   });
 
   final int heroId;
+  final String heroName;
+  final String avatarUrl;
   final int playCount;
   final double score;
 
@@ -13,6 +17,8 @@ class PlayerBestHero {
     final map = json is Map ? json : const <String, Object?>{};
     return PlayerBestHero(
       heroId: _readInt(map['hero_id'] ?? map['id']),
+      heroName: _readString(map['hero_name'] ?? map['heroName']),
+      avatarUrl: _readString(map['avatar_url'] ?? map['avatarUrl']),
       playCount: _readInt(map['play_cnt'] ?? map['playCount']),
       score: _readDouble(map['score']),
     );

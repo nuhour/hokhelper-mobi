@@ -518,18 +518,34 @@ class _BestHeroPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final heroLabel = hero.heroName.isEmpty
+        ? 'Hero ${hero.heroId}'
+        : hero.heroName;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
       decoration: BoxDecoration(
         color: AppTheme.gold.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        'Hero ${hero.heroId} · ${hero.score.toStringAsFixed(1)}',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppTheme.gold,
-          fontWeight: FontWeight.w800,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppImage(
+            url: hero.avatarUrl,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            semanticLabel: heroLabel,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$heroLabel · ${hero.score.toStringAsFixed(1)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.gold,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }

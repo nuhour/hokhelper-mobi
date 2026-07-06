@@ -131,148 +131,150 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     );
     final promptsValue = ref.watch(promptListQueryProvider(query));
 
-    return AppAsyncView<List<PromptSummary>>(
-      value: promptsValue,
-      retry: () => ref.invalidate(promptListQueryProvider(query)),
-      data: (prompts) {
-        final visiblePrompts = _visiblePrompts(
-          _mergePromptChanges([..._createdPrompts, ...prompts]),
-        );
-        return RefreshIndicator(
-          onRefresh: () => ref.refresh(promptListQueryProvider(query).future),
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppSectionHeader(
-                        title: 'Prompts',
-                        action: FilledButton.icon(
-                          onPressed: () => _openCreateSheet(context),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create'),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Explore public AI prompt templates from the community.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-                      ),
-                      const SizedBox(height: 14),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SegmentedButton<PromptListAction>(
-                          segments: PromptListAction.values
-                              .map(
-                                (action) => ButtonSegment(
-                                  value: action,
-                                  label: Text(action.label),
-                                ),
-                              )
-                              .toList(growable: false),
-                          selected: {_action},
-                          onSelectionChanged: (selection) {
-                            setState(() => _action = selection.single);
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _searchController,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          labelText: 'Search prompts',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _search.isEmpty
-                              ? null
-                              : IconButton(
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _search = '');
-                                  },
-                                  icon: const Icon(Icons.close),
-                                  tooltip: 'Clear search',
-                                ),
-                        ),
-                        onChanged: (value) {
-                          setState(() => _search = value.trim());
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SegmentedButton<PromptListSort>(
-                          segments: PromptListSort.values
-                              .map(
-                                (sort) => ButtonSegment(
-                                  value: sort,
-                                  icon: Icon(
-                                    sort == PromptListSort.hot
-                                        ? Icons.local_fire_department_outlined
-                                        : Icons.schedule,
-                                  ),
-                                  label: Text(sort.label),
-                                ),
-                              )
-                              .toList(growable: false),
-                          selected: {_sort},
-                          onSelectionChanged: (selection) {
-                            setState(() => _sort = selection.single);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (visiblePrompts.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: AppEmptyState(
-                    icon: Icons.auto_awesome_outlined,
-                    title: 'No prompts found',
-                    message: 'Pull to refresh and try again.',
-                  ),
-                )
-              else
+    return Material(
+      color: AppTheme.bg,
+      child: AppAsyncView<List<PromptSummary>>(
+        value: promptsValue,
+        retry: () => ref.invalidate(promptListQueryProvider(query)),
+        data: (prompts) {
+          final visiblePrompts = _visiblePrompts(
+            _mergePromptChanges([..._createdPrompts, ...prompts]),
+          );
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(promptListQueryProvider(query).future),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  sliver: SliverList.separated(
-                    itemCount: visiblePrompts.length,
-                    itemBuilder: (context, index) {
-                      final prompt = visiblePrompts[index];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (prompt.id == widget.initialPromptId) ...[
-                            const _SharedPromptBadge(),
-                            const SizedBox(height: 8),
-                          ],
-                          _PromptCard(
-                            prompt: prompt,
-                            canManage: _action == PromptListAction.myPrompts,
-                            onEdit: () => _openEditSheet(context, prompt),
-                            onDelete: () => _confirmDelete(context, prompt),
-                            onGenerate: () =>
-                                _openGenerateSheet(context, prompt),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppSectionHeader(
+                          title: 'Prompts',
+                          action: FilledButton.icon(
+                            onPressed: () => _openCreateSheet(context),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create'),
                           ),
-                        ],
-                      );
-                    },
-                    separatorBuilder: (context, index) =>
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Explore public AI prompt templates from the community.',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                        const SizedBox(height: 14),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SegmentedButton<PromptListAction>(
+                            segments: PromptListAction.values
+                                .map(
+                                  (action) => ButtonSegment(
+                                    value: action,
+                                    label: Text(action.label),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            selected: {_action},
+                            onSelectionChanged: (selection) {
+                              setState(() => _action = selection.single);
+                            },
+                          ),
+                        ),
                         const SizedBox(height: 12),
+                        TextField(
+                          controller: _searchController,
+                          textInputAction: TextInputAction.search,
+                          decoration: InputDecoration(
+                            labelText: 'Search prompts',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _search.isEmpty
+                                ? null
+                                : IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _search = '');
+                                    },
+                                    icon: const Icon(Icons.close),
+                                    tooltip: 'Clear search',
+                                  ),
+                          ),
+                          onChanged: (value) {
+                            setState(() => _search = value.trim());
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SegmentedButton<PromptListSort>(
+                            segments: PromptListSort.values
+                                .map(
+                                  (sort) => ButtonSegment(
+                                    value: sort,
+                                    icon: Icon(
+                                      sort == PromptListSort.hot
+                                          ? Icons.local_fire_department_outlined
+                                          : Icons.schedule,
+                                    ),
+                                    label: Text(sort.label),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            selected: {_sort},
+                            onSelectionChanged: (selection) {
+                              setState(() => _sort = selection.single);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-            ],
-          ),
-        );
-      },
+                if (visiblePrompts.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppEmptyState(
+                      icon: Icons.auto_awesome_outlined,
+                      title: 'No prompts found',
+                      message: 'Pull to refresh and try again.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    sliver: SliverList.separated(
+                      itemCount: visiblePrompts.length,
+                      itemBuilder: (context, index) {
+                        final prompt = visiblePrompts[index];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (prompt.id == widget.initialPromptId) ...[
+                              const _SharedPromptBadge(),
+                              const SizedBox(height: 8),
+                            ],
+                            _PromptCard(
+                              prompt: prompt,
+                              canManage: _action == PromptListAction.myPrompts,
+                              onEdit: () => _openEditSheet(context, prompt),
+                              onDelete: () => _confirmDelete(context, prompt),
+                              onGenerate: () =>
+                                  _openGenerateSheet(context, prompt),
+                            ),
+                          ],
+                        );
+                      },
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

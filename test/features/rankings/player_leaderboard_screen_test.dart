@@ -29,7 +29,13 @@ void main() {
                   region: 44,
                   playerTypeLabel: 'Pro',
                   bestHeroes: [
-                    PlayerBestHero(heroId: 131, playCount: 72, score: 99.1),
+                    PlayerBestHero(
+                      heroId: 131,
+                      heroName: 'Diaochan',
+                      avatarUrl: 'https://example.test/diaochan.png',
+                      playCount: 72,
+                      score: 99.1,
+                    ),
                   ],
                 ),
               ],
@@ -52,7 +58,7 @@ void main() {
     expect(find.text('112 stars'), findsOneWidget);
     expect(find.text('68.40% win'), findsOneWidget);
     expect(find.text('Pro'), findsOneWidget);
-    expect(find.text('Hero 131 · 99.1'), findsOneWidget);
+    expect(find.text('Diaochan · 99.1'), findsOneWidget);
 
     await tester.tap(find.text('Peak'));
     await tester.pumpAndSettle();
