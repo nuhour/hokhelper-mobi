@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
@@ -106,5 +108,55 @@ void main() {
     expect(find.text('3 heroes'), findsOneWidget);
     expect(find.text('T1'), findsOneWidget);
     expect(find.text('1 hero'), findsOneWidget);
+  });
+
+  testWidgets('copies tier list detail share links', (tester) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    final router = createAppRouter();
+    router.go('/tools/tier-list/42');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'KIC Knockout Meta',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 3,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall, isNotNull);
+    expect(clipboardCall!.arguments, {'text': '/tools/tier-list/42'});
+    expect(find.text('Tier list link copied'), findsOneWidget);
   });
 }

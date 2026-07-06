@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -101,6 +102,15 @@ class _TierListDetailCard extends StatelessWidget {
                 _DetailBadge(label: scheme.heroCountText, isPrimary: true),
               ],
             ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => _shareTierList(context, scheme),
+                icon: const Icon(Icons.ios_share_outlined, size: 18),
+                label: const Text('Share'),
+              ),
+            ),
             const SizedBox(height: 18),
             for (final row in scheme.rows) ...[
               _TierRowDetail(row: row),
@@ -109,6 +119,23 @@ class _TierListDetailCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _shareTierList(
+    BuildContext context,
+    TierListSchemeSummary scheme,
+  ) async {
+    await Clipboard.setData(
+      ClipboardData(text: '/tools/tier-list/${scheme.id}'),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Tier list link copied')),
     );
   }
 }
