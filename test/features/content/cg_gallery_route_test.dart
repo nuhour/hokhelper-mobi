@@ -3,8 +3,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/cg_gallery_screen.dart';
+import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
+
+class _RouteCgRepository extends ContentRepository {
+  _RouteCgRepository(this.cgs)
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  final List<ContentItemSummary> cgs;
+
+  @override
+  Future<List<ContentItemSummary>> loadCgs(
+    int regionId, {
+    int page = 1,
+    int pageSize = 20,
+    String sort = 'updated_at',
+    String order = 'desc',
+    String search = '',
+    int? heroId,
+  }) async {
+    return cgs;
+  }
+}
 
 void main() {
   testWidgets('web cg gallery route preserves search query', (tester) async {
@@ -14,8 +45,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cgGalleryProvider.overrideWith((ref) async {
-            return const [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteCgRepository(const [
               ContentItemSummary(
                 id: 501,
                 kind: ContentKind.cg,
@@ -38,8 +69,9 @@ void main() {
                 ratingCount: 6,
                 viewCount: 900,
               ),
-            ];
-          }),
+            ]),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: HokHelperApp(router: router),
       ),
@@ -65,8 +97,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cgGalleryProvider.overrideWith((ref) async {
-            return const [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteCgRepository(const [
               ContentItemSummary(
                 id: 501,
                 kind: ContentKind.cg,
@@ -91,8 +123,9 @@ void main() {
                 ratingCount: 6,
                 viewCount: 900,
               ),
-            ];
-          }),
+            ]),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: HokHelperApp(router: router),
       ),

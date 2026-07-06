@@ -62,11 +62,20 @@ class ContentRepository {
     int pageSize = 20,
     String sort = 'updated_at',
     String order = 'desc',
+    String search = '',
+    int? heroId,
   }) async {
+    final filterRules = _cgFilterRules(
+      regionId,
+      search: search,
+      heroId: heroId,
+    );
     final json = await apiClient.postJson(
       '/cg/list',
       body: {
-        ..._pagedRegionBody(regionId, page: page, pageSize: pageSize),
+        'page': page,
+        'pageSize': pageSize,
+        'filterRules': filterRules,
         'sort': sort,
         'order': order == 'asc' ? 'asc' : 'desc',
       },
@@ -165,20 +174,6 @@ class ContentRepository {
     return PatchNoteSummary.fromJson(resultMap['post'] ?? resultMap);
   }
 
-  Map<String, Object> _pagedRegionBody(
-    int regionId, {
-    int page = 1,
-    int pageSize = 20,
-  }) {
-    return {
-      'page': page,
-      'pageSize': pageSize,
-      'filterRules': [
-        {'field': 'region_id', 'op': 'eq', 'value': regionId},
-      ],
-    };
-  }
-
   List<Map<String, Object>> _skinFilterRules(
     int regionId, {
     String search = '',
@@ -200,6 +195,32 @@ class ContentRepository {
       if (minRating > 0) {'field': 'rating', 'op': 'gte', 'value': minRating},
       if (lanePosition != null)
         {'field': 'hero_position', 'op': 'eq', 'value': lanePosition},
+    ];
+  }
+
+  List<Map<String, Object>> _cgFilterRules(
+    int regionId, {
+    String search = '',
+    int? heroId,
+  }) {
+    final trimmedSearch = search.trim();
+    return [
+      {'field': 'region_id', 'op': 'eq', 'value': regionId},
+      if (heroId != null) {'field': 'hero_id', 'op': 'eq', 'value': heroId},
+      if (trimmedSearch.isNotEmpty) ...[
+        {
+          'field': 'title1_key',
+          'op': 'contains',
+          'value': trimmedSearch,
+          'ig': true,
+        },
+        {
+          'field': 'hero_name',
+          'op': 'contains',
+          'value': trimmedSearch,
+          'ig': true,
+        },
+      ],
     ];
   }
 

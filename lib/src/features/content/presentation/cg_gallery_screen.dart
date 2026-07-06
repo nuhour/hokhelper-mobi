@@ -41,6 +41,8 @@ final cgGalleryQueryProvider =
             pageSize: _cgGalleryPageSize,
             sort: query.sort.apiValue,
             order: query.order.apiValue,
+            search: query.search,
+            heroId: query.heroId,
           );
     });
 
@@ -79,22 +81,32 @@ class _CgGalleryQuery {
   const _CgGalleryQuery({
     this.sort = _CgSort.updated,
     this.order = _CgSortOrder.desc,
+    this.search = '',
+    this.heroId,
   });
 
   final _CgSort sort;
   final _CgSortOrder order;
+  final String search;
+  final int? heroId;
 
-  bool get isDefault => sort == _CgSort.updated && order == _CgSortOrder.desc;
+  bool get isDefault =>
+      sort == _CgSort.updated &&
+      order == _CgSortOrder.desc &&
+      search.trim().isEmpty &&
+      heroId == null;
 
   @override
   bool operator ==(Object other) {
     return other is _CgGalleryQuery &&
         other.sort == sort &&
-        other.order == order;
+        other.order == order &&
+        other.search == search &&
+        other.heroId == heroId;
   }
 
   @override
-  int get hashCode => Object.hash(sort, order);
+  int get hashCode => Object.hash(sort, order, search, heroId);
 }
 
 class CgGalleryScreen extends ConsumerStatefulWidget {
@@ -142,7 +154,12 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final query = _CgGalleryQuery(sort: _sort, order: _sortOrder);
+    final query = _CgGalleryQuery(
+      sort: _sort,
+      order: _sortOrder,
+      search: _query,
+      heroId: widget.initialHeroId,
+    );
     final galleryValue = ref.watch(cgGalleryQueryProvider(query));
     final initialCgId = widget.initialCgId;
 
@@ -178,7 +195,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
             const SizedBox(height: 18),
             TextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: (value) => setState(() {
+                _query = value;
+                _resetLoadedPages();
+              }),
               style: const TextStyle(color: AppTheme.text),
               decoration: InputDecoration(
                 hintText: 'Search CG or hero',
@@ -189,7 +209,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                         tooltip: 'Clear',
                         onPressed: () {
                           _searchController.clear();
-                          setState(() => _query = '');
+                          setState(() {
+                            _query = '';
+                            _resetLoadedPages();
+                          });
                         },
                         icon: const Icon(Icons.close, color: AppTheme.muted),
                       ),
@@ -371,6 +394,8 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
             pageSize: _cgGalleryPageSize,
             sort: _sort.apiValue,
             order: _sortOrder.apiValue,
+            search: _query,
+            heroId: widget.initialHeroId,
           );
 
       if (!mounted) {

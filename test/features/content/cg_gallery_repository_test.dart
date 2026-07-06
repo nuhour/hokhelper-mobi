@@ -152,6 +152,27 @@ void main() {
     });
   });
 
+  test('loads cg gallery with web-compatible search and hero filter', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    await repository.loadCgs(2, search: 'lam', heroId: 199);
+
+    expect(apiClient.postCalls, ['/cg/list']);
+    expect(apiClient.lastBody, {
+      'page': 1,
+      'pageSize': 20,
+      'sort': 'updated_at',
+      'order': 'desc',
+      'filterRules': [
+        {'field': 'region_id', 'op': 'eq', 'value': 2},
+        {'field': 'hero_id', 'op': 'eq', 'value': 199},
+        {'field': 'title1_key', 'op': 'contains', 'value': 'lam', 'ig': true},
+        {'field': 'hero_name', 'op': 'contains', 'value': 'lam', 'ig': true},
+      ],
+    });
+  });
+
   test('loads cg comments with requested web-compatible order', () async {
     final apiClient = _FakeApiClient();
     final repository = ContentRepository(apiClient: apiClient);

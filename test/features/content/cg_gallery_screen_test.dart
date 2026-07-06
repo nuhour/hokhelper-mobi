@@ -9,8 +9,60 @@ import 'package:hok_helper_mobile/src/features/content/domain/content_item_summa
 import 'package:hok_helper_mobile/src/features/content/presentation/cg_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
 
+const _basicCgs = [
+  ContentItemSummary(
+    id: 501,
+    kind: ContentKind.cg,
+    title: 'Lam Cinematic',
+    heroName: 'Lam',
+    imageUrl: 'https://example.test/lam-cover.jpg',
+    subtitle: 'Playable video',
+    rating: 4.8,
+    ratingCount: 17,
+    viewCount: 2300,
+  ),
+  ContentItemSummary(
+    id: 502,
+    kind: ContentKind.cg,
+    title: 'Angela Trailer',
+    heroName: 'Angela',
+    imageUrl: '',
+    subtitle: 'Playable video',
+    rating: 3.9,
+    ratingCount: 6,
+    viewCount: 900,
+  ),
+];
+
+const _heroFilteredCgs = [
+  ContentItemSummary(
+    id: 501,
+    kind: ContentKind.cg,
+    title: 'Lam Cinematic',
+    heroName: 'Lam',
+    heroId: 199,
+    imageUrl: '',
+    subtitle: 'Playable video',
+    rating: 4.8,
+    ratingCount: 17,
+    viewCount: 2300,
+  ),
+  ContentItemSummary(
+    id: 502,
+    kind: ContentKind.cg,
+    title: 'Angela Trailer',
+    heroName: 'Angela',
+    heroId: 111,
+    imageUrl: '',
+    subtitle: 'Playable video',
+    rating: 3.9,
+    ratingCount: 6,
+    viewCount: 900,
+  ),
+];
+
 class _FakeContentRepository extends ContentRepository {
-  _FakeContentRepository()
+  _FakeContentRepository({this.cgs = const [_defaultCg]})
     : super(
         apiClient: ApiClient(
           config: const AppConfig(
@@ -20,6 +72,19 @@ class _FakeContentRepository extends ContentRepository {
         ),
       );
 
+  static const _defaultCg = ContentItemSummary(
+    id: 501,
+    kind: ContentKind.cg,
+    title: 'Lam Cinematic',
+    heroName: 'Lam',
+    imageUrl: 'https://example.test/lam-cover.jpg',
+    subtitle: 'Playable video',
+    rating: 4.8,
+    ratingCount: 17,
+    viewCount: 2300,
+  );
+
+  final List<ContentItemSummary> cgs;
   int? submittedCgId;
   String? submittedComment;
   int? viewedCgId;
@@ -27,6 +92,8 @@ class _FakeContentRepository extends ContentRepository {
   double? submittedRating;
   String? requestedCgSort;
   String? requestedCgOrder;
+  String? requestedCgSearch;
+  int? requestedHeroId;
   final commentOrders = <String>[];
 
   @override
@@ -36,22 +103,14 @@ class _FakeContentRepository extends ContentRepository {
     int pageSize = 20,
     String sort = 'updated_at',
     String order = 'desc',
+    String search = '',
+    int? heroId,
   }) async {
     requestedCgSort = sort;
     requestedCgOrder = order;
-    return const [
-      ContentItemSummary(
-        id: 501,
-        kind: ContentKind.cg,
-        title: 'Lam Cinematic',
-        heroName: 'Lam',
-        imageUrl: 'https://example.test/lam-cover.jpg',
-        subtitle: 'Playable video',
-        rating: 4.8,
-        ratingCount: 17,
-        viewCount: 2300,
-      ),
-    ];
+    requestedCgSearch = search;
+    requestedHeroId = heroId;
+    return cgs;
   }
 
   @override
@@ -136,6 +195,8 @@ class _PagedCgRepository extends ContentRepository {
     int pageSize = 20,
     String sort = 'updated_at',
     String order = 'desc',
+    String search = '',
+    int? heroId,
   }) async {
     requestedPages.add(page);
     final startId = (page - 1) * pageSize + 1;
@@ -169,32 +230,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cgGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 501,
-                kind: ContentKind.cg,
-                title: 'Lam Cinematic',
-                heroName: 'Lam',
-                imageUrl: 'https://example.test/lam-cover.jpg',
-                subtitle: 'Playable video',
-                rating: 4.8,
-                ratingCount: 17,
-                viewCount: 2300,
-              ),
-              ContentItemSummary(
-                id: 502,
-                kind: ContentKind.cg,
-                title: 'Angela Trailer',
-                heroName: 'Angela',
-                imageUrl: '',
-                subtitle: 'Playable video',
-                rating: 3.9,
-                ratingCount: 6,
-                viewCount: 900,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeContentRepository(cgs: _basicCgs),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
           cgDetailProvider(501).overrideWith((ref) async {
             return const CgDetail(
               id: 501,
@@ -241,7 +280,7 @@ void main() {
 
     expect(find.text('CG Detail'), findsOneWidget);
     expect(find.text('https://example.test/lam.mp4'), findsOneWidget);
-    expect(find.text('2,300 views'), findsOneWidget);
+    expect(find.text('2,301 views'), findsOneWidget);
     expect(find.text('Great cinematic.'), findsOneWidget);
   });
 
@@ -249,32 +288,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cgGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 501,
-                kind: ContentKind.cg,
-                title: 'Lam Cinematic',
-                heroName: 'Lam',
-                imageUrl: '',
-                subtitle: 'Playable video',
-                rating: 4.8,
-                ratingCount: 17,
-                viewCount: 2300,
-              ),
-              ContentItemSummary(
-                id: 502,
-                kind: ContentKind.cg,
-                title: 'Angela Trailer',
-                heroName: 'Angela',
-                imageUrl: '',
-                subtitle: 'Playable video',
-                rating: 3.9,
-                ratingCount: 6,
-                viewCount: 900,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeContentRepository(cgs: _basicCgs),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
           home: Scaffold(body: CgGalleryScreen(initialSearchQuery: 'Lam')),
@@ -292,34 +309,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          cgGalleryProvider.overrideWith((ref) async {
-            return const [
-              ContentItemSummary(
-                id: 501,
-                kind: ContentKind.cg,
-                title: 'Lam Cinematic',
-                heroName: 'Lam',
-                heroId: 199,
-                imageUrl: '',
-                subtitle: 'Playable video',
-                rating: 4.8,
-                ratingCount: 17,
-                viewCount: 2300,
-              ),
-              ContentItemSummary(
-                id: 502,
-                kind: ContentKind.cg,
-                title: 'Angela Trailer',
-                heroName: 'Angela',
-                heroId: 111,
-                imageUrl: '',
-                subtitle: 'Playable video',
-                rating: 3.9,
-                ratingCount: 6,
-                viewCount: 900,
-              ),
-            ];
-          }),
+          contentRepositoryProvider.overrideWithValue(
+            _FakeContentRepository(cgs: _heroFilteredCgs),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
           home: Scaffold(body: CgGalleryScreen(initialHeroId: 199)),
@@ -356,6 +349,31 @@ void main() {
 
     expect(repository.requestedCgSort, 'created_at');
     expect(repository.requestedCgOrder, 'asc');
+  });
+
+  testWidgets('requests cgs with hokx-compatible search and hero filter', (
+    tester,
+  ) async {
+    final repository = _FakeContentRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CgGalleryScreen(initialHeroId: 199)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Lam');
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedCgSearch, 'Lam');
+    expect(repository.requestedHeroId, 199);
   });
 
   testWidgets('loads more cgs after the first gallery page', (tester) async {
