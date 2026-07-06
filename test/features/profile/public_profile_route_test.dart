@@ -27,6 +27,8 @@ class _FakeProfileRepository extends ProfileRepository {
 
   int? followedUserId;
   int? likedUserId;
+  int? loadedFollowingUserId;
+  int? loadedFollowersUserId;
 
   @override
   Future<ProfileFollowResult> followUser(int userId) async {
@@ -41,6 +43,50 @@ class _FakeProfileRepository extends ProfileRepository {
       isLiked: true,
       likesCount: 7,
       targetUserId: userId,
+    );
+  }
+
+  @override
+  Future<ProfileFollowList> loadFollowing({int? userId, int page = 1}) async {
+    loadedFollowingUserId = userId;
+    return const ProfileFollowList(
+      users: [
+        ProfileFollowUser(
+          id: 77,
+          username: 'arthur',
+          displayName: 'Arthur',
+          avatar: '',
+          bio: 'Clash lane',
+          isFollowing: true,
+          isSelf: false,
+        ),
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+    );
+  }
+
+  @override
+  Future<ProfileFollowList> loadFollowers({int? userId, int page = 1}) async {
+    loadedFollowersUserId = userId;
+    return const ProfileFollowList(
+      users: [
+        ProfileFollowUser(
+          id: 88,
+          username: 'angela',
+          displayName: 'Angela',
+          avatar: '',
+          bio: 'Mid mage',
+          isFollowing: false,
+          isSelf: false,
+        ),
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
     );
   }
 }
@@ -177,5 +223,75 @@ void main() {
     expect(repository.likedUserId, 42);
     expect(find.widgetWithText(OutlinedButton, 'Liked'), findsOneWidget);
     expect(find.text('7'), findsOneWidget);
+  });
+
+  testWidgets('profile stats open following and followers lists', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/profile/42');
+    final repository = _FakeProfileRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
+          profileRepositoryProvider.overrideWithValue(repository),
+          publicUserProfileProvider(42).overrideWith((ref) async {
+            return const UserProfile(
+              id: 42,
+              username: 'lam',
+              displayName: 'Lam',
+              email: 'lam@example.test',
+              avatar: '',
+              level: 7,
+              points: 1200,
+              xpTotal: 1400,
+              xpCurrentLevel: 260,
+              xpToNextLevel: 740,
+              levelProgress: 26,
+              levelCap: false,
+              bio: 'Jungle main',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 3,
+                following: 4,
+                followers: 5,
+                likes: 6,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Following'));
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedFollowingUserId, 42);
+    expect(find.text('Following users'), findsOneWidget);
+    expect(find.text('Arthur'), findsOneWidget);
+    expect(find.text('Clash lane'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Followers'));
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedFollowersUserId, 42);
+    expect(find.text('Followers'), findsWidgets);
+    expect(find.text('Angela'), findsOneWidget);
+    expect(find.text('Mid mage'), findsOneWidget);
   });
 }

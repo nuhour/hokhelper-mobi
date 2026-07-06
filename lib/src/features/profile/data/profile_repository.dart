@@ -77,6 +77,26 @@ class ProfileRepository {
     return ProfileLikeResult.fromJson(_readResultMap(json));
   }
 
+  Future<ProfileFollowList> loadFollowing({int? userId, int page = 1}) async {
+    final query = <String, Object>{'page': page};
+    if (userId != null) {
+      query['user_id'] = userId;
+    }
+    final json = await apiClient.getJson('/user/following/list', query: query);
+    _ensureSuccess(json, fallbackMessage: 'Failed to load following');
+    return ProfileFollowList.fromJson(_readResultMap(json), key: 'following');
+  }
+
+  Future<ProfileFollowList> loadFollowers({int? userId, int page = 1}) async {
+    final query = <String, Object>{'page': page};
+    if (userId != null) {
+      query['user_id'] = userId;
+    }
+    final json = await apiClient.getJson('/user/followers/list', query: query);
+    _ensureSuccess(json, fallbackMessage: 'Failed to load followers');
+    return ProfileFollowList.fromJson(_readResultMap(json), key: 'followers');
+  }
+
   UserProfile _readProfile(
     Map<String, dynamic> json, {
     required String fallbackMessage,
@@ -148,6 +168,73 @@ class ProfileLikeResult {
   }
 }
 
+class ProfileFollowList {
+  const ProfileFollowList({
+    required this.users,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+    required this.hasMore,
+  });
+
+  final List<ProfileFollowUser> users;
+  final int total;
+  final int page;
+  final int pageSize;
+  final bool hasMore;
+
+  factory ProfileFollowList.fromJson(
+    Map<String, Object?> json, {
+    required String key,
+  }) {
+    final rows = json[key];
+    return ProfileFollowList(
+      users: rows is List
+          ? rows.map(ProfileFollowUser.fromJson).toList(growable: false)
+          : const [],
+      total: _readInt(json['total']),
+      page: _readInt(json['page'], fallback: 1),
+      pageSize: _readInt(json['page_size'] ?? json['pageSize']),
+      hasMore: _readBool(json['has_more'] ?? json['hasMore']),
+    );
+  }
+}
+
+class ProfileFollowUser {
+  const ProfileFollowUser({
+    required this.id,
+    required this.username,
+    required this.displayName,
+    required this.avatar,
+    required this.bio,
+    required this.isFollowing,
+    required this.isSelf,
+  });
+
+  final int id;
+  final String username;
+  final String displayName;
+  final String avatar;
+  final String bio;
+  final bool isFollowing;
+  final bool isSelf;
+
+  factory ProfileFollowUser.fromJson(Object? json) {
+    final map = json is Map ? json : const <String, Object?>{};
+    final username = _readString(map['username']);
+    final firstName = _readString(map['first_name'] ?? map['firstName']);
+    return ProfileFollowUser(
+      id: _readInt(map['id']),
+      username: username,
+      displayName: firstName.isNotEmpty ? firstName : username,
+      avatar: _readString(map['avatar'] ?? map['avatar_url']),
+      bio: _readString(map['bio']),
+      isFollowing: _readBool(map['is_following'] ?? map['isFollowing']),
+      isSelf: _readBool(map['is_self'] ?? map['isSelf']),
+    );
+  }
+}
+
 bool _readBool(Object? value) {
   if (value is bool) {
     return value;
@@ -156,9 +243,13 @@ bool _readBool(Object? value) {
   return normalized == '1' || normalized == 'true' || normalized == 'yes';
 }
 
-int _readInt(Object? value) {
+int _readInt(Object? value, {int fallback = 0}) {
   if (value is int) {
     return value;
   }
-  return int.tryParse(value?.toString() ?? '') ?? 0;
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+String _readString(Object? value) {
+  return value?.toString() ?? '';
 }

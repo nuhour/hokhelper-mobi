@@ -26,6 +26,52 @@ class _FakeApiClient extends ApiClient {
   }) async {
     getPath = path;
     getQuery = query;
+    if (path == '/user/following/list') {
+      return {
+        'success': true,
+        'result': {
+          'following': [
+            {
+              'id': 77,
+              'username': 'arthur',
+              'first_name': 'Arthur',
+              'avatar': 'https://example.test/arthur.png',
+              'bio': 'Clash lane',
+              'is_following': true,
+              'is_self': false,
+            },
+          ],
+          'count': 1,
+          'total': 1,
+          'page': 2,
+          'page_size': 20,
+          'has_more': false,
+        },
+      };
+    }
+    if (path == '/user/followers/list') {
+      return {
+        'success': true,
+        'result': {
+          'followers': [
+            {
+              'id': 88,
+              'username': 'angela',
+              'first_name': 'Angela',
+              'avatar': '',
+              'bio': 'Mid mage',
+              'is_following': false,
+              'is_self': false,
+            },
+          ],
+          'count': 1,
+          'total': 1,
+          'page': 1,
+          'page_size': 20,
+          'has_more': true,
+        },
+      };
+    }
     return response;
   }
 
@@ -185,6 +231,27 @@ void main() {
       expect(apiClient.postBody, {'target_user_id': 99});
       expect(result.isLiked, isTrue);
       expect(result.likesCount, 7);
+    });
+
+    test('loads following and followers with hokx request fields', () async {
+      final apiClient = _FakeApiClient(_profileResponse());
+      final repository = ProfileRepository(apiClient: apiClient);
+
+      final following = await repository.loadFollowing(userId: 42, page: 2);
+
+      expect(apiClient.getPath, '/user/following/list');
+      expect(apiClient.getQuery, {'page': 2, 'user_id': 42});
+      expect(following.users.single.displayName, 'Arthur');
+      expect(following.users.single.isFollowing, isTrue);
+      expect(following.hasMore, isFalse);
+
+      final followers = await repository.loadFollowers(userId: 42);
+
+      expect(apiClient.getPath, '/user/followers/list');
+      expect(apiClient.getQuery, {'page': 1, 'user_id': 42});
+      expect(followers.users.single.username, 'angela');
+      expect(followers.users.single.isFollowing, isFalse);
+      expect(followers.hasMore, isTrue);
     });
   });
 }

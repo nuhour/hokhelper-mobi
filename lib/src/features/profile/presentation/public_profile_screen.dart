@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../data/profile_repository.dart';
 import '../domain/user_profile.dart';
 import 'me_screen.dart';
 
@@ -169,6 +170,10 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
                 followers: _followers,
                 likes: _likes,
               ),
+              onFollowingTap: () =>
+                  _showFollowList(context, ProfileFollowListType.following),
+              onFollowersTap: () =>
+                  _showFollowList(context, ProfileFollowListType.followers),
             ),
             if (profile.bio.isNotEmpty) ...[
               const SizedBox(height: 18),
@@ -302,6 +307,200 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
       }
     }
   }
+
+  void _showFollowList(BuildContext context, ProfileFollowListType type) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _FollowListSheet(type: type, userId: profile.id),
+    );
+  }
+}
+
+enum ProfileFollowListType { following, followers }
+
+class _FollowListSheet extends ConsumerStatefulWidget {
+  const _FollowListSheet({required this.type, required this.userId});
+
+  final ProfileFollowListType type;
+  final int userId;
+
+  @override
+  ConsumerState<_FollowListSheet> createState() => _FollowListSheetState();
+}
+
+class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
+  late Future<ProfileFollowList> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<ProfileFollowList> _load() {
+    final repository = ref.read(profileRepositoryProvider);
+    return widget.type == ProfileFollowListType.following
+        ? repository.loadFollowing(userId: widget.userId)
+        : repository.loadFollowers(userId: widget.userId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.type == ProfileFollowListType.following
+        ? 'Following users'
+        : 'Followers';
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.72,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: FutureBuilder<ProfileFollowList>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Failed to load users',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                      );
+                    }
+                    final users = snapshot.data?.users ?? const [];
+                    if (users.isEmpty) {
+                      return Center(
+                        child: Text(
+                          widget.type == ProfileFollowListType.following
+                              ? 'No following yet'
+                              : 'No followers yet',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      itemBuilder: (context, index) {
+                        return _FollowUserTile(user: users[index]);
+                      },
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
+                      itemCount: users.length,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FollowUserTile extends StatelessWidget {
+  const _FollowUserTile({required this.user});
+
+  final ProfileFollowUser user;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = user.displayName.isNotEmpty
+        ? user.displayName.substring(0, 1).toUpperCase()
+        : '?';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppTheme.cyan.withValues(alpha: 0.16),
+              child: Text(
+                initial,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.cyan,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.displayName.isNotEmpty
+                        ? user.displayName
+                        : user.username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (user.bio.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      user.bio,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (!user.isSelf)
+              _StatePill(
+                icon: user.isFollowing
+                    ? Icons.check_circle_outline
+                    : Icons.person_add_alt_1_outlined,
+                label: user.isFollowing ? 'Following' : 'Follow',
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _LevelBadge extends StatelessWidget {
@@ -365,9 +564,15 @@ class _ProgressBar extends StatelessWidget {
 }
 
 class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.stats});
+  const _StatsGrid({
+    required this.stats,
+    this.onFollowingTap,
+    this.onFollowersTap,
+  });
 
   final ProfileStats stats;
+  final VoidCallback? onFollowingTap;
+  final VoidCallback? onFollowersTap;
 
   @override
   Widget build(BuildContext context) {
@@ -382,8 +587,16 @@ class _StatsGrid extends StatelessWidget {
       ),
       children: [
         _StatTile(label: 'Posts', value: stats.posts),
-        _StatTile(label: 'Following', value: stats.following),
-        _StatTile(label: 'Followers', value: stats.followers),
+        _StatTile(
+          label: 'Following',
+          value: stats.following,
+          onTap: onFollowingTap,
+        ),
+        _StatTile(
+          label: 'Followers',
+          value: stats.followers,
+          onTap: onFollowersTap,
+        ),
         _StatTile(label: 'Likes', value: stats.likes),
       ],
     );
@@ -391,17 +604,21 @@ class _StatsGrid extends StatelessWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
+  const _StatTile({required this.label, required this.value, this.onTap});
 
   final String label;
   final int value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final content = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panelAlt,
         borderRadius: BorderRadius.circular(12),
+        border: onTap == null
+            ? null
+            : Border.all(color: AppTheme.gold.withValues(alpha: 0.18)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -428,6 +645,18 @@ class _StatTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+    if (onTap == null) {
+      return content;
+    }
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: content,
       ),
     );
   }
