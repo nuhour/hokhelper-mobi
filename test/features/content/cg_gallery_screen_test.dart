@@ -110,6 +110,45 @@ class _FakeContentRepository extends ContentRepository {
   }
 }
 
+class _PagedCgRepository extends ContentRepository {
+  _PagedCgRepository()
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  final requestedPages = <int>[];
+
+  @override
+  Future<List<ContentItemSummary>> loadCgs(
+    int regionId, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    requestedPages.add(page);
+    final startId = (page - 1) * pageSize + 1;
+    final count = page == 1 ? pageSize : 1;
+    return List.generate(count, (index) {
+      final id = startId + index;
+      return ContentItemSummary(
+        id: id,
+        kind: ContentKind.cg,
+        title: 'Paged CG $id',
+        heroName: 'Hero $id',
+        imageUrl: '',
+        subtitle: 'Playable video',
+        rating: 4,
+        ratingCount: 1,
+        viewCount: id * 10,
+      );
+    }, growable: false);
+  }
+}
+
 void main() {
   testWidgets('renders cg gallery, filters, and opens cg detail', (
     tester,
@@ -239,6 +278,37 @@ void main() {
     expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
     expect(find.text('Lam Cinematic'), findsOneWidget);
     expect(find.text('Angela Trailer'), findsNothing);
+  });
+
+  testWidgets('loads more cgs after the first gallery page', (tester) async {
+    final repository = _PagedCgRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Paged CG 1'), findsOneWidget);
+    expect(find.text('Paged CG 61'), findsNothing);
+
+    final loadMoreButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Load more'),
+    );
+    await tester.runAsync(() async {
+      loadMoreButton.onPressed!();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+
+    expect(repository.requestedPages, [1, 2]);
+    expect(find.text('Paged CG 61'), findsOneWidget);
   });
 
   testWidgets('posts comments from the cg detail sheet', (tester) async {

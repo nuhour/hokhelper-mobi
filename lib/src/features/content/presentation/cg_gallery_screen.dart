@@ -11,11 +11,18 @@ import '../domain/cg_detail.dart';
 import '../domain/content_item_summary.dart';
 import 'content_screen.dart';
 
-final cgGalleryProvider = FutureProvider<List<ContentItemSummary>>((ref) async {
+const _cgGalleryPageSize = 60;
+
+final cgGalleryRegionProvider = FutureProvider<int>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
+  return settings.region.regionId;
+});
+
+final cgGalleryProvider = FutureProvider<List<ContentItemSummary>>((ref) async {
+  final regionId = await ref.watch(cgGalleryRegionProvider.future);
   return ref
       .watch(contentRepositoryProvider)
-      .loadCgs(settings.region.regionId, pageSize: 60);
+      .loadCgs(regionId, pageSize: _cgGalleryPageSize);
 });
 
 final cgDetailProvider = FutureProvider.family<CgDetail, int>((ref, cgId) {
@@ -64,6 +71,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
   String _query = '';
   _CgSort _sort = _CgSort.updated;
   int? _openedInitialCgId;
+  final _extraCgs = <ContentItemSummary>[];
+  var _nextPage = 2;
+  var _hasMoreCgs = true;
+  var _isLoadingMoreCgs = false;
 
   @override
   void initState() {
@@ -99,6 +110,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       color: AppTheme.bg,
       child: RefreshIndicator(
         onRefresh: () async {
+          _resetLoadedPages();
           ref.invalidate(cgGalleryProvider);
           await ref.read(cgGalleryProvider.future);
         },
@@ -162,7 +174,8 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
               value: galleryValue,
               retry: () => ref.invalidate(cgGalleryProvider),
               data: (items) {
-                final cgs = _filterAndSort(items);
+                final allItems = [...items, ..._extraCgs];
+                final cgs = _filterAndSort(allItems);
                 if (cgs.isEmpty) {
                   return const AppEmptyState(
                     icon: Icons.movie_creation_outlined,
@@ -171,18 +184,40 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                   );
                 }
 
-                return ListView.separated(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: cgs.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    return _CgCard(
-                      cg: cgs[index],
-                      onTap: () => _openDetail(context, cgs[index].id),
-                    );
-                  },
+                return Column(
+                  children: [
+                    ListView.separated(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: cgs.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        return _CgCard(
+                          cg: cgs[index],
+                          onTap: () => _openDetail(context, cgs[index].id),
+                        );
+                      },
+                    ),
+                    if (_hasMoreCgs && items.length >= _cgGalleryPageSize)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: FilledButton.icon(
+                          onPressed: _isLoadingMoreCgs ? null : _loadMoreCgs,
+                          icon: _isLoadingMoreCgs
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.expand_more),
+                          label: Text(
+                            _isLoadingMoreCgs ? 'Loading...' : 'Load more',
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -224,6 +259,48 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       ),
       builder: (context) => _CgDetailSheet(cgId: cgId),
     );
+  }
+
+  void _resetLoadedPages() {
+    _extraCgs.clear();
+    _nextPage = 2;
+    _hasMoreCgs = true;
+    _isLoadingMoreCgs = false;
+  }
+
+  Future<void> _loadMoreCgs() async {
+    if (_isLoadingMoreCgs || !_hasMoreCgs) {
+      return;
+    }
+
+    setState(() => _isLoadingMoreCgs = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final regionId = await ref.read(cgGalleryRegionProvider.future);
+      final nextItems = await ref
+          .read(contentRepositoryProvider)
+          .loadCgs(regionId, page: _nextPage, pageSize: _cgGalleryPageSize);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _nextPage += 1;
+        _extraCgs.addAll(nextItems);
+        _hasMoreCgs = nextItems.length >= _cgGalleryPageSize;
+        _isLoadingMoreCgs = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isLoadingMoreCgs = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to load more CGs: $error')),
+      );
+    }
   }
 }
 
