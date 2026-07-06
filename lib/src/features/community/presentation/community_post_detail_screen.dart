@@ -133,11 +133,10 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            post.authorName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall
+                          _AuthorNameButton(
+                            authorId: post.authorId,
+                            authorName: post.authorName,
+                            textStyle: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(
                                   color: AppTheme.text,
                                   fontWeight: FontWeight.w800,
@@ -332,9 +331,14 @@ class _CommentCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _CommentAuthorName(
+                  child: _AuthorNameButton(
                     authorId: comment.authorId,
                     authorName: comment.authorName,
+                    textStyle: Theme.of(context).textTheme.labelLarge
+                        ?.copyWith(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
                 ),
                 if (comment.likeCount > 0)
@@ -365,22 +369,19 @@ class _CommentCard extends StatelessWidget {
   }
 }
 
-class _CommentAuthorName extends StatelessWidget {
-  const _CommentAuthorName({
+class _AuthorNameButton extends StatelessWidget {
+  const _AuthorNameButton({
     required this.authorId,
     required this.authorName,
+    required this.textStyle,
   });
 
   final int authorId;
   final String authorName;
+  final TextStyle? textStyle;
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
-      color: AppTheme.text,
-      fontWeight: FontWeight.w800,
-    );
-
     if (authorId <= 0) {
       return Text(
         authorName,

@@ -317,4 +317,70 @@ void main() {
     expect(find.text('Public Profile'), findsOneWidget);
     expect(find.text('Comment strategist'), findsOneWidget);
   });
+
+  testWidgets('opens post authors from the mobile detail screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorId: 88,
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 0,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [],
+            );
+          }),
+          publicUserProfileProvider(88).overrideWith((ref) async {
+            return const UserProfile(
+              id: 88,
+              username: 'coach',
+              displayName: 'Coach',
+              email: 'coach@example.test',
+              avatar: '',
+              level: 8,
+              points: 1800,
+              xpTotal: 1800,
+              xpCurrentLevel: 320,
+              xpToNextLevel: 680,
+              levelProgress: 32,
+              levelCap: false,
+              bio: 'Post detail author',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 8,
+                following: 2,
+                followers: 12,
+                likes: 18,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: _buildDetailRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('coach'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Public Profile'), findsOneWidget);
+    expect(find.text('Post detail author'), findsOneWidget);
+  });
 }
