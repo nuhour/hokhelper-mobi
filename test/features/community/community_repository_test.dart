@@ -72,6 +72,23 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postPath = path;
     postBody = body;
+    if (path == '/community/posts/create') {
+      return const {
+        'id': '777',
+        'title': 'Mobile macro notes',
+        'content': 'Rotate after clearing mid and protect river vision.',
+        'content_preview':
+            'Rotate after clearing mid and protect river vision.',
+        'author_id': 42,
+        'author_name': 'Lam',
+        'author_avatar': 'https://example.test/lam.png',
+        'tags': ['Guide', 'Macro'],
+        'created_at': '2026-07-06T09:00:00Z',
+        'view_count': 0,
+        'like_count': 0,
+        'comment_count': 0,
+      };
+    }
     if (path.endsWith('/comments')) {
       return const {
         'id': 'c3',
@@ -157,5 +174,29 @@ void main() {
     expect(comment.id, 'c3');
     expect(comment.content, 'Try invading red after mid.');
     expect(comment.authorName, 'Lam');
+  });
+
+  test('creates community posts with web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final post = await repository.createPost(
+      title: 'Mobile macro notes',
+      content: 'Rotate after clearing mid and protect river vision.',
+      tags: ['Guide', 'Macro'],
+      regionId: 2,
+    );
+
+    expect(apiClient.postPath, '/community/posts/create');
+    expect(apiClient.postBody, {
+      'title': 'Mobile macro notes',
+      'content': 'Rotate after clearing mid and protect river vision.',
+      'tags': ['Guide', 'Macro'],
+      'region_id': 2,
+    });
+    expect(post.id, '777');
+    expect(post.title, 'Mobile macro notes');
+    expect(post.preview, 'Rotate after clearing mid and protect river vision.');
+    expect(post.tags, ['Guide', 'Macro']);
   });
 }

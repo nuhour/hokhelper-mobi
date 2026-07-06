@@ -116,7 +116,7 @@ class CommunityScreen extends ConsumerWidget {
   }
 }
 
-class _PostsTab extends ConsumerWidget {
+class _PostsTab extends ConsumerStatefulWidget {
   const _PostsTab({
     required this.value,
     required this.initialView,
@@ -128,23 +128,42 @@ class _PostsTab extends ConsumerWidget {
   final String? initialTag;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PostsTab> createState() => _PostsTabState();
+}
+
+class _PostsTabState extends ConsumerState<_PostsTab> {
+  final _contentController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _createdPosts = <CommunityPostSummary>[];
+  var _isCreateOpen = false;
+  var _createSubmitting = false;
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authUser = ref.watch(authControllerProvider).valueOrNull;
     return AppAsyncView<List<CommunityPostSummary>>(
-      value: value,
+      value: widget.value,
       retry: () => ref.invalidate(communityPostsProvider),
       data: (posts) {
-        final tag = initialTag?.trim() ?? '';
-        final modePosts = switch (initialView) {
+        final tag = widget.initialTag?.trim() ?? '';
+        final allPosts = _mergeCreatedPosts(posts);
+        final modePosts = switch (widget.initialView) {
           CommunityInitialView.myPosts =>
-            posts
+            allPosts
                 .where(
                   (post) => post.authorId > 0 && post.authorId == authUser?.id,
                 )
                 .toList(growable: false),
           CommunityInitialView.likedPosts =>
-            posts.where((post) => post.isLiked).toList(growable: false),
-          CommunityInitialView.hot => posts,
+            allPosts.where((post) => post.isLiked).toList(growable: false),
+          CommunityInitialView.hot => allPosts,
         };
         final visiblePosts = tag.isEmpty
             ? modePosts
@@ -152,32 +171,23 @@ class _PostsTab extends ConsumerWidget {
                   .where((post) => _matchesTag(post, tag))
                   .toList(growable: false);
 
-        if (visiblePosts.isEmpty) {
-          return AppEmptyState(
-            icon: Icons.forum_outlined,
-            title: tag.isNotEmpty
-                ? 'No matching posts'
-                : initialView == CommunityInitialView.myPosts
-                ? 'No posts from you yet'
-                : initialView == CommunityInitialView.likedPosts
-                ? 'No liked posts yet'
-                : 'No community posts found',
-            message: tag.isNotEmpty
-                ? 'No posts matched "$tag" in this region.'
-                : initialView == CommunityInitialView.myPosts
-                ? 'Create or sync a community post on HOK Helper first.'
-                : initialView == CommunityInitialView.likedPosts
-                ? 'Like posts on HOK Helper to collect them here.'
-                : 'Pull to refresh or switch region in settings.',
-          );
-        }
-
         return RefreshIndicator(
           onRefresh: () => ref.refresh(communityPostsProvider.future),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
-              if (initialView == CommunityInitialView.myPosts) ...[
+              if (widget.initialView != CommunityInitialView.likedPosts) ...[
+                _CreatePostCard(
+                  contentController: _contentController,
+                  isExpanded: _isCreateOpen,
+                  isSubmitting: _createSubmitting,
+                  onExpand: () => setState(() => _isCreateOpen = true),
+                  onSubmit: () => _createPost(context),
+                  titleController: _titleController,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (widget.initialView == CommunityInitialView.myPosts) ...[
                 const _ModePill(
                   icon: Icons.person_outline,
                   label: 'My Posts',
@@ -185,7 +195,7 @@ class _PostsTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              if (initialView == CommunityInitialView.likedPosts) ...[
+              if (widget.initialView == CommunityInitialView.likedPosts) ...[
                 const _ModePill(
                   icon: Icons.favorite_border,
                   label: 'Liked Posts',
@@ -201,15 +211,71 @@ class _PostsTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              for (final post in visiblePosts) ...[
-                _PostCard(post: post),
-                const SizedBox(height: 12),
-              ],
+              if (visiblePosts.isEmpty)
+                _PostsEmptyState(tag: tag, initialView: widget.initialView)
+              else
+                for (final post in visiblePosts) ...[
+                  _PostCard(post: post),
+                  const SizedBox(height: 12),
+                ],
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _createPost(BuildContext context) async {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+    if (title.isEmpty || content.isEmpty) {
+      return;
+    }
+    setState(() => _createSubmitting = true);
+    try {
+      final settings = await ref.read(appSettingsControllerProvider.future);
+      final createdPost = await ref
+          .read(communityRepositoryProvider)
+          .createPost(
+            title: title,
+            content: content,
+            tags: const ['Guide'],
+            regionId: settings.region.regionId,
+          );
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      _titleController.clear();
+      _contentController.clear();
+      setState(() {
+        _createdPosts.insert(0, createdPost);
+        _isCreateOpen = false;
+        _createSubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Post created')));
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _createSubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to create post')),
+      );
+    }
+  }
+
+  List<CommunityPostSummary> _mergeCreatedPosts(
+    List<CommunityPostSummary> posts,
+  ) {
+    final existingIds = posts.map((post) => post.id).toSet();
+    return [
+      ..._createdPosts.where((post) => !existingIds.contains(post.id)),
+      ...posts,
+    ];
   }
 
   bool _matchesTag(CommunityPostSummary post, String tag) {
@@ -267,6 +333,127 @@ class _ModePill extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CreatePostCard extends StatelessWidget {
+  const _CreatePostCard({
+    required this.contentController,
+    required this.isExpanded,
+    required this.isSubmitting,
+    required this.onExpand,
+    required this.onSubmit,
+    required this.titleController,
+  });
+
+  final TextEditingController contentController;
+  final bool isExpanded;
+  final bool isSubmitting;
+  final VoidCallback onExpand;
+  final VoidCallback onSubmit;
+  final TextEditingController titleController;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Create Post',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                if (!isExpanded)
+                  FilledButton.icon(
+                    onPressed: onExpand,
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('Create Post'),
+                  ),
+              ],
+            ),
+            if (isExpanded) ...[
+              const SizedBox(height: 10),
+              TextField(
+                controller: titleController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Title',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: contentController,
+                minLines: 3,
+                maxLines: 5,
+                textInputAction: TextInputAction.newline,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Content',
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const _Pill(label: 'Guide'),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: isSubmitting ? null : onSubmit,
+                    icon: const Icon(Icons.send_outlined, size: 16),
+                    label: const Text('Create'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PostsEmptyState extends StatelessWidget {
+  const _PostsEmptyState({required this.initialView, required this.tag});
+
+  final CommunityInitialView initialView;
+  final String tag;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = tag.isNotEmpty
+        ? 'No matching posts'
+        : initialView == CommunityInitialView.myPosts
+        ? 'No posts from you yet'
+        : initialView == CommunityInitialView.likedPosts
+        ? 'No liked posts yet'
+        : 'No community posts found';
+    final message = tag.isNotEmpty
+        ? 'No posts matched "$tag" in this region.'
+        : initialView == CommunityInitialView.myPosts
+        ? 'Create a community post here or sync one on HOK Helper.'
+        : initialView == CommunityInitialView.likedPosts
+        ? 'Like posts on HOK Helper to collect them here.'
+        : 'Pull to refresh or switch region in settings.';
+
+    return AppEmptyState(
+      icon: Icons.forum_outlined,
+      title: title,
+      message: message,
     );
   }
 }

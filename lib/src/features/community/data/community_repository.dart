@@ -26,6 +26,24 @@ class CommunityRepository {
     return _readRows(json).map(CommunityPostSummary.fromJson).toList();
   }
 
+  Future<CommunityPostSummary> createPost({
+    required String title,
+    required String content,
+    required List<String> tags,
+    required int regionId,
+  }) async {
+    final json = await apiClient.postJson(
+      '/community/posts/create',
+      body: {
+        'title': title,
+        'content': content,
+        'tags': tags,
+        'region_id': regionId,
+      },
+    );
+    return CommunityPostSummary.fromJson(json);
+  }
+
   Future<List<LeakPostSummary>> loadLeaks(int regionId) async {
     final json = await apiClient.getJson(
       '/leak/posts',

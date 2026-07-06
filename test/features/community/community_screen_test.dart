@@ -9,6 +9,7 @@ import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/leak_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _TestAuthController extends AuthController {
   @override
@@ -25,7 +26,37 @@ class _TestAuthController extends AuthController {
 class _FakeCommunityRepository extends CommunityRepository {
   _FakeCommunityRepository() : super(apiClient: _NoopApiClient());
 
+  String? createdContent;
+  int? createdRegionId;
+  List<String>? createdTags;
+  String? createdTitle;
   String? likedPostId;
+
+  @override
+  Future<CommunityPostSummary> createPost({
+    required String title,
+    required String content,
+    required List<String> tags,
+    required int regionId,
+  }) async {
+    createdTitle = title;
+    createdContent = content;
+    createdTags = tags;
+    createdRegionId = regionId;
+    return CommunityPostSummary(
+      id: '777',
+      title: title,
+      preview: content,
+      authorId: 42,
+      authorName: 'Lam',
+      authorAvatarUrl: '',
+      tags: tags,
+      createdAt: '2026-07-06T09:00:00Z',
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+    );
+  }
 
   @override
   Future<CommunityLikeResult> togglePostLike(String postId) async {
@@ -387,5 +418,52 @@ void main() {
     expect(repository.likedPostId, '101');
     expect(find.text('19 likes · 7 comments'), findsOneWidget);
     expect(find.text('Post liked'), findsOneWidget);
+  });
+
+  testWidgets('creates community posts from the mobile posts tab', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'selected_region_id': 2});
+    final repository = _FakeCommunityRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CommunityScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Post'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Mobile macro notes');
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      'Rotate after clearing mid and protect river vision.',
+    );
+    await tester.pumpAndSettle();
+    tester.testTextInput.hide();
+    await tester.pump();
+    await tester.ensureVisible(find.byType(FilledButton).last);
+    await tester.tap(find.byType(FilledButton).last);
+    await tester.pumpAndSettle();
+
+    expect(repository.createdTitle, 'Mobile macro notes');
+    expect(
+      repository.createdContent,
+      'Rotate after clearing mid and protect river vision.',
+    );
+    expect(repository.createdTags, ['Guide']);
+    expect(repository.createdRegionId, isNotNull);
+    expect(find.text('Mobile macro notes'), findsOneWidget);
+    expect(
+      find.text('Rotate after clearing mid and protect river vision.'),
+      findsOneWidget,
+    );
+    expect(find.text('Post created'), findsOneWidget);
   });
 }
