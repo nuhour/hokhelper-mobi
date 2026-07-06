@@ -160,7 +160,10 @@ class _ProfileCard extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  _LevelBadge(profile: profile!),
+                  _LevelBadge(
+                    profile: profile!,
+                    onTap: () => _showPointsRulesSheet(context, profile!),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(child: _ProgressBar(profile: profile!)),
                 ],
@@ -246,6 +249,15 @@ class _ProfileCard extends ConsumerWidget {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => const _ChangePasswordSheet(),
+    );
+  }
+
+  void _showPointsRulesSheet(BuildContext context, UserProfile profile) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _PointsRulesSheet(profile: profile),
     );
   }
 }
@@ -664,14 +676,89 @@ class _SheetHandle extends StatelessWidget {
   }
 }
 
-class _LevelBadge extends StatelessWidget {
-  const _LevelBadge({required this.profile});
+class _PointsRulesSheet extends StatelessWidget {
+  const _PointsRulesSheet({required this.profile});
 
   final UserProfile profile;
 
+  static const _rules = [
+    _PointsRule('Daily Login', 5),
+    _PointsRule('Post Content', 15),
+    _PointsRule('Comment Content', 8),
+    _PointsRule('Create Build', 20),
+    _PointsRule('Create Tier List', 30),
+    _PointsRule('Create Prompt', 20),
+    _PointsRule('Like/Favorite', 2),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final current = profile.xpCurrentLevel;
+    final next = profile.xpCurrentLevel + profile.xpToNextLevel;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SheetHandle(title: 'Points Rules'),
+            const SizedBox(height: 8),
+            Text(
+              profile.levelCap ? 'MAX' : '$current/$next XP',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+            ),
+            const SizedBox(height: 16),
+            ..._rules.map(
+              (rule) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        rule.action,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '+${rule.points}',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppTheme.gold,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PointsRule {
+  const _PointsRule(this.action, this.points);
+
+  final String action;
+  final int points;
+}
+
+class _LevelBadge extends StatelessWidget {
+  const _LevelBadge({required this.profile, this.onTap});
+
+  final UserProfile profile;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.gold.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
@@ -686,6 +773,18 @@ class _LevelBadge extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
+      ),
+    );
+    if (onTap == null) {
+      return badge;
+    }
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: badge,
       ),
     );
   }

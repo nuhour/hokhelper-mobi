@@ -255,6 +255,31 @@ void main() {
     expect(find.text('Prompts favorites'), findsOneWidget);
   });
 
+  testWidgets('signed-in profile opens hokx points rules from level badge', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+
+    await tester.pumpWidget(_buildMeScreenWithProfile(user, _profile));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('LV.7'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Points Rules'), findsOneWidget);
+    expect(find.text('Daily Login'), findsOneWidget);
+    expect(find.text('+5'), findsOneWidget);
+    expect(find.text('Create Prompt'), findsOneWidget);
+    expect(find.text('+20'), findsWidgets);
+    expect(find.text('Like/Favorite'), findsOneWidget);
+    expect(find.text('+2'), findsOneWidget);
+  });
+
   testWidgets('profile editor saves updated mobile profile fields', (
     tester,
   ) async {
