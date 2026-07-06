@@ -230,4 +230,73 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/profile/77');
     expect(find.text('Profile 77'), findsOneWidget);
   });
+
+  testWidgets('opens external notification links in the mobile link route', (
+    tester,
+  ) async {
+    final repository = _FakeNotificationsRepository();
+    repository.page = const NotificationPage(
+      total: 1,
+      rows: [
+        NotificationSummary(
+          id: 13,
+          type: 'system',
+          targetType: 'external',
+          title: 'Event link',
+          content: 'Open the official event page',
+          link: 'https://example.test/event?id=9',
+          isRead: false,
+          createdAt: '2026-07-05T08:30:00Z',
+          actorName: '',
+          actorAvatar: '',
+          actorId: 0,
+        ),
+      ],
+    );
+    final router = GoRouter(
+      initialLocation: '/notifications',
+      routes: [
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/external-link',
+          builder: (context, state) =>
+              Scaffold(body: Text(state.uri.queryParameters['url'] ?? '')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(
+              const AuthUser(
+                id: 42,
+                username: 'lam',
+                email: 'lam@example.test',
+                displayName: 'Lam',
+              ),
+            ),
+          ),
+          notificationsRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'View'));
+    await tester.pumpAndSettle();
+
+    expect(repository.markedIds, [13]);
+    expect(router.routeInformationProvider.value.uri.path, '/external-link');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['url'],
+      'https://example.test/event?id=9',
+    );
+    expect(find.text('https://example.test/event?id=9'), findsOneWidget);
+  });
 }

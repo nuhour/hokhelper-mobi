@@ -215,6 +215,12 @@ String? _resolveNotificationDestination(NotificationSummary notification) {
   }
 
   final link = notification.link.trim();
+  if (link.startsWith(RegExp('https?://', caseSensitive: false))) {
+    return Uri(
+      path: '/external-link',
+      queryParameters: {'url': link},
+    ).toString();
+  }
   if (!link.startsWith('/')) {
     return null;
   }

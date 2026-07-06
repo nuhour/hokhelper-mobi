@@ -23,6 +23,7 @@ import '../features/heroes/presentation/hero_gallery_screen.dart';
 import '../features/heroes/presentation/hero_relationships_screen.dart';
 import '../features/heroes/presentation/world_map_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/info/presentation/external_link_screen.dart';
 import '../features/info/presentation/info_center_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/prompts/presentation/prompts_screen.dart';
@@ -149,6 +150,11 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/external-link',
+        builder: (context, state) =>
+            ExternalLinkScreen(url: state.uri.queryParameters['url'] ?? ''),
       ),
       GoRoute(path: '/profile', redirect: (context, state) => '/me'),
       GoRoute(

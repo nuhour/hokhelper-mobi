@@ -64,6 +64,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Friend Links'), findsOneWidget);
     expect(find.text('HOK Lab'), findsOneWidget);
+
+    router.go(
+      Uri(
+        path: '/external-link',
+        queryParameters: {'url': 'https://example.test/event?id=9'},
+      ).toString(),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('External Link'), findsWidgets);
+    expect(find.text('https://example.test/event?id=9'), findsOneWidget);
   });
 
   testWidgets('info center opens each static information page', (tester) async {
