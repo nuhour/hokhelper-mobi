@@ -1451,6 +1451,11 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                     label: const Text('Copy'),
                   ),
                 OutlinedButton.icon(
+                  onPressed: () => _sharePrompt(context),
+                  icon: const Icon(Icons.ios_share_outlined, size: 16),
+                  label: const Text('Share'),
+                ),
+                OutlinedButton.icon(
                   onPressed: widget.onGenerate,
                   icon: const Icon(Icons.auto_awesome, size: 16),
                   label: const Text('Generate'),
@@ -1483,6 +1488,18 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(const SnackBar(content: Text('Prompt copied')));
+  }
+
+  Future<void> _sharePrompt(BuildContext context) async {
+    await Clipboard.setData(
+      ClipboardData(text: '/tools/prompts?promptId=${widget.prompt.id}'),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(const SnackBar(content: Text('Prompt link copied')));
   }
 
   Future<void> _likePrompt(BuildContext context) async {

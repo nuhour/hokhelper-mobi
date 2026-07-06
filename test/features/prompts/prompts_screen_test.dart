@@ -388,6 +388,49 @@ void main() {
     expect(find.text('Prompt copied'), findsOneWidget);
   });
 
+  testWidgets('copies prompt share links to clipboard', (tester) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall?.arguments, {'text': '/tools/prompts?promptId=7'});
+    expect(find.text('Prompt link copied'), findsOneWidget);
+  });
+
   testWidgets('favorites prompt cards through the backend', (tester) async {
     final repository = _FakePromptsRepository();
 
