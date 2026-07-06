@@ -24,12 +24,14 @@ final statsDashboardProvider = FutureProvider<StatsDashboard>((ref) async {
 
 enum StatsEntry {
   overview,
+  homeCore,
   tierRank,
   powerRank,
   equipRank;
 
   static StatsEntry fromRoute(String? value) {
     return switch (value) {
+      'home_core' => StatsEntry.homeCore,
       'tier_rank' => StatsEntry.tierRank,
       'power_rank' => StatsEntry.powerRank,
       'equip_rank' => StatsEntry.equipRank,
@@ -96,6 +98,7 @@ class StatsScreen extends ConsumerWidget {
         title: 'Hero Trends',
         icon: Icons.person_search_outlined,
         focusLabel: switch (initialEntry) {
+          StatsEntry.homeCore => 'Focused home core stats',
           StatsEntry.tierRank => 'Focused tier rank',
           StatsEntry.powerRank => 'Focused power rank',
           _ => '',

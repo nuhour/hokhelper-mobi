@@ -93,6 +93,12 @@ void main() {
             entry: null,
             equipId: null,
           ),
+          '/stats?entry=home_core': (
+            path: '/tools/stats',
+            tab: null,
+            entry: 'home_core',
+            equipId: null,
+          ),
           '/stats?entry=hero_trend': (
             path: '/trends',
             tab: null,

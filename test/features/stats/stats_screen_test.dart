@@ -117,4 +117,52 @@ void main() {
     final heroTopLeft = tester.getTopLeft(find.text('Hero Trends'));
     expect(equipTopLeft.dy, lessThan(heroTopLeft.dy));
   });
+
+  testWidgets('home core entry highlights overview stats', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider.overrideWith((ref) async {
+            return const StatsDashboard(
+              heroes: [
+                StatsHeroRow(
+                  id: '199',
+                  name: 'Lam',
+                  avatarUrl: '',
+                  winRate: 0.561,
+                  pickRate: 0.18,
+                  banRate: 0.07,
+                  score: 91.4,
+                ),
+              ],
+              equips: [
+                StatsEquipRow(
+                  id: '88',
+                  name: 'Doomsday',
+                  iconUrl: '',
+                  pickRate: 0.22,
+                  winRate: 0.53,
+                ),
+              ],
+              combos: [
+                StatsComboRow(
+                  heroAName: 'Lam',
+                  heroBName: 'Yaria',
+                  matches: 1200,
+                  winRate: 0.59,
+                  score: 88.5,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: StatsScreen(initialEntry: StatsEntry.homeCore)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Focused home core stats'), findsOneWidget);
+  });
 }
