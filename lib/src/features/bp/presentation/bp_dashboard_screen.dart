@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -75,57 +76,69 @@ class _BpSchemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final gameIndex = (scheme.gameNumber - 1).clamp(0, 99);
+    return Material(
+      color: AppTheme.panel,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () =>
+            context.go('/tools/bp-simulator/${scheme.id}?gameIndex=$gameIndex'),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.account_tree_outlined, color: AppTheme.gold),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    scheme.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.account_tree_outlined,
+                      color: AppTheme.gold,
                     ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        scheme.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    _MetricBadge(label: scheme.boModeText, isPrimary: true),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  scheme.matchupText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 10),
-                _MetricBadge(label: scheme.boModeText, isPrimary: true),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricBadge(label: scheme.progressText),
+                    _MetricBadge(label: scheme.historyCountText),
+                    _MetricBadge(label: scheme.phaseSummaryText),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              scheme.matchupText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MetricBadge(label: scheme.progressText),
-                _MetricBadge(label: scheme.historyCountText),
-                _MetricBadge(label: scheme.phaseSummaryText),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
