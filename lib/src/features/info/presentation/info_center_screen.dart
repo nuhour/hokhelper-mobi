@@ -70,9 +70,14 @@ class InfoCenterScreen extends ConsumerWidget {
 }
 
 class InfoStaticPage extends ConsumerWidget {
-  const InfoStaticPage({required this.section, super.key});
+  const InfoStaticPage({
+    required this.section,
+    this.highlightCommunity = false,
+    super.key,
+  });
 
   final InfoStaticSection section;
+  final bool highlightCommunity;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -88,7 +93,10 @@ class InfoStaticPage extends ConsumerWidget {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: _StaticSectionBody(section: section),
+          child: _StaticSectionBody(
+            section: section,
+            highlightCommunity: highlightCommunity,
+          ),
         ),
       ),
     );
@@ -108,9 +116,13 @@ enum InfoStaticSection {
 }
 
 class _StaticSectionBody extends ConsumerWidget {
-  const _StaticSectionBody({required this.section});
+  const _StaticSectionBody({
+    required this.section,
+    required this.highlightCommunity,
+  });
 
   final InfoStaticSection section;
+  final bool highlightCommunity;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -122,7 +134,9 @@ class _StaticSectionBody extends ConsumerWidget {
           const SizedBox(height: 12),
         ],
         switch (section) {
-          InfoStaticSection.about => const _AboutDetail(),
+          InfoStaticSection.about => _AboutDetail(
+            highlightCommunity: highlightCommunity,
+          ),
           InfoStaticSection.faq => const _FaqDetail(),
           InfoStaticSection.privacy => const _PrivacyDetail(),
           InfoStaticSection.terms => const _TermsDetail(),
@@ -576,23 +590,75 @@ class _InfoPanel extends StatelessWidget {
 }
 
 class _AboutDetail extends StatelessWidget {
-  const _AboutDetail();
+  const _AboutDetail({required this.highlightCommunity});
+
+  final bool highlightCommunity;
 
   @override
   Widget build(BuildContext context) {
-    return const _InfoPanel(
-      icon: Icons.shield_outlined,
-      title: 'Global Community Intel',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (highlightCommunity) ...[
+          const _CommunityFocusPanel(),
+          const SizedBox(height: 12),
+        ],
+        const _InfoPanel(
+          icon: Icons.shield_outlined,
+          title: 'Global Community Intel',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BodyText(
+                'HOK Helper brings hero data, build guides, meta trends, and community tools into one mobile-first assistant for Honor of Kings players.',
+              ),
+              SizedBox(height: 12),
+              _BulletText('Cross-region hero intelligence for CN, EN, and ID'),
+              _BulletText(
+                'Build, draft, tier list, and team composition tools',
+              ),
+              _BulletText(
+                'Community content, patch tracking, and esports context',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CommunityFocusPanel extends StatelessWidget {
+  const _CommunityFocusPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return _InfoPanel(
+      icon: Icons.groups_2_outlined,
+      title: 'Community channel focus',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _BodyText(
-            'HOK Helper brings hero data, build guides, meta trends, and community tools into one mobile-first assistant for Honor of Kings players.',
+          const _BodyText(
+            'Join discussion, share guides, and keep support links close from the mobile assistant.',
           ),
-          SizedBox(height: 12),
-          _BulletText('Cross-region hero intelligence for CN, EN, and ID'),
-          _BulletText('Build, draft, tier list, and team composition tools'),
-          _BulletText('Community content, patch tracking, and esports context'),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: () => context.go('/content/community'),
+                icon: const Icon(Icons.forum_outlined),
+                label: const Text('Open Community'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/links'),
+                icon: const Icon(Icons.link_outlined),
+                label: const Text('Support Links'),
+              ),
+            ],
+          ),
         ],
       ),
     );

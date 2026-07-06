@@ -428,8 +428,11 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/about',
-        builder: (context, state) =>
-            const InfoStaticPage(section: InfoStaticSection.about),
+        builder: (context, state) => InfoStaticPage(
+          section: InfoStaticSection.about,
+          highlightCommunity:
+              state.uri.queryParameters['section'] == 'community',
+        ),
       ),
       GoRoute(
         path: '/faq',
