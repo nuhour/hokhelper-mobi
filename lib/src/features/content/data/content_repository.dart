@@ -43,10 +43,16 @@ class ContentRepository {
     int regionId, {
     int page = 1,
     int pageSize = 20,
+    String sort = 'updated_at',
+    String order = 'desc',
   }) async {
     final json = await apiClient.postJson(
       '/cg/list',
-      body: _pagedRegionBody(regionId, page: page, pageSize: pageSize),
+      body: {
+        ..._pagedRegionBody(regionId, page: page, pageSize: pageSize),
+        'sort': sort,
+        'order': order == 'asc' ? 'asc' : 'desc',
+      },
     );
     return _readRows(
       json,

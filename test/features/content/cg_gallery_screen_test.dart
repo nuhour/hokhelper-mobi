@@ -25,6 +25,8 @@ class _FakeContentRepository extends ContentRepository {
   int? viewedCgId;
   int? ratedCgId;
   double? submittedRating;
+  String? requestedCgSort;
+  String? requestedCgOrder;
   final commentOrders = <String>[];
 
   @override
@@ -32,7 +34,11 @@ class _FakeContentRepository extends ContentRepository {
     int regionId, {
     int page = 1,
     int pageSize = 20,
+    String sort = 'updated_at',
+    String order = 'desc',
   }) async {
+    requestedCgSort = sort;
+    requestedCgOrder = order;
     return const [
       ContentItemSummary(
         id: 501,
@@ -128,6 +134,8 @@ class _PagedCgRepository extends ContentRepository {
     int regionId, {
     int page = 1,
     int pageSize = 20,
+    String sort = 'updated_at',
+    String order = 'desc',
   }) async {
     requestedPages.add(page);
     final startId = (page - 1) * pageSize + 1;
@@ -323,6 +331,31 @@ void main() {
     expect(find.text('Focused hero CGs'), findsOneWidget);
     expect(find.text('Lam Cinematic'), findsOneWidget);
     expect(find.text('Angela Trailer'), findsNothing);
+  });
+
+  testWidgets('requests cgs with hokx-compatible sort field and order', (
+    tester,
+  ) async {
+    final repository = _FakeContentRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Created'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ascending'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedCgSort, 'created_at');
+    expect(repository.requestedCgOrder, 'asc');
   });
 
   testWidgets('loads more cgs after the first gallery page', (tester) async {

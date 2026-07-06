@@ -25,6 +25,25 @@ final cgGalleryProvider = FutureProvider<List<ContentItemSummary>>((ref) async {
       .loadCgs(regionId, pageSize: _cgGalleryPageSize);
 });
 
+final cgGalleryQueryProvider =
+    FutureProvider.family<List<ContentItemSummary>, _CgGalleryQuery>((
+      ref,
+      query,
+    ) async {
+      if (query.isDefault) {
+        return ref.watch(cgGalleryProvider.future);
+      }
+      final regionId = await ref.watch(cgGalleryRegionProvider.future);
+      return ref
+          .watch(contentRepositoryProvider)
+          .loadCgs(
+            regionId,
+            pageSize: _cgGalleryPageSize,
+            sort: query.sort.apiValue,
+            order: query.order.apiValue,
+          );
+    });
+
 final cgDetailProvider = FutureProvider.family<CgDetail, int>((ref, cgId) {
   return ref.watch(contentRepositoryProvider).loadCgDetail(cgId);
 });
@@ -56,6 +75,28 @@ class CgCommentsQuery {
   int get hashCode => Object.hash(cgId, order);
 }
 
+class _CgGalleryQuery {
+  const _CgGalleryQuery({
+    this.sort = _CgSort.updated,
+    this.order = _CgSortOrder.desc,
+  });
+
+  final _CgSort sort;
+  final _CgSortOrder order;
+
+  bool get isDefault => sort == _CgSort.updated && order == _CgSortOrder.desc;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _CgGalleryQuery &&
+        other.sort == sort &&
+        other.order == order;
+  }
+
+  @override
+  int get hashCode => Object.hash(sort, order);
+}
+
 class CgGalleryScreen extends ConsumerStatefulWidget {
   const CgGalleryScreen({
     this.initialCgId,
@@ -76,6 +117,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   _CgSort _sort = _CgSort.updated;
+  _CgSortOrder _sortOrder = _CgSortOrder.desc;
   int? _openedInitialCgId;
   final _extraCgs = <ContentItemSummary>[];
   var _nextPage = 2;
@@ -100,7 +142,8 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final galleryValue = ref.watch(cgGalleryProvider);
+    final query = _CgGalleryQuery(sort: _sort, order: _sortOrder);
+    final galleryValue = ref.watch(cgGalleryQueryProvider(query));
     final initialCgId = widget.initialCgId;
 
     if (initialCgId != null && _openedInitialCgId != initialCgId) {
@@ -117,8 +160,8 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       child: RefreshIndicator(
         onRefresh: () async {
           _resetLoadedPages();
-          ref.invalidate(cgGalleryProvider);
-          await ref.read(cgGalleryProvider.future);
+          ref.invalidate(cgGalleryQueryProvider(query));
+          await ref.read(cgGalleryQueryProvider(query).future);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -166,14 +209,41 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                   icon: Icon(Icons.star_border),
                 ),
                 ButtonSegment(
+                  value: _CgSort.created,
+                  label: Text('Created'),
+                  icon: Icon(Icons.calendar_today_outlined),
+                ),
+                ButtonSegment(
                   value: _CgSort.views,
                   label: Text('Views'),
                   icon: Icon(Icons.visibility_outlined),
                 ),
               ],
               selected: {_sort},
-              onSelectionChanged: (value) =>
-                  setState(() => _sort = value.first),
+              onSelectionChanged: (value) => setState(() {
+                _sort = value.first;
+                _resetLoadedPages();
+              }),
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<_CgSortOrder>(
+              segments: const [
+                ButtonSegment(
+                  value: _CgSortOrder.desc,
+                  label: Text('Descending'),
+                  icon: Icon(Icons.south),
+                ),
+                ButtonSegment(
+                  value: _CgSortOrder.asc,
+                  label: Text('Ascending'),
+                  icon: Icon(Icons.north),
+                ),
+              ],
+              selected: {_sortOrder},
+              onSelectionChanged: (value) => setState(() {
+                _sortOrder = value.first;
+                _resetLoadedPages();
+              }),
             ),
             if (widget.initialHeroId != null) ...[
               const SizedBox(height: 12),
@@ -182,7 +252,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
               value: galleryValue,
-              retry: () => ref.invalidate(cgGalleryProvider),
+              retry: () => ref.invalidate(cgGalleryQueryProvider(query)),
               data: (items) {
                 final allItems = [...items, ..._extraCgs];
                 final cgs = _filterAndSort(allItems);
@@ -254,11 +324,12 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
         .toList(growable: false);
 
     return [...filtered]..sort((left, right) {
-      return switch (_sort) {
-        _CgSort.rating => right.rating.compareTo(left.rating),
-        _CgSort.views => right.viewCount.compareTo(left.viewCount),
-        _CgSort.updated => right.id.compareTo(left.id),
+      final comparison = switch (_sort) {
+        _CgSort.rating => left.rating.compareTo(right.rating),
+        _CgSort.views => left.viewCount.compareTo(right.viewCount),
+        _CgSort.updated || _CgSort.created => left.id.compareTo(right.id),
       };
+      return _sortOrder == _CgSortOrder.asc ? comparison : -comparison;
     });
   }
 
@@ -294,7 +365,13 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       final regionId = await ref.read(cgGalleryRegionProvider.future);
       final nextItems = await ref
           .read(contentRepositoryProvider)
-          .loadCgs(regionId, page: _nextPage, pageSize: _cgGalleryPageSize);
+          .loadCgs(
+            regionId,
+            page: _nextPage,
+            pageSize: _cgGalleryPageSize,
+            sort: _sort.apiValue,
+            order: _sortOrder.apiValue,
+          );
 
       if (!mounted) {
         return;
@@ -963,4 +1040,22 @@ String _compact(int value) {
   );
 }
 
-enum _CgSort { updated, rating, views }
+enum _CgSort {
+  updated('updated_at'),
+  rating('rating'),
+  created('created_at'),
+  views('view_count');
+
+  const _CgSort(this.apiValue);
+
+  final String apiValue;
+}
+
+enum _CgSortOrder {
+  desc('desc'),
+  asc('asc');
+
+  const _CgSortOrder(this.apiValue);
+
+  final String apiValue;
+}

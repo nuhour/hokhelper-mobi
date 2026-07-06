@@ -128,6 +128,30 @@ void main() {
     expect(comments.single.content, 'Great cinematic.');
   });
 
+  test('loads cg gallery with web-compatible sort and order', () async {
+    final apiClient = _FakeApiClient();
+    final repository = ContentRepository(apiClient: apiClient);
+
+    await repository.loadCgs(
+      2,
+      page: 3,
+      pageSize: 12,
+      sort: 'created_at',
+      order: 'asc',
+    );
+
+    expect(apiClient.postCalls, ['/cg/list']);
+    expect(apiClient.lastBody, {
+      'page': 3,
+      'pageSize': 12,
+      'sort': 'created_at',
+      'order': 'asc',
+      'filterRules': [
+        {'field': 'region_id', 'op': 'eq', 'value': 2},
+      ],
+    });
+  });
+
   test('loads cg comments with requested web-compatible order', () async {
     final apiClient = _FakeApiClient();
     final repository = ContentRepository(apiClient: apiClient);

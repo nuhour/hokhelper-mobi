@@ -129,6 +129,8 @@ void main() {
       expect(apiClient.postBody, {
         'page': 1,
         'pageSize': 20,
+        'sort': 'updated_at',
+        'order': 'desc',
         'filterRules': [
           {'field': 'region_id', 'op': 'eq', 'value': 3},
         ],
