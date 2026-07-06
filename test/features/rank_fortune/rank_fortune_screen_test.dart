@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
@@ -74,6 +75,8 @@ void main() {
     expect(find.text('Great Luck'), findsWidgets);
     expect(find.text('Fortune Value'), findsOneWidget);
     expect(find.text('92'), findsWidgets);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -220));
+    await tester.pumpAndSettle();
     expect(find.text('30-day History'), findsOneWidget);
   });
 
@@ -104,6 +107,61 @@ void main() {
     expect(find.text('Legendary Luck'), findsWidgets);
     expect(find.text('99'), findsWidgets);
     expect(find.text('Already drawn today'), findsOneWidget);
+  });
+
+  testWidgets('copies today fortune share links', (tester) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardCall = call;
+          }
+          return null;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          rankFortuneHistoryProvider.overrideWith((ref) async {
+            return const RankFortuneHistory(
+              rows: [
+                RankFortuneRecord(
+                  id: 3,
+                  date: '2026-07-04',
+                  typeId: 'great',
+                  score: 92,
+                ),
+              ],
+              today: RankFortuneRecord(
+                id: 3,
+                date: '2026-07-04',
+                typeId: 'great',
+                score: 92,
+              ),
+              canDraw: false,
+              days: 30,
+              catalog: [RankFortuneCatalogEntry(typeId: 'great', score: 92)],
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: RankFortuneScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Share Fortune'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardCall, isNotNull);
+    expect(clipboardCall!.arguments, {
+      'text':
+          'I just drew Great Luck on HOK Helper today! Fortune Value: 92\n/tools/rank-fortune',
+    });
+    expect(find.text('Fortune link copied'), findsOneWidget);
   });
 
   testWidgets('summarizes the latest thirty fortune history rows', (
@@ -138,6 +196,9 @@ void main() {
         child: const MaterialApp(home: Scaffold(body: RankFortuneScreen())),
       ),
     );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -260));
     await tester.pumpAndSettle();
 
     expect(find.text('30d Average'), findsOneWidget);

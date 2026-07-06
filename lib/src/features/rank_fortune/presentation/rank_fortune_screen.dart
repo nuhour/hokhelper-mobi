@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -280,7 +281,33 @@ class _FortuneResult extends StatelessWidget {
             fontWeight: FontWeight.w900,
           ),
         ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => _shareFortune(context, copy),
+          icon: const Icon(Icons.ios_share_outlined, size: 18),
+          label: const Text('Share Fortune'),
+        ),
       ],
+    );
+  }
+
+  Future<void> _shareFortune(
+    BuildContext context,
+    ({String title, String description}) copy,
+  ) async {
+    await Clipboard.setData(
+      ClipboardData(
+        text:
+            'I just drew ${copy.title} on HOK Helper today! Fortune Value: ${record.score}\n/tools/rank-fortune',
+      ),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Fortune link copied')),
     );
   }
 }
