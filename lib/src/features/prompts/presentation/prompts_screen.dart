@@ -1384,7 +1384,8 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      _PromptAuthorName(
+                      _PromptAuthorButton(
+                        authorAvatarUrl: prompt.authorAvatarUrl,
                         authorId: prompt.authorId,
                         authorName: prompt.authorName,
                       ),
@@ -1558,12 +1559,14 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
   }
 }
 
-class _PromptAuthorName extends StatelessWidget {
-  const _PromptAuthorName({
+class _PromptAuthorButton extends StatelessWidget {
+  const _PromptAuthorButton({
+    required this.authorAvatarUrl,
     required this.authorId,
     required this.authorName,
   });
 
+  final String authorAvatarUrl;
   final int authorId;
   final String authorName;
 
@@ -1573,32 +1576,43 @@ class _PromptAuthorName extends StatelessWidget {
       context,
     ).textTheme.bodySmall?.copyWith(color: AppTheme.muted);
 
-    if (authorId <= 0) {
-      return Text(
-        authorName,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: textStyle,
-      );
-    }
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppImage(
+          url: authorAvatarUrl,
+          width: 24,
+          height: 24,
+          borderRadius: 999,
+          semanticLabel: '$authorName avatar',
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            authorName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textStyle,
+          ),
+        ),
+      ],
+    );
 
     return Align(
       alignment: Alignment.centerLeft,
-      child: TextButton(
-        onPressed: () => context.go('/profile/$authorId'),
-        style: TextButton.styleFrom(
-          foregroundColor: AppTheme.muted,
-          minimumSize: Size.zero,
-          padding: EdgeInsets.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          textStyle: textStyle,
-        ),
-        child: Text(
-          authorName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+      child: authorId <= 0
+          ? content
+          : TextButton(
+              onPressed: () => context.go('/profile/$authorId'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.muted,
+                minimumSize: Size.zero,
+                padding: EdgeInsets.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: textStyle,
+              ),
+              child: content,
+            ),
     );
   }
 }

@@ -7,6 +7,7 @@ class PromptSummary {
     required this.imageUrl,
     this.authorId = 0,
     required this.authorName,
+    this.authorAvatarUrl = '',
     required this.likeCount,
     required this.favoriteCount,
     required this.isPublic,
@@ -23,6 +24,7 @@ class PromptSummary {
   final String imageUrl;
   final int authorId;
   final String authorName;
+  final String authorAvatarUrl;
   final int likeCount;
   final int favoriteCount;
   final bool isPublic;
@@ -33,6 +35,8 @@ class PromptSummary {
 
   factory PromptSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
+    final author = map['author'];
+    final authorMap = author is Map ? author : const <String, Object?>{};
     return PromptSummary(
       id: _readString(map['id']),
       title: _readString(map['title'], fallback: 'Untitled prompt'),
@@ -53,8 +57,14 @@ class PromptSummary {
             map['creatorId'],
       ),
       authorName: _readString(
-        map['author_name'] ?? map['authorName'],
+        map['author_name'] ?? map['authorName'] ?? authorMap['username'],
         fallback: 'Unknown creator',
+      ),
+      authorAvatarUrl: _readString(
+        map['author_avatar_url'] ??
+            map['author_avatar'] ??
+            authorMap['avatar_url'] ??
+            authorMap['avatar'],
       ),
       likeCount: _readInt(map['likes'] ?? map['like_count']),
       favoriteCount: _readInt(map['favorites'] ?? map['favorite_count']),
