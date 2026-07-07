@@ -12,7 +12,9 @@ import 'content_screen.dart';
 const _patchNotesPageSize = 120;
 
 class PatchNotesScreen extends ConsumerStatefulWidget {
-  const PatchNotesScreen({super.key});
+  const PatchNotesScreen({this.initialNoteId, super.key});
+
+  final int? initialNoteId;
 
   @override
   ConsumerState<PatchNotesScreen> createState() => _PatchNotesScreenState();
@@ -25,6 +27,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
   var _nextPage = 2;
   var _hasMoreNotes = true;
   var _isLoadingMoreNotes = false;
+  var _hasOpenedInitialNote = false;
 
   @override
   void dispose() {
@@ -82,6 +85,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
               retry: () => ref.invalidate(patchNotesProvider),
               data: (items) {
                 final allItems = [...items, ..._extraNotes];
+                _openInitialNoteIfNeeded(allItems);
                 final filteredItems = _filterByHero(allItems, _heroFilter);
                 if (filteredItems.isEmpty) {
                   return AppEmptyState(
@@ -171,6 +175,24 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
         return _PatchDetailSheet(note: note);
       },
     );
+  }
+
+  void _openInitialNoteIfNeeded(List<PatchNoteSummary> items) {
+    final initialNoteId = widget.initialNoteId;
+    if (_hasOpenedInitialNote || initialNoteId == null) {
+      return;
+    }
+    for (final note in items) {
+      if (note.id == initialNoteId) {
+        _hasOpenedInitialNote = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showPatchDetail(context, note);
+          }
+        });
+        return;
+      }
+    }
   }
 
   void _resetLoadedPages() {

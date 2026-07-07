@@ -265,79 +265,92 @@ class _PatchNoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+        onTap: () => context.go('/content/patch-notes?note_id=${note.id}'),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _VersionBadge(version: note.version),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        note.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppTheme.text,
-                          fontWeight: FontWeight.w900,
-                        ),
+                Row(
+                  children: [
+                    _VersionBadge(version: note.version),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            note.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: AppTheme.text,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'V${note.version} · ${note.date}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.muted),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'V${note.version} · ${note.date}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                    ],
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppTheme.muted,
+                      size: 20,
+                    ),
+                  ],
+                ),
+                if (note.preview.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    note.preview,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
                   ),
+                ],
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _PatchMetaChip(
+                      icon: Icons.tune_outlined,
+                      label:
+                          '${note.changeCount} hero ${note.changeCount == 1 ? 'change' : 'changes'}',
+                    ),
+                    if (note.tags.isNotEmpty)
+                      _PatchMetaChip(
+                        icon: Icons.sell_outlined,
+                        label: note.tags.first,
+                      ),
+                  ],
                 ),
               ],
             ),
-            if (note.preview.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                note.preview,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _PatchMetaChip(
-                  icon: Icons.tune_outlined,
-                  label:
-                      '${note.changeCount} hero ${note.changeCount == 1 ? 'change' : 'changes'}',
-                ),
-                if (note.tags.isNotEmpty)
-                  _PatchMetaChip(
-                    icon: Icons.sell_outlined,
-                    label: note.tags.first,
-                  ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -623,7 +623,11 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'patch-notes',
-                    builder: (context, state) => const PatchNotesScreen(),
+                    builder: (context, state) => PatchNotesScreen(
+                      initialNoteId: int.tryParse(
+                        state.uri.queryParameters['note_id'] ?? '',
+                      ),
+                    ),
                   ),
                   GoRoute(
                     path: 'info',
