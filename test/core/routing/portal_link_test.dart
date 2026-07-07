@@ -176,4 +176,21 @@ void main() {
       '/tools/prompts?promptId=42',
     );
   });
+
+  test('normalizes build simulator scheme query links', () {
+    expect(
+      normalizePortalLinkTarget('/build-sim?scheme_id=42'),
+      '/tools/build-sim?scheme=42',
+    );
+    expect(
+      normalizePortalLinkTarget('/tools/build-sim?scheme_id=42&hero_id=166'),
+      '/tools/build-sim?scheme=42&hero_id=166',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/tools/build-sim?scheme_id=42',
+      ),
+      '/tools/build-sim?scheme=42',
+    );
+  });
 }

@@ -108,6 +108,10 @@ String _normalizeInternalTarget(String target) {
     return _normalizePromptsTarget(uri).toString();
   }
 
+  if (uri.path == '/build-sim' || uri.path == '/tools/build-sim') {
+    return _normalizeBuildSimTarget(uri).toString();
+  }
+
   final aliasPath = _mobileAliasPath(uri.path);
   if (aliasPath != null) {
     return uri.replace(path: aliasPath).toString();
@@ -142,6 +146,22 @@ Uri _normalizePromptsTarget(Uri uri) {
   normalizedQueryParameters.addAll(queryParameters);
   return Uri(
     path: '/tools/prompts',
+    queryParameters: normalizedQueryParameters.isEmpty
+        ? null
+        : normalizedQueryParameters,
+  );
+}
+
+Uri _normalizeBuildSimTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final schemeId = queryParameters.remove('scheme_id')?.trim();
+  final normalizedQueryParameters = <String, String>{};
+  if (schemeId != null && schemeId.isNotEmpty) {
+    normalizedQueryParameters['scheme'] = schemeId;
+  }
+  normalizedQueryParameters.addAll(queryParameters);
+  return Uri(
+    path: '/tools/build-sim',
     queryParameters: normalizedQueryParameters.isEmpty
         ? null
         : normalizedQueryParameters,
