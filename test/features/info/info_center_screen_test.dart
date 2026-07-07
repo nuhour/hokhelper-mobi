@@ -71,9 +71,9 @@ void main() {
 
     expect(find.text('Info Center'), findsOneWidget);
     expect(find.text('About HOK Helper'), findsOneWidget);
-    expect(find.text('FAQ'), findsOneWidget);
-    expect(find.text('Privacy Policy'), findsOneWidget);
-    expect(find.text('Terms of Service'), findsOneWidget);
+    expect(find.text('FAQ'), findsWidgets);
+    expect(find.text('Privacy Policy'), findsWidgets);
+    expect(find.text('Terms of Service'), findsWidgets);
     expect(find.text('Friend Links'), findsOneWidget);
     expect(find.text('HOK Lab'), findsOneWidget);
     expect(find.text('https://hoklab.example'), findsOneWidget);

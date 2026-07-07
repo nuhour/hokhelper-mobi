@@ -60,6 +60,8 @@ class InfoCenterScreen extends ConsumerWidget {
               body:
                   'Use HOK Helper as a strategy reference. Community conduct, AI prompt usage, and shared content must stay respectful and lawful. The project is independent from the game publisher.',
             ),
+            const SizedBox(height: 12),
+            const _PortalDirectorySection(),
             const SizedBox(height: 20),
             _FriendLinksSection(value: ref.watch(friendLinksProvider)),
           ],
@@ -496,6 +498,146 @@ class _FriendLinkCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PortalDirectorySection extends StatelessWidget {
+  const _PortalDirectorySection();
+
+  static const _groups = [
+    _PortalDirectoryGroup(
+      title: 'Discovery',
+      links: [
+        _PortalDirectoryLink('Hero Gallery', '/hero-gallery'),
+        _PortalDirectoryLink('Stats', '/stats'),
+        _PortalDirectoryLink('Skin Gallery', '/skin-gallery'),
+        _PortalDirectoryLink('Hero Tier List', '/tier-list'),
+        _PortalDirectoryLink('Trends', '/trends'),
+        _PortalDirectoryLink('Leaderboard', '/leaderboard'),
+      ],
+    ),
+    _PortalDirectoryGroup(
+      title: 'Community',
+      links: [
+        _PortalDirectoryLink('Community', '/community'),
+        _PortalDirectoryLink('Community Leaks', '/community/leaks'),
+        _PortalDirectoryLink('Event Assistance', '/event-assistance'),
+        _PortalDirectoryLink('Esports', '/esports'),
+        _PortalDirectoryLink('HOK World', '/hok-world'),
+      ],
+    ),
+    _PortalDirectoryGroup(
+      title: 'Tools',
+      links: [
+        _PortalDirectoryLink('BP Simulator', '/tools/bp-simulator'),
+        _PortalDirectoryLink('Tier List Editor', '/tools/tier-list'),
+        _PortalDirectoryLink('AI Prompt', '/tools/prompts'),
+        _PortalDirectoryLink('Team Builder', '/tools/team-builder'),
+        _PortalDirectoryLink('Build Sim', '/tools/build-sim'),
+        _PortalDirectoryLink('Game Assistant', '/tools/game-assistant'),
+        _PortalDirectoryLink('Rank Fortune', '/tools/rank-fortune'),
+      ],
+    ),
+    _PortalDirectoryGroup(
+      title: 'Support',
+      links: [
+        _PortalDirectoryLink('About Us', '/about'),
+        _PortalDirectoryLink('Links', '/links'),
+        _PortalDirectoryLink('Terms of Service', '/terms'),
+        _PortalDirectoryLink('Privacy Policy', '/privacy'),
+        _PortalDirectoryLink('FAQ', '/faq'),
+      ],
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return _InfoPanel(
+      icon: Icons.account_tree_outlined,
+      title: 'Portal Directory',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mobile map of the same discovery, community, tool, and support links available in the hokx portal footer.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+          ),
+          const SizedBox(height: 14),
+          for (final group in _groups) ...[
+            _PortalDirectoryGroupView(group: group),
+            if (group != _groups.last) const SizedBox(height: 14),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PortalDirectoryGroup {
+  const _PortalDirectoryGroup({required this.title, required this.links});
+
+  final String title;
+  final List<_PortalDirectoryLink> links;
+}
+
+class _PortalDirectoryLink {
+  const _PortalDirectoryLink(this.label, this.route);
+
+  final String label;
+  final String route;
+}
+
+class _PortalDirectoryGroupView extends StatelessWidget {
+  const _PortalDirectoryGroupView({required this.group});
+
+  final _PortalDirectoryGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          group.title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final link in group.links) _PortalDirectoryChip(link: link),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PortalDirectoryChip extends StatelessWidget {
+  const _PortalDirectoryChip({required this.link});
+
+  final _PortalDirectoryLink link;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: const Icon(Icons.chevron_right, size: 16),
+      label: Text(link.label, overflow: TextOverflow.ellipsis),
+      onPressed: () => context.go(link.route),
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+      backgroundColor: AppTheme.panelAlt,
+      labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: AppTheme.text,
+        fontWeight: FontWeight.w800,
+      ),
+      visualDensity: VisualDensity.compact,
     );
   }
 }
