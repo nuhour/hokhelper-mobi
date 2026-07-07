@@ -762,13 +762,7 @@ class _MatchCard extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  match.scoreText,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.gold,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+                child: _MatchScoreText(match: match),
               ),
               Expanded(
                 child: _TeamIdentity(
@@ -861,14 +855,7 @@ void _showMatchDetailSheet(BuildContext context, EsportsMatchSummary match) {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          match.scoreText,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: AppTheme.gold,
-                                fontWeight: FontWeight.w900,
-                              ),
-                        ),
+                        child: _MatchScoreText(match: match),
                       ),
                       Expanded(
                         child: _TeamIdentity(
@@ -1521,6 +1508,43 @@ class _TeamIdentity extends StatelessWidget {
           ? MainAxisAlignment.end
           : MainAxisAlignment.start,
       children: alignEnd ? children.reversed.toList() : children,
+    );
+  }
+}
+
+class _MatchScoreText extends StatelessWidget {
+  const _MatchScoreText({required this.match});
+
+  final EsportsMatchSummary match;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
+      color: AppTheme.gold,
+      fontWeight: FontWeight.w900,
+    );
+
+    if (match.scoreA == null || match.scoreB == null) {
+      return Text(match.scoreText, style: baseStyle);
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${match.scoreA}',
+          style: baseStyle?.copyWith(
+            color: match.winnerSide == 'a' ? Colors.greenAccent : AppTheme.gold,
+          ),
+        ),
+        Text(' - ', style: baseStyle),
+        Text(
+          '${match.scoreB}',
+          style: baseStyle?.copyWith(
+            color: match.winnerSide == 'b' ? Colors.greenAccent : AppTheme.gold,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -68,7 +68,9 @@ void main() {
     expect(find.text('KPL Spring'), findsOneWidget);
     expect(find.text('Wolves'), findsWidgets);
     expect(find.text('AG'), findsOneWidget);
-    expect(find.text('4 - 3'), findsOneWidget);
+    expect(find.text('4'), findsOneWidget);
+    expect(find.text(' - '), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
 
     await tester.tap(find.text('Teams'));
     await tester.pumpAndSettle();
@@ -120,7 +122,9 @@ void main() {
     expect(find.text('KPL Spring · Playoffs'), findsOneWidget);
     expect(find.text('Wolves'), findsWidgets);
     expect(find.text('AG'), findsWidgets);
-    expect(find.text('4 - 3'), findsWidgets);
+    expect(find.text('4'), findsWidgets);
+    expect(find.text(' - '), findsWidgets);
+    expect(find.text('3'), findsWidgets);
     expect(find.text('Finished'), findsWidgets);
     expect(find.text('2026-06-28T11:00:00Z'), findsWidgets);
   });
@@ -191,7 +195,7 @@ void main() {
     expect(find.textContaining('BO7'), findsOneWidget);
   });
 
-  testWidgets('highlights esports match winner like the hokx portal', (
+  testWidgets('highlights esports match winner score like the hokx portal', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -225,9 +229,13 @@ void main() {
 
     final winnerText = tester.widget<Text>(find.text('Wolves'));
     final loserText = tester.widget<Text>(find.text('AG'));
+    final winnerScore = tester.widget<Text>(find.text('4'));
+    final loserScore = tester.widget<Text>(find.text('3'));
 
     expect(winnerText.style?.color, Colors.greenAccent);
     expect(loserText.style?.color, isNot(Colors.greenAccent));
+    expect(winnerScore.style?.color, Colors.greenAccent);
+    expect(loserScore.style?.color, isNot(Colors.greenAccent));
   });
 
   testWidgets('filters esports matches by league like the hokx portal', (
