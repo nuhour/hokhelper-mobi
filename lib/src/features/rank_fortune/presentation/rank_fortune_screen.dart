@@ -18,8 +18,15 @@ final rankFortuneHistoryProvider = FutureProvider<RankFortuneHistory>((ref) {
   return ref.watch(rankFortuneRepositoryProvider).loadHistory();
 });
 
+final rankFortuneHistoryByDaysProvider =
+    FutureProvider.family<RankFortuneHistory, int>((ref, days) {
+      return ref.watch(rankFortuneRepositoryProvider).loadHistory(days: days);
+    });
+
 class RankFortuneScreen extends ConsumerStatefulWidget {
-  const RankFortuneScreen({super.key});
+  const RankFortuneScreen({this.initialDays = 30, super.key});
+
+  final int initialDays;
 
   @override
   ConsumerState<RankFortuneScreen> createState() => _RankFortuneScreenState();
@@ -34,11 +41,14 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final historyValue = ref.watch(rankFortuneHistoryProvider);
+    final days = widget.initialDays.clamp(1, 365);
+    final historyValue = days == 30
+        ? ref.watch(rankFortuneHistoryProvider)
+        : ref.watch(rankFortuneHistoryByDaysProvider(days));
 
     return AppAsyncView<RankFortuneHistory>(
       value: historyValue,
-      retry: () => ref.invalidate(rankFortuneHistoryProvider),
+      retry: () => _invalidateHistory(days),
       data: (history) {
         final today = _localToday ?? history.today;
         final rows = _localRows ?? history.rows;
@@ -48,7 +58,10 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
         return RefreshIndicator(
           onRefresh: () {
             _clearLocalState();
-            return ref.refresh(rankFortuneHistoryProvider.future).then((_) {});
+            final future = days == 30
+                ? ref.refresh(rankFortuneHistoryProvider.future)
+                : ref.refresh(rankFortuneHistoryByDaysProvider(days).future);
+            return future.then((_) {});
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -70,12 +83,20 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
                 onDraw: canDraw && !_isDrawing ? _drawToday : null,
               ),
               const SizedBox(height: 16),
-              _HistoryPanel(rows: rows, catalog: catalog),
+              _HistoryPanel(rows: rows, catalog: catalog, days: days),
             ],
           ),
         );
       },
     );
+  }
+
+  void _invalidateHistory(int days) {
+    if (days == 30) {
+      ref.invalidate(rankFortuneHistoryProvider);
+    } else {
+      ref.invalidate(rankFortuneHistoryByDaysProvider(days));
+    }
   }
 
   Future<void> _drawToday() async {
@@ -356,16 +377,21 @@ class _FortuneResult extends StatelessWidget {
 }
 
 class _HistoryPanel extends StatelessWidget {
-  const _HistoryPanel({required this.rows, required this.catalog});
+  const _HistoryPanel({
+    required this.rows,
+    required this.catalog,
+    required this.days,
+  });
 
   final List<RankFortuneRecord> rows;
   final List<RankFortuneCatalogEntry> catalog;
+  final int days;
 
   @override
   Widget build(BuildContext context) {
     final sorted = [...rows]..sort((a, b) => a.date.compareTo(b.date));
     final latestRows = sorted.reversed
-        .take(30)
+        .take(days)
         .toList(growable: false)
         .reversed
         .toList(growable: false);
@@ -382,10 +408,10 @@ class _HistoryPanel extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '30-day History',
-                    style: TextStyle(
+                    '$days-day History',
+                    style: const TextStyle(
                       color: AppTheme.text,
                       fontWeight: FontWeight.w900,
                       fontSize: 18,

@@ -304,6 +304,11 @@ int? _playerLeaderboardRegionId(Uri uri) {
   return int.tryParse(uri.queryParameters['region_id'] ?? '') ?? 0;
 }
 
+int _rankFortuneDays(Uri uri) {
+  final days = int.tryParse(uri.queryParameters['days'] ?? '') ?? 30;
+  return days.clamp(1, 365);
+}
+
 GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: '/',
@@ -878,7 +883,9 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'rank-fortune',
-                    builder: (context, state) => const RankFortuneScreen(),
+                    builder: (context, state) => RankFortuneScreen(
+                      initialDays: _rankFortuneDays(state.uri),
+                    ),
                   ),
                   GoRoute(
                     path: 'curiosity-lab',

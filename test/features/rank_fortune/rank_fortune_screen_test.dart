@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/rank_fortune/data/rank_fortune_repository.dart';
@@ -20,6 +22,32 @@ class _FakeRepository extends RankFortuneRepository {
           ),
         ),
       );
+
+  int? loadedDays;
+
+  @override
+  Future<RankFortuneHistory> loadHistory({int days = 30}) async {
+    loadedDays = days;
+    return RankFortuneHistory(
+      rows: [
+        RankFortuneRecord(
+          id: 3,
+          date: '2026-07-04',
+          typeId: 'great',
+          score: 92,
+        ),
+      ],
+      today: const RankFortuneRecord(
+        id: 3,
+        date: '2026-07-04',
+        typeId: 'great',
+        score: 92,
+      ),
+      canDraw: false,
+      days: days,
+      catalog: const [RankFortuneCatalogEntry(typeId: 'great', score: 92)],
+    );
+  }
 
   @override
   Future<RankFortuneDraw> drawToday() async {
@@ -282,5 +310,51 @@ void main() {
     expect(find.text('30 days'), findsOneWidget);
     expect(find.text('2026-07-01'), findsNothing);
     expect(find.text('2026-07-31'), findsOneWidget);
+  });
+
+  testWidgets('loads hokx rank fortune history days from route query', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          rankFortuneRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: RankFortuneScreen(initialDays: 7)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedDays, 7);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -220));
+    await tester.pumpAndSettle();
+    expect(find.text('7-day History'), findsOneWidget);
+  });
+
+  testWidgets('web rank fortune alias preserves history days in app router', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+    final router = createAppRouter()..go('/rank-fortune?days=7');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          rankFortuneRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/rank-fortune',
+    );
+    expect(repository.loadedDays, 7);
   });
 }
