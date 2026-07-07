@@ -178,6 +178,7 @@ class _MatchesTab extends ConsumerStatefulWidget {
 class _MatchesTabState extends ConsumerState<_MatchesTab> {
   String _leagueFilter = 'all';
   String _statusFilter = 'all';
+  String _dateFilter = '';
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +209,10 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
           final matchesStatus =
               selectedStatus == 'all' ||
               match.statusKey.trim().toLowerCase() == selectedStatus;
-          return matchesLeague && matchesStatus;
+          final matchesDate =
+              _dateFilter.trim().isEmpty ||
+              _matchDateValue(match.startTime) == _dateFilter.trim();
+          return matchesLeague && matchesStatus && matchesDate;
         }).toList();
         final cards = <Widget>[
           _FilterCard(
@@ -232,6 +236,17 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
                 onChanged: (value) {
                   setState(() {
                     _statusFilter = value;
+                  });
+                },
+              ),
+              _FilterTextField(
+                width: 150,
+                label: 'Match Date',
+                value: _dateFilter,
+                hintText: 'YYYY-MM-DD',
+                onChanged: (value) {
+                  setState(() {
+                    _dateFilter = value;
                   });
                 },
               ),
@@ -528,6 +543,64 @@ class _FilterDropdown extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FilterTextField extends StatelessWidget {
+  const _FilterTextField({
+    required this.width,
+    required this.label,
+    required this.value,
+    required this.hintText,
+    required this.onChanged,
+  });
+
+  final double width;
+  final String label;
+  final String value;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: TextFormField(
+        initialValue: value,
+        keyboardType: TextInputType.datetime,
+        textInputAction: TextInputAction.done,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: AppTheme.text,
+          fontWeight: FontWeight.w800,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hintText,
+          isDense: true,
+          filled: true,
+          fillColor: Colors.black.withValues(alpha: 0.18),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppTheme.gold),
+          ),
+          labelStyle: const TextStyle(color: AppTheme.muted),
+          hintStyle: const TextStyle(color: AppTheme.muted),
+        ),
+        onChanged: onChanged,
       ),
     );
   }
@@ -1450,6 +1523,14 @@ List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
   return orderedValues
       .map((value) => _FilterOption(value: value, label: statusByValue[value]!))
       .toList();
+}
+
+String _matchDateValue(String startTime) {
+  final trimmed = startTime.trim();
+  if (trimmed.length >= 10) {
+    return trimmed.substring(0, 10);
+  }
+  return trimmed;
 }
 
 List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {
