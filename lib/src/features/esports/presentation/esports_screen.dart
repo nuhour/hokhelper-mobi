@@ -1576,7 +1576,7 @@ class _MatchScoreText extends StatelessWidget {
             color: match.winnerSide == 'a' ? Colors.greenAccent : AppTheme.gold,
           ),
         ),
-        Text(' - ', style: baseStyle),
+        Text(' : ', style: baseStyle),
         Text(
           '${match.scoreB}',
           style: baseStyle?.copyWith(

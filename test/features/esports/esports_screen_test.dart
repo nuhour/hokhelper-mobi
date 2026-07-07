@@ -69,7 +69,7 @@ void main() {
     expect(find.text('Wolves'), findsWidgets);
     expect(find.text('AG'), findsOneWidget);
     expect(find.text('4'), findsOneWidget);
-    expect(find.text(' - '), findsOneWidget);
+    expect(find.text(' : '), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
 
     await tester.tap(find.text('Teams'));
@@ -123,7 +123,7 @@ void main() {
     expect(find.text('Wolves'), findsWidgets);
     expect(find.text('AG'), findsWidgets);
     expect(find.text('4'), findsWidgets);
-    expect(find.text(' - '), findsWidgets);
+    expect(find.text(' : '), findsWidgets);
     expect(find.text('3'), findsWidgets);
     expect(find.text('Finished'), findsWidgets);
     expect(find.text('2026-06-28T11:00:00Z'), findsWidgets);
