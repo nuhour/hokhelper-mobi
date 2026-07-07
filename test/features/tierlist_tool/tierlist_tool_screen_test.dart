@@ -11,6 +11,7 @@ class _FakeTierListToolRepository extends TierListToolRepository {
   _FakeTierListToolRepository() : super(apiClient: _NoopApiClient());
 
   String? createdName;
+  String? deletedSchemeId;
 
   @override
   Future<TierListSchemeSummary> createScheme({required String name}) async {
@@ -35,6 +36,11 @@ class _FakeTierListToolRepository extends TierListToolRepository {
         ),
       ],
     );
+  }
+
+  @override
+  Future<void> deleteScheme(String schemeId) async {
+    deletedSchemeId = schemeId;
   }
 }
 
@@ -121,5 +127,48 @@ void main() {
     expect(find.text('Mobile Tier List'), findsOneWidget);
     expect(find.text('0 heroes'), findsOneWidget);
     expect(find.text('Tier list created'), findsOneWidget);
+  });
+
+  testWidgets('deletes tier list schemes from mobile cards', (tester) async {
+    final repository = _FakeTierListToolRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListToolSchemesProvider.overrideWith((ref) async {
+            return const [
+              TierListSchemeSummary(
+                id: '9',
+                name: 'Solo Queue Meta',
+                createdAt: '2026-07-01T08:00:00Z',
+                updatedAt: '2026-07-03T12:00:00Z',
+                rows: [
+                  TierListSchemeRowSummary(
+                    id: 'r1',
+                    label: 'T0',
+                    color: 'bg-red-600',
+                    heroCount: 2,
+                  ),
+                ],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TierListToolScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete tier list?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedSchemeId, '9');
+    expect(find.text('Solo Queue Meta'), findsNothing);
+    expect(find.text('Tier list deleted'), findsOneWidget);
   });
 }

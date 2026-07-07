@@ -49,4 +49,11 @@ class TierListToolRepository {
     final scheme = result is Map ? result['scheme'] : json['scheme'];
     return TierListSchemeSummary.fromJson(scheme is Map ? scheme : result);
   }
+
+  Future<void> deleteScheme(String schemeId) async {
+    await apiClient.postJson(
+      '/tierlist/schemes/$schemeId/delete',
+      body: <String, Object?>{},
+    );
+  }
 }

@@ -79,7 +79,10 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
                 ...visibleSchemes.map(
                   (scheme) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _TierListSchemeCard(scheme: scheme),
+                    child: _TierListSchemeCard(
+                      scheme: scheme,
+                      onDelete: () => _confirmDeleteScheme(scheme),
+                    ),
                   ),
                 ),
             ],
@@ -132,6 +135,58 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(content: Text('Failed to create tier list')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteScheme(TierListSchemeSummary scheme) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete tier list?'),
+        content: Text('Delete "${scheme.name}" from your tier lists.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    try {
+      await ref.read(tierListToolRepositoryProvider).deleteScheme(scheme.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        final existing =
+            _localSchemes ??
+            ref.read(tierListToolSchemesProvider).valueOrNull ??
+            const <TierListSchemeSummary>[];
+        _localSchemes = existing
+            .where((item) => item.id != scheme.id)
+            .toList(growable: false);
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Tier list deleted')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to delete tier list')),
       );
     }
   }
@@ -214,9 +269,10 @@ class _TierListCreateSheetState extends State<_TierListCreateSheet> {
 }
 
 class _TierListSchemeCard extends StatelessWidget {
-  const _TierListSchemeCard({required this.scheme});
+  const _TierListSchemeCard({required this.scheme, required this.onDelete});
 
   final TierListSchemeSummary scheme;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -281,6 +337,15 @@ class _TierListSchemeCard extends StatelessWidget {
                     rows: scheme.rows.take(5).toList(growable: false),
                   ),
                 ],
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Delete'),
+                  ),
+                ),
               ],
             ),
           ),

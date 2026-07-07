@@ -75,6 +75,9 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/tierlist/schemes/9/delete') {
+      return const {'success': true, 'message': 'success'};
+    }
     return const {
       'success': true,
       'message': 'success',
@@ -167,4 +170,14 @@ void main() {
       expect(scheme.heroCountText, '1 hero');
     },
   );
+
+  test('deletes a tier list scheme with hokx-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = TierListToolRepository(apiClient: apiClient);
+
+    await repository.deleteScheme('9');
+
+    expect(apiClient.requestedPath, '/tierlist/schemes/9/delete');
+    expect(apiClient.requestedBody, <String, Object?>{});
+  });
 }
