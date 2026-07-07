@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -517,7 +518,10 @@ class _HeroChangeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final route = change.heroId > 0
+        ? '/heroes/${change.heroId}?tab=history'
+        : null;
+    final row = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
@@ -553,6 +557,19 @@ class _HeroChangeRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+
+    if (route == null) {
+      return row;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => context.go(route),
+        child: row,
       ),
     );
   }

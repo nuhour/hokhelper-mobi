@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
@@ -254,5 +255,66 @@ void main() {
       find.text('Complete patch detail body loaded after opening the note.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('patch detail hero adjustments open hero history routes', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/content/patch-notes',
+          builder: (context, state) => const PatchNotesScreen(),
+        ),
+        GoRoute(
+          path: '/heroes/:heroId',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+      ],
+      initialLocation: '/content/patch-notes',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          patchNotesProvider.overrideWith((ref) async {
+            return const [
+              PatchNoteSummary(
+                id: 32,
+                version: '1.2.4',
+                title: 'Version 1.2.4 Patch Notes',
+                date: '2026-07-02',
+                preview: 'Arthur adjusted.',
+                content: 'Arthur changes only.',
+                changeCount: 1,
+                tags: ['Patch Notes'],
+                heroChanges: [
+                  PatchHeroChange(
+                    heroId: 10,
+                    heroName: 'Arthur',
+                    avatarUrl: '',
+                    changeType: 'adjust',
+                  ),
+                ],
+              ),
+            ];
+          }),
+          contentRepositoryProvider.overrideWithValue(_StaticPatchRepository()),
+          patchNotesRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Version 1.2.4 Patch Notes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Arthur').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/heroes/10');
+    expect(uri.queryParameters['tab'], 'history');
   });
 }
