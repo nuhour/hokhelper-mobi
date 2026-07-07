@@ -168,10 +168,33 @@ List<SearchResultAction> _readActions(
   Map<String, dynamic> json,
   String groupKey,
 ) {
-  if (groupKey != 'heroes') {
-    return const [];
-  }
+  return switch (groupKey) {
+    'heroes' => _heroActions(json),
+    'skins' => _singleAction(
+      label: 'Gallery',
+      url: _idPath('/skin-gallery', json['id'] ?? json['skin_id']),
+    ),
+    'equips' => _singleAction(
+      label: 'Equip Rank',
+      url: _equipStatsPath(json['equip_id'] ?? json['id']),
+    ),
+    'teams' => _singleAction(
+      label: 'Team',
+      url: _idPath('/esports/teams', json['id'] ?? json['team_id']),
+    ),
+    'pro_players' => _singleAction(
+      label: 'Player',
+      url: _idPath(
+        '/esports/players',
+        json['player_id'] ?? json['id'],
+        encode: true,
+      ),
+    ),
+    _ => const [],
+  };
+}
 
+List<SearchResultAction> _heroActions(Map<String, dynamic> json) {
   final heroId = _readString(json['id'] ?? json['hero_id']);
   if (heroId.isEmpty) {
     return const [];
@@ -195,6 +218,16 @@ List<SearchResultAction> _readActions(
         url: '/community/leaks?q=${Uri.encodeComponent(heroName)}',
       ),
   ];
+}
+
+List<SearchResultAction> _singleAction({
+  required String label,
+  required String url,
+}) {
+  if (url.isEmpty) {
+    return const [];
+  }
+  return [SearchResultAction(label: label, url: url)];
 }
 
 String _idPath(String prefix, Object? id, {bool encode = false}) {

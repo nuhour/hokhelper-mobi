@@ -144,8 +144,24 @@ void main() {
       ]),
     );
     expect(itemFor('skins').imageUrl, 'https://example.test/skin.png');
+    expect(
+      itemFor('skins').actions.map((action) => action.url),
+      contains('/skin-gallery/77'),
+    );
     expect(itemFor('equips').imageUrl, 'https://example.test/equip.png');
+    expect(
+      itemFor('equips').actions.map((action) => action.url),
+      contains('/stats?entry=equip_rank&equip_id=1337'),
+    );
     expect(itemFor('teams').imageUrl, 'https://example.test/ag.png');
+    expect(
+      itemFor('teams').actions.map((action) => action.url),
+      contains('/esports/teams/kpl-ag'),
+    );
     expect(itemFor('pro_players').imageUrl, 'https://example.test/cat.png');
+    expect(
+      itemFor('pro_players').actions.map((action) => action.url),
+      contains('/esports/players/cat'),
+    );
   });
 }
