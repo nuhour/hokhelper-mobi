@@ -15,6 +15,7 @@ class HeroesRepository {
     String order = 'desc',
     String search = '',
     int? lanePosition,
+    double minRating = 0,
   }) async {
     final trimmedSearch = search.trim();
     final filterRules = [
@@ -23,6 +24,7 @@ class HeroesRepository {
         {'field': 'name', 'op': 'contains', 'value': trimmedSearch, 'ig': true},
       if (lanePosition != null)
         {'field': 'position', 'op': 'eq', 'value': lanePosition},
+      if (minRating > 0) {'field': 'rating', 'op': 'gte', 'value': minRating},
     ];
 
     final json = await apiClient.postJson(

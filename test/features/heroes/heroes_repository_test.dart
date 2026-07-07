@@ -58,6 +58,7 @@ class _FakeHeroesRepository extends HeroesRepository {
   String? requestedSort;
   String? requestedOrder;
   int? requestedLanePosition;
+  double requestedMinRating = 0;
   final List<HeroSummary> heroes;
 
   @override
@@ -69,11 +70,13 @@ class _FakeHeroesRepository extends HeroesRepository {
     String order = 'desc',
     String search = '',
     int? lanePosition,
+    double minRating = 0,
   }) async {
     requestedSearch = search;
     requestedSort = sort;
     requestedOrder = order;
     requestedLanePosition = lanePosition;
+    requestedMinRating = minRating;
     return heroes;
   }
 }
@@ -194,6 +197,7 @@ void main() {
           sort: 'rating',
           order: 'asc',
           lanePosition: 0,
+          minRating: 4,
         );
 
         expect(apiClient.postPath, '/hero/gallery');
@@ -206,6 +210,7 @@ void main() {
             {'field': 'region_id', 'op': 'eq', 'value': 2},
             {'field': 'name', 'op': 'contains', 'value': 'Lam', 'ig': true},
             {'field': 'position', 'op': 'eq', 'value': 0},
+            {'field': 'rating', 'op': 'gte', 'value': 4.0},
           ],
         });
       },
@@ -355,6 +360,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Rating'));
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, '>4'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Clash'));
     await tester.pumpAndSettle();
 
@@ -362,5 +369,6 @@ void main() {
     expect(repository.requestedSort, 'rating');
     expect(repository.requestedOrder, 'asc');
     expect(repository.requestedLanePosition, 0);
+    expect(repository.requestedMinRating, 4);
   });
 }

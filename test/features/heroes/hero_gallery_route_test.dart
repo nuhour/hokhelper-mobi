@@ -34,6 +34,7 @@ class _FakeHeroesRepository extends HeroesRepository {
     String order = 'desc',
     String search = '',
     int? lanePosition,
+    double minRating = 0,
   }) async {
     requestedSearch = search;
     return const [
