@@ -14,6 +14,8 @@ class _FakeApiClient extends ApiClient {
 
   String? getPath;
   Map<String, dynamic>? getQuery;
+  String? postPath;
+  Object? postBody;
 
   @override
   Future<Map<String, dynamic>> getJson(
@@ -64,6 +66,23 @@ class _FakeApiClient extends ApiClient {
       },
     };
   }
+
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    postPath = path;
+    postBody = body;
+    return const {
+      'id': 'c3',
+      'content': 'Reply with river vision.',
+      'author_id': 78,
+      'author_name': 'Ming',
+      'author_avatar': '',
+      'created_at': '2026-07-03T10:00:00Z',
+      'like_count': 0,
+      'parent': 'c1',
+      'parent_author_name': 'Lam',
+    };
+  }
 }
 
 void main() {
@@ -85,5 +104,25 @@ void main() {
     expect(detail.comments.first.authorName, 'Lam');
     expect(detail.comments.last.parentId, 'c1');
     expect(detail.comments.last.parentAuthorName, 'Lam');
+  });
+
+  test('creates community replies with hokx-compatible parent field', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final comment = await repository.createComment(
+      '99',
+      content: 'Reply with river vision.',
+      parentId: 'c1',
+    );
+
+    expect(apiClient.postPath, '/community/posts/99/comments');
+    expect(apiClient.postBody, {
+      'content': 'Reply with river vision.',
+      'parent': 'c1',
+    });
+    expect(comment.id, 'c3');
+    expect(comment.parentId, 'c1');
+    expect(comment.parentAuthorName, 'Lam');
   });
 }

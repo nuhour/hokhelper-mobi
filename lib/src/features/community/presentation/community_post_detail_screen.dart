@@ -73,12 +73,16 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
   late var _likeCount = widget.detail.post.likeCount;
   late var _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
   final _commentController = TextEditingController();
+  final _replyController = TextEditingController();
+  CommunityCommentSummary? _replyTo;
   var _commentSubmitting = false;
+  var _replySubmitting = false;
   var _likeSubmitting = false;
 
   @override
   void dispose() {
     _commentController.dispose();
+    _replyController.dispose();
     super.dispose();
   }
 
@@ -95,7 +99,9 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
       _commentCount = widget.detail.post.commentCount;
       _likeCount = widget.detail.post.likeCount;
       _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
+      _replyTo = null;
       _commentSubmitting = false;
+      _replySubmitting = false;
       _likeSubmitting = false;
     }
   }
@@ -209,6 +215,8 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
         _CommentComposer(
           controller: _commentController,
           isSubmitting: _commentSubmitting,
+          hintText: 'Write a comment...',
+          submitLabel: 'Post',
           onSubmit: () => _createComment(context),
         ),
         const SizedBox(height: 22),
@@ -220,6 +228,40 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           ),
         ),
         const SizedBox(height: 12),
+        if (_replyTo != null) ...[
+          _CommentComposer(
+            controller: _replyController,
+            isSubmitting: _replySubmitting,
+            hintText: 'Reply to ${_replyTo!.authorName}...',
+            submitLabel: 'Reply',
+            leading: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Replying to ${_replyTo!.authorName}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.gold,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _replyTo = null;
+                      _replyController.clear();
+                    });
+                  },
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+            onSubmit: () => _createReply(context),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (_comments.isEmpty)
           const AppEmptyState(
             icon: Icons.chat_bubble_outline,
@@ -233,11 +275,61 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
             itemCount: _comments.length,
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              return _CommentCard(comment: _comments[index]);
+              final comment = _comments[index];
+              return _CommentCard(
+                comment: comment,
+                onReply: () {
+                  setState(() {
+                    _replyTo = comment;
+                    _replyController.clear();
+                  });
+                },
+              );
             },
           ),
       ],
     );
+  }
+
+  Future<void> _createReply(BuildContext context) async {
+    final parent = _replyTo;
+    final content = _replyController.text.trim();
+    if (parent == null || content.isEmpty) {
+      return;
+    }
+    setState(() => _replySubmitting = true);
+    try {
+      final reply = await ref
+          .read(communityRepositoryProvider)
+          .createComment(
+            widget.detail.post.id,
+            content: content,
+            parentId: parent.id,
+          );
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      _replyController.clear();
+      setState(() {
+        _comments = [..._comments, reply];
+        _commentCount += 1;
+        _replyTo = null;
+        _replySubmitting = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Reply posted')));
+    } catch (_) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      setState(() => _replySubmitting = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to post reply')),
+      );
+    }
   }
 
   Future<void> _createComment(BuildContext context) async {
@@ -321,9 +413,10 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
 }
 
 class _CommentCard extends StatelessWidget {
-  const _CommentCard({required this.comment});
+  const _CommentCard({required this.comment, required this.onReply});
 
   final CommunityCommentSummary comment;
+  final VoidCallback onReply;
 
   @override
   Widget build(BuildContext context) {
@@ -379,6 +472,15 @@ class _CommentCard extends StatelessWidget {
                 height: 1.35,
               ),
             ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onReply,
+                icon: const Icon(Icons.reply_outlined, size: 16),
+                label: const Text('Reply'),
+              ),
+            ),
           ],
         ),
       ),
@@ -429,12 +531,18 @@ class _CommentComposer extends StatelessWidget {
   const _CommentComposer({
     required this.controller,
     required this.isSubmitting,
+    required this.hintText,
+    required this.submitLabel,
     required this.onSubmit,
+    this.leading,
   });
 
   final TextEditingController controller;
   final bool isSubmitting;
+  final String hintText;
+  final String submitLabel;
   final VoidCallback onSubmit;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -449,13 +557,14 @@ class _CommentComposer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (leading != null) ...[leading!, const SizedBox(height: 8)],
             TextField(
               controller: controller,
               minLines: 2,
               maxLines: 4,
               textInputAction: TextInputAction.newline,
-              decoration: const InputDecoration(
-                hintText: 'Write a comment...',
+              decoration: InputDecoration(
+                hintText: hintText,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -465,7 +574,7 @@ class _CommentComposer extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: isSubmitting ? null : onSubmit,
                 icon: const Icon(Icons.send_outlined, size: 16),
-                label: const Text('Post'),
+                label: Text(submitLabel),
               ),
             ),
           ],

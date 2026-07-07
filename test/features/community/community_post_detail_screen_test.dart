@@ -18,6 +18,7 @@ class _FakeCommunityRepository extends CommunityRepository {
 
   String? commentedPostId;
   String? commentContent;
+  String? commentParentId;
   String? likedPostId;
 
   @override
@@ -28,6 +29,7 @@ class _FakeCommunityRepository extends CommunityRepository {
   }) async {
     commentedPostId = postId;
     commentContent = content;
+    commentParentId = parentId;
     return CommunityCommentSummary(
       id: 'c3',
       content: content,
@@ -36,7 +38,7 @@ class _FakeCommunityRepository extends CommunityRepository {
       createdAt: '2026-07-03T10:00:00Z',
       likeCount: 0,
       parentId: parentId ?? '',
-      parentAuthorName: '',
+      parentAuthorName: parentId == null ? '' : 'Lam',
     );
   }
 
@@ -294,6 +296,78 @@ void main() {
     expect(find.text('Try invading red after mid.'), findsOneWidget);
     expect(find.text('3 comments'), findsOneWidget);
     expect(find.text('Comment posted'), findsOneWidget);
+  });
+
+  testWidgets('replies to existing comments from the mobile detail screen', (
+    tester,
+  ) async {
+    final repository = _FakeCommunityRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 1,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [
+                CommunityCommentSummary(
+                  id: 'c1',
+                  content: 'Great route.',
+                  authorName: 'Lam',
+                  authorAvatarUrl: '',
+                  createdAt: '2026-07-03T09:00:00Z',
+                  likeCount: 3,
+                  parentId: '',
+                  parentAuthorName: '',
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityPostDetailScreen(postId: '99')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final replyButton = find.widgetWithText(TextButton, 'Reply');
+    await tester.ensureVisible(replyButton);
+    await tester.pumpAndSettle();
+    await tester.tap(replyButton);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Reply to Lam...'),
+      'Reply with river vision.',
+    );
+    final submitReplyButton = find.widgetWithText(FilledButton, 'Reply');
+    await tester.ensureVisible(submitReplyButton);
+    await tester.pumpAndSettle();
+    await tester.tap(submitReplyButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.commentedPostId, '99');
+    expect(repository.commentContent, 'Reply with river vision.');
+    expect(repository.commentParentId, 'c1');
+    expect(find.text('Reply with river vision.'), findsOneWidget);
+    expect(find.text('Reply to Lam'), findsOneWidget);
+    expect(find.text('2 comments'), findsOneWidget);
+    expect(find.text('Reply posted'), findsOneWidget);
   });
 
   testWidgets('opens comment authors from the mobile detail screen', (
