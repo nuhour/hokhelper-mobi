@@ -42,6 +42,10 @@ String _normalizeInternalTarget(String target) {
         .toString();
   }
 
+  if (uri.path == '/community') {
+    return _normalizeCommunityTarget(uri);
+  }
+
   if (uri.path == '/hero-gallery') {
     final heroId = uri.queryParameters['hero_id']?.trim();
     if (heroId != null && heroId.isNotEmpty) {
@@ -106,6 +110,22 @@ String _normalizeInternalTarget(String target) {
   }
 
   return target;
+}
+
+String _normalizeCommunityTarget(Uri uri) {
+  final queryParameters = <String, String>{};
+  final view = uri.queryParameters['view']?.trim();
+  if (view == 'my' || view == 'likes') {
+    queryParameters['tab'] = view!;
+  }
+  final tag = uri.queryParameters['tag']?.trim();
+  if (tag != null && tag.isNotEmpty) {
+    queryParameters['tag'] = tag;
+  }
+  return Uri(
+    path: '/content/community',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
 }
 
 String? _mobileAliasPath(String path) {

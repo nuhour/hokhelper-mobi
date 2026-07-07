@@ -142,4 +142,21 @@ void main() {
     );
     expect(normalizePortalLinkTarget('/profile/42'), '/profile/42');
   });
+
+  test('normalizes community view query links to mobile tabs', () {
+    expect(
+      normalizePortalLinkTarget('/community?view=my'),
+      '/content/community?tab=my',
+    );
+    expect(
+      normalizePortalLinkTarget('/community?view=likes&tag=Patch%20Meta'),
+      '/content/community?tab=likes&tag=Patch+Meta',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/community?view=likes',
+      ),
+      '/content/community?tab=likes',
+    );
+  });
 }
