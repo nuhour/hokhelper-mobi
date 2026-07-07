@@ -936,7 +936,9 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/me',
-                builder: (context, state) => const MeScreen(),
+                builder: (context, state) => MeScreen(
+                  initialFollowListTab: state.uri.queryParameters['tab'],
+                ),
               ),
             ],
           ),

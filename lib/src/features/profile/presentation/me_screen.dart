@@ -20,7 +20,9 @@ final currentUserProfileProvider = FutureProvider<UserProfile>((ref) {
 });
 
 class MeScreen extends ConsumerWidget {
-  const MeScreen({super.key});
+  const MeScreen({this.initialFollowListTab, super.key});
+
+  final String? initialFollowListTab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,7 +40,12 @@ class MeScreen extends ConsumerWidget {
               return const _SignedOutProfile();
             }
 
-            return _SignedInProfile(user: user);
+            return _SignedInProfile(
+              user: user,
+              initialFollowListType: _meFollowListTypeFromRoute(
+                initialFollowListTab,
+              ),
+            );
           },
         ),
       ],
@@ -62,16 +69,21 @@ class _SignedOutProfile extends StatelessWidget {
 }
 
 class _SignedInProfile extends ConsumerWidget {
-  const _SignedInProfile({required this.user});
+  const _SignedInProfile({required this.user, this.initialFollowListType});
 
   final AuthUser user;
+  final _MeFollowListType? initialFollowListType;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileValue = ref.watch(currentUserProfileProvider);
 
     return profileValue.when(
-      data: (profile) => _ProfileCard(user: user, profile: profile),
+      data: (profile) => _ProfileCard(
+        user: user,
+        profile: profile,
+        initialFollowListType: initialFollowListType,
+      ),
       loading: () => _ProfileCard(user: user),
       error: (error, stackTrace) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,10 +107,15 @@ class _SignedInProfile extends ConsumerWidget {
 }
 
 class _ProfileCard extends ConsumerWidget {
-  const _ProfileCard({required this.user, this.profile});
+  const _ProfileCard({
+    required this.user,
+    this.profile,
+    this.initialFollowListType,
+  });
 
   final AuthUser user;
   final UserProfile? profile;
+  final _MeFollowListType? initialFollowListType;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -169,18 +186,22 @@ class _ProfileCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 18),
-              _StatsGrid(
-                stats: profile!.stats,
-                onPostsTap: () => context.go('/content/community?tab=my'),
-                onFollowingTap: () => _showFollowListSheet(
-                  context,
-                  userId: profile!.id,
-                  type: _MeFollowListType.following,
-                ),
-                onFollowersTap: () => _showFollowListSheet(
-                  context,
-                  userId: profile!.id,
-                  type: _MeFollowListType.followers,
+              _AutoOpenMeFollowList(
+                profile: profile!,
+                initialFollowListType: initialFollowListType,
+                child: _StatsGrid(
+                  stats: profile!.stats,
+                  onPostsTap: () => context.go('/content/community?tab=my'),
+                  onFollowingTap: () => _showFollowListSheet(
+                    context,
+                    userId: profile!.id,
+                    type: _MeFollowListType.following,
+                  ),
+                  onFollowersTap: () => _showFollowListSheet(
+                    context,
+                    userId: profile!.id,
+                    type: _MeFollowListType.followers,
+                  ),
                 ),
               ),
               if (profile!.bio.isNotEmpty) ...[
@@ -292,6 +313,52 @@ void _showFollowListSheet(
 }
 
 enum _MeFollowListType { following, followers }
+
+_MeFollowListType? _meFollowListTypeFromRoute(String? value) {
+  return switch ((value ?? '').trim()) {
+    'following' => _MeFollowListType.following,
+    'followers' => _MeFollowListType.followers,
+    _ => null,
+  };
+}
+
+class _AutoOpenMeFollowList extends StatefulWidget {
+  const _AutoOpenMeFollowList({
+    required this.profile,
+    required this.child,
+    this.initialFollowListType,
+  });
+
+  final UserProfile profile;
+  final Widget child;
+  final _MeFollowListType? initialFollowListType;
+
+  @override
+  State<_AutoOpenMeFollowList> createState() => _AutoOpenMeFollowListState();
+}
+
+class _AutoOpenMeFollowListState extends State<_AutoOpenMeFollowList> {
+  _MeFollowListType? _openedInitialFollowListType;
+
+  @override
+  Widget build(BuildContext context) {
+    final initialFollowListType = widget.initialFollowListType;
+    if (initialFollowListType != null &&
+        _openedInitialFollowListType != initialFollowListType) {
+      _openedInitialFollowListType = initialFollowListType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showFollowListSheet(
+            context,
+            userId: widget.profile.id,
+            type: initialFollowListType,
+          );
+        }
+      });
+    }
+    return widget.child;
+  }
+}
 
 class _MeFollowListSheet extends ConsumerStatefulWidget {
   const _MeFollowListSheet({required this.type, required this.userId});

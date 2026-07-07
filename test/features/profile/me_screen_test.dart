@@ -435,6 +435,49 @@ void main() {
     expect(find.text('Profile 77'), findsOneWidget);
   });
 
+  testWidgets('signed-in profile followers tab query opens followers list', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final repository = _FakeProfileRepository(_profile);
+    final router = GoRouter(
+      initialLocation: '/me?tab=followers',
+      routes: [
+        GoRoute(
+          path: '/me',
+          builder: (context, state) =>
+              MeScreen(initialFollowListTab: state.uri.queryParameters['tab']),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController(user)),
+          profileRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedFollowersUserId, 42);
+    expect(find.text('Followers'), findsWidgets);
+    expect(find.text('Angela'), findsOneWidget);
+    expect(find.text('Mid lane'), findsOneWidget);
+  });
+
   testWidgets('signed-in profile opens hokx points rules from level badge', (
     tester,
   ) async {
