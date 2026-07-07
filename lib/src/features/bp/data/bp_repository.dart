@@ -80,10 +80,46 @@ class BpRepository {
     return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
   }
 
+  Future<BpSchemeSummary> updateDraftState(
+    String schemeId, {
+    required int gameNumber,
+    required int currentStepIndex,
+    required int blueBanCount,
+    required int redBanCount,
+    required int bluePickCount,
+    required int redPickCount,
+  }) async {
+    final json = await apiClient.postJson(
+      '/bp/scheme/$schemeId/update',
+      body: {
+        'schemeId': schemeId,
+        'data': {
+          'gameNumber': gameNumber,
+          'currentState': {
+            'blueBans': _mobileDraftSlots('mobile-blue-ban', blueBanCount),
+            'redBans': _mobileDraftSlots('mobile-red-ban', redBanCount),
+            'bluePicks': _mobileDraftSlots('mobile-blue-pick', bluePickCount),
+            'redPicks': _mobileDraftSlots('mobile-red-pick', redPickCount),
+            'currentStepIndex': currentStepIndex,
+            'isSaved': true,
+          },
+        },
+      },
+    );
+    final result = json['result'];
+    final scheme = result is Map ? result['scheme'] : json['scheme'];
+    return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
+  }
+
   Future<void> deleteScheme(String schemeId) async {
     await apiClient.postJson(
       '/bp/scheme/$schemeId/delete',
       body: {'schemeId': schemeId},
     );
   }
+}
+
+List<String> _mobileDraftSlots(String prefix, int count) {
+  final normalized = count.clamp(0, 5);
+  return List.generate(normalized, (index) => '$prefix-${index + 1}');
 }

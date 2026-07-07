@@ -74,6 +74,37 @@ class _FakeApiClient extends ApiClient {
       };
     }
     if (path == '/bp/scheme/12/update') {
+      final data = body is Map ? body['data'] : null;
+      if (data is Map && data.containsKey('currentState')) {
+        return const {
+          'success': true,
+          'message': 'success',
+          'result': {
+            'scheme': {
+              'id': '12',
+              'name': 'KPL Finals Draft',
+              'createdAt': '2026-07-07T11:30:00Z',
+              'boMode': 7,
+              'teamAName': 'Wolves',
+              'teamBName': 'AG',
+              'sideSelectionRule': 'loser_selects',
+              'gameNumber': 4,
+              'history': [
+                {'gameNumber': 1, 'winner': 'blue'},
+                {'gameNumber': 2, 'winner': 'red'},
+              ],
+              'currentState': {
+                'blueBans': ['mobile-blue-ban-1', 'mobile-blue-ban-2'],
+                'redBans': ['mobile-red-ban-1'],
+                'bluePicks': ['mobile-blue-pick-1'],
+                'redPicks': ['mobile-red-pick-1', 'mobile-red-pick-2'],
+                'currentStepIndex': 6,
+                'isSaved': true,
+              },
+            },
+          },
+        };
+      }
       return const {
         'success': true,
         'message': 'success',
@@ -217,6 +248,42 @@ void main() {
     expect(scheme.boModeText, 'BO5');
     expect(scheme.matchupText, 'Team Alpha vs Team Beta');
   });
+
+  test(
+    'updates BP draft state with hokx-compatible currentState data',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = BpRepository(apiClient: apiClient);
+
+      final scheme = await repository.updateDraftState(
+        '12',
+        gameNumber: 4,
+        currentStepIndex: 6,
+        blueBanCount: 2,
+        redBanCount: 1,
+        bluePickCount: 1,
+        redPickCount: 2,
+      );
+
+      expect(apiClient.requestedPath, '/bp/scheme/12/update');
+      expect(apiClient.requestedBody, {
+        'schemeId': '12',
+        'data': {
+          'gameNumber': 4,
+          'currentState': {
+            'blueBans': ['mobile-blue-ban-1', 'mobile-blue-ban-2'],
+            'redBans': ['mobile-red-ban-1'],
+            'bluePicks': ['mobile-blue-pick-1'],
+            'redPicks': ['mobile-red-pick-1', 'mobile-red-pick-2'],
+            'currentStepIndex': 6,
+            'isSaved': true,
+          },
+        },
+      });
+      expect(scheme.progressText, 'Game 4 · Step 6');
+      expect(scheme.phaseSummaryText, '3 bans · 3 picks');
+    },
+  );
 
   test('deletes a BP scheme with hokx-compatible request body', () async {
     final apiClient = _FakeApiClient();

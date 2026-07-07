@@ -67,6 +67,8 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
                 initialGameIndex: widget.initialGameIndex,
                 isUpdating: _isUpdating,
                 onEdit: () => _openEditSheet(_localScheme ?? scheme),
+                onDraftProgress: () =>
+                    _openDraftProgressSheet(_localScheme ?? scheme),
               ),
             ),
           ],
@@ -125,6 +127,58 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
       );
     }
   }
+
+  Future<void> _openDraftProgressSheet(BpSchemeSummary scheme) async {
+    final draft = await showModalBottomSheet<_BpDraftProgressDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _BpDraftProgressSheet(scheme: scheme),
+    );
+    if (draft == null || !mounted) {
+      return;
+    }
+
+    setState(() => _isUpdating = true);
+    try {
+      final updated = await ref
+          .read(bpRepositoryProvider)
+          .updateDraftState(
+            scheme.id,
+            gameNumber: draft.gameNumber,
+            currentStepIndex: draft.currentStepIndex,
+            blueBanCount: draft.blueBanCount,
+            redBanCount: draft.redBanCount,
+            bluePickCount: draft.bluePickCount,
+            redPickCount: draft.redPickCount,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _localScheme = updated;
+        _isUpdating = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('BP draft progress saved')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isUpdating = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to save BP draft progress')),
+      );
+    }
+  }
 }
 
 class _BpSchemeDetailCard extends StatelessWidget {
@@ -132,12 +186,14 @@ class _BpSchemeDetailCard extends StatelessWidget {
     required this.scheme,
     required this.isUpdating,
     required this.onEdit,
+    required this.onDraftProgress,
     this.initialGameIndex,
   });
 
   final BpSchemeSummary scheme;
   final bool isUpdating;
   final VoidCallback onEdit;
+  final VoidCallback onDraftProgress;
   final int? initialGameIndex;
 
   @override
@@ -197,13 +253,22 @@ class _BpSchemeDetailCard extends StatelessWidget {
             const SizedBox(height: 18),
             _DraftCountGrid(scheme: scheme),
             const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton.icon(
-                onPressed: isUpdating ? null : onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit'),
-              ),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: isUpdating ? null : onDraftProgress,
+                  icon: const Icon(Icons.timeline_outlined, size: 18),
+                  label: const Text('Draft Progress'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: isUpdating ? null : onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit'),
+                ),
+              ],
             ),
           ],
         ),
@@ -370,6 +435,235 @@ class _BpEditSheetState extends State<_BpEditSheet> {
             ? 'Team B'
             : _teamBController.text.trim(),
         sideSelectionRule: _sideSelectionRule,
+      ),
+    );
+  }
+}
+
+class _BpDraftProgressDraft {
+  const _BpDraftProgressDraft({
+    required this.gameNumber,
+    required this.currentStepIndex,
+    required this.blueBanCount,
+    required this.redBanCount,
+    required this.bluePickCount,
+    required this.redPickCount,
+  });
+
+  final int gameNumber;
+  final int currentStepIndex;
+  final int blueBanCount;
+  final int redBanCount;
+  final int bluePickCount;
+  final int redPickCount;
+}
+
+class _BpDraftProgressSheet extends StatefulWidget {
+  const _BpDraftProgressSheet({required this.scheme});
+
+  final BpSchemeSummary scheme;
+
+  @override
+  State<_BpDraftProgressSheet> createState() => _BpDraftProgressSheetState();
+}
+
+class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
+  late int _gameNumber;
+  late int _currentStepIndex;
+  late int _blueBanCount;
+  late int _redBanCount;
+  late int _bluePickCount;
+  late int _redPickCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _gameNumber = widget.scheme.gameNumber;
+    _currentStepIndex = widget.scheme.currentStepIndex;
+    _blueBanCount = widget.scheme.blueBanCount;
+    _redBanCount = widget.scheme.redBanCount;
+    _bluePickCount = widget.scheme.bluePickCount;
+    _redPickCount = widget.scheme.redPickCount;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, bottom + 20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Draft progress',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ProgressStepper(
+                label: 'Game',
+                value: _gameNumber,
+                min: 1,
+                max: widget.scheme.boMode,
+                decrementKey: const Key('bp-progress-game-minus'),
+                incrementKey: const Key('bp-progress-game-plus'),
+                onChanged: (value) => setState(() => _gameNumber = value),
+              ),
+              _ProgressStepper(
+                label: 'Step',
+                value: _currentStepIndex,
+                min: 0,
+                max: 20,
+                decrementKey: const Key('bp-progress-step-minus'),
+                incrementKey: const Key('bp-progress-step-plus'),
+                onChanged: (value) => setState(() => _currentStepIndex = value),
+              ),
+              _ProgressStepper(
+                label: 'Blue bans',
+                value: _blueBanCount,
+                min: 0,
+                max: 5,
+                decrementKey: const Key('bp-progress-blue-bans-minus'),
+                incrementKey: const Key('bp-progress-blue-bans-plus'),
+                onChanged: (value) => setState(() => _blueBanCount = value),
+              ),
+              _ProgressStepper(
+                label: 'Red bans',
+                value: _redBanCount,
+                min: 0,
+                max: 5,
+                decrementKey: const Key('bp-progress-red-bans-minus'),
+                incrementKey: const Key('bp-progress-red-bans-plus'),
+                onChanged: (value) => setState(() => _redBanCount = value),
+              ),
+              _ProgressStepper(
+                label: 'Blue picks',
+                value: _bluePickCount,
+                min: 0,
+                max: 5,
+                decrementKey: const Key('bp-progress-blue-picks-minus'),
+                incrementKey: const Key('bp-progress-blue-picks-plus'),
+                onChanged: (value) => setState(() => _bluePickCount = value),
+              ),
+              _ProgressStepper(
+                label: 'Red picks',
+                value: _redPickCount,
+                min: 0,
+                max: 5,
+                decrementKey: const Key('bp-progress-red-picks-minus'),
+                incrementKey: const Key('bp-progress-red-picks-plus'),
+                onChanged: (value) => setState(() => _redPickCount = value),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _submit,
+                      child: const Text('Save Progress'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    Navigator.of(context).pop(
+      _BpDraftProgressDraft(
+        gameNumber: _gameNumber,
+        currentStepIndex: _currentStepIndex,
+        blueBanCount: _blueBanCount,
+        redBanCount: _redBanCount,
+        bluePickCount: _bluePickCount,
+        redPickCount: _redPickCount,
+      ),
+    );
+  }
+}
+
+class _ProgressStepper extends StatelessWidget {
+  const _ProgressStepper({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.decrementKey,
+    required this.incrementKey,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final Key decrementKey;
+  final Key incrementKey;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.panelAlt,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                key: decrementKey,
+                onPressed: value <= min ? null : () => onChanged(value - 1),
+                icon: const Icon(Icons.remove),
+              ),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  '$value',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton(
+                key: incrementKey,
+                onPressed: value >= max ? null : () => onChanged(value + 1),
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
