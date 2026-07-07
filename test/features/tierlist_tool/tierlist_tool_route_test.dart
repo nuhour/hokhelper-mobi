@@ -110,6 +110,44 @@ void main() {
     expect(find.text('1 hero'), findsOneWidget);
   });
 
+  testWidgets('legacy tier list id query opens mobile scheme detail', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/tier-list?id=42&mode=edit');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'Legacy Shared Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 3,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/tools/tier-list/42');
+    expect(uri.queryParameters['mode'], 'edit');
+    expect(find.text('Tier List Detail'), findsOneWidget);
+    expect(find.text('Legacy Shared Tier List'), findsOneWidget);
+  });
+
   testWidgets('copies tier list detail share links', (tester) async {
     MethodCall? clipboardCall;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

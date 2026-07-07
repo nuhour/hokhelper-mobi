@@ -145,6 +145,19 @@ String _bpSimulatorTarget(Uri uri) {
   ).toString();
 }
 
+String _tierListToolTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final schemeId =
+      queryParameters.remove('id')?.trim() ??
+      queryParameters.remove('scheme_id')?.trim();
+  return Uri(
+    path: schemeId == null || schemeId.isEmpty
+        ? '/tools/tier-list'
+        : '/tools/tier-list/$schemeId',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
+}
+
 double? _initialMinRating(Uri uri) {
   final rating = double.tryParse(uri.queryParameters['min_rating'] ?? '');
   if (rating == null || rating <= 0) {
@@ -753,6 +766,13 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'tier-list',
+                    redirect: (context, state) {
+                      if (state.uri.queryParameters.containsKey('id') ||
+                          state.uri.queryParameters.containsKey('scheme_id')) {
+                        return _tierListToolTarget(state.uri);
+                      }
+                      return null;
+                    },
                     builder: (context, state) => const TierListToolScreen(),
                     routes: [
                       GoRoute(
