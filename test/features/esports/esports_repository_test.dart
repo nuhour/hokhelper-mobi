@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/esports/data/esports_repository.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -134,6 +135,22 @@ void main() {
     expect(matches.single.bestOf, 7);
     expect(matches.single.boText, 'BO7');
     expect(matches.single.winnerSide, 'a');
+  });
+
+  test('uses win camp before scores when resolving match winner side', () {
+    final match = EsportsMatchSummary.fromJson(const {
+      'id': 11,
+      'league_name': 'KPL Spring',
+      'stage_name': 'Finals',
+      'status_key': 'finished',
+      'win_camp': 2,
+      'team_a': {'id': 1, 'name': 'Wolves'},
+      'team_b': {'id': 2, 'name': 'AG'},
+      'score_a': 4,
+      'score_b': 3,
+    });
+
+    expect(match.winnerSide, 'b');
   });
 
   test('loads esports teams sorted by win rate', () async {

@@ -15,6 +15,7 @@ class EsportsMatchSummary {
     this.teamAId = '',
     this.teamBId = '',
     this.winnerTeamId = '',
+    this.winCamp = 0,
   });
 
   final String id;
@@ -32,6 +33,7 @@ class EsportsMatchSummary {
   final String teamAId;
   final String teamBId;
   final String winnerTeamId;
+  final int winCamp;
 
   String get title {
     if (leagueName.isNotEmpty && stageName.isNotEmpty) {
@@ -50,6 +52,12 @@ class EsportsMatchSummary {
   String get boText => bestOf > 0 ? 'BO$bestOf' : '';
 
   String get winnerSide {
+    if (winCamp == 1) {
+      return 'a';
+    }
+    if (winCamp == 2) {
+      return 'b';
+    }
     if (winnerTeamId.isNotEmpty && winnerTeamId == teamAId) {
       return 'a';
     }
@@ -98,6 +106,7 @@ class EsportsMatchSummary {
       startTime: _readString(map['start_time'] ?? map['scheduled_at']),
       bestOf: _readInt(map['bo'] ?? map['best_of']),
       winnerTeamId: _readString(map['winner_team_id']),
+      winCamp: _readInt(map['win_camp']),
     );
   }
 }
