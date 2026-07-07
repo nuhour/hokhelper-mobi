@@ -428,6 +428,90 @@ void main() {
     expect(find.widgetWithText(TextButton, '3 likes'), findsOneWidget);
   });
 
+  testWidgets('sorts comments by newest oldest and hot like hokx', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 3,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [
+                CommunityCommentSummary(
+                  id: 'old-low',
+                  content: 'Old setup.',
+                  authorName: 'Old',
+                  authorAvatarUrl: '',
+                  createdAt: '2026-07-03T08:00:00Z',
+                  likeCount: 1,
+                  parentId: '',
+                  parentAuthorName: '',
+                ),
+                CommunityCommentSummary(
+                  id: 'new-mid',
+                  content: 'New tempo.',
+                  authorName: 'New',
+                  authorAvatarUrl: '',
+                  createdAt: '2026-07-03T10:00:00Z',
+                  likeCount: 3,
+                  parentId: '',
+                  parentAuthorName: '',
+                ),
+                CommunityCommentSummary(
+                  id: 'mid-hot',
+                  content: 'Hot invade.',
+                  authorName: 'Hot',
+                  authorAvatarUrl: '',
+                  createdAt: '2026-07-03T09:00:00Z',
+                  likeCount: 9,
+                  parentId: '',
+                  parentAuthorName: '',
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityPostDetailScreen(postId: '99')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.text('New tempo.')).dy,
+      lessThan(tester.getTopLeft(find.text('Hot invade.')).dy),
+    );
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Hot'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text('Hot invade.')).dy,
+      lessThan(tester.getTopLeft(find.text('New tempo.')).dy),
+    );
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Oldest'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text('Old setup.')).dy,
+      lessThan(tester.getTopLeft(find.text('Hot invade.')).dy),
+    );
+  });
+
   testWidgets('opens comment authors from the mobile detail screen', (
     tester,
   ) async {

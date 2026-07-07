@@ -76,6 +76,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
   final _replyController = TextEditingController();
   CommunityCommentSummary? _replyTo;
   Set<String> _likedCommentIds = const {};
+  _CommentSort _commentSort = _CommentSort.newest;
   var _commentSubmitting = false;
   var _replySubmitting = false;
   var _likeSubmitting = false;
@@ -102,6 +103,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
       _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
       _replyTo = null;
       _likedCommentIds = const {};
+      _commentSort = _CommentSort.newest;
       _commentSubmitting = false;
       _replySubmitting = false;
       _likeSubmitting = false;
@@ -112,6 +114,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
   Widget build(BuildContext context) {
     final detail = widget.detail;
     final post = detail.post;
+    final sortedComments = _sortedComments();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,6 +232,20 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
             fontWeight: FontWeight.w900,
           ),
         ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _CommentSort.values
+              .map((sort) {
+                return ChoiceChip(
+                  label: Text(sort.label),
+                  selected: _commentSort == sort,
+                  onSelected: (_) => setState(() => _commentSort = sort),
+                );
+              })
+              .toList(growable: false),
+        ),
         const SizedBox(height: 12),
         if (_replyTo != null) ...[
           _CommentComposer(
@@ -264,7 +281,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           ),
           const SizedBox(height: 12),
         ],
-        if (_comments.isEmpty)
+        if (sortedComments.isEmpty)
           const AppEmptyState(
             icon: Icons.chat_bubble_outline,
             title: 'No comments yet',
@@ -274,10 +291,10 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           ListView.separated(
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
-            itemCount: _comments.length,
+            itemCount: sortedComments.length,
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              final comment = _comments[index];
+              final comment = sortedComments[index];
               return _CommentCard(
                 comment: comment,
                 isLiked: _likedCommentIds.contains(comment.id),
@@ -293,6 +310,25 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           ),
       ],
     );
+  }
+
+  List<CommunityCommentSummary> _sortedComments() {
+    final sorted = [..._comments];
+    sorted.sort((a, b) {
+      switch (_commentSort) {
+        case _CommentSort.hot:
+          final likeCompare = b.likeCount.compareTo(a.likeCount);
+          if (likeCompare != 0) {
+            return likeCompare;
+          }
+          return _compareCreatedDesc(a, b);
+        case _CommentSort.oldest:
+          return _compareCreatedAsc(a, b);
+        case _CommentSort.newest:
+          return _compareCreatedDesc(a, b);
+      }
+    });
+    return sorted;
   }
 
   void _toggleCommentLike(String commentId) {
@@ -426,6 +462,28 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(const SnackBar(content: Text('Post link copied')));
   }
+}
+
+enum _CommentSort {
+  newest('Newest'),
+  oldest('Oldest'),
+  hot('Hot');
+
+  const _CommentSort(this.label);
+
+  final String label;
+}
+
+int _compareCreatedDesc(CommunityCommentSummary a, CommunityCommentSummary b) {
+  return _createdMillis(b).compareTo(_createdMillis(a));
+}
+
+int _compareCreatedAsc(CommunityCommentSummary a, CommunityCommentSummary b) {
+  return _createdMillis(a).compareTo(_createdMillis(b));
+}
+
+int _createdMillis(CommunityCommentSummary comment) {
+  return DateTime.tryParse(comment.createdAt)?.millisecondsSinceEpoch ?? 0;
 }
 
 class _CommentCard extends StatelessWidget {
