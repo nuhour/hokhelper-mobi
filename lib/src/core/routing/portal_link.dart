@@ -131,6 +131,15 @@ String _normalizeInternalTarget(String target) {
 }
 
 String _normalizeCommunityTarget(Uri uri) {
+  final postQueryParameters = Map<String, String>.from(uri.queryParameters);
+  final postId = postQueryParameters.remove('post_id')?.trim();
+  if (postId != null && postId.isNotEmpty) {
+    return Uri(
+      path: '/content/community/post/$postId',
+      queryParameters: postQueryParameters.isEmpty ? null : postQueryParameters,
+    ).toString();
+  }
+
   final queryParameters = <String, String>{};
   final view = uri.queryParameters['view']?.trim();
   if (view == 'my' || view == 'likes') {

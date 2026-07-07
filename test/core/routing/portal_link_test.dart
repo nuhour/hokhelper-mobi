@@ -174,6 +174,23 @@ void main() {
     );
   });
 
+  test('normalizes community post query links to mobile post routes', () {
+    expect(
+      normalizePortalLinkTarget('/community?post_id=42'),
+      '/content/community/post/42',
+    );
+    expect(
+      normalizePortalLinkTarget('/community?post_id=42&source=home'),
+      '/content/community/post/42?source=home',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/community?post_id=42',
+      ),
+      '/content/community/post/42',
+    );
+  });
+
   test('normalizes prompt detail query links to mobile prompt ids', () {
     expect(
       normalizePortalLinkTarget('/prompts?prompt_id=42'),
