@@ -65,6 +65,23 @@ void main() {
     );
   });
 
+  test('normalizes hero gallery query detail links without dropping tabs', () {
+    expect(
+      normalizePortalLinkTarget('/hero-gallery?hero_id=101&tab=history'),
+      '/heroes/101?tab=history',
+    );
+    expect(
+      normalizePortalLinkTarget('/hero-gallery?hero_id=101&source=patch'),
+      '/heroes/101?source=patch',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/hero-gallery?hero_id=101&tab=history',
+      ),
+      '/heroes/101?tab=history',
+    );
+  });
+
   test('normalizes media gallery detail query links', () {
     expect(
       normalizePortalLinkTarget('/skin-gallery?skin_id=1001&q=Lam'),

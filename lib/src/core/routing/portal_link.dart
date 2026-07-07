@@ -49,7 +49,7 @@ String _normalizeInternalTarget(String target) {
   if (uri.path == '/hero-gallery') {
     final heroId = uri.queryParameters['hero_id']?.trim();
     if (heroId != null && heroId.isNotEmpty) {
-      return '/heroes/$heroId';
+      return _moveQueryIdToPath(uri, '/heroes/$heroId', 'hero_id');
     }
     return uri.replace(path: '/heroes').toString();
   }
