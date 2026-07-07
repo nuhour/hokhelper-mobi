@@ -3,16 +3,73 @@ class StatsDashboard {
     this.heroes = const [],
     this.equips = const [],
     this.combos = const [],
+    this.players = const [],
   });
 
   final List<StatsHeroRow> heroes;
   final List<StatsEquipRow> equips;
   final List<StatsComboRow> combos;
+  final List<StatsPlayerRow> players;
 
-  bool get isEmpty => heroes.isEmpty && equips.isEmpty && combos.isEmpty;
+  bool get isEmpty =>
+      heroes.isEmpty && equips.isEmpty && combos.isEmpty && players.isEmpty;
 }
 
-enum StatsDashboardEntry { overview, homeCore, tierRank, powerRank, equipRank }
+enum StatsDashboardEntry {
+  overview,
+  homeCore,
+  tierRank,
+  powerRank,
+  equipRank,
+  playerRank,
+}
+
+class StatsPlayerRow {
+  const StatsPlayerRow({
+    required this.playerId,
+    required this.playerName,
+    required this.avatarUrl,
+    required this.peakScore,
+    required this.rankStars,
+    required this.winRate,
+    required this.avgKda,
+    required this.playCount,
+    required this.grade,
+  });
+
+  final String playerId;
+  final String playerName;
+  final String avatarUrl;
+  final double peakScore;
+  final int rankStars;
+  final double winRate;
+  final double avgKda;
+  final int playCount;
+  final double grade;
+
+  String get peakScoreText =>
+      peakScore <= 0 ? '-' : peakScore.toStringAsFixed(0);
+  String get rankStarsText => '$rankStars stars';
+  String get winRateText => _formatPercent(winRate);
+  String get avgKdaText => avgKda <= 0 ? '-' : avgKda.toStringAsFixed(1);
+  String get playCountText => '$playCount matches';
+  String get gradeText => grade <= 0 ? '-' : grade.toStringAsFixed(1);
+
+  factory StatsPlayerRow.fromJson(Object? value) {
+    final json = _asMap(value);
+    return StatsPlayerRow(
+      playerId: _readString(json, const ['player_id', 'id']),
+      playerName: _readString(json, const ['player_name', 'name']),
+      avatarUrl: _readString(json, const ['avatar_url', 'avatar']),
+      peakScore: _readDouble(json, const ['peak_score', 'peakScore']),
+      rankStars: _readInt(json, const ['rank_stars', 'rankStars']),
+      winRate: _readRate(json, const ['win_rate', 'winRate']),
+      avgKda: _readDouble(json, const ['avg_kda', 'avgKda']),
+      playCount: _readInt(json, const ['play_cnt', 'playCount']),
+      grade: _readDouble(json, const ['grade', 'score']),
+    );
+  }
+}
 
 class StatsHeroRow {
   const StatsHeroRow({

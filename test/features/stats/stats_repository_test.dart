@@ -197,6 +197,34 @@ class _FakeApiClient extends ApiClient {
       };
     }
 
+    if (path == '/stats/table' && query?['dimension'] == 'player_rank') {
+      return const {
+        'success': true,
+        'data': {
+          'dimension': 'player_rank',
+          'label': 'Player Rank',
+          'baseline': 'peak_1000',
+          'view': 'peak',
+          'columns': [],
+          'rows': [
+            {
+              'player_id': 'p1',
+              'player_name': 'Top Laner',
+              'avatar_url': 'https://example.test/player.png',
+              'peak_score': 2310,
+              'rank_stars': 88,
+              'win_rate': 0.63,
+              'avg_kda': 7.2,
+              'play_cnt': 320,
+              'grade': 98.6,
+            },
+          ],
+          'available_views': ['peak', 'ranked'],
+          'available_baselines': ['peak_1000'],
+        },
+      };
+    }
+
     throw StateError('Unexpected request $path $query');
   }
 }
@@ -282,6 +310,34 @@ void main() {
     expect(dashboard.heroes.single.name, 'Arli');
     expect(dashboard.heroes.single.scoreText, '98.1');
   });
+
+  test(
+    'loads player rank entry with the hokx player_rank peak table',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = StatsRepository(apiClient: apiClient);
+
+      final dashboard = await repository.loadDashboard(
+        regionCode: 'en',
+        entry: StatsDashboardEntry.playerRank,
+      );
+
+      expect(apiClient.queries['/stats/table:player_rank:peak'], {
+        'dimension': 'player_rank',
+        'baseline': 'peak_1000',
+        'view': 'peak',
+        'region': 'en',
+        'lite': 1,
+      });
+      expect(
+        apiClient.queries.containsKey('/stats/table:hero_rank:base'),
+        false,
+      );
+      expect(dashboard.players.single.playerName, 'Top Laner');
+      expect(dashboard.players.single.peakScoreText, '2310');
+      expect(dashboard.players.single.winRateText, '63.0%');
+    },
+  );
 
   test(
     'loads focused equipment hero usage from hero combos endpoint',

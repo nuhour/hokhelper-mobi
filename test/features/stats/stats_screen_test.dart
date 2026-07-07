@@ -356,63 +356,64 @@ void main() {
     expect(find.text('Doomsday'), findsOneWidget);
   });
 
-  testWidgets('stats equipment cards open focused equipment usage detail route', (
-    tester,
-  ) async {
-    final router = createAppRouter();
-    router.go('/tools/stats');
+  testWidgets(
+    'stats equipment cards open focused equipment usage detail route',
+    (tester) async {
+      final router = createAppRouter();
+      router.go('/tools/stats');
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          statsDashboardProvider.overrideWith((ref, entry) async {
-            return const StatsDashboard(
-              heroes: [],
-              equips: [
-                StatsEquipRow(
-                  id: '88',
-                  name: 'Doomsday',
-                  iconUrl: '',
-                  pickRate: 0.22,
-                  winRate: 0.53,
-                ),
-              ],
-              combos: [],
-            );
-          }),
-          statsEquipDetailProvider('88').overrideWith((ref) async {
-            return const StatsEquipDetail(
-              equipId: '88',
-              equipName: 'Doomsday',
-              equipIconUrl: '',
-              heroes: [
-                StatsEquipHeroRow(
-                  id: '199',
-                  name: 'Lam',
-                  avatarUrl: '',
-                  pickRate: 0.42,
-                  winRate: 0.57,
-                  matches: 8900,
-                ),
-              ],
-            );
-          }),
-        ],
-        child: HokHelperApp(router: router),
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            statsDashboardProvider.overrideWith((ref, entry) async {
+              return const StatsDashboard(
+                heroes: [],
+                equips: [
+                  StatsEquipRow(
+                    id: '88',
+                    name: 'Doomsday',
+                    iconUrl: '',
+                    pickRate: 0.22,
+                    winRate: 0.53,
+                  ),
+                ],
+                combos: [],
+              );
+            }),
+            statsEquipDetailProvider('88').overrideWith((ref) async {
+              return const StatsEquipDetail(
+                equipId: '88',
+                equipName: 'Doomsday',
+                equipIconUrl: '',
+                heroes: [
+                  StatsEquipHeroRow(
+                    id: '199',
+                    name: 'Lam',
+                    avatarUrl: '',
+                    pickRate: 0.42,
+                    winRate: 0.57,
+                    matches: 8900,
+                  ),
+                ],
+              );
+            }),
+          ],
+          child: HokHelperApp(router: router),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Doomsday'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Doomsday'));
+      await tester.pumpAndSettle();
 
-    final uri = router.routeInformationProvider.value.uri;
-    expect(uri.path, '/tools/stats');
-    expect(uri.queryParameters['entry'], 'equip_rank');
-    expect(uri.queryParameters['equip_id'], '88');
-    expect(find.text('Equipment Hero Usage'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
-  });
+      final uri = router.routeInformationProvider.value.uri;
+      expect(uri.path, '/tools/stats');
+      expect(uri.queryParameters['entry'], 'equip_rank');
+      expect(uri.queryParameters['equip_id'], '88');
+      expect(find.text('Equipment Hero Usage'), findsOneWidget);
+      expect(find.text('Lam'), findsOneWidget);
+    },
+  );
 
   testWidgets('equipment usage hero rows open focused hero detail route', (
     tester,
@@ -606,5 +607,55 @@ void main() {
     expect(usedTierRankProvider, true);
     expect(find.text('Focused tier rank'), findsOneWidget);
     expect(find.text('Augran'), findsOneWidget);
+  });
+
+  testWidgets('player rank entry renders stats player leaderboard section', (
+    tester,
+  ) async {
+    var usedPlayerRankProvider = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider(StatsDashboardEntry.playerRank).overrideWith((
+            ref,
+          ) async {
+            usedPlayerRankProvider = true;
+            return const StatsDashboard(
+              players: [
+                StatsPlayerRow(
+                  playerId: 'p1',
+                  playerName: 'Top Laner',
+                  avatarUrl: '',
+                  peakScore: 2310,
+                  rankStars: 88,
+                  winRate: 0.63,
+                  avgKda: 7.2,
+                  playCount: 320,
+                  grade: 98.6,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: StatsScreen(initialEntry: StatsEntry.playerRank),
+          ),
+        ),
+      ),
+    );
+    for (var i = 0; i < 10 && !usedPlayerRankProvider; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump();
+
+    expect(usedPlayerRankProvider, true);
+    expect(find.text('Player Rankings'), findsOneWidget);
+    expect(find.text('Focused player rank'), findsOneWidget);
+    expect(find.text('Top Laner'), findsOneWidget);
+    expect(find.text('2310 peak'), findsOneWidget);
+    expect(find.text('63.0% WR'), findsOneWidget);
+    expect(find.text('320 matches'), findsOneWidget);
   });
 }

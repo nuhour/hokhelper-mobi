@@ -11,6 +11,16 @@ class StatsRepository {
     required String regionCode,
     StatsDashboardEntry entry = StatsDashboardEntry.overview,
   }) async {
+    if (entry == StatsDashboardEntry.playerRank) {
+      final players = await _loadRows(
+        dimension: 'player_rank',
+        view: 'peak',
+        regionCode: regionCode,
+        mapper: StatsPlayerRow.fromJson,
+      );
+      return StatsDashboard(players: players.cast<StatsPlayerRow>());
+    }
+
     final heroTable = _heroTableFor(entry);
     final equipView = _equipViewFor(entry);
     final results = await Future.wait([

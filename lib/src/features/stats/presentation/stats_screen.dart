@@ -56,7 +56,8 @@ enum StatsEntry {
   homeCore,
   tierRank,
   powerRank,
-  equipRank;
+  equipRank,
+  playerRank;
 
   static StatsEntry fromRoute(String? value) {
     return switch (value) {
@@ -64,6 +65,7 @@ enum StatsEntry {
       'tier_rank' => StatsEntry.tierRank,
       'power_rank' => StatsEntry.powerRank,
       'equip_rank' => StatsEntry.equipRank,
+      'player_rank' => StatsEntry.playerRank,
       _ => StatsEntry.overview,
     };
   }
@@ -74,6 +76,7 @@ enum StatsEntry {
       StatsEntry.tierRank => StatsDashboardEntry.tierRank,
       StatsEntry.powerRank => StatsDashboardEntry.powerRank,
       StatsEntry.equipRank => StatsDashboardEntry.equipRank,
+      StatsEntry.playerRank => StatsDashboardEntry.playerRank,
       StatsEntry.overview => StatsDashboardEntry.overview,
     };
   }
@@ -186,6 +189,17 @@ class StatsScreen extends ConsumerWidget {
             _ComboStatsCard(combo: combo),
         ],
       ),
+      _StatsSection(
+        title: 'Player Rankings',
+        icon: Icons.emoji_events_outlined,
+        focusLabel: initialEntry == StatsEntry.playerRank
+            ? 'Focused player rank'
+            : '',
+        children: [
+          for (final player in dashboard.players.take(10))
+            _PlayerStatsCard(player: player),
+        ],
+      ),
     ];
 
     if (initialEntry == StatsEntry.equipRank) {
@@ -195,6 +209,15 @@ class StatsScreen extends ConsumerWidget {
       if (equipIndex > 0) {
         final equipSection = sections.removeAt(equipIndex);
         sections.insert(0, equipSection);
+      }
+    }
+    if (initialEntry == StatsEntry.playerRank) {
+      final playerIndex = sections.indexWhere(
+        (section) => section.title == 'Player Rankings',
+      );
+      if (playerIndex > 0) {
+        final playerSection = sections.removeAt(playerIndex);
+        sections.insert(0, playerSection);
       }
     }
 
@@ -360,10 +383,7 @@ class _HeroEquipUsageCard extends StatelessWidget {
           : () => context.go(
               Uri(
                 path: '/tools/stats',
-                queryParameters: {
-                  'entry': 'equip_rank',
-                  'equip_id': equip.id,
-                },
+                queryParameters: {'entry': 'equip_rank', 'equip_id': equip.id},
               ).toString(),
             ),
       child: Row(
@@ -421,10 +441,7 @@ class _EquipHeroUsageCard extends StatelessWidget {
           : () => context.go(
               Uri(
                 path: '/tools/stats',
-                queryParameters: {
-                  'entry': 'tier_rank',
-                  'hero_id': hero.id,
-                },
+                queryParameters: {'entry': 'tier_rank', 'hero_id': hero.id},
               ).toString(),
             ),
       child: Row(
@@ -482,10 +499,7 @@ class _HeroStatsCard extends StatelessWidget {
           : () => context.go(
               Uri(
                 path: '/tools/stats',
-                queryParameters: {
-                  'entry': 'tier_rank',
-                  'hero_id': hero.id,
-                },
+                queryParameters: {'entry': 'tier_rank', 'hero_id': hero.id},
               ).toString(),
             ),
       child: Row(
@@ -532,6 +546,60 @@ class _HeroStatsCard extends StatelessWidget {
   }
 }
 
+class _PlayerStatsCard extends StatelessWidget {
+  const _PlayerStatsCard({required this.player});
+
+  final StatsPlayerRow player;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      child: Row(
+        children: [
+          AppImage(
+            url: player.avatarUrl,
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            semanticLabel: player.playerName,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  player.playerName.isEmpty ? 'Player' : player.playerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricPill(label: '${player.winRateText} WR'),
+                    _MetricPill(label: 'KDA ${player.avgKdaText}'),
+                    _MetricPill(label: player.playCountText),
+                    if (player.rankStars > 0)
+                      _MetricPill(label: player.rankStarsText),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          _PrimaryMetric(label: '${player.peakScoreText} peak'),
+        ],
+      ),
+    );
+  }
+}
+
 class _EquipStatsCard extends StatelessWidget {
   const _EquipStatsCard({required this.equip, this.isFocused = false});
 
@@ -546,10 +614,7 @@ class _EquipStatsCard extends StatelessWidget {
           : () => context.go(
               Uri(
                 path: '/tools/stats',
-                queryParameters: {
-                  'entry': 'equip_rank',
-                  'equip_id': equip.id,
-                },
+                queryParameters: {'entry': 'equip_rank', 'equip_id': equip.id},
               ).toString(),
             ),
       child: Row(
