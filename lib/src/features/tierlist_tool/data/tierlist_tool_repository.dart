@@ -50,6 +50,23 @@ class TierListToolRepository {
     return TierListSchemeSummary.fromJson(scheme is Map ? scheme : result);
   }
 
+  Future<TierListSchemeSummary> updateScheme(
+    TierListSchemeSummary scheme,
+  ) async {
+    final json = await apiClient.postJson(
+      '/tierlist/schemes/${scheme.id}/update',
+      body: {
+        'name': scheme.name,
+        'rows': scheme.rows.map((row) => row.toUpdateJson()).toList(),
+      },
+    );
+    final result = json['result'];
+    final updatedScheme = result is Map ? result['scheme'] : json['scheme'];
+    return TierListSchemeSummary.fromJson(
+      updatedScheme is Map ? updatedScheme : result,
+    );
+  }
+
   Future<void> deleteScheme(String schemeId) async {
     await apiClient.postJson(
       '/tierlist/schemes/$schemeId/delete',

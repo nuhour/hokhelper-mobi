@@ -887,6 +887,8 @@ GoRouter createAppRouter() {
                         builder: (context, state) {
                           return TierListSchemeDetailScreen(
                             schemeId: state.pathParameters['schemeId'] ?? '',
+                            initialEditMode:
+                                state.uri.queryParameters['mode'] == 'edit',
                           );
                         },
                       ),

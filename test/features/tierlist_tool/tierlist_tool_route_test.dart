@@ -4,9 +4,36 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/tierlist_tool/data/tierlist_tool_repository.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_scheme_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_tool_screen.dart';
+
+class _FakeTierListToolRepository extends TierListToolRepository {
+  _FakeTierListToolRepository() : super(apiClient: _NoopApiClient());
+
+  TierListSchemeSummary? savedScheme;
+
+  @override
+  Future<TierListSchemeSummary> updateScheme(
+    TierListSchemeSummary scheme,
+  ) async {
+    savedScheme = scheme;
+    return scheme;
+  }
+}
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
 
 void main() {
   testWidgets('tier list card opens its mobile scheme detail', (tester) async {
@@ -147,6 +174,62 @@ void main() {
     expect(find.text('Tier List Detail'), findsOneWidget);
     expect(find.text('Legacy Shared Tier List'), findsOneWidget);
   });
+
+  testWidgets(
+    'tier list edit links open row editing controls and save changes',
+    (tester) async {
+      final repository = _FakeTierListToolRepository();
+      final router = createAppRouter();
+      router.go('/tools/tier-list?id=42&mode=edit');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tierListToolRepositoryProvider.overrideWithValue(repository),
+            tierListSchemeDetailProvider('42').overrideWith((ref) async {
+              return const TierListSchemeSummary(
+                id: '42',
+                name: 'Editable Tier List',
+                createdAt: '2026-07-02T08:00:00Z',
+                updatedAt: '2026-07-04T12:00:00Z',
+                rows: [
+                  TierListSchemeRowSummary(
+                    id: 'r1',
+                    label: 'T0',
+                    color: 'bg-red-600',
+                    heroCount: 3,
+                    heroIds: [111, 222, 333],
+                  ),
+                  TierListSchemeRowSummary(
+                    id: 'r2',
+                    label: 'T1',
+                    color: 'bg-orange-500',
+                    heroCount: 1,
+                    heroIds: [444],
+                  ),
+                ],
+              );
+            }),
+          ],
+          child: HokHelperApp(router: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Editor mode'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('tier-row-label-r1')),
+        'S+',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
+      await tester.pumpAndSettle();
+
+      expect(repository.savedScheme, isNotNull);
+      expect(repository.savedScheme!.rows.first.label, 'S+');
+      expect(repository.savedScheme!.rows.first.heroIds, [111, 222, 333]);
+      expect(find.text('Tier list saved'), findsOneWidget);
+    },
+  );
 
   testWidgets('copies tier list detail share links', (tester) async {
     MethodCall? clipboardCall;

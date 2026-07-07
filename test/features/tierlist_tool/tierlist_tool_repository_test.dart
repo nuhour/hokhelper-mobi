@@ -78,6 +78,34 @@ class _FakeApiClient extends ApiClient {
     if (path == '/tierlist/schemes/9/delete') {
       return const {'success': true, 'message': 'success'};
     }
+    if (path == '/tierlist/schemes/42/update') {
+      return const {
+        'success': true,
+        'message': 'success',
+        'result': {
+          'scheme': {
+            'id': '42',
+            'name': 'KIC Knockout Meta',
+            'createdAt': '2026-07-02T08:00:00Z',
+            'updatedAt': '2026-07-07T09:00:00Z',
+            'rows': [
+              {
+                'id': 'r1',
+                'label': 'S+',
+                'color': 'bg-red-600',
+                'heroIds': [111, 222, 333],
+              },
+              {
+                'id': 'r2',
+                'label': 'T1',
+                'color': 'bg-orange-500',
+                'heroIds': [444],
+              },
+            ],
+          },
+        },
+      };
+    }
     return const {
       'success': true,
       'message': 'success',
@@ -179,5 +207,41 @@ void main() {
 
     expect(apiClient.requestedPath, '/tierlist/schemes/9/delete');
     expect(apiClient.requestedBody, <String, Object?>{});
+  });
+
+  test('updates a tier list scheme with preserved hero ids', () async {
+    final apiClient = _FakeApiClient();
+    final repository = TierListToolRepository(apiClient: apiClient);
+
+    final scheme = await repository.loadScheme('42');
+    final updated = await repository.updateScheme(
+      scheme.copyWith(
+        rows: [
+          scheme.rows.first.copyWith(label: 'S+'),
+          scheme.rows.last,
+        ],
+      ),
+    );
+
+    expect(apiClient.requestedPath, '/tierlist/schemes/42/update');
+    expect(apiClient.requestedBody, {
+      'name': 'KIC Knockout Meta',
+      'rows': [
+        {
+          'id': 'r1',
+          'label': 'S+',
+          'color': 'bg-red-600',
+          'heroIds': [111, 222, 333],
+        },
+        {
+          'id': 'r2',
+          'label': 'T1',
+          'color': 'bg-orange-500',
+          'heroIds': [444],
+        },
+      ],
+    });
+    expect(updated.rows.first.label, 'S+');
+    expect(updated.heroCountText, '4 heroes');
   });
 }
