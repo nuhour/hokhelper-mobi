@@ -38,7 +38,7 @@ void main() {
     expect(apiClient.postBody, {
       'query': 'arthur',
       'region_id': 2,
-      'limit_per_type': 10,
+      'limit_per_type': 6,
     });
   });
 

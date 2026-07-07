@@ -8,7 +8,7 @@ class SearchRepository {
   Future<Map<String, dynamic>> search(String keyword, int regionId) {
     return apiClient.postJson(
       '/search/global',
-      body: {'query': keyword, 'region_id': regionId, 'limit_per_type': 10},
+      body: {'query': keyword, 'region_id': regionId, 'limit_per_type': 6},
     );
   }
 }
