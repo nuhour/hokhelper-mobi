@@ -124,4 +124,58 @@ void main() {
     expect(find.text('Finished'), findsWidgets);
     expect(find.text('2026-06-28T11:00:00Z'), findsWidgets);
   });
+
+  testWidgets('filters esports players by team like the hokx portal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsPlayersProvider.overrideWith((ref) async {
+            return const [
+              EsportsPlayerSummary(
+                id: '8',
+                name: 'Fly',
+                avatarUrl: '',
+                teamName: 'Wolves',
+                teamLogoUrl: '',
+                role: 'Clash Lane',
+                grade: 91.5,
+                kda: 6.8,
+                winRate: 0.76,
+              ),
+              EsportsPlayerSummary(
+                id: '9',
+                name: 'Cat',
+                avatarUrl: '',
+                teamName: 'AG',
+                teamLogoUrl: '',
+                role: 'Mid',
+                grade: 88.2,
+                kda: 5.4,
+                winRate: 0.71,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: EsportsScreen(initialTab: EsportsInitialTab.players),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fly'), findsOneWidget);
+    expect(find.text('Cat'), findsOneWidget);
+
+    await tester.tap(find.text('All Teams'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('AG').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fly'), findsNothing);
+    expect(find.text('Cat'), findsOneWidget);
+  });
 }

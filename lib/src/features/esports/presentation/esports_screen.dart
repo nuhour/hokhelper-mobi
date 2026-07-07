@@ -280,16 +280,23 @@ class _TeamsTab extends ConsumerWidget {
   }
 }
 
-class _PlayersTab extends ConsumerWidget {
+class _PlayersTab extends ConsumerStatefulWidget {
   const _PlayersTab({required this.value, required this.focusedPlayerId});
 
   final AsyncValue<List<EsportsPlayerSummary>> value;
   final String? focusedPlayerId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PlayersTab> createState() => _PlayersTabState();
+}
+
+class _PlayersTabState extends ConsumerState<_PlayersTab> {
+  String _teamFilter = 'all';
+
+  @override
+  Widget build(BuildContext context) {
     return AppAsyncView<List<EsportsPlayerSummary>>(
-      value: value,
+      value: widget.value,
       retry: () => ref.invalidate(esportsPlayersProvider),
       data: (players) {
         if (players.isEmpty) {
@@ -299,10 +306,37 @@ class _PlayersTab extends ConsumerWidget {
             message: 'Pull to refresh and try again.',
           );
         }
-        final focusedPlayer = _findPlayer(players, focusedPlayerId);
-        final cards = [
+        final teamOptions = _playerTeamOptions(players);
+        final selectedTeam = teamOptions.contains(_teamFilter)
+            ? _teamFilter
+            : 'all';
+        final filteredPlayers = selectedTeam == 'all'
+            ? players
+            : players
+                  .where((player) => player.teamName.trim() == selectedTeam)
+                  .toList();
+        final focusedPlayer = _findPlayer(players, widget.focusedPlayerId);
+        final cards = <Widget>[
+          _PlayerTeamFilterCard(
+            teamOptions: teamOptions,
+            selectedTeam: selectedTeam,
+            onChanged: (value) {
+              setState(() {
+                _teamFilter = value;
+              });
+            },
+          ),
           if (focusedPlayer != null) _FocusedPlayerCard(player: focusedPlayer),
-          ...players.map((player) => _PlayerCard(player: player)),
+          if (filteredPlayers.isEmpty)
+            const AppEmptyState(
+              icon: Icons.person_search_outlined,
+              title: 'No players found',
+              message: 'Try another team filter.',
+            )
+          else
+            ...filteredPlayers
+                .where((player) => player.id != focusedPlayer?.id)
+                .map((player) => _PlayerCard(player: player)),
         ];
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsPlayersProvider.future),
@@ -314,6 +348,83 @@ class _PlayersTab extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _PlayerTeamFilterCard extends StatelessWidget {
+  const _PlayerTeamFilterCard({
+    required this.teamOptions,
+    required this.selectedTeam,
+    required this.onChanged,
+  });
+
+  final List<String> teamOptions;
+  final String selectedTeam;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      child: Row(
+        children: [
+          const Icon(Icons.filter_list, color: AppTheme.gold, size: 20),
+          const SizedBox(width: 10),
+          Text(
+            'Filters',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: AppTheme.text,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedTeam,
+                    isExpanded: true,
+                    dropdownColor: AppTheme.panel,
+                    iconEnabledColor: AppTheme.gold,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: 'all',
+                        child: Text('All Teams'),
+                      ),
+                      ...teamOptions.map(
+                        (team) => DropdownMenuItem(
+                          value: team,
+                          child: Text(
+                            team,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        onChanged(value);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -812,7 +923,7 @@ class _FocusedPlayerCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      player.teamName.isEmpty ? 'Free Agent' : player.teamName,
+                      player.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -820,6 +931,17 @@ class _FocusedPlayerCard extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                    if (player.teamName.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        player.teamName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ],
                     if (player.role.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -1183,6 +1305,17 @@ EsportsPlayerSummary? _findPlayer(
     }
   }
   return null;
+}
+
+List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {
+  final teams = <String>{};
+  for (final player in players) {
+    final teamName = player.teamName.trim();
+    if (teamName.isNotEmpty) {
+      teams.add(teamName);
+    }
+  }
+  return teams.toList()..sort();
 }
 
 class _Pill extends StatelessWidget {
