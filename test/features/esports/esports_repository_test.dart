@@ -31,6 +31,7 @@ class _FakeApiClient extends ApiClient {
               'status_key': 'finished',
               'start_time': '2026-06-28T11:00:00Z',
               'bo': 7,
+              'winner_team_id': 1,
               'team_a': {
                 'id': 1,
                 'name': 'Wolves',
@@ -132,6 +133,7 @@ void main() {
     expect(matches.single.statusLabel, 'Finished');
     expect(matches.single.bestOf, 7);
     expect(matches.single.boText, 'BO7');
+    expect(matches.single.winnerSide, 'a');
   });
 
   test('loads esports teams sorted by win rate', () async {

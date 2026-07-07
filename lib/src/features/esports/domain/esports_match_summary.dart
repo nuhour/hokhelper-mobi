@@ -12,6 +12,9 @@ class EsportsMatchSummary {
     required this.statusKey,
     required this.startTime,
     this.bestOf = 0,
+    this.teamAId = '',
+    this.teamBId = '',
+    this.winnerTeamId = '',
   });
 
   final String id;
@@ -26,6 +29,9 @@ class EsportsMatchSummary {
   final String statusKey;
   final String startTime;
   final int bestOf;
+  final String teamAId;
+  final String teamBId;
+  final String winnerTeamId;
 
   String get title {
     if (leagueName.isNotEmpty && stageName.isNotEmpty) {
@@ -42,6 +48,19 @@ class EsportsMatchSummary {
   }
 
   String get boText => bestOf > 0 ? 'BO$bestOf' : '';
+
+  String get winnerSide {
+    if (winnerTeamId.isNotEmpty && winnerTeamId == teamAId) {
+      return 'a';
+    }
+    if (winnerTeamId.isNotEmpty && winnerTeamId == teamBId) {
+      return 'b';
+    }
+    if (scoreA == null || scoreB == null || scoreA == scoreB) {
+      return '';
+    }
+    return scoreA! > scoreB! ? 'a' : 'b';
+  }
 
   String get statusLabel {
     return switch (statusKey.toLowerCase()) {
@@ -61,11 +80,13 @@ class EsportsMatchSummary {
       id: _readString(map['id']),
       leagueName: _readString(map['league_name']),
       stageName: _readString(map['stage_name']),
+      teamAId: _readString(teamA['id']),
       teamAName: _readString(
         teamA['name'] ?? teamA['short_name'],
         fallback: 'Team A',
       ),
       teamALogoUrl: _readString(teamA['logo_url']),
+      teamBId: _readString(teamB['id']),
       teamBName: _readString(
         teamB['name'] ?? teamB['short_name'],
         fallback: 'Team B',
@@ -76,6 +97,7 @@ class EsportsMatchSummary {
       statusKey: _readString(map['status_key'] ?? map['status']),
       startTime: _readString(map['start_time'] ?? map['scheduled_at']),
       bestOf: _readInt(map['bo'] ?? map['best_of']),
+      winnerTeamId: _readString(map['winner_team_id']),
     );
   }
 }

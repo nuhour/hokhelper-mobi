@@ -755,6 +755,9 @@ class _MatchCard extends StatelessWidget {
                 child: _TeamIdentity(
                   name: match.teamAName,
                   logoUrl: match.teamALogoUrl,
+                  highlightColor: match.winnerSide == 'a'
+                      ? Colors.greenAccent
+                      : null,
                 ),
               ),
               Padding(
@@ -772,6 +775,9 @@ class _MatchCard extends StatelessWidget {
                   name: match.teamBName,
                   logoUrl: match.teamBLogoUrl,
                   alignEnd: true,
+                  highlightColor: match.winnerSide == 'b'
+                      ? Colors.greenAccent
+                      : null,
                 ),
               ),
             ],
@@ -1477,11 +1483,13 @@ class _TeamIdentity extends StatelessWidget {
     required this.name,
     required this.logoUrl,
     this.alignEnd = false,
+    this.highlightColor,
   });
 
   final String name;
   final String logoUrl;
   final bool alignEnd;
+  final Color? highlightColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1501,7 +1509,7 @@ class _TeamIdentity extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: alignEnd ? TextAlign.end : TextAlign.start,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.text,
+            color: highlightColor ?? AppTheme.text,
             fontWeight: FontWeight.w800,
           ),
         ),

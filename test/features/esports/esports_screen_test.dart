@@ -191,6 +191,45 @@ void main() {
     expect(find.textContaining('BO7'), findsOneWidget);
   });
 
+  testWidgets('highlights esports match winner like the hokx portal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00',
+                winnerTeamId: '1',
+                teamAId: '1',
+                teamBId: '2',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final winnerText = tester.widget<Text>(find.text('Wolves'));
+    final loserText = tester.widget<Text>(find.text('AG'));
+
+    expect(winnerText.style?.color, Colors.greenAccent);
+    expect(loserText.style?.color, isNot(Colors.greenAccent));
+  });
+
   testWidgets('filters esports matches by league like the hokx portal', (
     tester,
   ) async {
