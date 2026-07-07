@@ -231,6 +231,66 @@ void main() {
     },
   );
 
+  testWidgets('tier list edit mode changes row colors and order', (
+    tester,
+  ) async {
+    final repository = _FakeTierListToolRepository();
+    final router = createAppRouter();
+    router.go('/tools/tier-list/42?mode=edit');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'Editable Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 3,
+                  heroIds: [111, 222, 333],
+                ),
+                TierListSchemeRowSummary(
+                  id: 'r2',
+                  label: 'T1',
+                  color: 'bg-orange-500',
+                  heroCount: 1,
+                  heroIds: [444],
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('tier-row-color-r1-bg-blue-500')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('tier-row-move-down-r1')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.widgetWithText(FilledButton, 'Save changes'),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(repository.savedScheme, isNotNull);
+    expect(repository.savedScheme!.rows.map((row) => row.id), ['r2', 'r1']);
+    expect(repository.savedScheme!.rows.last.color, 'bg-blue-500');
+    expect(repository.savedScheme!.rows.last.heroIds, [111, 222, 333]);
+    expect(find.text('Tier list saved'), findsOneWidget);
+  });
+
   testWidgets('copies tier list detail share links', (tester) async {
     MethodCall? clipboardCall;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

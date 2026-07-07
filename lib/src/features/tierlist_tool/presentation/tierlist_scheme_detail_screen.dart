@@ -13,6 +13,19 @@ final tierListSchemeDetailProvider =
       return ref.watch(tierListToolRepositoryProvider).loadScheme(schemeId);
     });
 
+const _tierListEditorColors = [
+  'bg-red-600',
+  'bg-orange-500',
+  'bg-yellow-500',
+  'bg-green-500',
+  'bg-teal-500',
+  'bg-blue-500',
+  'bg-indigo-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-slate-500',
+];
+
 class TierListSchemeDetailScreen extends ConsumerStatefulWidget {
   const TierListSchemeDetailScreen({
     super.key,
@@ -32,6 +45,7 @@ class _TierListSchemeDetailScreenState
     extends ConsumerState<TierListSchemeDetailScreen> {
   final Map<String, TextEditingController> _labelControllers = {};
   final Map<String, String> _editedLabels = {};
+  List<TierListSchemeRowSummary> _editedRows = const [];
   String? _hydratedSchemeId;
   TierListSchemeSummary? _savedScheme;
   bool _isSaving = false;
@@ -80,6 +94,8 @@ class _TierListSchemeDetailScreenState
                 isSaving: _isSaving,
                 labelControllers: _labelControllers,
                 onLabelChanged: _updateRowLabel,
+                onColorChanged: _updateRowColor,
+                onMoveRow: _moveRow,
                 onSave: () => _saveScheme(_schemeWithEditedRows(displayScheme)),
               ),
             ],
@@ -99,6 +115,7 @@ class _TierListSchemeDetailScreenState
       _editedLabels
         ..clear()
         ..addEntries(baseScheme.rows.map((row) => MapEntry(row.id, row.label)));
+      _editedRows = baseScheme.rows;
       final rowIds = baseScheme.rows.map((row) => row.id).toSet();
       final removedIds = _labelControllers.keys
           .where((rowId) => !rowIds.contains(rowId))
@@ -116,7 +133,7 @@ class _TierListSchemeDetailScreenState
     }
     return baseScheme.copyWith(
       rows: [
-        for (final row in baseScheme.rows) row.copyWith(label: _rowLabel(row)),
+        for (final row in _editedRows) row.copyWith(label: _rowLabel(row)),
       ],
     );
   }
@@ -140,9 +157,35 @@ class _TierListSchemeDetailScreenState
   TierListSchemeSummary _schemeWithEditedRows(TierListSchemeSummary scheme) {
     return scheme.copyWith(
       rows: [
-        for (final row in scheme.rows) row.copyWith(label: _rowLabel(row)),
+        for (final row in _editedRows) row.copyWith(label: _rowLabel(row)),
       ],
     );
+  }
+
+  void _updateRowColor(String rowId, String color) {
+    setState(() {
+      _editedRows = [
+        for (final row in _editedRows)
+          row.id == rowId ? row.copyWith(color: color) : row,
+      ];
+    });
+  }
+
+  void _moveRow(String rowId, int offset) {
+    final index = _editedRows.indexWhere((row) => row.id == rowId);
+    if (index < 0) {
+      return;
+    }
+    final targetIndex = index + offset;
+    if (targetIndex < 0 || targetIndex >= _editedRows.length) {
+      return;
+    }
+    final rows = [..._editedRows];
+    final row = rows.removeAt(index);
+    rows.insert(targetIndex, row);
+    setState(() {
+      _editedRows = rows;
+    });
   }
 
   Future<void> _saveScheme(TierListSchemeSummary scheme) async {
@@ -230,6 +273,8 @@ class _TierListDetailCard extends StatelessWidget {
     required this.isSaving,
     required this.labelControllers,
     required this.onLabelChanged,
+    required this.onColorChanged,
+    required this.onMoveRow,
     required this.onSave,
   });
 
@@ -238,6 +283,8 @@ class _TierListDetailCard extends StatelessWidget {
   final bool isSaving;
   final Map<String, TextEditingController> labelControllers;
   final void Function(String rowId, String label) onLabelChanged;
+  final void Function(String rowId, String color) onColorChanged;
+  final void Function(String rowId, int offset) onMoveRow;
   final VoidCallback onSave;
 
   @override
@@ -311,7 +358,12 @@ class _TierListDetailCard extends StatelessWidget {
                   row: row,
                   controller: labelControllers[row.id],
                   index: index,
+                  canMoveUp: index > 0,
+                  canMoveDown: index < scheme.rows.length - 1,
                   onChanged: (value) => onLabelChanged(row.id, value),
+                  onColorChanged: (color) => onColorChanged(row.id, color),
+                  onMoveUp: () => onMoveRow(row.id, -1),
+                  onMoveDown: () => onMoveRow(row.id, 1),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -347,41 +399,153 @@ class _TierRowEditor extends StatelessWidget {
     required this.row,
     required this.controller,
     required this.index,
+    required this.canMoveUp,
+    required this.canMoveDown,
     required this.onChanged,
+    required this.onColorChanged,
+    required this.onMoveUp,
+    required this.onMoveDown,
   });
 
   final TierListSchemeRowSummary row;
   final TextEditingController? controller;
   final int index;
+  final bool canMoveUp;
+  final bool canMoveDown;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String> onColorChanged;
+  final VoidCallback onMoveUp;
+  final VoidCallback onMoveDown;
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      key: ValueKey('tier-row-label-${row.id}'),
-      controller: controller,
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: index == 0 ? 'Row label' : 'Row label ${index + 1}',
-        prefixIcon: const Icon(Icons.drive_file_rename_outline),
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.gold),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.035),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  key: ValueKey('tier-row-move-up-${row.id}'),
+                  tooltip: 'Move up',
+                  onPressed: canMoveUp ? onMoveUp : null,
+                  icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                ),
+                IconButton(
+                  key: ValueKey('tier-row-move-down-${row.id}'),
+                  tooltip: 'Move down',
+                  onPressed: canMoveDown ? onMoveDown : null,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey('tier-row-label-${row.id}'),
+                    controller: controller,
+                    onChanged: onChanged,
+                    decoration: InputDecoration(
+                      labelText: index == 0
+                          ? 'Row label'
+                          : 'Row label ${index + 1}',
+                      prefixIcon: const Icon(Icons.drive_file_rename_outline),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.gold),
+                      ),
+                    ),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final color in _tierListEditorColors)
+                    _TierColorButton(
+                      key: ValueKey('tier-row-color-${row.id}-$color'),
+                      colorToken: color,
+                      isSelected: row.color == color,
+                      onTap: () => onColorChanged(color),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-        color: AppTheme.text,
-        fontWeight: FontWeight.w800,
+    );
+  }
+}
+
+class _TierColorButton extends StatelessWidget {
+  const _TierColorButton({
+    super.key,
+    required this.colorToken,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String colorToken;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _tierColorToken(colorToken);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.2),
+            width: isSelected ? 3 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.42),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
       ),
     );
   }
@@ -395,6 +559,7 @@ class _TierRowDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final heroText = row.heroCount == 1 ? '1 hero' : '${row.heroCount} heroes';
+    final color = _tierColorToken(row.color, fallbackLabel: row.label);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -411,18 +576,16 @@ class _TierRowDetail extends StatelessWidget {
               height: 42,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: tierListColor(row.label).withValues(alpha: 0.18),
+                color: color.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: tierListColor(row.label).withValues(alpha: 0.36),
-                ),
+                border: Border.all(color: color.withValues(alpha: 0.36)),
               ),
               child: Text(
                 row.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: tierListColor(row.label),
+                  color: color,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -445,7 +608,7 @@ class _TierRowDetail extends StatelessWidget {
                     child: LinearProgressIndicator(
                       minHeight: 6,
                       value: row.heroCount <= 0 ? 0.04 : row.heroCount / 8,
-                      color: tierListColor(row.label),
+                      color: color,
                       backgroundColor: Colors.white.withValues(alpha: 0.06),
                     ),
                   ),
@@ -457,6 +620,22 @@ class _TierRowDetail extends StatelessWidget {
       ),
     );
   }
+}
+
+Color _tierColorToken(String token, {String fallbackLabel = ''}) {
+  return switch (token) {
+    'bg-red-600' => const Color(0xFFDC2626),
+    'bg-orange-500' => const Color(0xFFF97316),
+    'bg-yellow-500' => const Color(0xFFEAB308),
+    'bg-green-500' => const Color(0xFF22C55E),
+    'bg-teal-500' => const Color(0xFF14B8A6),
+    'bg-blue-500' => const Color(0xFF3B82F6),
+    'bg-indigo-500' => const Color(0xFF6366F1),
+    'bg-purple-500' => const Color(0xFFA855F7),
+    'bg-pink-500' => const Color(0xFFEC4899),
+    'bg-slate-500' => const Color(0xFF64748B),
+    _ => tierListColor(fallbackLabel),
+  };
 }
 
 class _DetailBadge extends StatelessWidget {
