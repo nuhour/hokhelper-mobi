@@ -29,6 +29,8 @@ import 'package:hok_helper_mobile/src/features/teambuild/presentation/team_build
 import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_tool_screen.dart';
 
+Widget _toolRoutePage(Widget child) => Scaffold(body: child);
+
 GoRouter _buildRouter() {
   return GoRouter(
     initialLocation: '/tools',
@@ -39,51 +41,60 @@ GoRouter _buildRouter() {
         routes: [
           GoRoute(
             path: 'builds',
-            builder: (context, state) => const BuildExplorerScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const BuildExplorerScreen()),
           ),
           GoRoute(
             path: 'build-sim',
-            builder: (context, state) => const BuildSimulatorScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const BuildSimulatorScreen()),
           ),
           GoRoute(
             path: 'bp-simulator',
-            builder: (context, state) => const BpDashboardScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const BpDashboardScreen()),
           ),
           GoRoute(
             path: 'tier-list',
-            builder: (context, state) => const TierListToolScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const TierListToolScreen()),
           ),
           GoRoute(
             path: 'game-assistant',
-            builder: (context, state) => const GameAssistantScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const GameAssistantScreen()),
           ),
           GoRoute(
             path: 'rank-fortune',
-            builder: (context, state) => const RankFortuneScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const RankFortuneScreen()),
           ),
           GoRoute(
             path: 'curiosity-lab',
-            builder: (context, state) => const CuriosityLabScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const CuriosityLabScreen()),
           ),
           GoRoute(
             path: 'rankings',
-            builder: (context, state) => const HeroRankingScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const HeroRankingScreen()),
           ),
           GoRoute(
             path: 'team-builder',
-            builder: (context, state) => const TeamBuilderScreen(),
+            builder: (context, state) =>
+                _toolRoutePage(const TeamBuilderScreen()),
           ),
           GoRoute(
             path: 'prompts',
-            builder: (context, state) => const PromptsScreen(),
+            builder: (context, state) => _toolRoutePage(const PromptsScreen()),
           ),
           GoRoute(
             path: 'esports',
-            builder: (context, state) => const EsportsScreen(),
+            builder: (context, state) => _toolRoutePage(const EsportsScreen()),
           ),
           GoRoute(
             path: 'stats',
-            builder: (context, state) => const StatsScreen(),
+            builder: (context, state) => _toolRoutePage(const StatsScreen()),
           ),
         ],
       ),
@@ -520,7 +531,9 @@ void main() {
 
     expect(find.text('Esports'), findsOneWidget);
     expect(find.text('KPL Spring'), findsOneWidget);
-    expect(find.text('4 - 3'), findsOneWidget);
+    expect(find.text('4'), findsOneWidget);
+    expect(find.text(' : '), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
   });
 
   testWidgets('stats tile opens the stats route', (tester) async {
