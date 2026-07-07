@@ -18,9 +18,14 @@ final publicUserProfileProvider = FutureProvider.family<UserProfile, int>((
 });
 
 class PublicProfileScreen extends ConsumerWidget {
-  const PublicProfileScreen({required this.userId, super.key});
+  const PublicProfileScreen({
+    required this.userId,
+    this.initialFollowListType,
+    super.key,
+  });
 
   final int userId;
+  final ProfileFollowListType? initialFollowListType;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,6 +51,7 @@ class PublicProfileScreen extends ConsumerWidget {
               data: (profile) => _PublicProfileCard(
                 profile: profile,
                 canInteract: signedInUser != null && !profile.isSelf,
+                initialFollowListType: initialFollowListType,
               ),
             ),
           ],
@@ -56,10 +62,15 @@ class PublicProfileScreen extends ConsumerWidget {
 }
 
 class _PublicProfileCard extends ConsumerStatefulWidget {
-  const _PublicProfileCard({required this.profile, required this.canInteract});
+  const _PublicProfileCard({
+    required this.profile,
+    required this.canInteract,
+    this.initialFollowListType,
+  });
 
   final UserProfile profile;
   final bool canInteract;
+  final ProfileFollowListType? initialFollowListType;
 
   @override
   ConsumerState<_PublicProfileCard> createState() => _PublicProfileCardState();
@@ -72,6 +83,7 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
   late int _likes;
   bool _followUpdating = false;
   bool _likeUpdating = false;
+  ProfileFollowListType? _openedInitialFollowListType;
 
   UserProfile get profile => widget.profile;
 
@@ -98,6 +110,17 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
 
   @override
   Widget build(BuildContext context) {
+    final initialFollowListType = widget.initialFollowListType;
+    if (initialFollowListType != null &&
+        _openedInitialFollowListType != initialFollowListType) {
+      _openedInitialFollowListType = initialFollowListType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showFollowList(context, initialFollowListType);
+        }
+      });
+    }
+
     final avatarInitial = profile.displayName.isNotEmpty
         ? profile.displayName.substring(0, 1).toUpperCase()
         : '?';
@@ -340,6 +363,14 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
 }
 
 enum ProfileFollowListType { following, followers }
+
+ProfileFollowListType? profileFollowListTypeFromRoute(String? value) {
+  return switch ((value ?? '').trim()) {
+    'following' => ProfileFollowListType.following,
+    'followers' => ProfileFollowListType.followers,
+    _ => null,
+  };
+}
 
 class _FollowListSheet extends ConsumerStatefulWidget {
   const _FollowListSheet({required this.type, required this.userId});

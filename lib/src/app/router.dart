@@ -334,6 +334,9 @@ GoRouter createAppRouter() {
         builder: (context, state) {
           return PublicProfileScreen(
             userId: int.tryParse(state.pathParameters['userId'] ?? '') ?? 0,
+            initialFollowListType: profileFollowListTypeFromRoute(
+              state.uri.queryParameters['tab'],
+            ),
           );
         },
       ),

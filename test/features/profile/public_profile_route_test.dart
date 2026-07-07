@@ -356,4 +356,60 @@ void main() {
     expect(find.text('Angela'), findsOneWidget);
     expect(find.text('Mid mage'), findsOneWidget);
   });
+
+  testWidgets('profile followers tab query opens followers list', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/profile/42?tab=followers');
+    final repository = _FakeProfileRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
+          profileRepositoryProvider.overrideWithValue(repository),
+          publicUserProfileProvider(42).overrideWith((ref) async {
+            return const UserProfile(
+              id: 42,
+              username: 'lam',
+              displayName: 'Lam',
+              email: 'lam@example.test',
+              avatar: '',
+              level: 7,
+              points: 1200,
+              xpTotal: 1400,
+              xpCurrentLevel: 260,
+              xpToNextLevel: 740,
+              levelProgress: 26,
+              levelCap: false,
+              bio: 'Jungle main',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 3,
+                following: 4,
+                followers: 5,
+                likes: 6,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.loadedFollowersUserId, 42);
+    expect(find.text('Followers'), findsWidgets);
+    expect(find.text('Angela'), findsOneWidget);
+    expect(find.text('Mid mage'), findsOneWidget);
+  });
 }
