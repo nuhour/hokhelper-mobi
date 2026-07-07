@@ -492,9 +492,11 @@ class _PromptGenerationSheet extends ConsumerStatefulWidget {
 class _PromptGenerationSheetState
     extends ConsumerState<_PromptGenerationSheet> {
   late final TextEditingController _contentController;
+  late final TextEditingController _sourceImageController;
   late Future<PromptGenerationQuota> _quotaFuture;
   PromptGenerationQuota? _quota;
   List<String> _images = const [];
+  var _mode = _PromptGenerationMode.text;
   var _generating = false;
   String? _settingCoverUrl;
 
@@ -502,12 +504,16 @@ class _PromptGenerationSheetState
   void initState() {
     super.initState();
     _contentController = TextEditingController(text: widget.prompt.content);
+    _sourceImageController = TextEditingController(
+      text: widget.prompt.sourceImageUrl,
+    );
     _quotaFuture = ref.read(promptsRepositoryProvider).loadGenerationQuota();
   }
 
   @override
   void dispose() {
     _contentController.dispose();
+    _sourceImageController.dispose();
     super.dispose();
   }
 
@@ -543,125 +549,172 @@ class _PromptGenerationSheetState
                 ],
               ),
               const SizedBox(height: 12),
-              FutureBuilder<PromptGenerationQuota>(
-                future: _quotaFuture,
-                builder: (context, snapshot) {
-                  final quota = snapshot.data ?? _quota;
-                  if (quota == null) {
-                    return const LinearProgressIndicator();
-                  }
-                  _quota = quota;
-                  return _QuotaPanel(
-                    quota: quota,
-                    onRecharge: _openRechargeSheet,
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _contentController,
-                minLines: 4,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Prompt content',
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _generating || (_quota?.remaining ?? 1) <= 0
-                      ? null
-                      : _generate,
-                  icon: _generating
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.auto_awesome),
-                  label: const Text('Generate image'),
-                ),
-              ),
-              const SizedBox(height: 14),
               Expanded(
-                child: _images.isEmpty
-                    ? const Center(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.image_outlined,
-                                color: AppTheme.muted,
-                                size: 28,
-                              ),
-                              SizedBox(height: 6),
-                              Text(
-                                'No generated images yet',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppTheme.muted,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : GridView.builder(
-                        itemCount: _images.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                            ),
-                        itemBuilder: (context, index) {
-                          final imageUrl = _images[index];
-                          final isSettingCover = _settingCoverUrl == imageUrl;
-                          return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              AppImage(
-                                url: imageUrl,
-                                borderRadius: 14,
-                                semanticLabel: 'Generated image ${index + 1}',
-                              ),
-                              Positioned(
-                                left: 8,
-                                right: 8,
-                                top: 8,
-                                child: OutlinedButton.icon(
-                                  onPressed: _settingCoverUrl == null
-                                      ? () => _setCover(imageUrl)
-                                      : null,
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor: AppTheme.panel.withValues(
-                                      alpha: 0.92,
-                                    ),
-                                    foregroundColor: AppTheme.text,
-                                    side: const BorderSide(
-                                      color: AppTheme.muted,
-                                    ),
-                                    minimumSize: const Size.fromHeight(34),
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                  icon: isSettingCover
-                                      ? const SizedBox.square(
-                                          dimension: 14,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Icon(Icons.image, size: 16),
-                                  label: const Text('Set cover'),
-                                ),
-                              ),
-                            ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FutureBuilder<PromptGenerationQuota>(
+                        future: _quotaFuture,
+                        builder: (context, snapshot) {
+                          final quota = snapshot.data ?? _quota;
+                          if (quota == null) {
+                            return const LinearProgressIndicator();
+                          }
+                          _quota = quota;
+                          return _QuotaPanel(
+                            quota: quota,
+                            onRecharge: _openRechargeSheet,
                           );
                         },
                       ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<_PromptGenerationMode>(
+                        segments: const [
+                          ButtonSegment(
+                            value: _PromptGenerationMode.text,
+                            icon: Icon(Icons.text_fields),
+                            label: Text('Text to image'),
+                          ),
+                          ButtonSegment(
+                            value: _PromptGenerationMode.image,
+                            icon: Icon(Icons.layers_outlined),
+                            label: Text('Image to image'),
+                          ),
+                        ],
+                        selected: {_mode},
+                        onSelectionChanged: _generating
+                            ? null
+                            : (values) {
+                                setState(() => _mode = values.single);
+                              },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _contentController,
+                        minLines: 4,
+                        maxLines: 6,
+                        decoration: const InputDecoration(
+                          labelText: 'Prompt content',
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      if (_mode == _PromptGenerationMode.image) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _sourceImageController,
+                          decoration: const InputDecoration(
+                            labelText: 'Source image URL',
+                            hintText: 'https://example.com/source.png',
+                            prefixIcon: Icon(Icons.image_search_outlined),
+                          ),
+                          keyboardType: TextInputType.url,
+                          textInputAction: TextInputAction.done,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed:
+                              _generating || (_quota?.remaining ?? 1) <= 0
+                              ? null
+                              : _generate,
+                          icon: _generating
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.auto_awesome),
+                          label: const Text('Generate image'),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      if (_images.isEmpty)
+                        const SizedBox(
+                          height: 180,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.image_outlined,
+                                  color: AppTheme.muted,
+                                  size: 28,
+                                ),
+                                SizedBox(height: 6),
+                                Text(
+                                  'No generated images yet',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppTheme.muted,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _images.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10,
+                              ),
+                          itemBuilder: (context, index) {
+                            final imageUrl = _images[index];
+                            final isSettingCover = _settingCoverUrl == imageUrl;
+                            return Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                AppImage(
+                                  url: imageUrl,
+                                  borderRadius: 14,
+                                  semanticLabel: 'Generated image ${index + 1}',
+                                ),
+                                Positioned(
+                                  left: 8,
+                                  right: 8,
+                                  top: 8,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _settingCoverUrl == null
+                                        ? () => _setCover(imageUrl)
+                                        : null,
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: AppTheme.panel
+                                          .withValues(alpha: 0.92),
+                                      foregroundColor: AppTheme.text,
+                                      side: const BorderSide(
+                                        color: AppTheme.muted,
+                                      ),
+                                      minimumSize: const Size.fromHeight(34),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    icon: isSettingCover
+                                        ? const SizedBox.square(
+                                            dimension: 14,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.image, size: 16),
+                                    label: const Text('Set cover'),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -679,6 +732,9 @@ class _PromptGenerationSheetState
             promptId: widget.prompt.id,
             count: 1,
             customContent: _contentController.text,
+            sourceImageUrl: _mode == _PromptGenerationMode.image
+                ? _sourceImageController.text
+                : null,
           );
       if (!mounted) {
         return;
@@ -753,6 +809,8 @@ class _PromptGenerationSheetState
     );
   }
 }
+
+enum _PromptGenerationMode { text, image }
 
 class _QuotaPanel extends StatelessWidget {
   const _QuotaPanel({required this.quota, this.onRecharge});

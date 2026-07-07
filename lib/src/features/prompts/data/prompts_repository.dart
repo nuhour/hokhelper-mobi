@@ -121,15 +121,20 @@ class PromptsRepository {
     required String promptId,
     int count = 1,
     String? customContent,
+    String? sourceImageUrl,
   }) async {
+    final sourceImage = sourceImageUrl?.trim();
     final body = <String, Object?>{
       'prompt_id': promptId,
-      'mode': 'text',
+      'mode': sourceImage == null || sourceImage.isEmpty ? 'text' : 'image',
       'count': count,
     };
     final content = customContent?.trim();
     if (content != null && content.isNotEmpty) {
       body['custom_content'] = content;
+    }
+    if (sourceImage != null && sourceImage.isNotEmpty) {
+      body['source_image'] = sourceImage;
     }
     final json = await apiClient.postJson('/prompt/generate', body: body);
     final result = json['result'];

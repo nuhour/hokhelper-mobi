@@ -26,6 +26,7 @@ class _FakePromptsRepository extends PromptsRepository {
   String? generatedPromptId;
   int? generatedCount;
   String? generatedContent;
+  String? generatedSourceImageUrl;
   String? setCoverPromptId;
   String? setCoverImageData;
   String? rechargePlanId;
@@ -123,10 +124,12 @@ class _FakePromptsRepository extends PromptsRepository {
     required String promptId,
     int count = 1,
     String? customContent,
+    String? sourceImageUrl,
   }) async {
     generatedPromptId = promptId;
     generatedCount = count;
     generatedContent = customContent;
+    generatedSourceImageUrl = sourceImageUrl;
     return const PromptGenerateResult(
       images: ['https://example.test/generated-1.png'],
       quota: PromptGenerationQuota(used: 2, total: 5),
@@ -814,6 +817,57 @@ void main() {
       'Create a neon Honor of Kings skin splash art.',
     );
     expect(find.text('3 / 5 left'), findsOneWidget);
+    expect(find.bySemanticsLabel('Generated image 1'), findsOneWidget);
+  });
+
+  testWidgets('generates prompt images from a source image URL', (
+    tester,
+  ) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Cyber skin concept',
+                content: 'Create a neon Honor of Kings skin splash art.',
+                tags: ['skin', 'cyber'],
+                imageUrl: '',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Image to image'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Source image URL'),
+      'https://example.test/source.png',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Generate image'));
+    await tester.pumpAndSettle();
+
+    expect(repository.generatedPromptId, '7');
+    expect(
+      repository.generatedSourceImageUrl,
+      'https://example.test/source.png',
+    );
     expect(find.bySemanticsLabel('Generated image 1'), findsOneWidget);
   });
 

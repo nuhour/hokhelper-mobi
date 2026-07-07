@@ -372,6 +372,26 @@ void main() {
     expect(result.quota.remaining, 2);
   });
 
+  test('generates prompt images with hokx image mode payload', () async {
+    final apiClient = _FakeApiClient();
+    final repository = PromptsRepository(apiClient: apiClient);
+
+    await repository.generateImages(
+      promptId: '7',
+      customContent: 'Restyle this HOK hero splash.',
+      sourceImageUrl: 'https://example.test/source.png',
+    );
+
+    expect(apiClient.postPath, '/prompt/generate');
+    expect(apiClient.postBody, {
+      'prompt_id': '7',
+      'mode': 'image',
+      'count': 1,
+      'custom_content': 'Restyle this HOK hero splash.',
+      'source_image': 'https://example.test/source.png',
+    });
+  });
+
   test('sets generated prompt image as prompt cover', () async {
     final apiClient = _FakeApiClient();
     final repository = PromptsRepository(apiClient: apiClient);
