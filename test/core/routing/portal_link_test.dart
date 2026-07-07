@@ -248,6 +248,23 @@ void main() {
     );
   });
 
+  test('normalizes tier list tool query links to scheme detail routes', () {
+    expect(
+      normalizePortalLinkTarget('/tools/tier-list?id=42'),
+      '/tools/tier-list/42',
+    );
+    expect(
+      normalizePortalLinkTarget('/tools/tier-list?scheme_id=42&mode=edit'),
+      '/tools/tier-list/42?mode=edit',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/tools/tier-list?id=42',
+      ),
+      '/tools/tier-list/42',
+    );
+  });
+
   test('normalizes esports query links to focused team and player routes', () {
     expect(
       normalizePortalLinkTarget('/esports?team_id=1&season=2026'),

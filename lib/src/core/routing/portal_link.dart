@@ -118,6 +118,10 @@ String _normalizeInternalTarget(String target) {
     return _normalizeBpSimulatorTarget(uri).toString();
   }
 
+  if (uri.path == '/tools/tier-list') {
+    return _normalizeTierListToolTarget(uri).toString();
+  }
+
   if (uri.path == '/esports' || uri.path == '/tools/esports') {
     return _normalizeEsportsTarget(uri).toString();
   }
@@ -229,6 +233,19 @@ bool _isBpSimulatorDetailPath(Uri uri) {
   return uri.pathSegments.length == 3 &&
       uri.pathSegments[0] == 'tools' &&
       uri.pathSegments[1] == 'bp-simulator';
+}
+
+Uri _normalizeTierListToolTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final schemeId =
+      queryParameters.remove('id')?.trim() ??
+      queryParameters.remove('scheme_id')?.trim();
+  return Uri(
+    path: schemeId == null || schemeId.isEmpty
+        ? '/tools/tier-list'
+        : '/tools/tier-list/$schemeId',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  );
 }
 
 Uri _normalizeEsportsTarget(Uri uri) {
