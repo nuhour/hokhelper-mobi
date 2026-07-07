@@ -12,7 +12,7 @@ import 'package:hok_helper_mobile/src/features/search/presentation/search_screen
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeSearchRepository extends SearchRepository {
-  _FakeSearchRepository()
+  _FakeSearchRepository({this.resultData = _defaultResultData})
     : super(
         apiClient: ApiClient(
           config: const AppConfig(
@@ -24,29 +24,30 @@ class _FakeSearchRepository extends SearchRepository {
 
   String? requestedKeyword;
   int? requestedRegionId;
+  final Map<String, dynamic> resultData;
+
+  static const _defaultResultData = {
+    'heroes': [
+      {'id': 166, 'name': 'Arthur', 'subtitle': 'Paladin captain'},
+    ],
+    'builds': [
+      {
+        'id': 9,
+        'name': 'Arthur Clash Build',
+        'subtitle': 'Warrior sustain setup',
+        'url': '/about',
+      },
+    ],
+  };
 
   @override
   Future<Map<String, dynamic>> search(String keyword, int regionId) async {
     requestedKeyword = keyword;
     requestedRegionId = regionId;
-    return const {
+    return {
       'success': true,
       'message': 'ok',
-      'result': {
-        'data': {
-          'heroes': [
-            {'id': 166, 'name': 'Arthur', 'subtitle': 'Paladin captain'},
-          ],
-          'builds': [
-            {
-              'id': 9,
-              'name': 'Arthur Clash Build',
-              'subtitle': 'Warrior sustain setup',
-              'url': '/about',
-            },
-          ],
-        },
-      },
+      'result': {'data': resultData},
     };
   }
 }
@@ -175,5 +176,64 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/about');
     expect(find.text('About HOK Helper'), findsOneWidget);
     expect(find.text('Global Community Intel'), findsOneWidget);
+  });
+
+  testWidgets('ranked player search results open the player leaderboard', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _FakeSearchRepository(
+      resultData: const {
+        'players': [
+          {
+            'player_id': 'peak-1',
+            'player_name': 'PeakPlayer',
+            'rank_type': 'peak',
+            'region': 44,
+          },
+        ],
+      },
+    );
+    final router = GoRouter(
+      initialLocation: '/search?q=peak',
+      routes: [
+        GoRoute(
+          path: '/search',
+          builder: (context, state) =>
+              SearchScreen(initialQuery: state.uri.queryParameters['q']),
+        ),
+        GoRoute(
+          path: '/leaderboard',
+          builder: (context, state) => Text(
+            'Leaderboard ${state.uri.queryParameters['rank_type']} ${state.uri.queryParameters['region_id']}',
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [searchRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Players (1)'), findsOneWidget);
+    expect(find.text('PeakPlayer'), findsOneWidget);
+
+    await tester.tap(find.text('PeakPlayer'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/leaderboard');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['rank_type'],
+      'peak',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['region_id'],
+      '44',
+    );
+    expect(find.text('Leaderboard peak 44'), findsOneWidget);
   });
 }

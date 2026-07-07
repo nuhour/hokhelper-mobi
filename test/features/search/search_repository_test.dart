@@ -88,6 +88,7 @@ void main() {
             {
               'player_id': 'ranked-1',
               'player_name': 'PeakPlayer',
+              'region': 44,
               'rank_type': 'peak',
             },
           ],
@@ -124,6 +125,7 @@ void main() {
     expect(urlFor('skins'), '/skin-gallery/77');
     expect(urlFor('equips'), '/stats?entry=equip_rank&equip_id=1337');
     expect(urlFor('posts'), '/content/community/post/42');
+    expect(urlFor('players'), '/leaderboard?rank_type=peak&region_id=44');
     expect(urlFor('teams'), '/esports/teams/kpl-ag');
     expect(urlFor('pro_players'), '/esports/players/cat');
     expect(urlFor('leaks'), 'https://example.test/leak');

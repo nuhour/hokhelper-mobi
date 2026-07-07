@@ -197,6 +197,7 @@ String _readUrl(Map<String, dynamic> json, String groupKey) {
       '/content/community/post',
       json['id'] ?? json['post_id'],
     ),
+    'players' => _playerLeaderboardPath(json),
     'teams' => _idPath('/esports/teams', json['id'] ?? json['team_id']),
     'pro_players' => _idPath(
       '/esports/players',
@@ -290,5 +291,23 @@ String _equipStatsPath(Object? equipId) {
   return Uri(
     path: '/stats',
     queryParameters: {'entry': 'equip_rank', 'equip_id': value},
+  ).toString();
+}
+
+String _playerLeaderboardPath(Map<String, dynamic> json) {
+  final rankType = _readString(json['rank_type']).toLowerCase();
+  final region = _readString(json['region'] ?? json['region_id']);
+  final queryParameters = <String, String>{};
+
+  if (rankType == 'peak') {
+    queryParameters['rank_type'] = 'peak';
+  }
+  if (int.tryParse(region) case final regionId? when regionId > 0) {
+    queryParameters['region_id'] = '$regionId';
+  }
+
+  return Uri(
+    path: '/leaderboard',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
   ).toString();
 }
