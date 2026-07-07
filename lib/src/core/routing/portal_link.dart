@@ -32,6 +32,30 @@ String _normalizeInternalTarget(String target) {
     ).toString();
   }
 
+  if (uri.path == '/hero-gallery') {
+    final heroId = uri.queryParameters['hero_id']?.trim();
+    if (heroId != null && heroId.isNotEmpty) {
+      return '/heroes/$heroId';
+    }
+    return uri.replace(path: '/heroes').toString();
+  }
+
+  if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'hero-gallery') {
+    return uri.replace(path: '/heroes/${uri.pathSegments[1]}').toString();
+  }
+
+  if (uri.path == '/stats' && uri.queryParameters['entry'] == 'hero_trend') {
+    final heroId = uri.queryParameters['hero_id']?.trim();
+    return uri
+        .replace(
+          path: '/trends',
+          queryParameters: heroId == null || heroId.isEmpty
+              ? null
+              : {'hero_id': heroId},
+        )
+        .toString();
+  }
+
   if (uri.path == '/community/leaks' ||
       uri.path == '/leaks' ||
       uri.path == '/skin-leaks') {

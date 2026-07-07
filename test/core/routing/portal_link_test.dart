@@ -14,6 +14,15 @@ void main() {
   });
 
   test('normalizes hokx web aliases to mobile shell routes', () {
+    expect(normalizePortalLinkTarget('/hero-gallery'), '/heroes');
+    expect(
+      normalizePortalLinkTarget('/hero-gallery?hero_id=101'),
+      '/heroes/101',
+    );
+    expect(
+      normalizePortalLinkTarget('/hero-gallery/101?tab=history'),
+      '/heroes/101?tab=history',
+    );
     expect(
       normalizePortalLinkTarget('/builds?hero_id=166'),
       '/tools/builds?hero_id=166',
@@ -41,6 +50,10 @@ void main() {
     expect(
       normalizePortalLinkTarget('/stats?entry=equip_rank&equip_id=88'),
       '/tools/stats?entry=equip_rank&equip_id=88',
+    );
+    expect(
+      normalizePortalLinkTarget('/stats?entry=hero_trend&hero_id=101'),
+      '/trends?hero_id=101',
     );
     expect(
       normalizePortalLinkTarget('/rankings?lane=mid'),
