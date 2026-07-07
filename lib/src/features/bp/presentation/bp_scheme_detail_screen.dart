@@ -252,6 +252,10 @@ class _BpSchemeDetailCard extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _DraftCountGrid(scheme: scheme),
+            if (scheme.hasCurrentBoardHeroes) ...[
+              const SizedBox(height: 16),
+              _CurrentBpBoard(scheme: scheme),
+            ],
             const SizedBox(height: 16),
             Wrap(
               alignment: WrapAlignment.end,
@@ -593,6 +597,110 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
         redBanCount: _redBanCount,
         bluePickCount: _bluePickCount,
         redPickCount: _redPickCount,
+      ),
+    );
+  }
+}
+
+class _CurrentBpBoard extends StatelessWidget {
+  const _CurrentBpBoard({required this.scheme});
+
+  final BpSchemeSummary scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current BP Board',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _BpHeroSlotGroup(
+              title: 'Blue ban slots',
+              heroIds: scheme.blueBanHeroIds,
+              color: Colors.blueAccent,
+            ),
+            _BpHeroSlotGroup(
+              title: 'Red ban slots',
+              heroIds: scheme.redBanHeroIds,
+              color: Colors.redAccent,
+            ),
+            _BpHeroSlotGroup(
+              title: 'Blue pick slots',
+              heroIds: scheme.bluePickHeroIds,
+              color: Colors.lightBlueAccent,
+            ),
+            _BpHeroSlotGroup(
+              title: 'Red pick slots',
+              heroIds: scheme.redPickHeroIds,
+              color: Colors.deepOrangeAccent,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BpHeroSlotGroup extends StatelessWidget {
+  const _BpHeroSlotGroup({
+    required this.title,
+    required this.heroIds,
+    required this.color,
+  });
+
+  final String title;
+  final List<int> heroIds;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (heroIds.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppTheme.muted,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final heroId in heroIds)
+                Chip(
+                  avatar: Icon(
+                    Icons.sports_esports_outlined,
+                    size: 18,
+                    color: color,
+                  ),
+                  label: Text('Hero #$heroId'),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

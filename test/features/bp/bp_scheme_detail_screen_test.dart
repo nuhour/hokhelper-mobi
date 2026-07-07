@@ -231,4 +231,51 @@ void main() {
     expect(find.text('3 bans · 3 picks'), findsOneWidget);
     expect(find.text('BP draft progress saved'), findsOneWidget);
   });
+
+  testWidgets('renders BP current hero slots on the mobile detail screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpSchemeDetailProvider('12').overrideWith((ref) async {
+            return const BpSchemeSummary(
+              id: '12',
+              name: 'KPL Finals Draft',
+              createdAt: '2026-07-03T10:00:00Z',
+              boMode: 7,
+              teamAName: 'Wolves',
+              teamBName: 'AG',
+              sideSelectionRule: 'loser_selects',
+              gameNumber: 3,
+              historyCount: 2,
+              currentStepIndex: 4,
+              blueBanCount: 1,
+              redBanCount: 1,
+              bluePickCount: 1,
+              redPickCount: 1,
+              blueBanHeroIds: [199],
+              redBanHeroIds: [133],
+              bluePickHeroIds: [111],
+              redPickHeroIds: [222],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: BpSchemeDetailScreen(schemeId: '12')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Current BP Board'), findsOneWidget);
+    expect(find.text('Blue bans'), findsOneWidget);
+    expect(find.text('Hero #199'), findsOneWidget);
+    expect(find.text('Red bans'), findsOneWidget);
+    expect(find.text('Hero #133'), findsOneWidget);
+    expect(find.text('Blue picks'), findsOneWidget);
+    expect(find.text('Hero #111'), findsOneWidget);
+    expect(find.text('Red picks'), findsOneWidget);
+    expect(find.text('Hero #222'), findsOneWidget);
+  });
 }

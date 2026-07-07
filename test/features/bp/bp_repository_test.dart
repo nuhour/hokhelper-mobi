@@ -178,6 +178,10 @@ void main() {
     expect(schemes.single.boModeText, 'BO7');
     expect(schemes.single.progressText, 'Game 3 · Step 4');
     expect(schemes.single.historyCountText, '2 games');
+    expect(schemes.single.blueBanHeroIds, [199]);
+    expect(schemes.single.redBanHeroIds, [133]);
+    expect(schemes.single.bluePickHeroIds, [111]);
+    expect(schemes.single.redPickHeroIds, [222]);
   });
 
   test('loads a BP scheme detail with hokx detail endpoint', () async {
@@ -191,6 +195,10 @@ void main() {
     expect(scheme.id, '12');
     expect(scheme.name, 'KPL Finals Draft');
     expect(scheme.phaseSummaryText, '2 bans · 2 picks');
+    expect(scheme.blueBanHeroIds, [199]);
+    expect(scheme.redBanHeroIds, [133]);
+    expect(scheme.bluePickHeroIds, [111]);
+    expect(scheme.redPickHeroIds, [222]);
   });
 
   test('creates a BP scheme with hokx-compatible request fields', () async {

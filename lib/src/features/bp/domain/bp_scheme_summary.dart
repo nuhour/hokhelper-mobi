@@ -14,6 +14,10 @@ class BpSchemeSummary {
     required this.redBanCount,
     required this.bluePickCount,
     required this.redPickCount,
+    this.blueBanHeroIds = const [],
+    this.redBanHeroIds = const [],
+    this.bluePickHeroIds = const [],
+    this.redPickHeroIds = const [],
   });
 
   final String id;
@@ -30,6 +34,17 @@ class BpSchemeSummary {
   final int redBanCount;
   final int bluePickCount;
   final int redPickCount;
+  final List<int> blueBanHeroIds;
+  final List<int> redBanHeroIds;
+  final List<int> bluePickHeroIds;
+  final List<int> redPickHeroIds;
+
+  bool get hasCurrentBoardHeroes {
+    return blueBanHeroIds.isNotEmpty ||
+        redBanHeroIds.isNotEmpty ||
+        bluePickHeroIds.isNotEmpty ||
+        redPickHeroIds.isNotEmpty;
+  }
 
   String get matchupText {
     final left = teamAName.isEmpty ? 'Team A' : teamAName;
@@ -90,8 +105,33 @@ class BpSchemeSummary {
       redBanCount: _readListLength(state['redBans']),
       bluePickCount: _readListLength(state['bluePicks']),
       redPickCount: _readListLength(state['redPicks']),
+      blueBanHeroIds: _readHeroIds(state['blueBans']),
+      redBanHeroIds: _readHeroIds(state['redBans']),
+      bluePickHeroIds: _readHeroIds(state['bluePicks']),
+      redPickHeroIds: _readHeroIds(state['redPicks']),
     );
   }
+}
+
+List<int> _readHeroIds(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+  return value
+      .map((item) {
+        if (item is Map) {
+          return _readInt(
+            item['hero_id'] ??
+                item['heroId'] ??
+                item['id'] ??
+                item['hero'] ??
+                item['value'],
+          );
+        }
+        return _readInt(item);
+      })
+      .where((id) => id > 0)
+      .toList(growable: false);
 }
 
 int _readListLength(Object? value) {
