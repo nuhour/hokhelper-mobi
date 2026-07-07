@@ -216,6 +216,21 @@ void main() {
     });
   });
 
+  test('loads leak posts with category and platform filters', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    await repository.loadLeaks(3, category: 'skin', platform: 'youtube');
+
+    expect(apiClient.getQueries['/leak/posts'], {
+      'page': 1,
+      'pageSize': 30,
+      'region_id': 3,
+      'category': 'skin',
+      'platform': 'youtube',
+    });
+  });
+
   test('toggles community post like with web-compatible endpoint', () async {
     final apiClient = _FakeApiClient();
     final repository = CommunityRepository(apiClient: apiClient);

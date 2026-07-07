@@ -35,6 +35,8 @@ class _FakeCommunityRepository extends CommunityRepository {
   String? requestedPostSearch;
   String? requestedPostTag;
   CommunityPostSort? requestedPostSort;
+  String? requestedLeakCategory;
+  String? requestedLeakPlatform;
   final requestedPostPages = <int>[];
   final requestedLeakPages = <int>[];
   List<CommunityPostSummary> Function(int page, int pageSize)? loadPostsPage;
@@ -65,8 +67,12 @@ class _FakeCommunityRepository extends CommunityRepository {
     int regionId, {
     int page = 1,
     int pageSize = 30,
+    String category = 'all',
+    String platform = 'all',
   }) async {
     requestedLeakPages.add(page);
+    requestedLeakCategory = category;
+    requestedLeakPlatform = platform;
     final loader = loadLeaksPage;
     if (loader == null) {
       return const [];
@@ -275,6 +281,74 @@ void main() {
 
     expect(find.text('Leak Search'), findsOneWidget);
     expect(find.text('Showing leaks matching "Lam".'), findsOneWidget);
+    expect(find.text('Lam skin signal'), findsOneWidget);
+    expect(find.text('Angela animation leak'), findsNothing);
+  });
+
+  testWidgets('filters leaks by category and platform like the hokx portal', (
+    tester,
+  ) async {
+    final repository = _FakeCommunityRepository();
+    repository.loadLeaksPage = (page, pageSize) {
+      return const [
+        LeakPostSummary(
+          id: '502',
+          title: 'Lam skin signal',
+          content: 'A cyber themed Lam skin appeared in preview.',
+          category: 'skin',
+          platform: 'youtube',
+          authorName: 'leaker',
+          authorHandle: '@leaker',
+          authorAvatarUrl: '',
+          mediaUrl: '',
+          mediaType: 'image',
+          publishedAt: '2026-07-02T12:00:00Z',
+          likeCount: 12,
+          viewCount: 99,
+          keywords: ['Lam', 'skin'],
+        ),
+        LeakPostSummary(
+          id: '503',
+          title: 'Angela animation leak',
+          content: 'A mage animation appeared in preview.',
+          category: 'hero',
+          platform: 'x',
+          authorName: 'scout',
+          authorHandle: '@scout',
+          authorAvatarUrl: '',
+          mediaUrl: '',
+          mediaType: 'image',
+          publishedAt: '2026-07-02T12:00:00Z',
+          likeCount: 8,
+          viewCount: 77,
+          keywords: ['Angela'],
+        ),
+      ];
+    };
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Skin'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All Platforms'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('YouTube').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedLeakCategory, 'skin');
+    expect(repository.requestedLeakPlatform, 'youtube');
     expect(find.text('Lam skin signal'), findsOneWidget);
     expect(find.text('Angela animation leak'), findsNothing);
   });

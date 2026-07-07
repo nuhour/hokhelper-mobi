@@ -74,10 +74,48 @@ final leakPostsProvider = FutureProvider<List<LeakPostSummary>>((ref) async {
       .loadLeaks(regionId, pageSize: _leakPostsPageSize);
 });
 
+final leakPostsQueryProvider =
+    FutureProvider.family<List<LeakPostSummary>, LeakPostsQuery>((
+      ref,
+      query,
+    ) async {
+      if (query.isDefault) {
+        return ref.watch(leakPostsProvider.future);
+      }
+      final regionId = await ref.watch(leakPostsRegionProvider.future);
+      return ref
+          .watch(communityRepositoryProvider)
+          .loadLeaks(
+            regionId,
+            pageSize: _leakPostsPageSize,
+            category: query.category,
+            platform: query.platform,
+          );
+    });
+
 final leakPostsRegionProvider = FutureProvider<int>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
   return settings.region.regionId;
 });
+
+class LeakPostsQuery {
+  const LeakPostsQuery({this.category = 'all', this.platform = 'all'});
+
+  final String category;
+  final String platform;
+
+  bool get isDefault => category == 'all' && platform == 'all';
+
+  @override
+  bool operator ==(Object other) {
+    return other is LeakPostsQuery &&
+        other.category == category &&
+        other.platform == platform;
+  }
+
+  @override
+  int get hashCode => Object.hash(category, platform);
+}
 
 class CommunityPostsQuery {
   const CommunityPostsQuery({
@@ -174,10 +212,7 @@ class CommunityScreen extends ConsumerWidget {
           body: TabBarView(
             children: [
               _PostsTab(initialView: initialView, initialTag: initialPostTag),
-              _LeaksTab(
-                value: ref.watch(leakPostsProvider),
-                initialQuery: initialLeakQuery,
-              ),
+              _LeaksTab(initialQuery: initialLeakQuery),
             ],
           ),
         ),
@@ -866,9 +901,8 @@ class _PostsEmptyState extends StatelessWidget {
 }
 
 class _LeaksTab extends ConsumerStatefulWidget {
-  const _LeaksTab({required this.value, required this.initialQuery});
+  const _LeaksTab({required this.initialQuery});
 
-  final AsyncValue<List<LeakPostSummary>> value;
   final String? initialQuery;
 
   @override
@@ -877,42 +911,68 @@ class _LeaksTab extends ConsumerStatefulWidget {
 
 class _LeaksTabState extends ConsumerState<_LeaksTab> {
   final _extraLeaks = <LeakPostSummary>[];
+  var _category = 'all';
+  var _platform = 'all';
   var _nextLeaksPage = 2;
   var _hasMoreLeaks = true;
   var _isLoadingMoreLeaks = false;
 
   @override
   Widget build(BuildContext context) {
+    final leakQuery = LeakPostsQuery(category: _category, platform: _platform);
+    final leakValue = ref.watch(leakPostsQueryProvider(leakQuery));
     return AppAsyncView<List<LeakPostSummary>>(
-      value: widget.value,
-      retry: () => ref.invalidate(leakPostsProvider),
+      value: leakValue,
+      retry: () => ref.invalidate(leakPostsQueryProvider(leakQuery)),
       data: (leaks) {
         final query = widget.initialQuery?.trim() ?? '';
         final allLeaks = [...leaks, ..._extraLeaks];
+        final filteredLeaks = allLeaks
+            .where(_matchesSelectedFilters)
+            .toList(growable: false);
         final visibleLeaks = query.isEmpty
-            ? allLeaks
-            : allLeaks
+            ? filteredLeaks
+            : filteredLeaks
                   .where((leak) => _matchesQuery(leak, query))
                   .toList(growable: false);
 
         if (visibleLeaks.isEmpty) {
-          return AppEmptyState(
-            icon: Icons.campaign_outlined,
-            title: query.isEmpty ? 'No leaks found' : 'No matching leaks',
-            message: query.isEmpty
-                ? 'Pull to refresh or switch region in settings.'
-                : 'No leaks matched "$query" in this region.',
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+            children: [
+              _LeakFilterControls(
+                category: _category,
+                platform: _platform,
+                onCategoryChanged: _setCategory,
+                onPlatformChanged: _setPlatform,
+              ),
+              const SizedBox(height: 12),
+              AppEmptyState(
+                icon: Icons.campaign_outlined,
+                title: query.isEmpty ? 'No leaks found' : 'No matching leaks',
+                message: query.isEmpty
+                    ? 'Pull to refresh, switch filters, or change region in settings.'
+                    : 'No leaks matched "$query" in this region.',
+              ),
+            ],
           );
         }
 
         return RefreshIndicator(
           onRefresh: () async {
             _resetLoadedPages();
-            return ref.refresh(leakPostsProvider.future);
+            return ref.refresh(leakPostsQueryProvider(leakQuery).future);
           },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
+              _LeakFilterControls(
+                category: _category,
+                platform: _platform,
+                onCategoryChanged: _setCategory,
+                onPlatformChanged: _setPlatform,
+              ),
+              const SizedBox(height: 12),
               if (query.isNotEmpty) ...[
                 _ModePill(
                   icon: Icons.search,
@@ -965,6 +1025,18 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
     ].any((value) => value.toLowerCase().contains(needle));
   }
 
+  bool _matchesSelectedFilters(LeakPostSummary leak) {
+    final leakCategory = leak.category.trim().toLowerCase();
+    final leakPlatform = _normalizeLeakPlatform(leak.platform);
+    return (_category == 'all' || leakCategory == _category) &&
+        (_platform == 'all' || leakPlatform == _platform);
+  }
+
+  String _normalizeLeakPlatform(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'x' ? 'twitter' : normalized;
+  }
+
   bool _canLoadMoreLeaks(List<LeakPostSummary> firstPageLeaks) {
     return _hasMoreLeaks && firstPageLeaks.length >= _leakPostsPageSize;
   }
@@ -982,6 +1054,8 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
             regionId,
             page: _nextLeaksPage,
             pageSize: _leakPostsPageSize,
+            category: _category,
+            platform: _platform,
           );
       if (!mounted) {
         return;
@@ -1010,6 +1084,72 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
     _nextLeaksPage = 2;
     _hasMoreLeaks = true;
     _isLoadingMoreLeaks = false;
+  }
+
+  void _setCategory(String value) {
+    setState(() {
+      _category = value;
+      _resetLoadedPages();
+    });
+  }
+
+  void _setPlatform(String value) {
+    setState(() {
+      _platform = value;
+      _resetLoadedPages();
+    });
+  }
+}
+
+class _LeakFilterControls extends StatelessWidget {
+  const _LeakFilterControls({
+    required this.category,
+    required this.platform,
+    required this.onCategoryChanged,
+    required this.onPlatformChanged,
+  });
+
+  final String category;
+  final String platform;
+  final ValueChanged<String> onCategoryChanged;
+  final ValueChanged<String> onPlatformChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'all', label: Text('All')),
+            ButtonSegment(value: 'hero', label: Text('Hero')),
+            ButtonSegment(value: 'skin', label: Text('Skin')),
+          ],
+          selected: {category},
+          showSelectedIcon: false,
+          onSelectionChanged: (selection) => onCategoryChanged(selection.first),
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          initialValue: platform,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.public_outlined),
+            labelText: 'Platform',
+          ),
+          items: const [
+            DropdownMenuItem(value: 'all', child: Text('All Platforms')),
+            DropdownMenuItem(value: 'twitter', child: Text('Twitter / X')),
+            DropdownMenuItem(value: 'youtube', child: Text('YouTube')),
+            DropdownMenuItem(value: 'instagram', child: Text('Instagram')),
+            DropdownMenuItem(value: 'facebook', child: Text('Facebook')),
+            DropdownMenuItem(value: 'telegram', child: Text('Telegram')),
+            DropdownMenuItem(value: 'tiktok', child: Text('TikTok')),
+            DropdownMenuItem(value: 'reddit', child: Text('Reddit')),
+          ],
+          onChanged: (value) => onPlatformChanged(value ?? 'all'),
+        ),
+      ],
+    );
   }
 }
 

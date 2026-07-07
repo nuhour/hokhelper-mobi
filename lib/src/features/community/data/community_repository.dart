@@ -73,16 +73,20 @@ class CommunityRepository {
     int regionId, {
     int page = 1,
     int pageSize = 30,
+    String category = 'all',
+    String platform = 'all',
   }) async {
-    final json = await apiClient.getJson(
-      '/leak/posts',
-      query: {
-        'page': page,
-        'pageSize': pageSize,
-        'region_id': regionId,
-        'category': 'all',
-      },
-    );
+    final query = <String, dynamic>{
+      'page': page,
+      'pageSize': pageSize,
+      'region_id': regionId,
+      'category': category.trim().isEmpty ? 'all' : category.trim(),
+    };
+    final platformValue = platform.trim();
+    if (platformValue.isNotEmpty && platformValue != 'all') {
+      query['platform'] = platformValue;
+    }
+    final json = await apiClient.getJson('/leak/posts', query: query);
 
     return _readRows(json).map(LeakPostSummary.fromJson).toList();
   }
