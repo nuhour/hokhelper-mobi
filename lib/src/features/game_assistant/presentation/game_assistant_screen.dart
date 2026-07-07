@@ -6,19 +6,21 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_section_header.dart';
 
 class GameAssistantScreen extends StatelessWidget {
-  const GameAssistantScreen({super.key});
+  const GameAssistantScreen({this.initialTrack, super.key});
+
+  final String? initialTrack;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: 'Game Assistant'),
-          SizedBox(height: 8),
-          Text(
+          const AppSectionHeader(title: 'Game Assistant'),
+          const SizedBox(height: 8),
+          const Text(
             'Mobile Companion App',
             style: TextStyle(
               color: AppTheme.gold,
@@ -26,19 +28,19 @@ class GameAssistantScreen extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          SizedBox(height: 10),
-          Text(
+          const SizedBox(height: 10),
+          const Text(
             'A lightweight match companion for timers, economy reads, cooldown tracking, and tactical prompts.',
             style: TextStyle(color: AppTheme.muted, height: 1.45),
           ),
-          SizedBox(height: 18),
-          _PhonePreview(),
-          SizedBox(height: 18),
-          _FeatureGrid(),
-          SizedBox(height: 18),
-          _DownloadSection(),
-          SizedBox(height: 18),
-          _LiveMatchConsole(),
+          const SizedBox(height: 18),
+          const _PhonePreview(),
+          const SizedBox(height: 18),
+          const _FeatureGrid(),
+          const SizedBox(height: 18),
+          const _DownloadSection(),
+          const SizedBox(height: 18),
+          _LiveMatchConsole(initialTrack: initialTrack),
         ],
       ),
     );
@@ -605,7 +607,9 @@ class _FeatureCard extends StatelessWidget {
 }
 
 class _LiveMatchConsole extends StatefulWidget {
-  const _LiveMatchConsole();
+  const _LiveMatchConsole({this.initialTrack});
+
+  final String? initialTrack;
 
   @override
   State<_LiveMatchConsole> createState() => _LiveMatchConsoleState();
@@ -618,6 +622,15 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
   var _blueBuffSeconds = 15;
   var _redBuffSeconds = 42;
   final _trackedCooldowns = <_TrackedCooldown>[];
+
+  @override
+  void initState() {
+    super.initState();
+    final initialCooldown = _initialCooldown(widget.initialTrack);
+    if (initialCooldown != null) {
+      _trackedCooldowns.add(initialCooldown);
+    }
+  }
 
   @override
   void dispose() {
@@ -824,6 +837,18 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
     final seconds = totalSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
+}
+
+_TrackedCooldown? _initialCooldown(String? value) {
+  return switch (value?.trim().toLowerCase()) {
+    'flash' || 'mid_flash' || 'enemy_mid_flash' => _TrackedCooldown(
+      label: 'Enemy Mid Flash',
+      remainingSeconds: 120,
+    ),
+    'ultimate' || 'ult' || 'mid_ultimate' || 'enemy_mid_ultimate' =>
+      _TrackedCooldown(label: 'Enemy Mid Ultimate', remainingSeconds: 45),
+    _ => null,
+  };
 }
 
 class _TrackedCooldown {

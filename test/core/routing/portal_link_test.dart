@@ -64,6 +64,10 @@ void main() {
       '/tools/rankings?tab=equips',
     );
     expect(
+      normalizePortalLinkTarget('/game-assistant?track=flash'),
+      '/tools/game-assistant?track=flash',
+    );
+    expect(
       normalizePortalLinkTarget('/prompts?tab=favorites'),
       '/tools/prompts?tab=favorites',
     );

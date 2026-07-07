@@ -888,7 +888,9 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'game-assistant',
-                    builder: (context, state) => const GameAssistantScreen(),
+                    builder: (context, state) => GameAssistantScreen(
+                      initialTrack: state.uri.queryParameters['track'],
+                    ),
                   ),
                   GoRoute(
                     path: 'rank-fortune',

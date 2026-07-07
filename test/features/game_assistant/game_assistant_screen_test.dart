@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/game_assistant/presentation/game_assistant_screen.dart';
 
 void main() {
@@ -83,5 +86,43 @@ void main() {
     await tester.pump();
 
     expect(find.text('Enemy Mid Flash 117s'), findsNothing);
+  });
+
+  testWidgets('opens with a tracked cooldown from hokx query state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: GameAssistantScreen(initialTrack: 'flash')),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Live Match Console'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Enemy Mid Flash 120s'), findsOneWidget);
+  });
+
+  testWidgets('web game assistant alias opens with tracked cooldown', (
+    tester,
+  ) async {
+    final router = createAppRouter()..go('/game-assistant?track=ultimate');
+
+    await tester.pumpWidget(ProviderScope(child: HokHelperApp(router: router)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Live Match Console'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/game-assistant',
+    );
+    expect(find.text('Enemy Mid Ultimate 45s'), findsOneWidget);
   });
 }
