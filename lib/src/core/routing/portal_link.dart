@@ -104,6 +104,10 @@ String _normalizeInternalTarget(String target) {
     return uri.replace(path: '/me').toString();
   }
 
+  if (uri.path == '/prompts' || uri.path == '/tools/prompts') {
+    return _normalizePromptsTarget(uri).toString();
+  }
+
   final aliasPath = _mobileAliasPath(uri.path);
   if (aliasPath != null) {
     return uri.replace(path: aliasPath).toString();
@@ -126,6 +130,22 @@ String _normalizeCommunityTarget(Uri uri) {
     path: '/content/community',
     queryParameters: queryParameters.isEmpty ? null : queryParameters,
   ).toString();
+}
+
+Uri _normalizePromptsTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final promptId = queryParameters.remove('prompt_id')?.trim();
+  final normalizedQueryParameters = <String, String>{};
+  if (promptId != null && promptId.isNotEmpty) {
+    normalizedQueryParameters['promptId'] = promptId;
+  }
+  normalizedQueryParameters.addAll(queryParameters);
+  return Uri(
+    path: '/tools/prompts',
+    queryParameters: normalizedQueryParameters.isEmpty
+        ? null
+        : normalizedQueryParameters,
+  );
 }
 
 String? _mobileAliasPath(String path) {

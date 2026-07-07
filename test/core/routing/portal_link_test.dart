@@ -159,4 +159,21 @@ void main() {
       '/content/community?tab=likes',
     );
   });
+
+  test('normalizes prompt detail query links to mobile prompt ids', () {
+    expect(
+      normalizePortalLinkTarget('/prompts?prompt_id=42'),
+      '/tools/prompts?promptId=42',
+    );
+    expect(
+      normalizePortalLinkTarget('/tools/prompts?prompt_id=42&tab=myPrompts'),
+      '/tools/prompts?promptId=42&tab=myPrompts',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/prompts?prompt_id=42',
+      ),
+      '/tools/prompts?promptId=42',
+    );
+  });
 }
