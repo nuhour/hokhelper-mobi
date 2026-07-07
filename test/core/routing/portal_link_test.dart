@@ -143,6 +143,20 @@ void main() {
     expect(normalizePortalLinkTarget('/profile/42'), '/profile/42');
   });
 
+  test('normalizes profile user query links to public profile routes', () {
+    expect(normalizePortalLinkTarget('/profile?user_id=42'), '/profile/42');
+    expect(
+      normalizePortalLinkTarget('/profile?user_id=42&tab=followers'),
+      '/profile/42?tab=followers',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/profile?user_id=42',
+      ),
+      '/profile/42',
+    );
+  });
+
   test('normalizes community view query links to mobile tabs', () {
     expect(
       normalizePortalLinkTarget('/community?view=my'),

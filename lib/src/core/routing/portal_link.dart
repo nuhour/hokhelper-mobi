@@ -101,7 +101,7 @@ String _normalizeInternalTarget(String target) {
   }
 
   if (uri.path == '/profile') {
-    return uri.replace(path: '/me').toString();
+    return _normalizeProfileTarget(uri);
   }
 
   if (uri.path == '/prompts' || uri.path == '/tools/prompts') {
@@ -144,6 +144,18 @@ String _normalizeCommunityTarget(Uri uri) {
     path: '/content/community',
     queryParameters: queryParameters.isEmpty ? null : queryParameters,
   ).toString();
+}
+
+String _normalizeProfileTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final userId = queryParameters.remove('user_id')?.trim();
+  if (userId != null && userId.isNotEmpty) {
+    return Uri(
+      path: '/profile/$userId',
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    ).toString();
+  }
+  return uri.replace(path: '/me').toString();
 }
 
 Uri _normalizePromptsTarget(Uri uri) {
