@@ -67,6 +67,8 @@ class _FakeApiClient extends ApiClient {
             'like_count': 12,
             'favorite_count': 5,
             'clone_count': 3,
+            'is_liked': true,
+            'is_favorited': true,
           },
         ],
       },
@@ -180,6 +182,8 @@ void main() {
       expect(schemes.single.likeCount, 12);
       expect(schemes.single.favoriteCount, 5);
       expect(schemes.single.cloneCount, 3);
+      expect(schemes.single.isLiked, isTrue);
+      expect(schemes.single.isFavorited, isTrue);
     },
   );
 
@@ -266,6 +270,26 @@ void main() {
     await repository.favoriteBuildScheme(7);
 
     expect(apiClient.postPath, '/build/schemes/favorite');
+    expect(apiClient.postBody, {'scheme_id': '7'});
+  });
+
+  test('unlikes build schemes with hokx-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    await repository.unlikeBuildScheme(7);
+
+    expect(apiClient.postPath, '/build/schemes/unlike');
+    expect(apiClient.postBody, {'scheme_id': '7'});
+  });
+
+  test('unfavorites build schemes with hokx-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    await repository.unfavoriteBuildScheme(7);
+
+    expect(apiClient.postPath, '/build/schemes/unfavorite');
     expect(apiClient.postBody, {'scheme_id': '7'});
   });
 

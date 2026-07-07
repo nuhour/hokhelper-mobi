@@ -70,13 +70,17 @@ final buildSimSaveSchemeProvider =
 final buildSimLikeSchemeProvider =
     Provider<Future<void> Function(BuildSchemeSummary)>((ref) {
       final repository = ref.watch(buildsRepositoryProvider);
-      return (scheme) => repository.likeBuildScheme(scheme.id);
+      return (scheme) => scheme.isLiked
+          ? repository.unlikeBuildScheme(scheme.id)
+          : repository.likeBuildScheme(scheme.id);
     });
 
 final buildSimFavoriteSchemeProvider =
     Provider<Future<void> Function(BuildSchemeSummary)>((ref) {
       final repository = ref.watch(buildsRepositoryProvider);
-      return (scheme) => repository.favoriteBuildScheme(scheme.id);
+      return (scheme) => scheme.isFavorited
+          ? repository.unfavoriteBuildScheme(scheme.id)
+          : repository.favoriteBuildScheme(scheme.id);
     });
 
 final buildSimCloneSchemeProvider =
@@ -1293,13 +1297,25 @@ class _CommunityBuildActions extends StatelessWidget {
           children: [
             OutlinedButton.icon(
               onPressed: disabled ? null : onLike,
-              icon: const Icon(Icons.thumb_up_outlined, size: 18),
-              label: const Text('Like'),
+              icon: Icon(
+                scheme.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                size: 18,
+              ),
+              label: Text(
+                '${scheme.isLiked ? 'Liked' : 'Like'} ${scheme.likeCount}',
+              ),
             ),
             OutlinedButton.icon(
               onPressed: disabled ? null : onFavorite,
-              icon: const Icon(Icons.star_border_rounded, size: 18),
-              label: const Text('Favorite'),
+              icon: Icon(
+                scheme.isFavorited
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                size: 18,
+              ),
+              label: Text(
+                '${scheme.isFavorited ? 'Favorited' : 'Favorite'} ${scheme.favoriteCount}',
+              ),
             ),
             for (final slotIndex in const [1, 2, 3])
               OutlinedButton.icon(

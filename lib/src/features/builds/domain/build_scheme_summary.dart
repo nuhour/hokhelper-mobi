@@ -9,6 +9,8 @@ class BuildSchemeSummary {
     required this.favoriteCount,
     required this.cloneCount,
     required this.isPublic,
+    this.isLiked = false,
+    this.isFavorited = false,
     this.slotIndex = 0,
     this.equipmentIds = const [],
     this.runeIds = const [],
@@ -26,6 +28,8 @@ class BuildSchemeSummary {
   final int favoriteCount;
   final int cloneCount;
   final bool isPublic;
+  final bool isLiked;
+  final bool isFavorited;
   final int slotIndex;
   final List<int> equipmentIds;
   final List<int> runeIds;
@@ -68,6 +72,10 @@ class BuildSchemeSummary {
       favoriteCount: _readInt(map['favorite_count'] ?? map['favorites']),
       cloneCount: _readInt(map['clone_count'] ?? map['clones']),
       isPublic: map['is_public'] != false && map['public'] != false,
+      isLiked: _readBool(map['is_liked'] ?? map['isLiked'] ?? map['liked']),
+      isFavorited: _readBool(
+        map['is_favorited'] ?? map['isFavorited'] ?? map['favorited'],
+      ),
       slotIndex: _readInt(map['slot_index'] ?? map['slotIndex']),
       equipmentIds: _readEquipmentIds(rawEquipment),
       runeIds: _readIdList(map['runes'] ?? map['arcana']),
@@ -131,6 +139,17 @@ int _readInt(Object? value) {
     return value;
   }
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+bool _readBool(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is num) {
+    return value != 0;
+  }
+  final text = value?.toString().toLowerCase().trim();
+  return text == 'true' || text == '1' || text == 'yes';
 }
 
 int? _readOptionalInt(Object? value) {

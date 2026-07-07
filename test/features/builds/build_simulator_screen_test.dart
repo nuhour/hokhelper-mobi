@@ -521,11 +521,95 @@ void main() {
     await tester.drag(find.byType(ListView).first, const Offset(0, -720));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Like').last);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorite').last);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Like 12').last);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorite 5').last);
     await tester.tap(find.text('Clone S2'));
     await tester.pumpAndSettle();
 
     expect(actions, ['like:7', 'favorite:7', 'clone:7:2']);
+  });
+
+  testWidgets('shows liked favorite state and toggles community reactions', (
+    tester,
+  ) async {
+    final actions = <String>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '199',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 7,
+                title: 'Burst jungle',
+                heroName: 'Lam',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 5,
+                cloneCount: 3,
+                isPublic: true,
+                isLiked: true,
+                isFavorited: true,
+                slotIndex: 1,
+              ),
+            ];
+          }),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            return const [null, null, null];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(
+              equips: [],
+              runes: [],
+              summonerSkills: [],
+            );
+          }),
+          buildSimSaveSchemeProvider.overrideWith((ref) {
+            return (_) async {};
+          }),
+          buildSimLikeSchemeProvider.overrideWith((ref) {
+            return (scheme) async {
+              actions.add('${scheme.isLiked ? 'unlike' : 'like'}:${scheme.id}');
+            };
+          }),
+          buildSimFavoriteSchemeProvider.overrideWith((ref) {
+            return (scheme) async {
+              actions.add(
+                '${scheme.isFavorited ? 'unfavorite' : 'favorite'}:${scheme.id}',
+              );
+            };
+          }),
+          buildSimCloneSchemeProvider.overrideWith((ref) {
+            return (_, _) async {};
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BuildSimulatorScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(OutlinedButton, 'Liked 12'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Favorited 5'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Liked 12').last);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorited 5').last);
+    await tester.pumpAndSettle();
+
+    expect(actions, ['unlike:7', 'unfavorite:7']);
   });
 }

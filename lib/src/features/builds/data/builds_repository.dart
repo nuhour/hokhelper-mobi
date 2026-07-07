@@ -147,9 +147,23 @@ class BuildsRepository {
     );
   }
 
+  Future<void> unlikeBuildScheme(int schemeId) async {
+    await apiClient.postJson(
+      '/build/schemes/unlike',
+      body: {'scheme_id': schemeId.toString()},
+    );
+  }
+
   Future<void> favoriteBuildScheme(int schemeId) async {
     await apiClient.postJson(
       '/build/schemes/favorite',
+      body: {'scheme_id': schemeId.toString()},
+    );
+  }
+
+  Future<void> unfavoriteBuildScheme(int schemeId) async {
+    await apiClient.postJson(
+      '/build/schemes/unfavorite',
       body: {'scheme_id': schemeId.toString()},
     );
   }
