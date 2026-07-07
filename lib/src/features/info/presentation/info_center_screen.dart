@@ -633,8 +633,142 @@ class _AboutDetail extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        const _AboutStatsGrid(),
+        const SizedBox(height: 12),
+        const _AboutMissionPanel(),
+        const SizedBox(height: 12),
         const _AboutFeatureHighlights(),
+        const SizedBox(height: 12),
+        const _AboutPipelinePanel(),
+        const SizedBox(height: 12),
+        const _AboutCompliancePanel(),
       ],
+    );
+  }
+}
+
+class _AboutStatsGrid extends StatelessWidget {
+  const _AboutStatsGrid();
+
+  static const _stats = [
+    _AboutStat(
+      icon: Icons.shield_outlined,
+      value: '110+',
+      label: 'Heroes Tracked',
+    ),
+    _AboutStat(
+      icon: Icons.check_circle_outline,
+      value: '99%',
+      label: 'Data Accuracy',
+    ),
+    _AboutStat(
+      icon: Icons.schedule_outlined,
+      value: '1d',
+      label: 'Update Cycle',
+    ),
+    _AboutStat(icon: Icons.public_outlined, value: '200+', label: 'Regions'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _stats.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisExtent: 118,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemBuilder: (context, index) => _AboutStatTile(stat: _stats[index]),
+    );
+  }
+}
+
+class _AboutStat {
+  const _AboutStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+}
+
+class _AboutStatTile extends StatelessWidget {
+  const _AboutStatTile({required this.stat});
+
+  final _AboutStat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(stat.icon, color: AppTheme.gold, size: 22),
+            const SizedBox(height: 10),
+            Text(
+              stat.value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              stat.label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AboutMissionPanel extends StatelessWidget {
+  const _AboutMissionPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _InfoPanel(
+      icon: Icons.verified_user_outlined,
+      title: 'Our Mission',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _BodyText(
+            'Provide reliable tier evaluations, build recommendations, and patch interpretation so players can make better tactical decisions in ranked and competition settings.',
+          ),
+          SizedBox(height: 10),
+          _BodyText(
+            'HOK Helper is maintained by data analysts and high-rank players, focusing on cross-region meta differences, hero trends, and actionable guidance.',
+          ),
+          SizedBox(height: 12),
+          _BulletText('Cross-region meta analysis'),
+          _BulletText('Patch-by-patch hero trend tracking'),
+          _BulletText('Community-driven build curation'),
+          _BulletText('Multi-language support (EN / ZH / ID)'),
+        ],
+      ),
     );
   }
 }
@@ -755,6 +889,135 @@ class _AboutFeatureTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AboutPipelinePanel extends StatelessWidget {
+  const _AboutPipelinePanel();
+
+  static const _steps = [
+    _AboutPipelineStep(
+      step: '01',
+      title: 'Explore Heroes',
+      description:
+          'Find your favorites and check roles, strengths, and trends.',
+    ),
+    _AboutPipelineStep(
+      step: '02',
+      title: 'Plan Builds',
+      description:
+          'Compare builds and save the setups that fit your playstyle.',
+    ),
+    _AboutPipelineStep(
+      step: '03',
+      title: 'Practice Drafts',
+      description: 'Run pick/ban simulations before ranked or tournaments.',
+    ),
+    _AboutPipelineStep(
+      step: '04',
+      title: 'Share & Improve',
+      description: 'Exchange ideas with the community and keep improving.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return _InfoPanel(
+      icon: Icons.route_outlined,
+      title: 'Beginner Friendly',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _BodyText(
+            'Our automated data pipeline keeps hero stats fresh and reliable around the clock.',
+          ),
+          const SizedBox(height: 14),
+          for (var index = 0; index < _steps.length; index++) ...[
+            _AboutPipelineTile(step: _steps[index]),
+            if (index != _steps.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutPipelineStep {
+  const _AboutPipelineStep({
+    required this.step,
+    required this.title,
+    required this.description,
+  });
+
+  final String step;
+  final String title;
+  final String description;
+}
+
+class _AboutPipelineTile extends StatelessWidget {
+  const _AboutPipelineTile({required this.step});
+
+  final _AboutPipelineStep step;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppTheme.gold.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+            border: Border.all(color: AppTheme.gold.withValues(alpha: 0.22)),
+          ),
+          child: Text(
+            step.step,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppTheme.gold,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  step.title,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                _BodyText(step.description),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AboutCompliancePanel extends StatelessWidget {
+  const _AboutCompliancePanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _InfoPanel(
+      icon: Icons.policy_outlined,
+      title: 'Data & Compliance',
+      child: _BodyText(
+        'All data is collected from public endpoints and community submissions for educational use. This product does not represent official publisher positions.',
       ),
     );
   }

@@ -44,6 +44,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('About HOK Helper'), findsOneWidget);
     expect(find.text('Global Community Intel'), findsOneWidget);
+    expect(find.text('Heroes Tracked'), findsOneWidget);
+    expect(find.text('Data Accuracy'), findsOneWidget);
+    expect(find.text('Update Cycle'), findsOneWidget);
+    expect(find.text('Regions'), findsOneWidget);
+    expect(find.text('Our Mission'), findsOneWidget);
+    expect(find.text('Beginner Friendly'), findsOneWidget);
+    expect(find.text('Explore Heroes'), findsOneWidget);
+    expect(find.text('Plan Builds'), findsOneWidget);
+    expect(find.text('Practice Drafts'), findsOneWidget);
+    expect(find.text('Share & Improve'), findsOneWidget);
     expect(find.text('Hero Analytics'), findsOneWidget);
     expect(find.text('Tier Lists'), findsOneWidget);
     expect(find.text('BP Simulator'), findsOneWidget);
