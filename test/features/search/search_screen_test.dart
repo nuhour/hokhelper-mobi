@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
@@ -51,6 +52,52 @@ class _FakeSearchRepository extends SearchRepository {
 }
 
 void main() {
+  testWidgets('hero search results expose hokx quick actions', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _FakeSearchRepository();
+    final router = GoRouter(
+      initialLocation: '/search?q=arthur',
+      routes: [
+        GoRoute(
+          path: '/search',
+          builder: (context, state) =>
+              SearchScreen(initialQuery: state.uri.queryParameters['q']),
+        ),
+        GoRoute(
+          path: '/trends',
+          builder: (context, state) =>
+              Text('Trend hero ${state.uri.queryParameters['hero_id']}'),
+        ),
+        GoRoute(
+          path: '/tools/build-sim',
+          builder: (context, state) =>
+              Text('Build hero ${state.uri.queryParameters['hero_id']}'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [searchRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Trend'), findsOneWidget);
+    expect(find.text('Build Sim'), findsOneWidget);
+
+    await tester.tap(find.text('Trend'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/trends');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['hero_id'],
+      '166',
+    );
+    expect(find.text('Trend hero 166'), findsOneWidget);
+  });
+
   testWidgets('search route query auto-runs global search', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final repository = _FakeSearchRepository();

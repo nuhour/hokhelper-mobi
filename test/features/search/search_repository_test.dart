@@ -132,6 +132,17 @@ void main() {
     expect(itemFor('pro_players').title, 'Cat');
     expect(itemFor('pro_players').subtitle, 'eStar · Mid');
     expect(itemFor('heroes').imageUrl, 'https://example.test/yaria.png');
+    expect(
+      itemFor('heroes').actions.map((action) => action.label),
+      containsAll(<String>['Trend', 'Build Sim']),
+    );
+    expect(
+      itemFor('heroes').actions.map((action) => action.url),
+      containsAll(<String>[
+        '/trends?hero_id=166',
+        '/tools/build-sim?hero_id=166',
+      ]),
+    );
     expect(itemFor('skins').imageUrl, 'https://example.test/skin.png');
     expect(itemFor('equips').imageUrl, 'https://example.test/equip.png');
     expect(itemFor('teams').imageUrl, 'https://example.test/ag.png');

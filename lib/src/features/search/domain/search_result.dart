@@ -21,6 +21,7 @@ class SearchResultItem {
     required this.subtitle,
     required this.url,
     this.imageUrl = '',
+    this.actions = const [],
   });
 
   final String id;
@@ -28,6 +29,7 @@ class SearchResultItem {
   final String subtitle;
   final String url;
   final String imageUrl;
+  final List<SearchResultAction> actions;
 
   factory SearchResultItem.fromJson(Object? value, {String groupKey = ''}) {
     final json = value is Map<String, dynamic>
@@ -50,8 +52,16 @@ class SearchResultItem {
       subtitle: _readSubtitle(json, groupKey),
       url: _readUrl(json, groupKey),
       imageUrl: _readImageUrl(json),
+      actions: _readActions(json, groupKey),
     );
   }
+}
+
+class SearchResultAction {
+  const SearchResultAction({required this.label, required this.url});
+
+  final String label;
+  final String url;
 }
 
 List<SearchResultGroup> parseSearchResultGroups(Map<String, dynamic> json) {
@@ -152,6 +162,39 @@ String _readUrl(Map<String, dynamic> json, String groupKey) {
     'leaks' => _readString(json['source_url'] ?? json['sourceUrl']),
     _ => '',
   };
+}
+
+List<SearchResultAction> _readActions(
+  Map<String, dynamic> json,
+  String groupKey,
+) {
+  if (groupKey != 'heroes') {
+    return const [];
+  }
+
+  final heroId = _readString(json['id'] ?? json['hero_id']);
+  if (heroId.isEmpty) {
+    return const [];
+  }
+
+  final heroName = _readString(
+    json['name'] ?? json['heroName'] ?? json['hero_name'],
+  );
+  return [
+    SearchResultAction(label: 'Atlas', url: '/hero-gallery/$heroId'),
+    SearchResultAction(label: 'Trend', url: '/trends?hero_id=$heroId'),
+    const SearchResultAction(label: 'Tier', url: '/stats?entry=tier_rank'),
+    const SearchResultAction(label: 'Power', url: '/stats?entry=power_rank'),
+    SearchResultAction(
+      label: 'Build Sim',
+      url: '/tools/build-sim?hero_id=$heroId',
+    ),
+    if (heroName.isNotEmpty)
+      SearchResultAction(
+        label: 'Leaks',
+        url: '/community/leaks?q=${Uri.encodeComponent(heroName)}',
+      ),
+  ];
 }
 
 String _idPath(String prefix, Object? id, {bool encode = false}) {

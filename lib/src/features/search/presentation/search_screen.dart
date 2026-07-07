@@ -244,6 +244,37 @@ class _SearchResultTile extends StatelessWidget {
                         ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
                       ),
                     ],
+                    if (item.actions.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final action in item.actions)
+                            OutlinedButton(
+                              onPressed: () =>
+                                  _openSearchResult(context, action.url),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 0,
+                                ),
+                                foregroundColor: AppTheme.gold,
+                                side: BorderSide(
+                                  color: AppTheme.gold.withValues(alpha: 0.35),
+                                ),
+                                textStyle: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              child: Text(action.label),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
