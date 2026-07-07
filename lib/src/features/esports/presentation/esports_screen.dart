@@ -292,6 +292,7 @@ class _PlayersTab extends ConsumerStatefulWidget {
 
 class _PlayersTabState extends ConsumerState<_PlayersTab> {
   String _teamFilter = 'all';
+  String _roleFilter = 'all';
 
   @override
   Widget build(BuildContext context) {
@@ -307,22 +308,35 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
           );
         }
         final teamOptions = _playerTeamOptions(players);
+        final roleOptions = _playerRoleOptions(players);
         final selectedTeam = teamOptions.contains(_teamFilter)
             ? _teamFilter
             : 'all';
-        final filteredPlayers = selectedTeam == 'all'
-            ? players
-            : players
-                  .where((player) => player.teamName.trim() == selectedTeam)
-                  .toList();
+        final selectedRole = roleOptions.contains(_roleFilter)
+            ? _roleFilter
+            : 'all';
+        final filteredPlayers = players.where((player) {
+          final matchesTeam =
+              selectedTeam == 'all' || player.teamName.trim() == selectedTeam;
+          final matchesRole =
+              selectedRole == 'all' || player.role.trim() == selectedRole;
+          return matchesTeam && matchesRole;
+        }).toList();
         final focusedPlayer = _findPlayer(players, widget.focusedPlayerId);
         final cards = <Widget>[
-          _PlayerTeamFilterCard(
+          _PlayerFilterCard(
             teamOptions: teamOptions,
+            roleOptions: roleOptions,
             selectedTeam: selectedTeam,
-            onChanged: (value) {
+            selectedRole: selectedRole,
+            onTeamChanged: (value) {
               setState(() {
                 _teamFilter = value;
+              });
+            },
+            onRoleChanged: (value) {
+              setState(() {
+                _roleFilter = value;
               });
             },
           ),
@@ -352,78 +366,127 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
   }
 }
 
-class _PlayerTeamFilterCard extends StatelessWidget {
-  const _PlayerTeamFilterCard({
+class _PlayerFilterCard extends StatelessWidget {
+  const _PlayerFilterCard({
     required this.teamOptions,
+    required this.roleOptions,
     required this.selectedTeam,
-    required this.onChanged,
+    required this.selectedRole,
+    required this.onTeamChanged,
+    required this.onRoleChanged,
   });
 
   final List<String> teamOptions;
+  final List<String> roleOptions;
   final String selectedTeam;
-  final ValueChanged<String> onChanged;
+  final String selectedRole;
+  final ValueChanged<String> onTeamChanged;
+  final ValueChanged<String> onRoleChanged;
 
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.filter_list, color: AppTheme.gold, size: 20),
-          const SizedBox(width: 10),
-          Text(
-            'Filters',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppTheme.text,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedTeam,
-                    isExpanded: true,
-                    dropdownColor: AppTheme.panel,
-                    iconEnabledColor: AppTheme.gold,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    items: [
-                      const DropdownMenuItem(
-                        value: 'all',
-                        child: Text('All Teams'),
-                      ),
-                      ...teamOptions.map(
-                        (team) => DropdownMenuItem(
-                          value: team,
-                          child: Text(
-                            team,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        onChanged(value);
-                      }
-                    },
-                  ),
+          Row(
+            children: [
+              const Icon(Icons.filter_list, color: AppTheme.gold, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                'Filters',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _PlayerFilterDropdown(
+                width: 160,
+                value: selectedTeam,
+                fallbackLabel: 'All Teams',
+                options: teamOptions,
+                onChanged: onTeamChanged,
+              ),
+              _PlayerFilterDropdown(
+                width: 150,
+                value: selectedRole,
+                fallbackLabel: 'All Roles',
+                options: roleOptions,
+                onChanged: onRoleChanged,
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlayerFilterDropdown extends StatelessWidget {
+  const _PlayerFilterDropdown({
+    required this.width,
+    required this.value,
+    required this.fallbackLabel,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final double width;
+  final String value;
+  final String fallbackLabel;
+  final List<String> options;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              dropdownColor: AppTheme.panel,
+              iconEnabledColor: AppTheme.gold,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
+              items: [
+                DropdownMenuItem(value: 'all', child: Text(fallbackLabel)),
+                ...options.map(
+                  (option) => DropdownMenuItem(
+                    value: option,
+                    child: Text(
+                      option,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (nextValue) {
+                if (nextValue != null) {
+                  onChanged(nextValue);
+                }
+              },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1316,6 +1379,17 @@ List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {
     }
   }
   return teams.toList()..sort();
+}
+
+List<String> _playerRoleOptions(List<EsportsPlayerSummary> players) {
+  final roles = <String>{};
+  for (final player in players) {
+    final role = player.role.trim();
+    if (role.isNotEmpty) {
+      roles.add(role);
+    }
+  }
+  return roles.toList()..sort();
 }
 
 class _Pill extends StatelessWidget {
