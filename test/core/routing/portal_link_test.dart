@@ -60,6 +60,10 @@ void main() {
       '/tools/rankings?lane=mid',
     );
     expect(
+      normalizePortalLinkTarget('/rankings?tab=equips'),
+      '/tools/rankings?tab=equips',
+    );
+    expect(
       normalizePortalLinkTarget('/prompts?tab=favorites'),
       '/tools/prompts?tab=favorites',
     );

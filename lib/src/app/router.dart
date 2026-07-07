@@ -309,6 +309,15 @@ int _rankFortuneDays(Uri uri) {
   return days.clamp(1, 365);
 }
 
+int _rankingsTabIndex(Uri uri) {
+  return switch (uri.queryParameters['tab']?.trim().toLowerCase()) {
+    'players' || 'player' => 1,
+    'equips' || 'equip' || 'equipment' => 2,
+    'tier' || 'tier-list' || 'tier_list' => 3,
+    _ => 0,
+  };
+}
+
 GoRouter createAppRouter() {
   return GoRouter(
     initialLocation: '/',
@@ -895,7 +904,9 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'rankings',
-                    builder: (context, state) => const HeroRankingScreen(),
+                    builder: (context, state) => HeroRankingScreen(
+                      initialTabIndex: _rankingsTabIndex(state.uri),
+                    ),
                   ),
                   GoRoute(
                     path: 'leaderboard',
