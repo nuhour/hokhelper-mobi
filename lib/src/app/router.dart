@@ -571,7 +571,12 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/relationships',
-        builder: (context, state) => const HeroRelationshipsScreen(),
+        builder: (context, state) => HeroRelationshipsScreen(
+          initialHeroId: state.uri.queryParameters['hero_id'],
+          initialHeroName:
+              state.uri.queryParameters['hero'] ??
+              state.uri.queryParameters['hero_name'],
+        ),
       ),
       GoRoute(
         path: '/world-map',

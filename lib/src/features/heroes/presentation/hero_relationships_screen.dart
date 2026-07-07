@@ -20,7 +20,14 @@ final heroRelationshipsProvider = FutureProvider<List<HeroRelationship>>((
 });
 
 class HeroRelationshipsScreen extends ConsumerStatefulWidget {
-  const HeroRelationshipsScreen({super.key});
+  const HeroRelationshipsScreen({
+    this.initialHeroId,
+    this.initialHeroName,
+    super.key,
+  });
+
+  final String? initialHeroId;
+  final String? initialHeroName;
 
   @override
   ConsumerState<HeroRelationshipsScreen> createState() =>
@@ -31,6 +38,16 @@ class _HeroRelationshipsScreenState
     extends ConsumerState<HeroRelationshipsScreen> {
   String _query = '';
   String _focusedHero = '';
+  bool _didResolveInitialFocus = false;
+
+  @override
+  void didUpdateWidget(covariant HeroRelationshipsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialHeroId != widget.initialHeroId ||
+        oldWidget.initialHeroName != widget.initialHeroName) {
+      _didResolveInitialFocus = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +59,7 @@ class _HeroRelationshipsScreenState
         value: relationshipsValue,
         retry: () => ref.invalidate(heroRelationshipsProvider),
         data: (relationships) {
+          _resolveInitialFocus(relationships);
           final heroNames = _collectHeroNames(relationships);
           final visibleRelationships = _filterRelationships(relationships);
 
@@ -165,6 +183,50 @@ class _HeroRelationshipsScreenState
           return haystack.contains(query);
         })
         .toList(growable: false);
+  }
+
+  void _resolveInitialFocus(List<HeroRelationship> relationships) {
+    if (_didResolveInitialFocus || relationships.isEmpty) {
+      return;
+    }
+
+    final heroId = widget.initialHeroId?.trim();
+    final heroName = widget.initialHeroName?.trim();
+    String focusedHero = '';
+
+    if (heroId != null && heroId.isNotEmpty) {
+      for (final relationship in relationships) {
+        if (relationship.sourceHeroId == heroId) {
+          focusedHero = relationship.sourceHeroName;
+          break;
+        }
+        if (relationship.targetHeroId == heroId) {
+          focusedHero = relationship.targetHeroName;
+          break;
+        }
+      }
+    }
+
+    if (focusedHero.isEmpty && heroName != null && heroName.isNotEmpty) {
+      for (final relationship in relationships) {
+        if (relationship.sourceHeroName.toLowerCase() ==
+            heroName.toLowerCase()) {
+          focusedHero = relationship.sourceHeroName;
+          break;
+        }
+        if (relationship.targetHeroName.toLowerCase() ==
+            heroName.toLowerCase()) {
+          focusedHero = relationship.targetHeroName;
+          break;
+        }
+      }
+    }
+
+    _didResolveInitialFocus = true;
+    if (focusedHero.isNotEmpty) {
+      _focusedHero = focusedHero;
+      _query = '';
+    }
   }
 
   List<String> _collectHeroNames(List<HeroRelationship> relationships) {
