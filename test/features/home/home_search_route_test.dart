@@ -100,6 +100,10 @@ void main() {
           builder: (context, state) => const SizedBox.shrink(),
         ),
         GoRoute(
+          path: '/content/community/post/:postId',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+        GoRoute(
           path: '/content/patch-notes',
           builder: (context, state) => const SizedBox.shrink(),
         ),
@@ -136,10 +140,19 @@ void main() {
                   ],
                 },
                 'community_hot': [
-                  {'title': 'Draft talk', 'content_preview': 'Open discussion'},
+                  {
+                    'id': 99,
+                    'title': 'Draft talk',
+                    'content_preview': 'Open discussion',
+                  },
                 ],
                 'patch_notes': [
-                  {'title': 'Patch 1.2', 'content_preview': 'Balance update'},
+                  {
+                    'id': 31,
+                    'post_id': 100,
+                    'title': 'Patch 1.2',
+                    'content_preview': 'Balance update',
+                  },
                 ],
               },
             );
@@ -186,6 +199,81 @@ void main() {
     expect(
       router.routeInformationProvider.value.uri.path,
       '/content/patch-notes',
+    );
+  });
+
+  testWidgets('home preview rows open community detail routes', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+        GoRoute(
+          path: '/content/community',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+        GoRoute(
+          path: '/content/community/post/:postId',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+        GoRoute(
+          path: '/content/patch-notes',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeStatsProvider.overrideWith((ref) async {
+            return const HomeStats(
+              success: true,
+              message: 'Backend connected',
+              result: {
+                'community_hot': [
+                  {
+                    'id': 99,
+                    'title': 'Draft talk',
+                    'content_preview': 'Open discussion',
+                  },
+                ],
+                'patch_notes': [
+                  {
+                    'id': 31,
+                    'post_id': 100,
+                    'title': 'Patch 1.2',
+                    'content_preview': 'Balance update',
+                  },
+                ],
+              },
+            );
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Draft talk'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/content/community/post/99',
+    );
+
+    router.go('/');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Patch 1.2'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/content/community/post/100',
     );
   });
 }

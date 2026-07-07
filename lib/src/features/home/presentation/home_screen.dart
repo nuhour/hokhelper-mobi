@@ -128,6 +128,7 @@ class _HomePortalPreviews extends StatelessWidget {
               _HomePreviewRow(
                 title: _readString(row['title'], fallback: 'Community post'),
                 detail: _readString(row['content_preview']),
+                route: _communityPostRoute(row['id']),
               ),
           ],
         ),
@@ -141,6 +142,9 @@ class _HomePortalPreviews extends StatelessWidget {
               _HomePreviewRow(
                 title: _readString(row['title'], fallback: 'Patch note'),
                 detail: _readString(row['content_preview']),
+                route:
+                    _communityPostRoute(row['post_id']) ??
+                    _patchNoteRoute(row['id']),
               ),
           ],
         ),
@@ -232,10 +236,15 @@ class _HomePreviewSection extends StatelessWidget {
 }
 
 class _HomePreviewRow {
-  const _HomePreviewRow({required this.title, required this.detail});
+  const _HomePreviewRow({
+    required this.title,
+    required this.detail,
+    this.route,
+  });
 
   final String title;
   final String detail;
+  final String? route;
 }
 
 class _HomePreviewTile extends StatelessWidget {
@@ -245,7 +254,8 @@ class _HomePreviewTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final route = row.route;
+    final tile = DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panelAlt,
         borderRadius: BorderRadius.circular(12),
@@ -281,6 +291,19 @@ class _HomePreviewTile extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+
+    if (route == null) {
+      return tile;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.go(route),
+        child: tile,
       ),
     );
   }
@@ -779,6 +802,22 @@ List<Map<String, dynamic>> _readList(Object? value) {
 String _readString(Object? value, {String fallback = ''}) {
   final text = value?.toString().trim() ?? '';
   return text.isEmpty ? fallback : text;
+}
+
+String? _communityPostRoute(Object? value) {
+  final id = _readString(value);
+  if (id.isEmpty) {
+    return null;
+  }
+  return '/content/community/post/$id';
+}
+
+String? _patchNoteRoute(Object? value) {
+  final id = _readString(value);
+  if (id.isEmpty) {
+    return null;
+  }
+  return '/content/patch-notes?note_id=$id';
 }
 
 String _readHeroName(Map<String, dynamic> row, {required String fallback}) {
