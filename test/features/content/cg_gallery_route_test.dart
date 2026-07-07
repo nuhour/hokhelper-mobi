@@ -266,4 +266,66 @@ void main() {
       'Lam',
     );
   });
+
+  testWidgets('cg detail play links open through the mobile link route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/cg?q=Lam');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteCgRepository(const [
+              ContentItemSummary(
+                id: 501,
+                kind: ContentKind.cg,
+                title: 'Lam Cinematic',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 4.8,
+                ratingCount: 17,
+                viewCount: 2300,
+              ),
+            ]),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Lam Cinematic'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CG Detail'), findsOneWidget);
+    expect(find.text('https://example.test/cg/501.mp4'), findsOneWidget);
+
+    final playButton = find.widgetWithText(
+      FilledButton,
+      'Play video',
+      skipOffstage: false,
+    );
+    await tester.scrollUntilVisible(
+      playButton.last,
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(playButton.last);
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/external-link');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['url'],
+      'https://example.test/cg/501.mp4',
+    );
+  });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/routing/portal_link.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
@@ -426,7 +427,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       builder: (context) => _CgDetailSheet(cgId: cgId),
     ).whenComplete(() {
       if (mounted && router != null && listPath != null) {
-        _syncDetailRoute(router: router, listPath: listPath, cgId: null);
+        final currentPath = router.routeInformationProvider.value.uri.path;
+        if (currentPath == '$listPath/$cgId') {
+          _syncDetailRoute(router: router, listPath: listPath, cgId: null);
+        }
       }
     });
   }
@@ -1033,6 +1037,12 @@ class _CgDetailContent extends StatelessWidget {
         _CgRatingControl(rating: rating, isRating: isRating, onRate: onRate),
         if (detail.playUrl.isNotEmpty) ...[
           const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => context.go(externalLinkRoute(detail.playUrl)),
+            icon: const Icon(Icons.play_circle_outline, size: 18),
+            label: const Text('Play video'),
+          ),
+          const SizedBox(height: 8),
           Text(
             detail.playUrl,
             maxLines: 2,
