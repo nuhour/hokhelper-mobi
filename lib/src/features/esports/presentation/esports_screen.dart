@@ -177,6 +177,7 @@ class _MatchesTab extends ConsumerStatefulWidget {
 
 class _MatchesTabState extends ConsumerState<_MatchesTab> {
   String _leagueFilter = 'all';
+  String _statusFilter = 'all';
 
   @override
   Widget build(BuildContext context) {
@@ -195,11 +196,20 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
         final selectedLeague = leagueOptions.contains(_leagueFilter)
             ? _leagueFilter
             : 'all';
-        final filteredMatches = selectedLeague == 'all'
-            ? matches
-            : matches
-                  .where((match) => match.leagueName.trim() == selectedLeague)
-                  .toList();
+        final statusOptions = _matchStatusOptions(matches);
+        final selectedStatus =
+            statusOptions.map((option) => option.value).contains(_statusFilter)
+            ? _statusFilter
+            : 'all';
+        final filteredMatches = matches.where((match) {
+          final matchesLeague =
+              selectedLeague == 'all' ||
+              match.leagueName.trim() == selectedLeague;
+          final matchesStatus =
+              selectedStatus == 'all' ||
+              match.statusKey.trim().toLowerCase() == selectedStatus;
+          return matchesLeague && matchesStatus;
+        }).toList();
         final cards = <Widget>[
           _FilterCard(
             children: [
@@ -207,10 +217,21 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
                 width: 180,
                 value: selectedLeague,
                 fallbackLabel: 'All Leagues',
-                options: leagueOptions,
+                options: _textFilterOptions(leagueOptions),
                 onChanged: (value) {
                   setState(() {
                     _leagueFilter = value;
+                  });
+                },
+              ),
+              _FilterDropdown(
+                width: 160,
+                value: selectedStatus,
+                fallbackLabel: 'All Status',
+                options: statusOptions,
+                onChanged: (value) {
+                  setState(() {
+                    _statusFilter = value;
                   });
                 },
               ),
@@ -371,7 +392,7 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
                 width: 160,
                 value: selectedTeam,
                 fallbackLabel: 'All Teams',
-                options: teamOptions,
+                options: _textFilterOptions(teamOptions),
                 onChanged: (value) {
                   setState(() {
                     _teamFilter = value;
@@ -382,7 +403,7 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
                 width: 150,
                 value: selectedRole,
                 fallbackLabel: 'All Roles',
-                options: roleOptions,
+                options: _textFilterOptions(roleOptions),
                 onChanged: (value) {
                   setState(() {
                     _roleFilter = value;
@@ -461,7 +482,7 @@ class _FilterDropdown extends StatelessWidget {
   final double width;
   final String value;
   final String fallbackLabel;
-  final List<String> options;
+  final List<_FilterOption> options;
   final ValueChanged<String> onChanged;
 
   @override
@@ -490,9 +511,9 @@ class _FilterDropdown extends StatelessWidget {
                 DropdownMenuItem(value: 'all', child: Text(fallbackLabel)),
                 ...options.map(
                   (option) => DropdownMenuItem(
-                    value: option,
+                    value: option.value,
                     child: Text(
-                      option,
+                      option.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -510,6 +531,13 @@ class _FilterDropdown extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FilterOption {
+  const _FilterOption({required this.value, required this.label});
+
+  final String value;
+  final String label;
 }
 
 class _MatchCard extends StatelessWidget {
@@ -1401,6 +1429,29 @@ List<String> _matchLeagueOptions(List<EsportsMatchSummary> matches) {
   return leagues.toList()..sort();
 }
 
+List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
+  final statusByValue = <String, String>{};
+  for (final match in matches) {
+    final value = match.statusKey.trim().toLowerCase();
+    if (value.isNotEmpty) {
+      statusByValue[value] = match.statusLabel;
+    }
+  }
+  const preferredOrder = ['live', 'upcoming', 'finished'];
+  final extraValues =
+      statusByValue.keys
+          .where((value) => !preferredOrder.contains(value))
+          .toList()
+        ..sort();
+  final orderedValues = [
+    ...preferredOrder.where(statusByValue.containsKey),
+    ...extraValues,
+  ];
+  return orderedValues
+      .map((value) => _FilterOption(value: value, label: statusByValue[value]!))
+      .toList();
+}
+
 List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {
   final teams = <String>{};
   for (final player in players) {
@@ -1421,6 +1472,12 @@ List<String> _playerRoleOptions(List<EsportsPlayerSummary> players) {
     }
   }
   return roles.toList()..sort();
+}
+
+List<_FilterOption> _textFilterOptions(List<String> values) {
+  return values
+      .map((value) => _FilterOption(value: value, label: value))
+      .toList();
 }
 
 class _Pill extends StatelessWidget {

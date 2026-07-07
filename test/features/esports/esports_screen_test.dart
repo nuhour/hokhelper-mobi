@@ -180,6 +180,60 @@ void main() {
     expect(find.text('Nova'), findsOneWidget);
   });
 
+  testWidgets('filters esports matches by status like the hokx portal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: '11',
+                leagueName: 'KIC',
+                stageName: 'Group Stage',
+                teamAName: 'Nova',
+                teamALogoUrl: '',
+                teamBName: 'DRG',
+                teamBLogoUrl: '',
+                scoreA: null,
+                scoreB: null,
+                statusKey: 'upcoming',
+                startTime: '2026-07-12T12:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wolves'), findsOneWidget);
+    expect(find.text('Nova'), findsOneWidget);
+
+    await tester.tap(find.text('All Status'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upcoming').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wolves'), findsNothing);
+    expect(find.text('Nova'), findsOneWidget);
+  });
+
   testWidgets('filters esports players by team like the hokx portal', (
     tester,
   ) async {
