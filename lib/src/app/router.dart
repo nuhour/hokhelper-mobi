@@ -45,13 +45,16 @@ import '../features/topics/presentation/topic_hub_screen.dart';
 import 'app_shell.dart';
 
 String _communityLeaksTarget(Uri uri) {
-  final query = uri.queryParameters['q']?.trim();
-  if (query == null || query.isEmpty) {
-    return '/content/community?tab=leaks';
+  final queryParameters = <String, String>{'tab': 'leaks'};
+  for (final key in const ['q', 'category', 'platform']) {
+    final value = uri.queryParameters[key]?.trim();
+    if (value != null && value.isNotEmpty) {
+      queryParameters[key] = value;
+    }
   }
   return Uri(
     path: '/content/community',
-    queryParameters: {'tab': 'leaks', 'q': query},
+    queryParameters: queryParameters,
   ).toString();
 }
 
@@ -790,6 +793,10 @@ GoRouter createAppRouter() {
                         initialTabIndex: initialTabIndex,
                         initialView: initialView,
                         initialLeakQuery: state.uri.queryParameters['q'],
+                        initialLeakCategory:
+                            state.uri.queryParameters['category'],
+                        initialLeakPlatform:
+                            state.uri.queryParameters['platform'],
                         initialPostTag: state.uri.queryParameters['tag'],
                       );
                     },

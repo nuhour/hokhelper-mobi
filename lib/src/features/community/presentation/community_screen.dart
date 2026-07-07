@@ -152,6 +152,8 @@ class CommunityScreen extends ConsumerWidget {
     this.initialTabIndex = 0,
     this.initialView = CommunityInitialView.hot,
     this.initialLeakQuery,
+    this.initialLeakCategory,
+    this.initialLeakPlatform,
     this.initialPostTag,
     super.key,
   });
@@ -159,6 +161,8 @@ class CommunityScreen extends ConsumerWidget {
   final int initialTabIndex;
   final CommunityInitialView initialView;
   final String? initialLeakQuery;
+  final String? initialLeakCategory;
+  final String? initialLeakPlatform;
   final String? initialPostTag;
 
   @override
@@ -212,7 +216,11 @@ class CommunityScreen extends ConsumerWidget {
           body: TabBarView(
             children: [
               _PostsTab(initialView: initialView, initialTag: initialPostTag),
-              _LeaksTab(initialQuery: initialLeakQuery),
+              _LeaksTab(
+                initialQuery: initialLeakQuery,
+                initialCategory: initialLeakCategory,
+                initialPlatform: initialLeakPlatform,
+              ),
             ],
           ),
         ),
@@ -901,9 +909,15 @@ class _PostsEmptyState extends StatelessWidget {
 }
 
 class _LeaksTab extends ConsumerStatefulWidget {
-  const _LeaksTab({required this.initialQuery});
+  const _LeaksTab({
+    required this.initialQuery,
+    required this.initialCategory,
+    required this.initialPlatform,
+  });
 
   final String? initialQuery;
+  final String? initialCategory;
+  final String? initialPlatform;
 
   @override
   ConsumerState<_LeaksTab> createState() => _LeaksTabState();
@@ -911,8 +925,21 @@ class _LeaksTab extends ConsumerStatefulWidget {
 
 class _LeaksTabState extends ConsumerState<_LeaksTab> {
   final _extraLeaks = <LeakPostSummary>[];
-  var _category = 'all';
-  var _platform = 'all';
+  late var _category = _normalizeInitialFilter(widget.initialCategory, {
+    'all',
+    'hero',
+    'skin',
+  });
+  late var _platform = _normalizeInitialFilter(widget.initialPlatform, {
+    'all',
+    'twitter',
+    'youtube',
+    'instagram',
+    'facebook',
+    'telegram',
+    'tiktok',
+    'reddit',
+  });
   var _nextLeaksPage = 2;
   var _hasMoreLeaks = true;
   var _isLoadingMoreLeaks = false;
@@ -1035,6 +1062,14 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
   String _normalizeLeakPlatform(String value) {
     final normalized = value.trim().toLowerCase();
     return normalized == 'x' ? 'twitter' : normalized;
+  }
+
+  String _normalizeInitialFilter(String? value, Set<String> allowedValues) {
+    final normalized = value?.trim().toLowerCase() ?? '';
+    if (normalized == 'x') {
+      return allowedValues.contains('twitter') ? 'twitter' : 'all';
+    }
+    return allowedValues.contains(normalized) ? normalized : 'all';
   }
 
   bool _canLoadMoreLeaks(List<LeakPostSummary> firstPageLeaks) {
