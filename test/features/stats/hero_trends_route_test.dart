@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
@@ -34,6 +36,57 @@ GoRouter _buildRouter() {
 }
 
 void main() {
+  testWidgets('legacy stats hero trend route preserves focused hero id', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/stats?entry=hero_trend&hero_id=166');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroGalleryProvider.overrideWith((ref) async => const []),
+          heroTrendsProvider.overrideWith((ref) async {
+            return const [
+              HeroTrendRow(
+                id: 199,
+                name: 'Lam',
+                avatarUrl: '',
+                winRate: 56.1,
+                mvpScore: 13.8,
+                mvpRate: 22.5,
+                dmgShare: 31.4,
+                takeDmgShare: 28.7,
+                ecoShare: 24.1,
+              ),
+              HeroTrendRow(
+                id: 166,
+                name: 'Yaria',
+                avatarUrl: '',
+                winRate: 60.2,
+                mvpScore: 9.2,
+                mvpRate: 11.4,
+                dmgShare: 12.1,
+                takeDmgShare: 18.2,
+                ecoShare: 17.7,
+              ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/trends');
+    expect(uri.queryParameters['hero_id'], '166');
+    expect(find.text('Focused hero'), findsOneWidget);
+    final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
+    final lamTopLeft = tester.getTopLeft(find.text('Lam'));
+    expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
+  });
+
   testWidgets('hero gallery opens hero trends route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

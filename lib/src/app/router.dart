@@ -365,6 +365,13 @@ GoRouter createAppRouter() {
         path: '/stats',
         redirect: (context, state) {
           if (state.uri.queryParameters['entry'] == 'hero_trend') {
+            final heroId = state.uri.queryParameters['hero_id']?.trim();
+            if (heroId != null && heroId.isNotEmpty) {
+              return Uri(
+                path: '/trends',
+                queryParameters: {'hero_id': heroId},
+              ).toString();
+            }
             return '/trends';
           }
           final query = state.uri.query;
