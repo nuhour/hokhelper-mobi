@@ -20,12 +20,14 @@ class SearchResultItem {
     required this.title,
     required this.subtitle,
     required this.url,
+    this.imageUrl = '',
   });
 
   final String id;
   final String title;
   final String subtitle;
   final String url;
+  final String imageUrl;
 
   factory SearchResultItem.fromJson(Object? value, {String groupKey = ''}) {
     final json = value is Map<String, dynamic>
@@ -47,6 +49,7 @@ class SearchResultItem {
       ),
       subtitle: _readSubtitle(json, groupKey),
       url: _readUrl(json, groupKey),
+      imageUrl: _readImageUrl(json),
     );
   }
 }
@@ -114,6 +117,19 @@ String _readSubtitle(Map<String, dynamic> json, String groupKey) {
     _ => const <String>[],
   };
   return parts.where((part) => part.isNotEmpty).join(' · ');
+}
+
+String _readImageUrl(Map<String, dynamic> json) {
+  return _readString(
+    json['avatar_url'] ??
+        json['hero_icon'] ??
+        json['icon_url'] ??
+        json['image_url'] ??
+        json['additional_image_url'] ??
+        json['logo_url'] ??
+        json['player_avatar'] ??
+        json['team_logo_url'],
+  );
 }
 
 String _readUrl(Map<String, dynamic> json, String groupKey) {

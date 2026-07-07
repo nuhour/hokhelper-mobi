@@ -47,19 +47,38 @@ void main() {
       'result': {
         'data': {
           'heroes': [
-            {'id': 166, 'name': 'Yaria', 'subtitle': 'Forest Child'},
+            {
+              'id': 166,
+              'name': 'Yaria',
+              'subtitle': 'Forest Child',
+              'avatar_url': 'https://example.test/yaria.png',
+            },
           ],
           'skins': [
-            {'id': 77, 'name': 'Starlight Skin', 'hero_name': 'Yaria'},
+            {
+              'id': 77,
+              'name': 'Starlight Skin',
+              'hero_name': 'Yaria',
+              'additional_image_url': 'https://example.test/skin.png',
+            },
           ],
           'equips': [
-            {'id': 9, 'equip_id': 1337, 'name': 'Storm Blade'},
+            {
+              'id': 9,
+              'equip_id': 1337,
+              'name': 'Storm Blade',
+              'icon_url': 'https://example.test/equip.png',
+            },
           ],
           'posts': [
             {'id': 42, 'title': 'Patch Discussion'},
           ],
           'teams': [
-            {'id': 'kpl-ag', 'name': 'AG Super Play'},
+            {
+              'id': 'kpl-ag',
+              'name': 'AG Super Play',
+              'logo_url': 'https://example.test/ag.png',
+            },
           ],
           'players': [
             {
@@ -72,6 +91,7 @@ void main() {
             {
               'player_id': 'cat',
               'player_name': 'Cat',
+              'player_avatar': 'https://example.test/cat.png',
               'team_name': 'eStar',
               'position': 'Mid',
             },
@@ -111,5 +131,10 @@ void main() {
     expect(itemFor('players').subtitle, 'peak');
     expect(itemFor('pro_players').title, 'Cat');
     expect(itemFor('pro_players').subtitle, 'eStar · Mid');
+    expect(itemFor('heroes').imageUrl, 'https://example.test/yaria.png');
+    expect(itemFor('skins').imageUrl, 'https://example.test/skin.png');
+    expect(itemFor('equips').imageUrl, 'https://example.test/equip.png');
+    expect(itemFor('teams').imageUrl, 'https://example.test/ag.png');
+    expect(itemFor('pro_players').imageUrl, 'https://example.test/cat.png');
   });
 }

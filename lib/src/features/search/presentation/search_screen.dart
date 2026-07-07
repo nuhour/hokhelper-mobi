@@ -7,6 +7,7 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/search_repository.dart';
@@ -210,7 +211,16 @@ class _SearchResultTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.chevron_right, color: AppTheme.gold, size: 20),
+              if (item.imageUrl.isNotEmpty)
+                AppImage(
+                  url: item.imageUrl,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  semanticLabel: item.title,
+                )
+              else
+                const Icon(Icons.chevron_right, color: AppTheme.gold, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
