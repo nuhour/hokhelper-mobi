@@ -49,6 +49,28 @@ void main() {
     expect(find.text('4 - 3'), findsNothing);
   });
 
+  testWidgets('localized tools esports team route keeps the deep path', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/en/tools/esports/teams/1');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/esports/teams/1',
+    );
+    expect(find.text('Focused Team'), findsOneWidget);
+    expect(find.text('Chongqing Wolves'), findsOneWidget);
+  });
+
   testWidgets('legacy esports team query opens the team route', (tester) async {
     final router = createAppRouter();
     router.go('/esports?team_id=1');

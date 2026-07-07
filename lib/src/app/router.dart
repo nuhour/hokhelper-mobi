@@ -313,6 +313,15 @@ List<GoRoute> _localizedPathRedirects() {
           state.pathParameters['s3'] ?? '',
         ]),
       ),
+      GoRoute(
+        path: '/$locale/:s1/:s2/:s3/:s4',
+        redirect: (context, state) => _localizedTargetWithQuery(state.uri, [
+          state.pathParameters['s1'] ?? '',
+          state.pathParameters['s2'] ?? '',
+          state.pathParameters['s3'] ?? '',
+          state.pathParameters['s4'] ?? '',
+        ]),
+      ),
     ],
   ];
 }
