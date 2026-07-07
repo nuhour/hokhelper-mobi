@@ -169,6 +169,28 @@ void main() {
     expect(find.text('KPL Spring'), findsNothing);
   });
 
+  testWidgets('legacy tools esports player query opens focused player route', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/esports?player_id=8&league=kpl');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _esportsOverrides(),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/tools/esports/players/8');
+    expect(uri.queryParameters['league'], 'kpl');
+    expect(find.text('Focused Player'), findsOneWidget);
+    expect(find.text('Fly'), findsOneWidget);
+    expect(find.text('KPL Spring'), findsNothing);
+  });
+
   testWidgets('tools esports tab changes preserve the tools route namespace', (
     tester,
   ) async {

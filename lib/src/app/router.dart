@@ -184,6 +184,24 @@ String _tierListToolTarget(Uri uri) {
   ).toString();
 }
 
+String? _esportsTarget(Uri uri, String routeBase) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final teamId = queryParameters.remove('team_id')?.trim();
+  final playerId = queryParameters.remove('player_id')?.trim();
+  final focusedPath = teamId != null && teamId.isNotEmpty
+      ? '$routeBase/teams/$teamId'
+      : playerId != null && playerId.isNotEmpty
+      ? '$routeBase/players/$playerId'
+      : null;
+  if (focusedPath == null) {
+    return null;
+  }
+  return Uri(
+    path: focusedPath,
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
+}
+
 double? _initialMinRating(Uri uri) {
   final rating = double.tryParse(uri.queryParameters['min_rating'] ?? '');
   if (rating == null || rating <= 0) {
@@ -517,17 +535,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/esports',
-        redirect: (context, state) {
-          final teamId = state.uri.queryParameters['team_id']?.trim() ?? '';
-          if (teamId.isNotEmpty) {
-            return '/esports/teams/$teamId';
-          }
-          final playerId = state.uri.queryParameters['player_id']?.trim() ?? '';
-          if (playerId.isNotEmpty) {
-            return '/esports/players/$playerId';
-          }
-          return null;
-        },
+        redirect: (context, state) => _esportsTarget(state.uri, '/esports'),
         builder: (context, state) => const EsportsScreen(),
         routes: [
           GoRoute(
@@ -869,6 +877,8 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'esports',
+                    redirect: (context, state) =>
+                        _esportsTarget(state.uri, '/tools/esports'),
                     builder: (context, state) => const EsportsScreen(),
                     routes: [
                       GoRoute(
