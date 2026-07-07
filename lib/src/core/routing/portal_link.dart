@@ -112,6 +112,12 @@ String _normalizeInternalTarget(String target) {
     return _normalizeBuildSimTarget(uri).toString();
   }
 
+  if (uri.path == '/bp-simulator' ||
+      uri.path == '/tools/bp-simulator' ||
+      _isBpSimulatorDetailPath(uri)) {
+    return _normalizeBpSimulatorTarget(uri).toString();
+  }
+
   final aliasPath = _mobileAliasPath(uri.path);
   if (aliasPath != null) {
     return uri.replace(path: aliasPath).toString();
@@ -166,6 +172,38 @@ Uri _normalizeBuildSimTarget(Uri uri) {
         ? null
         : normalizedQueryParameters,
   );
+}
+
+Uri _normalizeBpSimulatorTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final schemeIdFromQuery = queryParameters.remove('scheme_id')?.trim();
+  final gameIndex = queryParameters.remove('game_index')?.trim();
+  final normalizedQueryParameters = <String, String>{};
+  if (gameIndex != null && gameIndex.isNotEmpty) {
+    normalizedQueryParameters['gameIndex'] = gameIndex;
+  }
+  normalizedQueryParameters.addAll(queryParameters);
+
+  final schemeIdFromPath = _isBpSimulatorDetailPath(uri)
+      ? uri.pathSegments[2].trim()
+      : null;
+  final schemeId = schemeIdFromPath != null && schemeIdFromPath.isNotEmpty
+      ? schemeIdFromPath
+      : schemeIdFromQuery;
+  return Uri(
+    path: schemeId == null || schemeId.isEmpty
+        ? '/tools/bp-simulator'
+        : '/tools/bp-simulator/$schemeId',
+    queryParameters: normalizedQueryParameters.isEmpty
+        ? null
+        : normalizedQueryParameters,
+  );
+}
+
+bool _isBpSimulatorDetailPath(Uri uri) {
+  return uri.pathSegments.length == 3 &&
+      uri.pathSegments[0] == 'tools' &&
+      uri.pathSegments[1] == 'bp-simulator';
 }
 
 String? _mobileAliasPath(String path) {

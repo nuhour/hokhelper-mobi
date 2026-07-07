@@ -193,4 +193,27 @@ void main() {
       '/tools/build-sim?scheme=42',
     );
   });
+
+  test('normalizes bp simulator query links to mobile scheme routes', () {
+    expect(
+      normalizePortalLinkTarget('/bp-simulator?scheme_id=12'),
+      '/tools/bp-simulator/12',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        '/tools/bp-simulator?scheme_id=12&game_index=1',
+      ),
+      '/tools/bp-simulator/12?gameIndex=1',
+    );
+    expect(
+      normalizePortalLinkTarget('/tools/bp-simulator/12?game_index=1'),
+      '/tools/bp-simulator/12?gameIndex=1',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/tools/bp-simulator?scheme_id=12&game_index=1',
+      ),
+      '/tools/bp-simulator/12?gameIndex=1',
+    );
+  });
 }
