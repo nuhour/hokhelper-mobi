@@ -75,6 +75,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Privacy Policy'), findsOneWidget);
     expect(find.text('Data use'), findsOneWidget);
+    expect(find.text('1. Data Harvesting & Usage'), findsOneWidget);
+    expect(find.text('2. Cookie Manifest'), findsOneWidget);
+    expect(find.text('3. Third-Party Deployment'), findsOneWidget);
+    expect(find.text('Essential Cookies'), findsOneWidget);
+    expect(find.text('Preference Cookies'), findsOneWidget);
+    expect(find.text('Google Cloud / Gemini'), findsOneWidget);
+    expect(find.text('Vercel / Netlify'), findsOneWidget);
+    expect(
+      find.text(
+        'Last updated: April 2026. For data deletion requests, contact us via the Discord support channel.',
+      ),
+      findsOneWidget,
+    );
 
     router.go('/terms');
     await tester.pumpAndSettle();

@@ -1099,22 +1099,187 @@ class _PrivacyDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _InfoPanel(
-      icon: Icons.lock_outline,
-      title: 'Data use',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _BodyText(
-            'HOK Helper uses account identifiers, preferences, and interaction data to sync your mobile experience, protect sessions, and improve recommendations.',
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _InfoPanel(
+          icon: Icons.lock_outline,
+          title: 'Data use',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BodyText(
+                'HOK Helper uses account identifiers, preferences, and interaction data to sync your mobile experience, protect sessions, and improve recommendations.',
+              ),
+              SizedBox(height: 12),
+              _BulletText(
+                'JWT sessions are used for authenticated app requests',
+              ),
+              _BulletText(
+                'Region and language preferences shape displayed data',
+              ),
+              _BulletText(
+                'Optional community and prompt actions remain user-driven',
+              ),
+            ],
           ),
-          SizedBox(height: 12),
-          _BulletText('JWT sessions are used for authenticated app requests'),
-          _BulletText('Region and language preferences shape displayed data'),
-          _BulletText(
-            'Optional community and prompt actions remain user-driven',
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.storage_outlined,
+          title: '1. Data Harvesting & Usage',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BodyText(
+                'HOK Helper collects minimal personal identifiers. We prioritize your privacy by only requesting email addresses for account synchronization.',
+              ),
+              SizedBox(height: 12),
+              _BulletText(
+                'In-Game IDs: Used solely to provide personalized match history and leaderboard tracking.',
+              ),
+              _BulletText(
+                'AI Interaction: When using the AI Prompt Library, your text inputs are processed via Google Gemini API. These inputs are anonymized and not stored alongside your personal identity.',
+              ),
+              _BulletText(
+                'Analytics: We track site usage patterns, such as most visited hero pages, to improve our UI/UX.',
+              ),
+            ],
           ),
-        ],
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.cookie_outlined,
+          title: '2. Cookie Manifest',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BodyText(
+                'We use cookies and similar technologies to maintain your session and preferences, such as your chosen language and theme.',
+              ),
+              SizedBox(height: 12),
+              _PrivacyMiniCard(
+                title: 'Essential Cookies',
+                description:
+                    'Required for logging in and keeping your profile synced across devices.',
+              ),
+              SizedBox(height: 10),
+              _PrivacyMiniCard(
+                title: 'Preference Cookies',
+                description:
+                    'Remembers your dark/light mode toggle and language selection.',
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.visibility_outlined,
+          title: '3. Third-Party Deployment',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BodyText(
+                'We do not sell your data. We partner with secure providers for specific features:',
+              ),
+              SizedBox(height: 12),
+              _PrivacyPartnerRow(
+                partner: 'Google Cloud / Gemini',
+                function: 'AI Processing',
+              ),
+              SizedBox(height: 10),
+              _PrivacyPartnerRow(
+                partner: 'Vercel / Netlify',
+                function: 'Hosting & DNS',
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.update_outlined,
+          title: 'Policy update',
+          child: _BodyText(
+            'Last updated: April 2026. For data deletion requests, contact us via the Discord support channel.',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PrivacyMiniCard extends StatelessWidget {
+  const _PrivacyMiniCard({required this.title, required this.description});
+
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            _BodyText(description),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrivacyPartnerRow extends StatelessWidget {
+  const _PrivacyPartnerRow({required this.partner, required this.function});
+
+  final String partner;
+  final String function;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                partner,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              function,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppTheme.gold,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
