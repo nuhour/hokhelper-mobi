@@ -238,6 +238,51 @@ void main() {
     expect(loserScore.style?.color, isNot(Colors.greenAccent));
   });
 
+  testWidgets('marks the latest finished match winner as champion like hokx', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: 'old-final',
+                leagueName: 'KPL Spring',
+                stageName: 'Finals',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-20T11:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: 'champion-final',
+                leagueName: 'KPL Summer',
+                stageName: 'Finals',
+                teamAName: 'DRG',
+                teamALogoUrl: '',
+                teamBName: 'TTG',
+                teamBLogoUrl: '',
+                scoreA: 2,
+                scoreB: 4,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+  });
+
   testWidgets('filters esports matches by league like the hokx portal', (
     tester,
   ) async {

@@ -215,10 +215,12 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
           return matchesLeague && matchesStatus && matchesDate;
         }).toList();
         final groupedMatches = _groupMatchesByStatus(filteredMatches);
+        final championMatchId = _championMatchId(matches);
         final matchSections = _matchStatusOptions(matches).map((status) {
           return _MatchStatusSection(
             status: status,
             matches: groupedMatches[status.value] ?? const [],
+            championMatchId: championMatchId,
           );
         });
         final cards = <Widget>[
@@ -621,10 +623,15 @@ class _FilterOption {
 }
 
 class _MatchStatusSection extends StatelessWidget {
-  const _MatchStatusSection({required this.status, required this.matches});
+  const _MatchStatusSection({
+    required this.status,
+    required this.matches,
+    required this.championMatchId,
+  });
 
   final _FilterOption status;
   final List<EsportsMatchSummary> matches;
+  final String? championMatchId;
 
   @override
   Widget build(BuildContext context) {
@@ -655,7 +662,11 @@ class _MatchStatusSection extends StatelessWidget {
         else
           ...matches.expand(
             (match) => [
-              _MatchCard(match: match),
+              _MatchCard(
+                match: match,
+                isChampion:
+                    championMatchId != null && match.id == championMatchId,
+              ),
               if (match != matches.last) const SizedBox(height: 10),
             ],
           ),
@@ -704,9 +715,10 @@ class _InlineEmptyState extends StatelessWidget {
 }
 
 class _MatchCard extends StatelessWidget {
-  const _MatchCard({required this.match});
+  const _MatchCard({required this.match, required this.isChampion});
 
   final EsportsMatchSummary match;
+  final bool isChampion;
 
   @override
   Widget build(BuildContext context) {
@@ -758,6 +770,7 @@ class _MatchCard extends StatelessWidget {
                   highlightColor: match.winnerSide == 'a'
                       ? Colors.greenAccent
                       : null,
+                  showChampionIcon: isChampion && match.winnerSide == 'a',
                 ),
               ),
               Padding(
@@ -772,6 +785,7 @@ class _MatchCard extends StatelessWidget {
                   highlightColor: match.winnerSide == 'b'
                       ? Colors.greenAccent
                       : null,
+                  showChampionIcon: isChampion && match.winnerSide == 'b',
                 ),
               ),
             ],
@@ -1471,12 +1485,14 @@ class _TeamIdentity extends StatelessWidget {
     required this.logoUrl,
     this.alignEnd = false,
     this.highlightColor,
+    this.showChampionIcon = false,
   });
 
   final String name;
   final String logoUrl;
   final bool alignEnd;
   final Color? highlightColor;
+  final bool showChampionIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -1501,6 +1517,15 @@ class _TeamIdentity extends StatelessWidget {
           ),
         ),
       ),
+      if (showChampionIcon) ...[
+        const SizedBox(width: 4),
+        const Icon(
+          Icons.emoji_events,
+          color: AppTheme.gold,
+          size: 16,
+          semanticLabel: 'Champion winner',
+        ),
+      ],
     ];
 
     return Row(
@@ -1665,6 +1690,23 @@ Map<String, List<EsportsMatchSummary>> _groupMatchesByStatus(
     grouped.putIfAbsent(status, () => []).add(match);
   }
   return grouped;
+}
+
+String? _championMatchId(List<EsportsMatchSummary> matches) {
+  final finished = matches
+      .where((match) => match.statusKey.trim().toLowerCase() == 'finished')
+      .toList();
+  if (finished.isEmpty) {
+    return null;
+  }
+  finished.sort((a, b) {
+    final timeA = DateTime.tryParse(a.startTime.trim());
+    final timeB = DateTime.tryParse(b.startTime.trim());
+    return (timeB?.millisecondsSinceEpoch ?? 0).compareTo(
+      timeA?.millisecondsSinceEpoch ?? 0,
+    );
+  });
+  return finished.first.id;
 }
 
 IconData _matchStatusIcon(String status) {
