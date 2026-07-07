@@ -75,6 +75,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
   final _commentController = TextEditingController();
   final _replyController = TextEditingController();
   CommunityCommentSummary? _replyTo;
+  Set<String> _likedCommentIds = const {};
   var _commentSubmitting = false;
   var _replySubmitting = false;
   var _likeSubmitting = false;
@@ -100,6 +101,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
       _likeCount = widget.detail.post.likeCount;
       _isLiked = widget.detail.isLiked || widget.detail.post.isLiked;
       _replyTo = null;
+      _likedCommentIds = const {};
       _commentSubmitting = false;
       _replySubmitting = false;
       _likeSubmitting = false;
@@ -278,6 +280,8 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
               final comment = _comments[index];
               return _CommentCard(
                 comment: comment,
+                isLiked: _likedCommentIds.contains(comment.id),
+                onToggleLike: () => _toggleCommentLike(comment.id),
                 onReply: () {
                   setState(() {
                     _replyTo = comment;
@@ -289,6 +293,18 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           ),
       ],
     );
+  }
+
+  void _toggleCommentLike(String commentId) {
+    setState(() {
+      final next = Set<String>.from(_likedCommentIds);
+      if (next.contains(commentId)) {
+        next.remove(commentId);
+      } else {
+        next.add(commentId);
+      }
+      _likedCommentIds = next;
+    });
   }
 
   Future<void> _createReply(BuildContext context) async {
@@ -413,9 +429,16 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
 }
 
 class _CommentCard extends StatelessWidget {
-  const _CommentCard({required this.comment, required this.onReply});
+  const _CommentCard({
+    required this.comment,
+    required this.isLiked,
+    required this.onToggleLike,
+    required this.onReply,
+  });
 
   final CommunityCommentSummary comment;
+  final bool isLiked;
+  final VoidCallback onToggleLike;
   final VoidCallback onReply;
 
   @override
@@ -451,8 +474,6 @@ class _CommentCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (comment.likeCount > 0)
-                  _MetricChip(label: '${comment.likeCount} likes'),
               ],
             ),
             if (comment.parentAuthorName.isNotEmpty) ...[
@@ -473,13 +494,24 @@ class _CommentCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onReply,
-                icon: const Icon(Icons.reply_outlined, size: 16),
-                label: const Text('Reply'),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: onToggleLike,
+                  icon: Icon(
+                    isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                    size: 16,
+                  ),
+                  label: Text('${comment.likeCount + (isLiked ? 1 : 0)} likes'),
+                ),
+                const SizedBox(width: 6),
+                TextButton.icon(
+                  onPressed: onReply,
+                  icon: const Icon(Icons.reply_outlined, size: 16),
+                  label: const Text('Reply'),
+                ),
+              ],
             ),
           ],
         ),

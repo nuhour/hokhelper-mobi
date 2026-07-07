@@ -370,6 +370,64 @@ void main() {
     expect(find.text('Reply posted'), findsOneWidget);
   });
 
+  testWidgets('toggles comment likes locally like the hokx detail page', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 1,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [
+                CommunityCommentSummary(
+                  id: 'c1',
+                  content: 'Great route.',
+                  authorName: 'Lam',
+                  authorAvatarUrl: '',
+                  createdAt: '2026-07-03T09:00:00Z',
+                  likeCount: 3,
+                  parentId: '',
+                  parentAuthorName: '',
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityPostDetailScreen(postId: '99')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final likeButton = find.widgetWithText(TextButton, '3 likes');
+    await tester.ensureVisible(likeButton);
+    await tester.pumpAndSettle();
+    await tester.tap(likeButton);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextButton, '4 likes'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, '4 likes'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextButton, '3 likes'), findsOneWidget);
+  });
+
   testWidgets('opens comment authors from the mobile detail screen', (
     tester,
   ) async {
