@@ -1401,13 +1401,32 @@ class _PostAuthorName extends StatelessWidget {
   }
 }
 
-class _LeakCard extends StatelessWidget {
+class _LeakCard extends StatefulWidget {
   const _LeakCard({required this.leak});
 
   final LeakPostSummary leak;
 
   @override
+  State<_LeakCard> createState() => _LeakCardState();
+}
+
+class _LeakCardState extends State<_LeakCard> {
+  late var _isLiked = false;
+  late var _likeCount = widget.leak.likeCount;
+
+  @override
+  void didUpdateWidget(covariant _LeakCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.leak.id != widget.leak.id ||
+        oldWidget.leak.likeCount != widget.leak.likeCount) {
+      _isLiked = false;
+      _likeCount = widget.leak.likeCount;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final leak = widget.leak;
     return _PanelCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1469,7 +1488,15 @@ class _LeakCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _Pill(label: leak.metricText),
+              TextButton.icon(
+                onPressed: _toggleLike,
+                icon: Icon(
+                  _isLiked ? Icons.favorite : Icons.favorite_border,
+                  size: 16,
+                ),
+                label: Text('$_likeCount'),
+              ),
+              _Pill(label: '${leak.viewCount} views'),
               _Pill(label: leak.category),
               if (leak.platform.isNotEmpty) _Pill(label: leak.platform),
               ...leak.keywords.take(3).map((keyword) => _Pill(label: keyword)),
@@ -1478,6 +1505,13 @@ class _LeakCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _toggleLike() {
+    setState(() {
+      _isLiked = !_isLiked;
+      _likeCount = widget.leak.likeCount + (_isLiked ? 1 : 0);
+    });
   }
 }
 

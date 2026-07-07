@@ -186,7 +186,8 @@ void main() {
 
     expect(find.text('New Lam skin teaser'), findsOneWidget);
     expect(find.text('leaker · @leaker'), findsOneWidget);
-    expect(find.text('91 likes · 1200 views'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, '91'), findsOneWidget);
+    expect(find.text('1200 views'), findsOneWidget);
     expect(find.text('skin'), findsWidgets);
     expect(find.text('Lam'), findsOneWidget);
   });
@@ -226,6 +227,52 @@ void main() {
 
     expect(find.text('Direct leak entry'), findsOneWidget);
     expect(find.text('No community posts found'), findsNothing);
+  });
+
+  testWidgets('toggles leak likes locally like the hokx portal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsProvider.overrideWith((ref) async {
+            return const [
+              LeakPostSummary(
+                id: '501',
+                title: 'New Lam skin teaser',
+                content: 'A cyber themed Lam skin appeared in preview.',
+                category: 'skin',
+                platform: 'youtube',
+                authorName: 'leaker',
+                authorHandle: '@leaker',
+                authorAvatarUrl: '',
+                mediaUrl: '',
+                mediaType: 'image',
+                publishedAt: '2026-07-02T12:00:00Z',
+                likeCount: 91,
+                viewCount: 1200,
+                keywords: ['Lam', 'skin'],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextButton, '91'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, '91'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextButton, '92'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, '92'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextButton, '91'), findsOneWidget);
   });
 
   testWidgets('filters leaks from initial search query', (tester) async {
