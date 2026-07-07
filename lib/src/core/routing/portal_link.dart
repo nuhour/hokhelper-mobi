@@ -91,6 +91,11 @@ String _normalizeInternalTarget(String target) {
         .toString();
   }
 
+  if (uri.path == '/honor-of-kings-world-tier-list' ||
+      uri.path == '/hok-world-tier-list') {
+    return uri.replace(path: '/hok-world/hok-world-tier-list').toString();
+  }
+
   final aliasPath = _mobileAliasPath(uri.path);
   if (aliasPath != null) {
     return uri.replace(path: aliasPath).toString();

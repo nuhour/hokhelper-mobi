@@ -115,4 +115,21 @@ void main() {
       'https://external.example/en/hero-gallery/101',
     );
   });
+
+  test('normalizes hok world topic aliases to article routes', () {
+    expect(
+      normalizePortalLinkTarget('/honor-of-kings-world-tier-list'),
+      '/hok-world/hok-world-tier-list',
+    );
+    expect(
+      normalizePortalLinkTarget('/zh/hok-world-tier-list'),
+      '/hok-world/hok-world-tier-list',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/honor-of-kings-world-tier-list',
+      ),
+      '/hok-world/hok-world-tier-list',
+    );
+  });
 }
