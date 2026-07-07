@@ -15,6 +15,7 @@ class _FakeBpRepository extends BpRepository {
   String? createdTeamAName;
   String? createdTeamBName;
   String? createdSideSelectionRule;
+  String? deletedSchemeId;
 
   @override
   Future<BpSchemeSummary> createScheme({
@@ -45,6 +46,11 @@ class _FakeBpRepository extends BpRepository {
       bluePickCount: 0,
       redPickCount: 0,
     );
+  }
+
+  @override
+  Future<void> deleteScheme(String schemeId) async {
+    deletedSchemeId = schemeId;
   }
 }
 
@@ -142,5 +148,51 @@ void main() {
     expect(find.text('Team Alpha vs Team Beta'), findsOneWidget);
     expect(find.text('BO5'), findsOneWidget);
     expect(find.text('BP scheme created'), findsOneWidget);
+  });
+
+  testWidgets('deletes BP schemes after confirmation', (tester) async {
+    final repository = _FakeBpRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpRepositoryProvider.overrideWithValue(repository),
+          bpSchemesProvider.overrideWith((ref) async {
+            return const [
+              BpSchemeSummary(
+                id: '12',
+                name: 'KPL Finals Draft',
+                createdAt: '2026-07-03T10:00:00Z',
+                boMode: 7,
+                teamAName: 'Wolves',
+                teamBName: 'AG',
+                sideSelectionRule: 'loser_selects',
+                gameNumber: 3,
+                historyCount: 2,
+                currentStepIndex: 4,
+                blueBanCount: 1,
+                redBanCount: 1,
+                bluePickCount: 1,
+                redPickCount: 1,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BpDashboardScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete BP scheme?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedSchemeId, '12');
+    expect(find.text('KPL Finals Draft'), findsNothing);
+    expect(find.text('BP scheme deleted'), findsOneWidget);
   });
 }

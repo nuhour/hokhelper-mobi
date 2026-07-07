@@ -53,4 +53,11 @@ class BpRepository {
     final scheme = result is Map ? result['scheme'] : json['scheme'];
     return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
   }
+
+  Future<void> deleteScheme(String schemeId) async {
+    await apiClient.postJson(
+      '/bp/scheme/$schemeId/delete',
+      body: {'schemeId': schemeId},
+    );
+  }
 }

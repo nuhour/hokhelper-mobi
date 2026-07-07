@@ -77,7 +77,10 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
                 ...visibleSchemes.map(
                   (scheme) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _BpSchemeCard(scheme: scheme),
+                    child: _BpSchemeCard(
+                      scheme: scheme,
+                      onDelete: () => _confirmDeleteScheme(scheme),
+                    ),
                   ),
                 ),
             ],
@@ -136,6 +139,61 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(content: Text('Failed to create BP scheme')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteScheme(BpSchemeSummary scheme) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete BP scheme?'),
+          content: Text('Delete "${scheme.name}" from your BP schemes.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    try {
+      await ref.read(bpRepositoryProvider).deleteScheme(scheme.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        final existing =
+            _localSchemes ??
+            ref.read(bpSchemesProvider).valueOrNull ??
+            const <BpSchemeSummary>[];
+        _localSchemes = existing
+            .where((item) => item.id != scheme.id)
+            .toList(growable: false);
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('BP scheme deleted')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to delete BP scheme')),
       );
     }
   }
@@ -293,9 +351,10 @@ class _BpCreateSheetState extends State<_BpCreateSheet> {
 }
 
 class _BpSchemeCard extends StatelessWidget {
-  const _BpSchemeCard({required this.scheme});
+  const _BpSchemeCard({required this.scheme, required this.onDelete});
 
   final BpSchemeSummary scheme;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -358,6 +417,21 @@ class _BpSchemeCard extends StatelessWidget {
                     _MetricBadge(label: scheme.historyCountText),
                     _MetricBadge(label: scheme.phaseSummaryText),
                   ],
+                ),
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Delete'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.error,
+                      side: BorderSide(
+                        color: AppTheme.error.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

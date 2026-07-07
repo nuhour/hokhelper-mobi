@@ -167,4 +167,14 @@ void main() {
     expect(scheme.boModeText, 'BO5');
     expect(scheme.matchupText, 'Team Alpha vs Team Beta');
   });
+
+  test('deletes a BP scheme with hokx-compatible request body', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BpRepository(apiClient: apiClient);
+
+    await repository.deleteScheme('12');
+
+    expect(apiClient.requestedPath, '/bp/scheme/12/delete');
+    expect(apiClient.requestedBody, {'schemeId': '12'});
+  });
 }
