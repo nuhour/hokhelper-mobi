@@ -77,7 +77,8 @@ void main() {
         child: HokHelperApp(router: router),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     await tester.tap(find.text('Shared route build'));
     await tester.pumpAndSettle();
@@ -151,7 +152,8 @@ void main() {
         child: HokHelperApp(router: router),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     await tester.tap(find.text('sharer'));
     await tester.pumpAndSettle();
@@ -224,7 +226,8 @@ void main() {
         child: HokHelperApp(router: router),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
     expect(requestedSlots, contains(166));
@@ -495,5 +498,43 @@ void main() {
     expect(find.text('Angela · '), findsOneWidget);
     expect(find.text('collector'), findsOneWidget);
     expect(find.text('Public route build'), findsNothing);
+  });
+
+  testWidgets('legacy builds hero query focuses build explorer', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+
+    router.go('/builds?hero_id=166');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          publicBuildSchemesForHeroProvider(166).overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 42,
+                title: 'Angela route build',
+                heroName: 'Angela',
+                authorName: 'coach',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 8,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/tools/builds');
+    expect(uri.queryParameters['hero_id'], '166');
+    expect(find.text('Focused hero builds'), findsOneWidget);
+    expect(find.text('Angela route build'), findsOneWidget);
   });
 }

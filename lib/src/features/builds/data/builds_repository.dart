@@ -21,7 +21,13 @@ class BuildsRepository {
   Future<List<BuildSchemeSummary>> loadPublicSchemes(
     int regionId, {
     BuildSchemeSort sort = BuildSchemeSort.popular,
+    int? heroId,
   }) async {
+    final filterRules = [
+      {'field': 'region_id', 'op': 'eq', 'value': regionId},
+      if (heroId != null && heroId > 0)
+        {'field': 'hero__heroId', 'op': 'eq', 'value': heroId},
+    ];
     final json = await apiClient.getJson(
       '/build/schemes',
       query: {
@@ -30,9 +36,7 @@ class BuildsRepository {
         'pageSize': 20,
         'sort': sort.backendValue,
         'order': 'desc',
-        'filterRules': jsonEncode([
-          {'field': 'region_id', 'op': 'eq', 'value': regionId},
-        ]),
+        'filterRules': jsonEncode(filterRules),
       },
     );
     return _readRows(

@@ -757,7 +757,11 @@ GoRouter createAppRouter() {
                 routes: [
                   GoRoute(
                     path: 'builds',
-                    builder: (context, state) => const BuildExplorerScreen(),
+                    builder: (context, state) => BuildExplorerScreen(
+                      initialHeroId: int.tryParse(
+                        state.uri.queryParameters['hero_id'] ?? '',
+                      ),
+                    ),
                   ),
                   GoRoute(
                     path: 'build-sim',

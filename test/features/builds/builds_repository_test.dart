@@ -195,6 +195,19 @@ void main() {
     expect(apiClient.getQuery?['order'], 'desc');
   });
 
+  test('loads public build schemes with hokx hero filter', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
+
+    await repository.loadPublicSchemes(2, heroId: 166);
+
+    expect(apiClient.getPath, '/build/schemes');
+    expect(jsonDecode(apiClient.getQuery?['filterRules'] as String), [
+      {'field': 'region_id', 'op': 'eq', 'value': 2},
+      {'field': 'hero__heroId', 'op': 'eq', 'value': 166},
+    ]);
+  });
+
   test(
     'loads my build slots for a hero with region and hero filters',
     () async {

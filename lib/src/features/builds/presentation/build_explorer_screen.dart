@@ -31,26 +31,52 @@ final publicBuildSchemesProvider = FutureProvider<List<BuildSchemeSummary>>((
 ) async {
   final regionId = await ref.watch(publicBuildSchemesRegionProvider.future);
   final sort = ref.watch(publicBuildSchemeSortProvider);
-  return ref.watch(buildsRepositoryProvider).loadPublicSchemes(
-        regionId,
-        sort: sort,
-      );
+  return ref
+      .watch(buildsRepositoryProvider)
+      .loadPublicSchemes(regionId, sort: sort);
 });
 
+final publicBuildSchemesForHeroProvider =
+    FutureProvider.family<List<BuildSchemeSummary>, int>((ref, heroId) async {
+      final regionId = await ref.watch(publicBuildSchemesRegionProvider.future);
+      final sort = ref.watch(publicBuildSchemeSortProvider);
+      return ref
+          .watch(buildsRepositoryProvider)
+          .loadPublicSchemes(regionId, sort: sort, heroId: heroId);
+    });
+
 class BuildExplorerScreen extends ConsumerWidget {
-  const BuildExplorerScreen({super.key});
+  const BuildExplorerScreen({this.initialHeroId, super.key});
+
+  final int? initialHeroId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final schemesValue = ref.watch(publicBuildSchemesProvider);
+    final focusedHeroId = initialHeroId;
+    final schemesValue = focusedHeroId == null
+        ? ref.watch(publicBuildSchemesProvider)
+        : ref.watch(publicBuildSchemesForHeroProvider(focusedHeroId));
     final selectedSort = ref.watch(publicBuildSchemeSortProvider);
+
+    final focusedProvider = focusedHeroId == null
+        ? null
+        : publicBuildSchemesForHeroProvider(focusedHeroId);
+    final refreshFuture = focusedProvider == null
+        ? publicBuildSchemesProvider.future
+        : focusedProvider.future;
 
     return AppAsyncView<List<BuildSchemeSummary>>(
       value: schemesValue,
-      retry: () => ref.invalidate(publicBuildSchemesProvider),
+      retry: () {
+        if (focusedProvider == null) {
+          ref.invalidate(publicBuildSchemesProvider);
+        } else {
+          ref.invalidate(focusedProvider);
+        }
+      },
       data: (schemes) {
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(publicBuildSchemesProvider.future),
+          onRefresh: () => ref.refresh(refreshFuture),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -63,11 +89,24 @@ class BuildExplorerScreen extends ConsumerWidget {
                       const AppSectionHeader(title: 'Build Explorer'),
                       const SizedBox(height: 8),
                       Text(
-                        'Browse public hero builds from the community.',
+                        focusedHeroId == null
+                            ? 'Browse public hero builds from the community.'
+                            : 'Browse public builds filtered by hero #$focusedHeroId.',
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
                       ),
+                      if (focusedHeroId != null) ...[
+                        const SizedBox(height: 10),
+                        Chip(
+                          avatar: const Icon(
+                            Icons.filter_alt_outlined,
+                            size: 16,
+                          ),
+                          label: const Text('Focused hero builds'),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       Wrap(
                         spacing: 8,
@@ -79,10 +118,9 @@ class BuildExplorerScreen extends ConsumerWidget {
                             avatar: const Icon(Icons.trending_up, size: 16),
                             onSelected: (_) {
                               ref
-                                  .read(
-                                    publicBuildSchemeSortProvider.notifier,
-                                  )
-                                  .state = BuildSchemeSort.popular;
+                                  .read(publicBuildSchemeSortProvider.notifier)
+                                  .state = BuildSchemeSort
+                                  .popular;
                             },
                           ),
                           ChoiceChip(
@@ -91,10 +129,9 @@ class BuildExplorerScreen extends ConsumerWidget {
                             avatar: const Icon(Icons.schedule, size: 16),
                             onSelected: (_) {
                               ref
-                                  .read(
-                                    publicBuildSchemeSortProvider.notifier,
-                                  )
-                                  .state = BuildSchemeSort.latest;
+                                  .read(publicBuildSchemeSortProvider.notifier)
+                                  .state = BuildSchemeSort
+                                  .latest;
                             },
                           ),
                         ],
@@ -373,10 +410,9 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   Future<void> _cloneScheme(BuildContext context, int slotIndex) async {
     setState(() => _cloneSubmitting = true);
     try {
-      await ref.read(buildsRepositoryProvider).cloneBuildScheme(
-            schemeId: widget.scheme.id,
-            slotIndex: slotIndex,
-          );
+      await ref
+          .read(buildsRepositoryProvider)
+          .cloneBuildScheme(schemeId: widget.scheme.id, slotIndex: slotIndex);
       if (!mounted || !context.mounted) {
         return;
       }

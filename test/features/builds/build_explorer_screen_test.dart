@@ -16,13 +16,16 @@ class _FakeBuildsRepository extends BuildsRepository {
   int? clonedSchemeId;
   int? clonedSlotIndex;
   BuildSchemeSort? loadedSort;
+  int? loadedHeroId;
 
   @override
   Future<List<BuildSchemeSummary>> loadPublicSchemes(
     int regionId, {
     BuildSchemeSort sort = BuildSchemeSort.popular,
+    int? heroId,
   }) async {
     loadedSort = sort;
+    loadedHeroId = heroId;
     return const [
       BuildSchemeSummary(
         id: 7,
@@ -112,9 +115,7 @@ void main() {
     expect(find.text('3'), findsOneWidget);
   });
 
-  testWidgets('likes public build schemes from explorer cards', (
-    tester,
-  ) async {
+  testWidgets('likes public build schemes from explorer cards', (tester) async {
     final repository = _FakeBuildsRepository();
 
     await tester.pumpWidget(
