@@ -1065,31 +1065,103 @@ class _FaqDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _InfoPanel(
-      icon: Icons.help_outline,
-      title: 'Common questions',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _QuestionAnswer(
-            question: 'Where does hero data come from?',
-            answer:
-                'Hero, equipment, and stats data are normalized from HOK Helper backend sources and public game-facing datasets for region-aware app views.',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _InfoPanel(
+          icon: Icons.help_outline,
+          title: 'Common questions',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BodyText(
+                'Everything you need to know about navigating HOK Helper and dominating the competition.',
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question: 'Where does hero data come from?',
+                answer:
+                    'Hero, equipment, and stats data are normalized from HOK Helper backend sources and public game-facing datasets for region-aware app views.',
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question:
+                    'Where does the hero data and win rate statistics come from?',
+                answer:
+                    'Statistics are updated daily by crawling public game data sources.',
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question: "Why isn't my favorite hero appearing in T0 or T1?",
+                answer:
+                    'Tiers are calculated based on a weighted average of Win Rate, Pick Rate, and Ban Rate. A hero may be strong in the right hands but have a low overall win rate due to skill floor or meta-counters, placing them in T2 or T3.',
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question: 'Is the BP Simulator synced with the actual game?',
+                answer:
+                    'The simulator is a strategic tool for drafting practice. While it mimics the official pick/ban sequence and roster, it does not connect to your live game client. You can use it to plan drafts with your team before a tournament.',
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question: 'How does the AI Prompt Library work?',
+                answer:
+                    'You can use the prompts on different image-generation platforms. The in-platform generation feature is not publicly available for now.',
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question:
+                    'Can I use the builds provided here in pro tournaments?',
+                answer:
+                    "Our 'Pro Builds' are curated from the top 100 players in each region. However, in professional play, builds must be adapted based on the enemy lineup and your specific team strategy. Use them as a highly optimized baseline.",
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question:
+                    'Is HOK Helper an official product of Level Infinite?',
+                answer:
+                    'No. We are a 100% independent fan project. We love Honor of Kings and want to build the best tools for the community, but we are not affiliated with TiMi Studio Group or Level Infinite.',
+              ),
+              SizedBox(height: 12),
+              _QuestionAnswer(
+                question: 'How can I report a bug or incorrect data?',
+                answer:
+                    "The fastest way to reach the dev team is through our Discord server. You can also use the 'Report Post' feature in the Community section for content violations.",
+              ),
+            ],
           ),
-          SizedBox(height: 12),
-          _QuestionAnswer(
-            question: 'Can I use it while playing?',
-            answer:
-                'Use the app as a planning and strategy reference. It does not automate gameplay or replace in-match decision making.',
+        ),
+        const SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.support_agent_outlined,
+          title: 'Still have questions?',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _BodyText(
+                'Our community coordinators are online and ready to help.',
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => context.go('/links'),
+                    icon: const Icon(Icons.mail_outline),
+                    label: const Text('Contact Support'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/about?section=community'),
+                    icon: const Icon(Icons.groups_2_outlined),
+                    label: const Text('Join Community'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          SizedBox(height: 12),
-          _QuestionAnswer(
-            question: 'Is this an official product?',
-            answer:
-                'No. HOK Helper is an independent community assistant for learning, discussion, and strategy planning.',
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

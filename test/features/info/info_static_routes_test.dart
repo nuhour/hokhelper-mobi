@@ -70,6 +70,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('FAQ'), findsOneWidget);
     expect(find.text('Where does hero data come from?'), findsOneWidget);
+    expect(
+      find.text('Where does the hero data and win rate statistics come from?'),
+      findsOneWidget,
+    );
+    expect(
+      find.text("Why isn't my favorite hero appearing in T0 or T1?"),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Is the BP Simulator synced with the actual game?'),
+      findsOneWidget,
+    );
+    expect(find.text('How does the AI Prompt Library work?'), findsOneWidget);
+    expect(
+      find.text('Can I use the builds provided here in pro tournaments?'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Is HOK Helper an official product of Level Infinite?'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('How can I report a bug or incorrect data?'),
+      findsOneWidget,
+    );
+    expect(find.text('Still have questions?'), findsOneWidget);
+    expect(find.text('Contact Support'), findsOneWidget);
+    expect(find.text('Join Community'), findsOneWidget);
 
     router.go('/privacy');
     await tester.pumpAndSettle();
