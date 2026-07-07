@@ -114,10 +114,8 @@ String _readSubtitle(Map<String, dynamic> json, String groupKey) {
   }
 
   final parts = switch (groupKey) {
-    'pro_players' => [
-      _readString(json['team_name']),
-      _readString(json['position'] ?? json['role']),
-    ],
+    'teams' => _teamSubtitleParts(json),
+    'pro_players' => _proPlayerSubtitleParts(json),
     'players' => [
       _readString(json['rank_type']),
       _readString(json['area'] ?? json['server_name']),
@@ -127,6 +125,49 @@ String _readSubtitle(Map<String, dynamic> json, String groupKey) {
     _ => const <String>[],
   };
   return parts.where((part) => part.isNotEmpty).join(' · ');
+}
+
+List<String> _teamSubtitleParts(Map<String, dynamic> json) {
+  final schedule = _readMap(json['schedule']);
+  return [
+    _readString(json['league_name']),
+    _recordText(json['wins'], json['losses']),
+    _opponentText(schedule),
+  ];
+}
+
+List<String> _proPlayerSubtitleParts(Map<String, dynamic> json) {
+  final schedule = _readMap(json['schedule']);
+  return [
+    _readString(json['team_name']),
+    _readString(json['position'] ?? json['role']),
+    _opponentText(schedule),
+  ];
+}
+
+Map<String, dynamic> _readMap(Object? value) {
+  return value is Map<String, dynamic>
+      ? value
+      : value is Map
+      ? Map<String, dynamic>.from(value)
+      : const <String, dynamic>{};
+}
+
+String _recordText(Object? wins, Object? losses) {
+  final winText = _readString(wins);
+  final lossText = _readString(losses);
+  if (winText.isEmpty || lossText.isEmpty) {
+    return '';
+  }
+  return '$winText-$lossText';
+}
+
+String _opponentText(Map<String, dynamic> schedule) {
+  final opponent = _readString(schedule['opponent_name']);
+  if (opponent.isEmpty) {
+    return '';
+  }
+  return 'VS $opponent';
 }
 
 String _readImageUrl(Map<String, dynamic> json) {

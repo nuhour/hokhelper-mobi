@@ -78,6 +78,10 @@ void main() {
               'id': 'kpl-ag',
               'name': 'AG Super Play',
               'logo_url': 'https://example.test/ag.png',
+              'league_name': 'KPL',
+              'wins': 12,
+              'losses': 3,
+              'schedule': {'opponent_name': 'Wolves'},
             },
           ],
           'players': [
@@ -94,6 +98,7 @@ void main() {
               'player_avatar': 'https://example.test/cat.png',
               'team_name': 'eStar',
               'position': 'Mid',
+              'schedule': {'opponent_name': 'AG Super Play'},
             },
           ],
           'leaks': [
@@ -130,7 +135,7 @@ void main() {
     expect(itemFor('players').title, 'PeakPlayer');
     expect(itemFor('players').subtitle, 'peak');
     expect(itemFor('pro_players').title, 'Cat');
-    expect(itemFor('pro_players').subtitle, 'eStar · Mid');
+    expect(itemFor('pro_players').subtitle, 'eStar · Mid · VS AG Super Play');
     expect(itemFor('heroes').imageUrl, 'https://example.test/yaria.png');
     expect(
       itemFor('heroes').actions.map((action) => action.label),
@@ -154,6 +159,7 @@ void main() {
       contains('/stats?entry=equip_rank&equip_id=1337'),
     );
     expect(itemFor('teams').imageUrl, 'https://example.test/ag.png');
+    expect(itemFor('teams').subtitle, 'KPL · 12-3 · VS Wolves');
     expect(
       itemFor('teams').actions.map((action) => action.url),
       contains('/esports/teams/kpl-ag'),
