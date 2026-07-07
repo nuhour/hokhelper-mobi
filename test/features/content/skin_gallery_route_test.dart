@@ -236,4 +236,53 @@ void main() {
       'Lam',
     );
   });
+
+  testWidgets(
+    'legacy skin_id query preserves gallery filters on detail route',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final router = createAppRouter();
+      router.go('/skin-gallery?skin_id=1001&q=Lam');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            contentRepositoryProvider.overrideWithValue(
+              _RouteSkinRepository(const [
+                ContentItemSummary(
+                  id: 1001,
+                  kind: ContentKind.skin,
+                  title: 'Crimson Hunter',
+                  heroName: 'Lam',
+                  imageUrl: '',
+                  subtitle: 'Hunter Series',
+                  rating: 4.5,
+                  ratingCount: 12,
+                  viewCount: 0,
+                ),
+              ]),
+            ),
+            skinGalleryRegionProvider.overrideWith((ref) async => 2),
+          ],
+          child: HokHelperApp(router: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/skin-gallery/1001',
+      );
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['q'],
+        'Lam',
+      );
+      expect(find.text('Skin Detail'), findsOneWidget);
+      expect(find.text('Hunter Series'), findsWidgets);
+    },
+  );
 }

@@ -437,7 +437,13 @@ GoRouter createAppRouter() {
             state.uri.queryParameters['skin_id'] ?? '',
           );
           if (skinId != null && skinId > 0) {
-            return '/skin-gallery/$skinId';
+            final queryParameters = Map<String, String>.from(
+              state.uri.queryParameters,
+            )..remove('skin_id');
+            return Uri(
+              path: '/skin-gallery/$skinId',
+              queryParameters: queryParameters.isEmpty ? null : queryParameters,
+            ).toString();
           }
           return null;
         },
