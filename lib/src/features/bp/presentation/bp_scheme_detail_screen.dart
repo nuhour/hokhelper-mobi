@@ -14,7 +14,7 @@ final bpSchemeDetailProvider = FutureProvider.family<BpSchemeSummary, String>((
   return ref.watch(bpRepositoryProvider).loadScheme(schemeId);
 });
 
-class BpSchemeDetailScreen extends ConsumerWidget {
+class BpSchemeDetailScreen extends ConsumerStatefulWidget {
   const BpSchemeDetailScreen({
     required this.schemeId,
     this.initialGameIndex,
@@ -25,15 +25,25 @@ class BpSchemeDetailScreen extends ConsumerWidget {
   final int? initialGameIndex;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final value = ref.watch(bpSchemeDetailProvider(schemeId));
+  ConsumerState<BpSchemeDetailScreen> createState() =>
+      _BpSchemeDetailScreenState();
+}
+
+class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
+  BpSchemeSummary? _localScheme;
+  var _isUpdating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = ref.watch(bpSchemeDetailProvider(widget.schemeId));
 
     return Material(
       color: AppTheme.bg,
       child: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(bpSchemeDetailProvider(schemeId));
-          await ref.read(bpSchemeDetailProvider(schemeId).future);
+          _localScheme = null;
+          ref.invalidate(bpSchemeDetailProvider(widget.schemeId));
+          await ref.read(bpSchemeDetailProvider(widget.schemeId).future);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -50,10 +60,13 @@ class BpSchemeDetailScreen extends ConsumerWidget {
             const SizedBox(height: 18),
             AppAsyncView<BpSchemeSummary>(
               value: value,
-              retry: () => ref.invalidate(bpSchemeDetailProvider(schemeId)),
+              retry: () =>
+                  ref.invalidate(bpSchemeDetailProvider(widget.schemeId)),
               data: (scheme) => _BpSchemeDetailCard(
-                scheme: scheme,
-                initialGameIndex: initialGameIndex,
+                scheme: _localScheme ?? scheme,
+                initialGameIndex: widget.initialGameIndex,
+                isUpdating: _isUpdating,
+                onEdit: () => _openEditSheet(_localScheme ?? scheme),
               ),
             ),
           ],
@@ -61,12 +74,70 @@ class BpSchemeDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _openEditSheet(BpSchemeSummary scheme) async {
+    final draft = await showModalBottomSheet<_BpEditDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _BpEditSheet(scheme: scheme),
+    );
+    if (draft == null || !mounted) {
+      return;
+    }
+
+    setState(() => _isUpdating = true);
+    try {
+      final updated = await ref
+          .read(bpRepositoryProvider)
+          .updateScheme(
+            scheme.id,
+            name: draft.name,
+            boMode: draft.boMode,
+            teamAName: draft.teamAName,
+            teamBName: draft.teamBName,
+            sideSelectionRule: draft.sideSelectionRule,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _localScheme = updated;
+        _isUpdating = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('BP scheme updated')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isUpdating = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to update BP scheme')),
+      );
+    }
+  }
 }
 
 class _BpSchemeDetailCard extends StatelessWidget {
-  const _BpSchemeDetailCard({required this.scheme, this.initialGameIndex});
+  const _BpSchemeDetailCard({
+    required this.scheme,
+    required this.isUpdating,
+    required this.onEdit,
+    this.initialGameIndex,
+  });
 
   final BpSchemeSummary scheme;
+  final bool isUpdating;
+  final VoidCallback onEdit;
   final int? initialGameIndex;
 
   @override
@@ -125,8 +196,180 @@ class _BpSchemeDetailCard extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _DraftCountGrid(scheme: scheme),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed: isUpdating ? null : onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Edit'),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BpEditDraft {
+  const _BpEditDraft({
+    required this.name,
+    required this.boMode,
+    required this.teamAName,
+    required this.teamBName,
+    required this.sideSelectionRule,
+  });
+
+  final String name;
+  final int boMode;
+  final String teamAName;
+  final String teamBName;
+  final String sideSelectionRule;
+}
+
+class _BpEditSheet extends StatefulWidget {
+  const _BpEditSheet({required this.scheme});
+
+  final BpSchemeSummary scheme;
+
+  @override
+  State<_BpEditSheet> createState() => _BpEditSheetState();
+}
+
+class _BpEditSheetState extends State<_BpEditSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _teamAController;
+  late final TextEditingController _teamBController;
+  late int _boMode;
+  late String _sideSelectionRule;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.scheme.name);
+    _teamAController = TextEditingController(text: widget.scheme.teamAName);
+    _teamBController = TextEditingController(text: widget.scheme.teamBName);
+    _boMode = widget.scheme.boMode;
+    _sideSelectionRule = widget.scheme.sideSelectionRule;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _teamAController.dispose();
+    _teamBController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, bottom + 20),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Edit BP scheme',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Scheme name'),
+                  validator: (value) =>
+                      (value ?? '').trim().isEmpty ? 'Enter a name' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _teamAController,
+                  decoration: const InputDecoration(labelText: 'Blue side'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _teamBController,
+                  decoration: const InputDecoration(labelText: 'Red side'),
+                ),
+                const SizedBox(height: 16),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 3, label: Text('BO3')),
+                    ButtonSegment(value: 5, label: Text('BO5')),
+                    ButtonSegment(value: 7, label: Text('BO7')),
+                  ],
+                  selected: {_boMode},
+                  onSelectionChanged: (values) {
+                    setState(() => _boMode = values.single);
+                  },
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'loser_selects',
+                      label: Text('Loser selects'),
+                    ),
+                    ButtonSegment(
+                      value: 'alternating',
+                      label: Text('Alternate'),
+                    ),
+                  ],
+                  selected: {_sideSelectionRule},
+                  onSelectionChanged: (values) {
+                    setState(() => _sideSelectionRule = values.single);
+                  },
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _submit,
+                        child: const Text('Save'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    Navigator.of(context).pop(
+      _BpEditDraft(
+        name: _nameController.text.trim(),
+        boMode: _boMode,
+        teamAName: _teamAController.text.trim().isEmpty
+            ? 'Team A'
+            : _teamAController.text.trim(),
+        teamBName: _teamBController.text.trim().isEmpty
+            ? 'Team B'
+            : _teamBController.text.trim(),
+        sideSelectionRule: _sideSelectionRule,
       ),
     );
   }

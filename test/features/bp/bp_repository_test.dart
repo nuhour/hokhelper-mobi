@@ -73,6 +73,26 @@ class _FakeApiClient extends ApiClient {
         },
       };
     }
+    if (path == '/bp/scheme/12/update') {
+      return const {
+        'success': true,
+        'message': 'success',
+        'result': {
+          'scheme': {
+            'id': '12',
+            'name': 'Updated Draft',
+            'createdAt': '2026-07-07T11:00:00Z',
+            'boMode': 5,
+            'teamAName': 'Team Alpha',
+            'teamBName': 'Team Beta',
+            'sideSelectionRule': 'alternating',
+            'gameNumber': 1,
+            'history': [],
+            'currentState': {'currentStepIndex': 0},
+          },
+        },
+      };
+    }
     return const {
       'success': true,
       'message': 'success',
@@ -164,6 +184,36 @@ void main() {
     });
     expect(scheme.id, '99');
     expect(scheme.name, 'Mobile Draft');
+    expect(scheme.boModeText, 'BO5');
+    expect(scheme.matchupText, 'Team Alpha vs Team Beta');
+  });
+
+  test('updates a BP scheme with hokx-compatible request wrapper', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BpRepository(apiClient: apiClient);
+
+    final scheme = await repository.updateScheme(
+      '12',
+      name: 'Updated Draft',
+      boMode: 5,
+      teamAName: 'Team Alpha',
+      teamBName: 'Team Beta',
+      sideSelectionRule: 'alternating',
+    );
+
+    expect(apiClient.requestedPath, '/bp/scheme/12/update');
+    expect(apiClient.requestedBody, {
+      'schemeId': '12',
+      'data': {
+        'name': 'Updated Draft',
+        'boMode': 5,
+        'teamAName': 'Team Alpha',
+        'teamBName': 'Team Beta',
+        'sideSelectionRule': 'alternating',
+      },
+    });
+    expect(scheme.id, '12');
+    expect(scheme.name, 'Updated Draft');
     expect(scheme.boModeText, 'BO5');
     expect(scheme.matchupText, 'Team Alpha vs Team Beta');
   });
