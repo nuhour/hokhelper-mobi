@@ -658,4 +658,115 @@ void main() {
     expect(find.text('63.0% WR'), findsOneWidget);
     expect(find.text('320 matches'), findsOneWidget);
   });
+
+  testWidgets('hokx stats dimension query opens focused equipment rank', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/stats?dimension=equip_rank&view=main&equip_id=88');
+    var usedEquipRankProvider = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider(StatsDashboardEntry.equipRank).overrideWith((
+            ref,
+          ) async {
+            usedEquipRankProvider = true;
+            return const StatsDashboard(
+              equips: [
+                StatsEquipRow(
+                  id: '88',
+                  name: 'Doomsday',
+                  iconUrl: '',
+                  pickRate: 0.22,
+                  winRate: 0.53,
+                ),
+              ],
+            );
+          }),
+          statsEquipDetailProvider('88').overrideWith((ref) async {
+            return const StatsEquipDetail(
+              equipId: '88',
+              equipName: 'Doomsday',
+              equipIconUrl: '',
+              heroes: [
+                StatsEquipHeroRow(
+                  id: '199',
+                  name: 'Lam',
+                  avatarUrl: '',
+                  pickRate: 0.42,
+                  winRate: 0.57,
+                  matches: 8900,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    for (var i = 0; i < 10 && !usedEquipRankProvider; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    for (
+      var i = 0;
+      i < 10 && find.text('Equipment Hero Usage').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump();
+
+    expect(usedEquipRankProvider, true);
+    expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
+    expect(find.text('Focused equipment rank'), findsOneWidget);
+    expect(find.text('Equipment Hero Usage'), findsOneWidget);
+    expect(find.text('Lam'), findsOneWidget);
+  });
+
+  testWidgets('legacy stats dimension query redirects into mobile stats', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/stats?dimension=player_rank&view=peak');
+    var usedPlayerRankProvider = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          statsDashboardProvider(StatsDashboardEntry.playerRank).overrideWith((
+            ref,
+          ) async {
+            usedPlayerRankProvider = true;
+            return const StatsDashboard(
+              players: [
+                StatsPlayerRow(
+                  playerId: 'p1',
+                  playerName: 'Top Laner',
+                  avatarUrl: '',
+                  peakScore: 2310,
+                  rankStars: 88,
+                  winRate: 0.63,
+                  avgKda: 7.2,
+                  playCount: 320,
+                  grade: 98.6,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    for (var i = 0; i < 10 && !usedPlayerRankProvider; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump();
+
+    expect(usedPlayerRankProvider, true);
+    expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
+    expect(find.text('Focused player rank'), findsOneWidget);
+    expect(find.text('Top Laner'), findsOneWidget);
+  });
 }

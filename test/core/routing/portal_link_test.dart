@@ -56,6 +56,10 @@ void main() {
       '/tools/stats?entry=equip_rank&equip_id=88',
     );
     expect(
+      normalizePortalLinkTarget('/stats?dimension=equip_rank&view=main'),
+      '/tools/stats?dimension=equip_rank&view=main',
+    );
+    expect(
       normalizePortalLinkTarget('/stats?entry=hero_trend&hero_id=101'),
       '/trends?hero_id=101',
     );

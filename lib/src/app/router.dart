@@ -993,6 +993,7 @@ GoRouter createAppRouter() {
                     builder: (context, state) => StatsScreen(
                       initialEntry: StatsEntry.fromRoute(
                         state.uri.queryParameters['entry'],
+                        dimension: state.uri.queryParameters['dimension'],
                       ),
                       initialEquipId: state.uri.queryParameters['equip_id'],
                       initialHeroId: state.uri.queryParameters['hero_id'],

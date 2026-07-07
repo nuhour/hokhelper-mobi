@@ -59,13 +59,25 @@ enum StatsEntry {
   equipRank,
   playerRank;
 
-  static StatsEntry fromRoute(String? value) {
-    return switch (value) {
+  static StatsEntry fromRoute(String? value, {String? dimension}) {
+    final entry = switch (value) {
       'home_core' => StatsEntry.homeCore,
       'tier_rank' => StatsEntry.tierRank,
       'power_rank' => StatsEntry.powerRank,
       'equip_rank' => StatsEntry.equipRank,
       'player_rank' => StatsEntry.playerRank,
+      _ => null,
+    };
+    if (entry != null) {
+      return entry;
+    }
+
+    return switch (dimension) {
+      'tier_rank' => StatsEntry.tierRank,
+      'power_rank' => StatsEntry.powerRank,
+      'equip_rank' => StatsEntry.equipRank,
+      'player_rank' => StatsEntry.playerRank,
+      'home_core' => StatsEntry.homeCore,
       _ => StatsEntry.overview,
     };
   }
