@@ -119,6 +119,32 @@ String _buildSimTarget(Uri uri) {
   ).toString();
 }
 
+String _bpSimulatorTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final schemeIdFromQuery = queryParameters.remove('scheme_id')?.trim();
+  final schemeIdFromPath =
+      uri.pathSegments.length == 3 &&
+          uri.pathSegments[0] == 'tools' &&
+          uri.pathSegments[1] == 'bp-simulator'
+      ? uri.pathSegments[2].trim()
+      : null;
+  final schemeId = schemeIdFromPath != null && schemeIdFromPath.isNotEmpty
+      ? schemeIdFromPath
+      : schemeIdFromQuery;
+  final legacyGameIndex = queryParameters.remove('game_index')?.trim();
+  if (legacyGameIndex != null &&
+      legacyGameIndex.isNotEmpty &&
+      (queryParameters['gameIndex']?.trim().isEmpty ?? true)) {
+    queryParameters['gameIndex'] = legacyGameIndex;
+  }
+  return Uri(
+    path: schemeId == null || schemeId.isEmpty
+        ? '/tools/bp-simulator'
+        : '/tools/bp-simulator/$schemeId',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
+}
+
 double? _initialMinRating(Uri uri) {
   final rating = double.tryParse(uri.queryParameters['min_rating'] ?? '');
   if (rating == null || rating <= 0) {
@@ -327,8 +353,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/bp-simulator',
-        redirect: (context, state) =>
-            _targetWithQuery('/tools/bp-simulator', state.uri),
+        redirect: (context, state) => _bpSimulatorTarget(state.uri),
       ),
       GoRoute(
         path: '/rankings',
@@ -696,10 +721,25 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'bp-simulator',
+                    redirect: (context, state) {
+                      if (state.uri.queryParameters.containsKey('scheme_id') ||
+                          state.uri.queryParameters.containsKey('game_index')) {
+                        return _bpSimulatorTarget(state.uri);
+                      }
+                      return null;
+                    },
                     builder: (context, state) => const BpDashboardScreen(),
                     routes: [
                       GoRoute(
                         path: ':schemeId',
+                        redirect: (context, state) {
+                          if (state.uri.queryParameters.containsKey(
+                            'game_index',
+                          )) {
+                            return _bpSimulatorTarget(state.uri);
+                          }
+                          return null;
+                        },
                         builder: (context, state) {
                           return BpSchemeDetailScreen(
                             schemeId: state.pathParameters['schemeId'] ?? '',
