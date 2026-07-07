@@ -29,7 +29,7 @@ String externalLinkRoute(String url) {
 }
 
 String _normalizeInternalTarget(String target) {
-  final uri = Uri.tryParse(target);
+  final uri = _stripLocalePrefix(Uri.tryParse(target));
   if (uri == null) {
     return target;
   }
@@ -126,6 +126,18 @@ bool _isPortalHost(String host) {
       normalized.endsWith('.hok-helper.com') ||
       normalized == 'hokhelper.com' ||
       normalized.endsWith('.hokhelper.com');
+}
+
+Uri? _stripLocalePrefix(Uri? uri) {
+  if (uri == null || uri.pathSegments.isEmpty) {
+    return uri;
+  }
+  final locale = uri.pathSegments.first.toLowerCase();
+  if (locale != 'en' && locale != 'zh' && locale != 'id') {
+    return uri;
+  }
+  final remainingPath = uri.pathSegments.skip(1).join('/');
+  return uri.replace(path: remainingPath.isEmpty ? '/' : '/$remainingPath');
 }
 
 String _moveQueryIdToPath(Uri uri, String path, String idKey) {

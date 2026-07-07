@@ -94,4 +94,25 @@ void main() {
       'https://external.example/hero-gallery/101',
     );
   });
+
+  test('normalizes localized hokx portal paths to mobile routes', () {
+    expect(
+      normalizePortalLinkTarget('/en/hero-gallery/101?tab=history'),
+      '/heroes/101?tab=history',
+    );
+    expect(
+      normalizePortalLinkTarget('/zh/community/post/42'),
+      '/content/community/post/42',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/id/stats?entry=hero_trend&hero_id=101',
+      ),
+      '/trends?hero_id=101',
+    );
+    expect(
+      normalizePortalLinkTarget('https://external.example/en/hero-gallery/101'),
+      'https://external.example/en/hero-gallery/101',
+    );
+  });
 }
