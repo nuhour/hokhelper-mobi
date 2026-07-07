@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/routing/portal_link.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
@@ -404,7 +405,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       builder: (context) => _SkinDetailSheet(skinId: skinId),
     ).whenComplete(() {
       if (mounted && router != null && listPath != null) {
-        _syncDetailRoute(router: router, listPath: listPath, skinId: null);
+        final currentPath = router.routeInformationProvider.value.uri.path;
+        if (currentPath == '$listPath/$skinId') {
+          _syncDetailRoute(router: router, listPath: listPath, skinId: null);
+        }
       }
     });
   }
@@ -963,6 +967,12 @@ class _SkinDetailContent extends StatelessWidget {
         _SkinRatingControl(rating: rating, isRating: isRating, onRate: onRate),
         if (detail.linkUrl.isNotEmpty) ...[
           const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: () => context.go(externalLinkRoute(detail.linkUrl)),
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('Open source'),
+          ),
+          const SizedBox(height: 8),
           Text(
             detail.linkUrl,
             maxLines: 2,

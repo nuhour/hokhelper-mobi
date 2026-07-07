@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
@@ -228,7 +230,13 @@ void main() {
     expect(find.text('Moonlight Tune'), findsNothing);
 
     await tester.ensureVisible(find.text('Crimson Hunter'));
-    await tester.tap(find.text('Crimson Hunter'));
+    expect(find.text('Crimson Hunter'), findsOneWidget);
+    await tester.tap(
+      find.ancestor(
+        of: find.text('Crimson Hunter'),
+        matching: find.byType(InkWell),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Skin Detail'), findsOneWidget);
@@ -534,6 +542,59 @@ void main() {
     expect(repository.submittedRating, 5);
     expect(find.text('Rating submitted'), findsOneWidget);
     expect(find.text('13 ratings'), findsOneWidget);
+  });
+
+  testWidgets('skin detail source links open through the mobile link route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/skin-gallery');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(_FakeSkinRepository()),
+          skinGalleryProvider.overrideWith(
+            (ref) =>
+                ref.watch(contentRepositoryProvider).loadSkins(2, pageSize: 60),
+          ),
+          skinDetailProvider(1001).overrideWith(
+            (ref) => ref.watch(contentRepositoryProvider).loadSkinDetail(1001),
+          ),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Crimson Hunter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Skin Detail'), findsOneWidget);
+    expect(find.text('https://example.test/skin/1001'), findsOneWidget);
+    final sourceButton = find.widgetWithText(
+      FilledButton,
+      'Open source',
+      skipOffstage: false,
+    );
+    await tester.scrollUntilVisible(
+      sourceButton.last,
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(sourceButton.last);
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/external-link');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['url'],
+      'https://example.test/skin/1001',
+    );
   });
 
   testWidgets('rates skins directly from gallery cards', (tester) async {
