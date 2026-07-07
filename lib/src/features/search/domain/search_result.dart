@@ -223,6 +223,9 @@ List<SearchResultAction> _readActions(
       label: 'Equip Rank',
       url: _equipStatsPath(json['equip_id'] ?? json['id']),
     ),
+    'players' => const [
+      SearchResultAction(label: 'Player Rank', url: '/stats?entry=player_rank'),
+    ],
     'teams' => _singleAction(
       label: 'Team',
       url: _idPath('/esports/teams', json['id'] ?? json['team_id']),

@@ -136,6 +136,14 @@ void main() {
 
     expect(itemFor('players').title, 'PeakPlayer');
     expect(itemFor('players').subtitle, 'peak');
+    expect(
+      itemFor('players').actions.map((action) => action.label),
+      contains('Player Rank'),
+    );
+    expect(
+      itemFor('players').actions.map((action) => action.url),
+      contains('/stats?entry=player_rank'),
+    );
     expect(itemFor('pro_players').title, 'Cat');
     expect(itemFor('pro_players').subtitle, 'eStar · Mid · VS AG Super Play');
     expect(itemFor('heroes').imageUrl, 'https://example.test/yaria.png');

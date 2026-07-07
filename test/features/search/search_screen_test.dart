@@ -208,6 +208,11 @@ void main() {
             'Leaderboard ${state.uri.queryParameters['rank_type']} ${state.uri.queryParameters['region_id']}',
           ),
         ),
+        GoRoute(
+          path: '/tools/stats',
+          builder: (context, state) =>
+              Text('Stats ${state.uri.queryParameters['entry']}'),
+        ),
       ],
     );
 
@@ -221,6 +226,7 @@ void main() {
 
     expect(find.text('Players (1)'), findsOneWidget);
     expect(find.text('PeakPlayer'), findsOneWidget);
+    expect(find.text('Player Rank'), findsOneWidget);
 
     await tester.tap(find.text('PeakPlayer'));
     await tester.pumpAndSettle();
@@ -235,5 +241,18 @@ void main() {
       '44',
     );
     expect(find.text('Leaderboard peak 44'), findsOneWidget);
+
+    router.go('/search?q=peak');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Player Rank'));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['entry'],
+      'player_rank',
+    );
+    expect(find.text('Stats player_rank'), findsOneWidget);
   });
 }
