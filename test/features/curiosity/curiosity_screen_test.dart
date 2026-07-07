@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/curiosity/data/curiosity_repository.dart';
@@ -157,6 +159,60 @@ void main() {
     expect(find.text('Yes, if the target point is valid.'), findsOneWidget);
     expect(find.text('Replay evidence'), findsOneWidget);
     expect(find.text('Works on thin walls.'), findsOneWidget);
+  });
+
+  testWidgets('auto asks initial hokx curiosity query', (tester) async {
+    final repository = _FakeRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          curiosityRepositoryProvider.overrideWithValue(repository),
+          curiosityOptionsProvider.overrideWith((ref) async {
+            return repository.searchOptions(query: '', regionId: 1);
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CuriosityLabScreen(
+              initialQuestion: 'Can Kongming dash through walls?',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.askedQuery, 'Can Kongming dash through walls?');
+    expect(find.text('Yes, if the target point is valid.'), findsOneWidget);
+  });
+
+  testWidgets('web curiosity alias auto asks query in app router', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+    final router = createAppRouter()
+      ..go('/curiosity-lab?q=Can%20Kongming%20dash%20through%20walls%3F');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          curiosityRepositoryProvider.overrideWithValue(repository),
+          curiosityOptionsProvider.overrideWith((ref) async {
+            return repository.searchOptions(query: '', regionId: 1);
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/curiosity-lab',
+    );
+    expect(repository.askedQuery, 'Can Kongming dash through walls?');
+    expect(find.text('Yes, if the target point is valid.'), findsOneWidget);
   });
 
   testWidgets('runs an advanced interaction experiment', (tester) async {

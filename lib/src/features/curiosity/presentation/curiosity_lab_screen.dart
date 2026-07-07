@@ -20,7 +20,9 @@ final curiosityOptionsProvider = FutureProvider<CuriosityOptionResult>((ref) {
 });
 
 class CuriosityLabScreen extends ConsumerStatefulWidget {
-  const CuriosityLabScreen({super.key});
+  const CuriosityLabScreen({this.initialQuestion, super.key});
+
+  final String? initialQuestion;
 
   @override
   ConsumerState<CuriosityLabScreen> createState() => _CuriosityLabScreenState();
@@ -36,6 +38,21 @@ class _CuriosityLabScreenState extends ConsumerState<CuriosityLabScreen> {
   var _asking = false;
   var _querying = false;
   var _showAdvanced = false;
+  var _didAutoAskInitialQuestion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialQuestion = widget.initialQuestion?.trim() ?? '';
+    if (initialQuestion.isNotEmpty) {
+      _questionController.text = initialQuestion;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _askInitialQuestion();
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -142,6 +159,14 @@ class _CuriosityLabScreenState extends ConsumerState<CuriosityLabScreen> {
         setState(() => _asking = false);
       }
     }
+  }
+
+  void _askInitialQuestion() {
+    if (_didAutoAskInitialQuestion) {
+      return;
+    }
+    _didAutoAskInitialQuestion = true;
+    _ask();
   }
 
   Future<void> _runExperiment() async {

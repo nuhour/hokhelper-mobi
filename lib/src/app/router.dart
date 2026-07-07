@@ -882,7 +882,9 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'curiosity-lab',
-                    builder: (context, state) => const CuriosityLabScreen(),
+                    builder: (context, state) => CuriosityLabScreen(
+                      initialQuestion: state.uri.queryParameters['q'],
+                    ),
                   ),
                   GoRoute(
                     path: 'rankings',
