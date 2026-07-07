@@ -617,6 +617,7 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
   var _elapsedSeconds = 0;
   var _blueBuffSeconds = 15;
   var _redBuffSeconds = 42;
+  final _trackedCooldowns = <_TrackedCooldown>[];
 
   @override
   void dispose() {
@@ -693,6 +694,13 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
               ],
             ),
             const SizedBox(height: 12),
+            _CooldownTracker(
+              cooldowns: _trackedCooldowns,
+              onTrackFlash: () => _trackCooldown('Enemy Mid Flash', 120),
+              onTrackUltimate: () => _trackCooldown('Enemy Mid Ultimate', 45),
+              onRemove: _removeCooldown,
+            ),
+            const SizedBox(height: 12),
             DecoratedBox(
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.22),
@@ -767,6 +775,12 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
         _elapsedSeconds += 1;
         _blueBuffSeconds = (_blueBuffSeconds - 1).clamp(0, 999);
         _redBuffSeconds = (_redBuffSeconds - 1).clamp(0, 999);
+        for (final cooldown in _trackedCooldowns) {
+          cooldown.remainingSeconds = (cooldown.remainingSeconds - 1).clamp(
+            0,
+            999,
+          );
+        }
       });
     });
   }
@@ -778,6 +792,7 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
       _elapsedSeconds = 0;
       _blueBuffSeconds = 15;
       _redBuffSeconds = 42;
+      _trackedCooldowns.clear();
     });
   }
 
@@ -789,10 +804,157 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
     setState(() => _redBuffSeconds = seconds);
   }
 
+  void _trackCooldown(String label, int seconds) {
+    setState(() {
+      _trackedCooldowns.removeWhere((cooldown) => cooldown.label == label);
+      _trackedCooldowns.add(
+        _TrackedCooldown(label: label, remainingSeconds: seconds),
+      );
+    });
+  }
+
+  void _removeCooldown(String label) {
+    setState(() {
+      _trackedCooldowns.removeWhere((cooldown) => cooldown.label == label);
+    });
+  }
+
   String _formatClock(int totalSeconds) {
     final minutes = totalSeconds ~/ 60;
     final seconds = totalSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+}
+
+class _TrackedCooldown {
+  _TrackedCooldown({required this.label, required this.remainingSeconds});
+
+  final String label;
+  int remainingSeconds;
+}
+
+class _CooldownTracker extends StatelessWidget {
+  const _CooldownTracker({
+    required this.cooldowns,
+    required this.onTrackFlash,
+    required this.onTrackUltimate,
+    required this.onRemove,
+  });
+
+  final List<_TrackedCooldown> cooldowns;
+  final VoidCallback onTrackFlash;
+  final VoidCallback onTrackUltimate;
+  final ValueChanged<String> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.error.withValues(alpha: 0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bolt_outlined, color: AppTheme.error),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Enemy cooldown tracker',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onTrackFlash,
+                  icon: const Icon(Icons.flash_on_outlined, size: 16),
+                  label: const Text('Track flash'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onTrackUltimate,
+                  icon: const Icon(Icons.auto_awesome_outlined, size: 16),
+                  label: const Text('Track ultimate'),
+                ),
+              ],
+            ),
+            if (cooldowns.isEmpty) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Tap a skill when the enemy spends it.',
+                style: TextStyle(color: AppTheme.muted),
+              ),
+            ] else ...[
+              const SizedBox(height: 10),
+              for (final cooldown in cooldowns) ...[
+                _TrackedCooldownRow(
+                  cooldown: cooldown,
+                  onRemove: () => onRemove(cooldown.label),
+                ),
+                if (cooldown != cooldowns.last) const SizedBox(height: 8),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrackedCooldownRow extends StatelessWidget {
+  const _TrackedCooldownRow({required this.cooldown, required this.onRemove});
+
+  final _TrackedCooldown cooldown;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${cooldown.label} ${cooldown.remainingSeconds}s',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(Icons.close, size: 18),
+              color: AppTheme.muted,
+              tooltip: 'Remove cooldown',
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

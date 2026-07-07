@@ -55,4 +55,33 @@ void main() {
     expect(find.text('00:00'), findsOneWidget);
     expect(find.text('Blue Buff 15s'), findsOneWidget);
   });
+
+  testWidgets('tracks enemy cooldown windows during a match', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: GameAssistantScreen())),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Live Match Console'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Track flash'), findsOneWidget);
+    expect(find.text('Enemy Mid Flash 120s'), findsNothing);
+
+    await tester.tap(find.text('Track flash'));
+    await tester.pump();
+
+    expect(find.text('Enemy Mid Flash 120s'), findsOneWidget);
+
+    await tester.tap(find.text('Start match'));
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(find.text('Enemy Mid Flash 117s'), findsOneWidget);
+
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+
+    expect(find.text('Enemy Mid Flash 117s'), findsNothing);
+  });
 }
