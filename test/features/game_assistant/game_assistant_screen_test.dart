@@ -17,7 +17,10 @@ void main() {
     expect(find.text('Enemy cooldowns'), findsWidgets);
     expect(find.text('AI tactical tips'), findsOneWidget);
     expect(find.text('Live Match Console'), findsOneWidget);
-    expect(find.text('Coming soon'), findsNothing);
+    expect(find.text('Scan to download'), findsOneWidget);
+    expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.text('App Store'), findsOneWidget);
+    expect(find.text('Google Play'), findsOneWidget);
   });
 
   testWidgets('runs the live match timer controls', (tester) async {

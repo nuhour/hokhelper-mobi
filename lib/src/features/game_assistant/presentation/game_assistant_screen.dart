@@ -36,6 +36,8 @@ class GameAssistantScreen extends StatelessWidget {
           SizedBox(height: 18),
           _FeatureGrid(),
           SizedBox(height: 18),
+          _DownloadSection(),
+          SizedBox(height: 18),
           _LiveMatchConsole(),
         ],
       ),
@@ -356,6 +358,248 @@ class _PreviewPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DownloadSection extends StatelessWidget {
+  const _DownloadSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.qr_code_2_outlined, color: AppTheme.gold, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Scan to download',
+                    style: TextStyle(
+                      color: AppTheme.muted,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _ComingSoonQr(),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _StoreButton(
+                        icon: Icons.apple,
+                        eyebrow: 'Download on the',
+                        label: 'App Store',
+                      ),
+                      SizedBox(height: 10),
+                      _StoreButton(
+                        icon: Icons.play_arrow_rounded,
+                        eyebrow: 'Get it on',
+                        label: 'Google Play',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ComingSoonQr extends StatelessWidget {
+  const _ComingSoonQr();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Text(
+          'Coming soon',
+          style: TextStyle(color: AppTheme.gold, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const SizedBox(
+                width: 112,
+                height: 112,
+                child: CustomPaint(painter: _QrPlaceholderPainter()),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.48),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              Transform.rotate(
+                angle: -0.24,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.panelAlt),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    child: Text(
+                      'COMING SOON',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StoreButton extends StatelessWidget {
+  const _StoreButton({
+    required this.icon,
+    required this.eyebrow,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String eyebrow;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 26),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    eyebrow,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppTheme.muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QrPlaceholderPainter extends CustomPainter {
+  const _QrPlaceholderPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.black.withValues(alpha: 0.72);
+    final cell = size.width / 9;
+    const filled = <(int, int)>[
+      (0, 0),
+      (1, 0),
+      (2, 0),
+      (0, 1),
+      (2, 1),
+      (0, 2),
+      (1, 2),
+      (2, 2),
+      (6, 0),
+      (7, 0),
+      (8, 0),
+      (6, 1),
+      (8, 1),
+      (6, 2),
+      (7, 2),
+      (8, 2),
+      (0, 6),
+      (1, 6),
+      (2, 6),
+      (0, 7),
+      (2, 7),
+      (0, 8),
+      (1, 8),
+      (2, 8),
+      (4, 1),
+      (5, 3),
+      (3, 4),
+      (6, 5),
+      (4, 6),
+      (7, 7),
+      (5, 8),
+    ];
+    for (final (x, y) in filled) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x * cell + 4, y * cell + 4, cell - 5, cell - 5),
+          const Radius.circular(2),
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _FeatureGrid extends StatelessWidget {
