@@ -53,6 +53,26 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     requestedPath = path;
     requestedBody = body;
+    if (path == '/bp/scheme/create') {
+      return const {
+        'success': true,
+        'message': 'success',
+        'result': {
+          'scheme': {
+            'id': '99',
+            'name': 'Mobile Draft',
+            'createdAt': '2026-07-07T10:00:00Z',
+            'boMode': 5,
+            'teamAName': 'Team Alpha',
+            'teamBName': 'Team Beta',
+            'sideSelectionRule': 'alternating',
+            'gameNumber': 1,
+            'history': [],
+            'currentState': {'currentStepIndex': 0},
+          },
+        },
+      };
+    }
     return const {
       'success': true,
       'message': 'success',
@@ -120,5 +140,31 @@ void main() {
     expect(scheme.id, '12');
     expect(scheme.name, 'KPL Finals Draft');
     expect(scheme.phaseSummaryText, '2 bans · 2 picks');
+  });
+
+  test('creates a BP scheme with hokx-compatible request fields', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BpRepository(apiClient: apiClient);
+
+    final scheme = await repository.createScheme(
+      name: 'Mobile Draft',
+      boMode: 5,
+      teamAName: 'Team Alpha',
+      teamBName: 'Team Beta',
+      sideSelectionRule: 'alternating',
+    );
+
+    expect(apiClient.requestedPath, '/bp/scheme/create');
+    expect(apiClient.requestedBody, {
+      'name': 'Mobile Draft',
+      'boMode': 5,
+      'teamAName': 'Team Alpha',
+      'teamBName': 'Team Beta',
+      'sideSelectionRule': 'alternating',
+    });
+    expect(scheme.id, '99');
+    expect(scheme.name, 'Mobile Draft');
+    expect(scheme.boModeText, 'BO5');
+    expect(scheme.matchupText, 'Team Alpha vs Team Beta');
   });
 }

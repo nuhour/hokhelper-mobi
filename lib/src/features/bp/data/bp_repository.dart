@@ -31,4 +31,26 @@ class BpRepository {
     final result = json['result'];
     return BpSchemeSummary.fromJson(result is Map ? result : json);
   }
+
+  Future<BpSchemeSummary> createScheme({
+    required String name,
+    required int boMode,
+    required String teamAName,
+    required String teamBName,
+    required String sideSelectionRule,
+  }) async {
+    final json = await apiClient.postJson(
+      '/bp/scheme/create',
+      body: {
+        'name': name,
+        'boMode': boMode,
+        'teamAName': teamAName,
+        'teamBName': teamBName,
+        'sideSelectionRule': sideSelectionRule,
+      },
+    );
+    final result = json['result'];
+    final scheme = result is Map ? result['scheme'] : json['scheme'];
+    return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
+  }
 }
