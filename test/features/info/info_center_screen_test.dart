@@ -119,7 +119,7 @@ void main() {
 
     expect(repository.submittedBody, {
       'name': 'New Lab',
-      'url': 'newlab.example',
+      'url': 'https://newlab.example',
       'description': 'Meta tools.',
     });
     expect(find.text('Friend link application submitted'), findsOneWidget);

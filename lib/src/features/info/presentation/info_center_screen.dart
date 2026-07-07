@@ -397,14 +397,15 @@ class _FriendLinkApplySheetState extends ConsumerState<_FriendLinkApplySheet> {
     setState(() => _isSubmitting = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final url = _normalizePortalUrl(_urlController.text);
 
     try {
       await ref
           .read(infoRepositoryProvider)
           .applyFriendLink(
-            name: _nameController.text,
-            url: _urlController.text,
-            description: _descriptionController.text,
+            name: _nameController.text.trim(),
+            url: url,
+            description: _descriptionController.text.trim(),
           );
       ref.invalidate(friendLinksProvider);
       messenger.showSnackBar(
@@ -419,6 +420,14 @@ class _FriendLinkApplySheetState extends ConsumerState<_FriendLinkApplySheet> {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  String _normalizePortalUrl(String value) {
+    final trimmed = value.trim();
+    if (RegExp(r'^https?://', caseSensitive: false).hasMatch(trimmed)) {
+      return trimmed;
+    }
+    return 'https://$trimmed';
   }
 }
 
