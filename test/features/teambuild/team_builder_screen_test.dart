@@ -290,6 +290,67 @@ void main() {
     expect(find.text('Slot 1: Dolia'), findsOneWidget);
   });
 
+  testWidgets('hydrates ban slots from team builder route query', (
+    tester,
+  ) async {
+    final requestedBans = <List<int>>[];
+    final requestedSlotTypes = <String>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          teamBuilderHeroesProvider.overrideWith((ref) async {
+            return const [
+              TeamBuildHero(
+                id: 42,
+                externalHeroId: '142',
+                name: 'Lam',
+                mainJob: 3,
+                avatarUrl: '',
+              ),
+              TeamBuildHero(
+                id: 7,
+                externalHeroId: '107',
+                name: 'Marco Polo',
+                mainJob: 1,
+                avatarUrl: '',
+              ),
+            ];
+          }),
+          teamRecommendationsProvider.overrideWith((ref) async {
+            final draft = ref.watch(teamBuilderDraftProvider);
+            requestedBans.add(draft.banIds);
+            requestedSlotTypes.add(draft.activeSlotType.apiValue);
+            return const TeamRecommendationResult(recommendations: []);
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: TeamBuilderScreen(
+              initialBanHeroIds: [42, 7],
+              initialSlotType: TeamBuilderSlotType.ban,
+              initialSlotIndex: 1,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ban 1: Lam'), findsOneWidget);
+    expect(find.text('Ban 2: Marco Polo'), findsOneWidget);
+    expect(
+      requestedBans,
+      contains(
+        predicate<List<int>>(
+          (ids) => ids.length == 2 && ids[0] == 42 && ids[1] == 7,
+        ),
+      ),
+    );
+    expect(requestedSlotTypes, contains('ban'));
+  });
+
   testWidgets('web team builder alias hydrates draft in app router', (
     tester,
   ) async {
@@ -341,5 +402,50 @@ void main() {
     expect(find.text('Slot 1: Lam'), findsOneWidget);
     expect(find.text('Slot 2: Marco Polo'), findsOneWidget);
     expect(find.text('Slot 1: Dolia'), findsOneWidget);
+  });
+
+  testWidgets('team builder alias hydrates ban query in app router', (
+    tester,
+  ) async {
+    final router = createAppRouter()
+      ..go('/team-builder?ban_ids=42,7&slot_type=ban&slot=2');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          teamBuilderHeroesProvider.overrideWith((ref) async {
+            return const [
+              TeamBuildHero(
+                id: 42,
+                externalHeroId: '142',
+                name: 'Lam',
+                mainJob: 3,
+                avatarUrl: '',
+              ),
+              TeamBuildHero(
+                id: 7,
+                externalHeroId: '107',
+                name: 'Marco Polo',
+                mainJob: 1,
+                avatarUrl: '',
+              ),
+            ];
+          }),
+          teamRecommendationsProvider.overrideWith((ref) async {
+            return const TeamRecommendationResult(recommendations: []);
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/team-builder',
+    );
+    expect(find.text('Ban 1: Lam'), findsOneWidget);
+    expect(find.text('Ban 2: Marco Polo'), findsOneWidget);
   });
 }

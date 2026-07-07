@@ -119,6 +119,8 @@ class TeamBuilderScreen extends ConsumerStatefulWidget {
   const TeamBuilderScreen({
     this.initialAllyHeroIds = const [],
     this.initialEnemyHeroIds = const [],
+    this.initialBanHeroIds = const [],
+    this.initialSlotType,
     this.initialSide,
     this.initialSlotIndex,
     super.key,
@@ -126,6 +128,8 @@ class TeamBuilderScreen extends ConsumerStatefulWidget {
 
   final List<int> initialAllyHeroIds;
   final List<int> initialEnemyHeroIds;
+  final List<int> initialBanHeroIds;
+  final TeamBuilderSlotType? initialSlotType;
   final TeamBuilderSide? initialSide;
   final int? initialSlotIndex;
 
@@ -196,6 +200,8 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
     final hasInitialIntent =
         widget.initialAllyHeroIds.isNotEmpty ||
         widget.initialEnemyHeroIds.isNotEmpty ||
+        widget.initialBanHeroIds.isNotEmpty ||
+        widget.initialSlotType != null ||
         widget.initialSide != null ||
         widget.initialSlotIndex != null;
     if (!hasInitialIntent) {
@@ -208,6 +214,8 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
 
     final allyPicks = _hydratePicks(heroes, widget.initialAllyHeroIds);
     final enemyPicks = _hydratePicks(heroes, widget.initialEnemyHeroIds);
+    final bans = _hydratePicks(heroes, widget.initialBanHeroIds);
+    final activeSlotType = widget.initialSlotType ?? TeamBuilderSlotType.pick;
     final activeSide = widget.initialSide ?? TeamBuilderSide.ally;
     final activeIndex = (widget.initialSlotIndex ?? 0).clamp(0, 4);
     _didHydrateInitialDraft = true;
@@ -219,6 +227,8 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
       ref.read(teamBuilderDraftProvider.notifier).state = TeamBuilderDraft(
         allyPicks: allyPicks,
         enemyPicks: enemyPicks,
+        bans: bans,
+        activeSlotType: activeSlotType,
         activeSide: activeSide,
         activeIndex: activeIndex,
       );

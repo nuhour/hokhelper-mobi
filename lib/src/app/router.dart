@@ -139,6 +139,15 @@ TeamBuilderSide? _teamBuilderSide(Uri uri) {
   };
 }
 
+TeamBuilderSlotType? _teamBuilderSlotType(Uri uri) {
+  return switch (uri.queryParameters['slot_type']?.trim() ??
+      uri.queryParameters['type']?.trim()) {
+    'ban' || 'bans' => TeamBuilderSlotType.ban,
+    'pick' || 'picks' => TeamBuilderSlotType.pick,
+    _ => null,
+  };
+}
+
 int? _teamBuilderSlotIndex(Uri uri) {
   final rawValue =
       uri.queryParameters['slot'] ?? uri.queryParameters['slot_index'];
@@ -938,6 +947,12 @@ GoRouter createAppRouter() {
                         'enemy_ids',
                         'enemy_id',
                       ),
+                      initialBanHeroIds: _teamBuilderHeroIds(
+                        state.uri,
+                        'ban_ids',
+                        'ban_id',
+                      ),
+                      initialSlotType: _teamBuilderSlotType(state.uri),
                       initialSide: _teamBuilderSide(state.uri),
                       initialSlotIndex: _teamBuilderSlotIndex(state.uri),
                     ),
