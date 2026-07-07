@@ -63,6 +63,12 @@ void main() {
       normalizePortalLinkTarget('/prompts?tab=favorites'),
       '/tools/prompts?tab=favorites',
     );
+    expect(
+      normalizePortalLinkTarget(
+        '/team-builder?ally_ids=42,7&enemy_id=99&side=enemy&slot=3',
+      ),
+      '/tools/team-builder?ally_ids=42,7&enemy_id=99&side=enemy&slot=3',
+    );
   });
 
   test('normalizes hero gallery query detail links without dropping tabs', () {

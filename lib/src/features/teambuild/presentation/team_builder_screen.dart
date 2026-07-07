@@ -88,8 +88,26 @@ final teamRecommendationsProvider = FutureProvider<TeamRecommendationResult>((
       );
 });
 
-class TeamBuilderScreen extends ConsumerWidget {
-  const TeamBuilderScreen({super.key});
+class TeamBuilderScreen extends ConsumerStatefulWidget {
+  const TeamBuilderScreen({
+    this.initialAllyHeroIds = const [],
+    this.initialEnemyHeroIds = const [],
+    this.initialSide,
+    this.initialSlotIndex,
+    super.key,
+  });
+
+  final List<int> initialAllyHeroIds;
+  final List<int> initialEnemyHeroIds;
+  final TeamBuilderSide? initialSide;
+  final int? initialSlotIndex;
+
+  @override
+  ConsumerState<TeamBuilderScreen> createState() => _TeamBuilderScreenState();
+}
+
+class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
+  bool _didHydrateInitialDraft = false;
 
   void _selectHero(WidgetRef ref, TeamBuildHero hero) {
     final draft = ref.read(teamBuilderDraftProvider);
@@ -117,9 +135,48 @@ class TeamBuilderScreen extends ConsumerWidget {
         const TeamBuilderDraft();
   }
 
+  void _hydrateInitialDraft(List<TeamBuildHero> heroes) {
+    if (_didHydrateInitialDraft) {
+      return;
+    }
+    final hasInitialIntent =
+        widget.initialAllyHeroIds.isNotEmpty ||
+        widget.initialEnemyHeroIds.isNotEmpty ||
+        widget.initialSide != null ||
+        widget.initialSlotIndex != null;
+    if (!hasInitialIntent) {
+      _didHydrateInitialDraft = true;
+      return;
+    }
+    if (heroes.isEmpty) {
+      return;
+    }
+
+    final allyPicks = _hydratePicks(heroes, widget.initialAllyHeroIds);
+    final enemyPicks = _hydratePicks(heroes, widget.initialEnemyHeroIds);
+    final activeSide = widget.initialSide ?? TeamBuilderSide.ally;
+    final activeIndex = (widget.initialSlotIndex ?? 0).clamp(0, 4);
+    _didHydrateInitialDraft = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      ref.read(teamBuilderDraftProvider.notifier).state = TeamBuilderDraft(
+        allyPicks: allyPicks,
+        enemyPicks: enemyPicks,
+        activeSide: activeSide,
+        activeIndex: activeIndex,
+      );
+    });
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final heroesValue = ref.watch(teamBuilderHeroesProvider);
+    if (heroesValue case AsyncData(value: final heroes)) {
+      _hydrateInitialDraft(heroes);
+    }
     final draft = ref.watch(teamBuilderDraftProvider);
     final recommendations = ref.watch(teamRecommendationsProvider);
 
@@ -184,6 +241,23 @@ class TeamBuilderScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+List<TeamBuildHero?> _hydratePicks(List<TeamBuildHero> heroes, List<int> ids) {
+  final picks = List<TeamBuildHero?>.filled(5, null);
+  for (var index = 0; index < ids.length && index < picks.length; index += 1) {
+    picks[index] = _findTeamBuildHero(heroes, ids[index]);
+  }
+  return picks;
+}
+
+TeamBuildHero? _findTeamBuildHero(List<TeamBuildHero> heroes, int id) {
+  for (final hero in heroes) {
+    if (hero.id == id || hero.externalHeroId == '$id') {
+      return hero;
+    }
+  }
+  return null;
 }
 
 class _PickPanel extends StatelessWidget {

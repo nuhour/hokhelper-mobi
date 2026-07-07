@@ -117,6 +117,38 @@ String _targetWithQuery(String path, Uri uri) {
   return query.isEmpty ? path : '$path?$query';
 }
 
+List<int> _teamBuilderHeroIds(Uri uri, String pluralKey, String singleKey) {
+  final values = [
+    ...(uri.queryParametersAll[pluralKey] ?? const <String>[]),
+    ...(uri.queryParametersAll[singleKey] ?? const <String>[]),
+  ];
+  return values
+      .expand((value) => value.split(','))
+      .map((value) => int.tryParse(value.trim()))
+      .whereType<int>()
+      .where((value) => value > 0)
+      .take(5)
+      .toList(growable: false);
+}
+
+TeamBuilderSide? _teamBuilderSide(Uri uri) {
+  return switch (uri.queryParameters['side']?.trim()) {
+    'enemy' || 'red' => TeamBuilderSide.enemy,
+    'ally' || 'blue' => TeamBuilderSide.ally,
+    _ => null,
+  };
+}
+
+int? _teamBuilderSlotIndex(Uri uri) {
+  final rawValue =
+      uri.queryParameters['slot'] ?? uri.queryParameters['slot_index'];
+  if (rawValue == null) {
+    return null;
+  }
+  final value = int.tryParse(rawValue) ?? 0;
+  return value > 0 ? value - 1 : 0;
+}
+
 String _promptsTarget(Uri uri) {
   final queryParameters = Map<String, String>.from(uri.queryParameters);
   final legacyPromptId = queryParameters.remove('prompt_id')?.trim();
@@ -865,7 +897,20 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'team-builder',
-                    builder: (context, state) => const TeamBuilderScreen(),
+                    builder: (context, state) => TeamBuilderScreen(
+                      initialAllyHeroIds: _teamBuilderHeroIds(
+                        state.uri,
+                        'ally_ids',
+                        'ally_id',
+                      ),
+                      initialEnemyHeroIds: _teamBuilderHeroIds(
+                        state.uri,
+                        'enemy_ids',
+                        'enemy_id',
+                      ),
+                      initialSide: _teamBuilderSide(state.uri),
+                      initialSlotIndex: _teamBuilderSlotIndex(state.uri),
+                    ),
                   ),
                   GoRoute(
                     path: 'prompts',
