@@ -86,7 +86,12 @@ String _communityTarget(Uri uri) {
 String _heroGalleryTarget(Uri uri) {
   final heroId = int.tryParse(uri.queryParameters['hero_id'] ?? '');
   if (heroId != null && heroId > 0) {
-    return '/heroes/$heroId';
+    final queryParameters = Map<String, String>.from(uri.queryParameters)
+      ..remove('hero_id');
+    return Uri(
+      path: '/heroes/$heroId',
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    ).toString();
   }
   final query = uri.queryParameters['q']?.trim();
   if (query == null || query.isEmpty) {

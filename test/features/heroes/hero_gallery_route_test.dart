@@ -149,4 +149,39 @@ void main() {
     );
     expect(find.text('Jungle tuning'), findsOneWidget);
   });
+
+  testWidgets('legacy hero id query preserves history tab on detail route', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/hero-gallery?hero_id=166&tab=history');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
+            return {
+              'hero': {'id': 166, 'name': 'Lam', 'title': 'Shark Rider'},
+              'history': [
+                {
+                  'version': '1.2.3',
+                  'date': '2026-07-01',
+                  'type': 'buff',
+                  'title': 'Jungle tuning',
+                  'content': 'Improved early clear speed.',
+                },
+              ],
+            };
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/heroes/166');
+    expect(uri.queryParameters['tab'], 'history');
+    expect(find.text('Patch history focus'), findsOneWidget);
+  });
 }
