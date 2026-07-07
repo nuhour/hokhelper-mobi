@@ -12,6 +12,89 @@ Widget _buildHomeScreen(HomeStats stats) {
 }
 
 void main() {
+  testWidgets('home screen renders hokx portal preview sections', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHomeScreen(
+        const HomeStats(
+          success: true,
+          message: 'Home portal ready',
+          result: {
+            'hero_ranking_table': {
+              'rows': [
+                {
+                  'hero': {'name': 'Angela'},
+                  'win_rate': 0.56,
+                },
+              ],
+            },
+            'tier_list': [
+              {
+                'tier': 'T0',
+                'heroes': [
+                  {'name': 'Dolia'},
+                ],
+              },
+            ],
+            'player_ranking': {
+              'peak': [
+                {'player_name': 'Top Player', 'peak_score': 2400},
+              ],
+            },
+            'community_hot': [
+              {'title': 'Draft talk', 'content_preview': 'Ban pick ideas'},
+            ],
+            'patch_notes': [
+              {'title': 'Patch 1.2', 'content_preview': 'Balance update'},
+            ],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Hero Rankings'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Hero Rankings'), findsOneWidget);
+    expect(find.text('Angela'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Tier List Preview'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Tier List Preview'), findsOneWidget);
+    expect(find.text('Dolia'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Leaderboard'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Leaderboard'), findsOneWidget);
+    expect(find.text('Top Player'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Community Hot'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Community Hot'), findsOneWidget);
+    expect(find.text('Draft talk'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Latest Updates'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Latest Updates'), findsOneWidget);
+    expect(find.text('Patch 1.2'), findsOneWidget);
+  });
+
   testWidgets('home screen exposes hokx portal tool and topic entry points', (
     tester,
   ) async {
