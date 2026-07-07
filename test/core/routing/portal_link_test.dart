@@ -75,4 +75,23 @@ void main() {
       '/cg/501',
     );
   });
+
+  test('normalizes absolute hokx portal URLs to mobile internal routes', () {
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/hero-gallery/101?tab=history',
+      ),
+      '/heroes/101?tab=history',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/stats?entry=hero_trend&hero_id=101',
+      ),
+      '/trends?hero_id=101',
+    );
+    expect(
+      normalizePortalLinkTarget('https://external.example/hero-gallery/101'),
+      'https://external.example/hero-gallery/101',
+    );
+  });
 }

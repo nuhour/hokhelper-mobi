@@ -11,6 +11,16 @@ String normalizePortalLinkTarget(String url) {
   if (parsed.fragment.startsWith('/')) {
     return _normalizeInternalTarget(parsed.fragment);
   }
+  if (_isPortalHost(parsed.host)) {
+    return _normalizeInternalTarget(
+      Uri(
+        path: parsed.path.isEmpty ? '/' : parsed.path,
+        queryParameters: parsed.queryParameters.isEmpty
+            ? null
+            : parsed.queryParameters,
+      ).toString(),
+    );
+  }
   return trimmed;
 }
 
@@ -27,9 +37,9 @@ String _normalizeInternalTarget(String target) {
   if (uri.pathSegments.length == 3 &&
       uri.pathSegments[0] == 'community' &&
       uri.pathSegments[1] == 'post') {
-    return uri.replace(
-      path: '/content/community/post/${uri.pathSegments[2]}',
-    ).toString();
+    return uri
+        .replace(path: '/content/community/post/${uri.pathSegments[2]}')
+        .toString();
   }
 
   if (uri.path == '/hero-gallery') {
@@ -76,10 +86,7 @@ String _normalizeInternalTarget(String target) {
     return uri
         .replace(
           path: '/content/community',
-          queryParameters: {
-            'tab': 'leaks',
-            ...uri.queryParameters,
-          },
+          queryParameters: {'tab': 'leaks', ...uri.queryParameters},
         )
         .toString();
   }
@@ -108,6 +115,17 @@ String? _mobileAliasPath(String path) {
     '/patch-notes' || '/versions' => '/content/patch-notes',
     _ => null,
   };
+}
+
+bool _isPortalHost(String host) {
+  final normalized = host.toLowerCase();
+  return normalized == 'localhost' ||
+      normalized == '127.0.0.1' ||
+      normalized == '::1' ||
+      normalized == 'hok-helper.com' ||
+      normalized.endsWith('.hok-helper.com') ||
+      normalized == 'hokhelper.com' ||
+      normalized.endsWith('.hokhelper.com');
 }
 
 String _moveQueryIdToPath(Uri uri, String path, String idKey) {
