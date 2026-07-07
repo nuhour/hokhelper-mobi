@@ -31,24 +31,28 @@ class TeamBuilderDraft {
     this.enemyPicks = const [null, null, null, null, null],
     this.activeSide = TeamBuilderSide.ally,
     this.activeIndex = 0,
+    this.recommendType = TeamRecommendType.balanced,
   });
 
   final List<TeamBuildHero?> allyPicks;
   final List<TeamBuildHero?> enemyPicks;
   final TeamBuilderSide activeSide;
   final int activeIndex;
+  final TeamRecommendType recommendType;
 
   TeamBuilderDraft copyWith({
     List<TeamBuildHero?>? allyPicks,
     List<TeamBuildHero?>? enemyPicks,
     TeamBuilderSide? activeSide,
     int? activeIndex,
+    TeamRecommendType? recommendType,
   }) {
     return TeamBuilderDraft(
       allyPicks: allyPicks ?? this.allyPicks,
       enemyPicks: enemyPicks ?? this.enemyPicks,
       activeSide: activeSide ?? this.activeSide,
       activeIndex: activeIndex ?? this.activeIndex,
+      recommendType: recommendType ?? this.recommendType,
     );
   }
 
@@ -85,6 +89,7 @@ final teamRecommendationsProvider = FutureProvider<TeamRecommendationResult>((
             ? draft.enemyIds
             : draft.allyIds,
         slotIndex: draft.activeIndex,
+        recommendType: draft.recommendType,
       );
 });
 
@@ -133,6 +138,13 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   void _clearAll(WidgetRef ref) {
     ref.read(teamBuilderDraftProvider.notifier).state =
         const TeamBuilderDraft();
+  }
+
+  void _setRecommendType(WidgetRef ref, TeamRecommendType type) {
+    final draft = ref.read(teamBuilderDraftProvider);
+    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
+      recommendType: type,
+    );
   }
 
   void _hydrateInitialDraft(List<TeamBuildHero> heroes) {
@@ -225,6 +237,11 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
             activeIndex: draft.activeIndex,
             side: TeamBuilderSide.enemy,
             onSlotTap: (side, index) => _setActiveSlot(ref, side, index),
+          ),
+          const SizedBox(height: 20),
+          _RecommendationTypePanel(
+            selected: draft.recommendType,
+            onChanged: (type) => _setRecommendType(ref, type),
           ),
           const SizedBox(height: 20),
           AppAsyncView<List<TeamBuildHero>>(
@@ -438,6 +455,64 @@ class _HeroChip extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecommendationTypePanel extends StatelessWidget {
+  const _RecommendationTypePanel({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final TeamRecommendType selected;
+  final ValueChanged<TeamRecommendType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recommendation Type',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SegmentedButton<TeamRecommendType>(
+              segments: const [
+                ButtonSegment(
+                  value: TeamRecommendType.balanced,
+                  icon: Icon(Icons.balance_outlined),
+                  label: Text('Balanced'),
+                ),
+                ButtonSegment(
+                  value: TeamRecommendType.synergy,
+                  icon: Icon(Icons.group_work_outlined),
+                  label: Text('Synergy'),
+                ),
+                ButtonSegment(
+                  value: TeamRecommendType.counter,
+                  icon: Icon(Icons.shield_outlined),
+                  label: Text('Counter'),
+                ),
+              ],
+              selected: {selected},
+              onSelectionChanged: (values) => onChanged(values.single),
+            ),
+          ],
         ),
       ),
     );

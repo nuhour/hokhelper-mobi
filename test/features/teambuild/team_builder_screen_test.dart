@@ -62,6 +62,70 @@ void main() {
     expect(find.text('Blue 57.0%'), findsOneWidget);
   });
 
+  testWidgets('switches recommendation type like the hokx team builder', (
+    tester,
+  ) async {
+    final requestedTypes = <TeamRecommendType>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          teamBuilderHeroesProvider.overrideWith((ref) async {
+            return const [
+              TeamBuildHero(
+                id: 42,
+                externalHeroId: '142',
+                name: 'Lam',
+                mainJob: 3,
+                avatarUrl: '',
+              ),
+            ];
+          }),
+          teamRecommendationsProvider.overrideWith((ref) async {
+            final draft = ref.watch(teamBuilderDraftProvider);
+            requestedTypes.add(draft.recommendType);
+            return TeamRecommendationResult(
+              recommendations: [
+                TeamRecommendation(
+                  heroId: draft.recommendType == TeamRecommendType.counter
+                      ? 100
+                      : 99,
+                  externalHeroId:
+                      draft.recommendType == TeamRecommendType.counter
+                      ? '200'
+                      : '199',
+                  name: draft.recommendType == TeamRecommendType.counter
+                      ? 'Anti-carry'
+                      : 'Dolia',
+                  mainJob: 6,
+                  score: 88.5,
+                  reason: draft.recommendType == TeamRecommendType.counter
+                      ? 'Counter enemy burst'
+                      : 'Strong synergy with Lam',
+                  pickRate: 0.125,
+                  banRate: 0.04,
+                  synergy: 0.72,
+                  counter: 0.81,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TeamBuilderScreen())),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dolia'), findsOneWidget);
+    await tester.tap(find.text('Counter'));
+    await tester.pumpAndSettle();
+
+    expect(requestedTypes, contains(TeamRecommendType.counter));
+    expect(find.text('Anti-carry'), findsOneWidget);
+    expect(find.text('Counter enemy burst'), findsOneWidget);
+  });
+
   testWidgets('hydrates draft from hokx team builder route query', (
     tester,
   ) async {
