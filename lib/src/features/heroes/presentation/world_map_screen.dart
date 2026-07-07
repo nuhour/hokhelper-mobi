@@ -19,11 +19,28 @@ final worldMapHeroesProvider = FutureProvider<List<HeroSummary>>((ref) async {
       .loadHeroes(settings.region.regionId);
 });
 
-class WorldMapScreen extends ConsumerWidget {
-  const WorldMapScreen({super.key});
+class WorldMapScreen extends ConsumerStatefulWidget {
+  const WorldMapScreen({this.initialHeroId, super.key});
+
+  final String? initialHeroId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorldMapScreen> createState() => _WorldMapScreenState();
+}
+
+class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
+  String? _openedInitialHeroId;
+
+  @override
+  void didUpdateWidget(covariant WorldMapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialHeroId != widget.initialHeroId) {
+      _openedInitialHeroId = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final heroesValue = ref.watch(worldMapHeroesProvider);
 
     return Material(
@@ -33,6 +50,7 @@ class WorldMapScreen extends ConsumerWidget {
         retry: () => ref.invalidate(worldMapHeroesProvider),
         data: (heroes) {
           final regions = attachWorldMapHeroes(heroes);
+          _openInitialHeroRegion(regions);
 
           return RefreshIndicator(
             onRefresh: () => ref.refresh(worldMapHeroesProvider.future),
@@ -63,7 +81,11 @@ class WorldMapScreen extends ConsumerWidget {
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      return _WorldRegionCard(region: regions[index]);
+                      return _WorldRegionCard(
+                        region: regions[index],
+                        onOpenDetail: (region) =>
+                            _openRegionDetail(context, region),
+                      );
                     },
                   ),
                 ),
@@ -74,12 +96,107 @@ class WorldMapScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _openInitialHeroRegion(List<WorldMapRegion> regions) {
+    final heroId = widget.initialHeroId?.trim();
+    if (heroId == null || heroId.isEmpty || _openedInitialHeroId == heroId) {
+      return;
+    }
+
+    WorldMapRegion? focusedRegion;
+    for (final region in regions) {
+      final containsHero = region.representativeHeroes.any((hero) {
+        return hero.heroId == heroId || hero.id == heroId;
+      });
+      if (containsHero) {
+        focusedRegion = region;
+        break;
+      }
+    }
+    _openedInitialHeroId = heroId;
+
+    if (focusedRegion == null) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _openRegionDetail(context, focusedRegion!);
+    });
+  }
+
+  void _openRegionDetail(BuildContext context, WorldMapRegion region) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.panel,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                Text(
+                  'Domain Records',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppTheme.gold,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  region.name,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  region.description,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Representative Heroes',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (region.representativeHeroes.isEmpty)
+                  const AppEmptyState(
+                    icon: Icons.travel_explore_outlined,
+                    title: 'No hero data',
+                    message: 'Switch region or pull to refresh hero records.',
+                  )
+                else
+                  ...region.representativeHeroes.map((hero) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _HeroDetailRow(hero: hero),
+                    );
+                  }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _WorldRegionCard extends StatelessWidget {
-  const _WorldRegionCard({required this.region});
+  const _WorldRegionCard({required this.region, required this.onOpenDetail});
 
   final WorldMapRegion region;
+  final ValueChanged<WorldMapRegion> onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +207,7 @@ class _WorldRegionCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _openRegionDetail(context, region),
+        onTap: () => onOpenDetail(region),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -159,70 +276,6 @@ class _WorldRegionCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  void _openRegionDetail(BuildContext context, WorldMapRegion region) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppTheme.panel,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                Text(
-                  'Domain Records',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppTheme.gold,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  region.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  region.description,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Representative Heroes',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (region.representativeHeroes.isEmpty)
-                  const AppEmptyState(
-                    icon: Icons.travel_explore_outlined,
-                    title: 'No hero data',
-                    message: 'Switch region or pull to refresh hero records.',
-                  )
-                else
-                  ...region.representativeHeroes.map((hero) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _HeroDetailRow(hero: hero),
-                    );
-                  }),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

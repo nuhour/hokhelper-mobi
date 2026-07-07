@@ -580,7 +580,8 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/world-map',
-        builder: (context, state) => const WorldMapScreen(),
+        builder: (context, state) =>
+            WorldMapScreen(initialHeroId: state.uri.queryParameters['hero_id']),
       ),
       GoRoute(
         path: '/trends',

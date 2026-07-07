@@ -55,4 +55,31 @@ void main() {
     expect(find.text('Representative Heroes'), findsOneWidget);
     expect(find.text('Forest Child'), findsOneWidget);
   });
+
+  testWidgets('opens focused region from initial hero id', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          worldMapHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '2',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: WorldMapScreen(initialHeroId: '199')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Domain Records'), findsOneWidget);
+    expect(find.text('Great River Basin'), findsWidgets);
+    expect(find.text('Lam'), findsOneWidget);
+    expect(find.text('Shark Blade'), findsOneWidget);
+  });
 }

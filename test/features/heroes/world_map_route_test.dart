@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
@@ -17,7 +19,8 @@ GoRouter _buildRouter() {
       ),
       GoRoute(
         path: '/world-map',
-        builder: (context, state) => const WorldMapScreen(),
+        builder: (context, state) =>
+            WorldMapScreen(initialHeroId: state.uri.queryParameters['hero_id']),
       ),
       GoRoute(
         path: '/heroes/:heroId',
@@ -106,5 +109,36 @@ void main() {
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/1');
     expect(find.text('Hero #1'), findsOneWidget);
+  });
+
+  testWidgets('app router world map query opens focused region detail', (
+    tester,
+  ) async {
+    final router = createAppRouter()..go('/world-map?hero_id=199');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          worldMapHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '2',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/world-map');
+    expect(find.text('Domain Records'), findsOneWidget);
+    expect(find.text('Great River Basin'), findsWidgets);
+    expect(find.text('Lam'), findsOneWidget);
   });
 }
