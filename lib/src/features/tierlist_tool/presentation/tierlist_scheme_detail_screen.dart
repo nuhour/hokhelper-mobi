@@ -43,6 +43,7 @@ class TierListSchemeDetailScreen extends ConsumerStatefulWidget {
 
 class _TierListSchemeDetailScreenState
     extends ConsumerState<TierListSchemeDetailScreen> {
+  final TextEditingController _nameController = TextEditingController();
   final Map<String, TextEditingController> _labelControllers = {};
   final Map<String, String> _editedLabels = {};
   List<TierListSchemeRowSummary> _editedRows = const [];
@@ -52,6 +53,7 @@ class _TierListSchemeDetailScreenState
 
   @override
   void dispose() {
+    _nameController.dispose();
     for (final controller in _labelControllers.values) {
       controller.dispose();
     }
@@ -92,6 +94,7 @@ class _TierListSchemeDetailScreenState
                 scheme: displayScheme,
                 isEditMode: widget.initialEditMode,
                 isSaving: _isSaving,
+                nameController: _nameController,
                 labelControllers: _labelControllers,
                 onLabelChanged: _updateRowLabel,
                 onColorChanged: _updateRowColor,
@@ -116,6 +119,7 @@ class _TierListSchemeDetailScreenState
         ..clear()
         ..addEntries(baseScheme.rows.map((row) => MapEntry(row.id, row.label)));
       _editedRows = baseScheme.rows;
+      _nameController.text = baseScheme.name;
       final rowIds = baseScheme.rows.map((row) => row.id).toSet();
       final removedIds = _labelControllers.keys
           .where((rowId) => !rowIds.contains(rowId))
@@ -155,7 +159,9 @@ class _TierListSchemeDetailScreenState
   }
 
   TierListSchemeSummary _schemeWithEditedRows(TierListSchemeSummary scheme) {
+    final editedName = _nameController.text.trim();
     return scheme.copyWith(
+      name: editedName.isEmpty ? scheme.name : editedName,
       rows: [
         for (final row in _editedRows) row.copyWith(label: _rowLabel(row)),
       ],
@@ -271,6 +277,7 @@ class _TierListDetailCard extends StatelessWidget {
     required this.scheme,
     required this.isEditMode,
     required this.isSaving,
+    required this.nameController,
     required this.labelControllers,
     required this.onLabelChanged,
     required this.onColorChanged,
@@ -281,6 +288,7 @@ class _TierListDetailCard extends StatelessWidget {
   final TierListSchemeSummary scheme;
   final bool isEditMode;
   final bool isSaving;
+  final TextEditingController nameController;
   final Map<String, TextEditingController> labelControllers;
   final void Function(String rowId, String label) onLabelChanged;
   final void Function(String rowId, String color) onColorChanged;
@@ -312,13 +320,49 @@ class _TierListDetailCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        scheme.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.text,
-                          fontWeight: FontWeight.w900,
+                      if (isEditMode)
+                        TextFormField(
+                          key: const ValueKey('tier-list-name-field'),
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            labelText: 'Tier list name',
+                            prefixIcon: const Icon(Icons.edit_outlined),
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.05),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.08),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.08),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: AppTheme.gold,
+                              ),
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: AppTheme.text,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        )
+                      else
+                        Text(
+                          scheme.name,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: AppTheme.text,
+                                fontWeight: FontWeight.w900,
+                              ),
                         ),
-                      ),
                       const SizedBox(height: 6),
                       Text(
                         'Updated ${scheme.updatedDateText}',
