@@ -286,6 +286,92 @@ void main() {
     expect(find.text('Nova'), findsOneWidget);
   });
 
+  testWidgets('groups esports matches by status like the hokx portal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '9',
+                leagueName: 'KPL Spring',
+                stageName: 'Finals',
+                teamAName: 'TTG',
+                teamALogoUrl: '',
+                teamBName: 'WB',
+                teamBLogoUrl: '',
+                scoreA: 1,
+                scoreB: 1,
+                statusKey: 'live',
+                startTime: '2026-06-28T10:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: '11',
+                leagueName: 'KIC',
+                stageName: 'Group Stage',
+                teamAName: 'Nova',
+                teamALogoUrl: '',
+                teamBName: 'DRG',
+                teamBLogoUrl: '',
+                scoreA: null,
+                scoreB: null,
+                statusKey: 'upcoming',
+                startTime: '2026-07-12T12:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('match-status-heading-live')),
+      findsOneWidget,
+    );
+    expect(find.text('TTG'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('match-status-heading-upcoming')),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('match-status-heading-upcoming')),
+      findsOneWidget,
+    );
+    expect(find.text('Nova'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('match-status-heading-finished')),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('match-status-heading-finished')),
+      findsOneWidget,
+    );
+    expect(find.text('Wolves'), findsOneWidget);
+  });
+
   testWidgets('filters esports players by team like the hokx portal', (
     tester,
   ) async {

@@ -214,6 +214,13 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
               _matchDateValue(match.startTime) == _dateFilter.trim();
           return matchesLeague && matchesStatus && matchesDate;
         }).toList();
+        final groupedMatches = _groupMatchesByStatus(filteredMatches);
+        final matchSections = _matchStatusOptions(matches).map((status) {
+          return _MatchStatusSection(
+            status: status,
+            matches: groupedMatches[status.value] ?? const [],
+          );
+        });
         final cards = <Widget>[
           _FilterCard(
             children: [
@@ -256,10 +263,10 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
             const AppEmptyState(
               icon: Icons.sports_esports_outlined,
               title: 'No matches found',
-              message: 'Try another league filter.',
+              message: 'Try another match filter.',
             )
           else
-            ...filteredMatches.map((match) => _MatchCard(match: match)),
+            ...matchSections,
         ];
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsMatchesProvider.future),
@@ -611,6 +618,89 @@ class _FilterOption {
 
   final String value;
   final String label;
+}
+
+class _MatchStatusSection extends StatelessWidget {
+  const _MatchStatusSection({required this.status, required this.matches});
+
+  final _FilterOption status;
+  final List<EsportsMatchSummary> matches;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          key: ValueKey('match-status-heading-${status.value}'),
+          children: [
+            Icon(
+              _matchStatusIcon(status.value),
+              color: _matchStatusColor(status.value),
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              status.label,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (matches.isEmpty)
+          const _InlineEmptyState(message: 'No matches')
+        else
+          ...matches.expand(
+            (match) => [
+              _MatchCard(match: match),
+              if (match != matches.last) const SizedBox(height: 10),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _InlineEmptyState extends StatelessWidget {
+  const _InlineEmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.10),
+          style: BorderStyle.solid,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.event_busy_outlined,
+              color: AppTheme.muted,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _MatchCard extends StatelessWidget {
@@ -1510,6 +1600,15 @@ List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
       statusByValue[value] = match.statusLabel;
     }
   }
+  const statusDefaults = {
+    'live': 'Live',
+    'upcoming': 'Upcoming',
+    'finished': 'Finished',
+  };
+  statusByValue.addAll({
+    for (final entry in statusDefaults.entries)
+      if (!statusByValue.containsKey(entry.key)) entry.key: entry.value,
+  });
   const preferredOrder = ['live', 'upcoming', 'finished'];
   final extraValues =
       statusByValue.keys
@@ -1523,6 +1622,35 @@ List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
   return orderedValues
       .map((value) => _FilterOption(value: value, label: statusByValue[value]!))
       .toList();
+}
+
+Map<String, List<EsportsMatchSummary>> _groupMatchesByStatus(
+  List<EsportsMatchSummary> matches,
+) {
+  final grouped = <String, List<EsportsMatchSummary>>{};
+  for (final match in matches) {
+    final status = match.statusKey.trim().toLowerCase();
+    grouped.putIfAbsent(status, () => []).add(match);
+  }
+  return grouped;
+}
+
+IconData _matchStatusIcon(String status) {
+  return switch (status) {
+    'live' => Icons.wifi_tethering,
+    'upcoming' => Icons.schedule,
+    'finished' => Icons.emoji_events_outlined,
+    _ => Icons.sports_esports_outlined,
+  };
+}
+
+Color _matchStatusColor(String status) {
+  return switch (status) {
+    'live' => Colors.redAccent,
+    'upcoming' => AppTheme.cyan,
+    'finished' => Colors.greenAccent,
+    _ => AppTheme.gold,
+  };
 }
 
 String _matchDateValue(String startTime) {
