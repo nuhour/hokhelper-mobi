@@ -1106,11 +1106,30 @@ class _CgCommentCard extends StatelessWidget {
                 height: 1.35,
               ),
             ),
+            if (comment.createdAt.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                _formatCgCommentTime(comment.createdAt),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+String _formatCgCommentTime(String value) {
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) {
+    return value;
+  }
+  String twoDigits(int number) => number.toString().padLeft(2, '0');
+  return '${parsed.year}-${twoDigits(parsed.month)}-${twoDigits(parsed.day)} '
+      '${twoDigits(parsed.hour)}:${twoDigits(parsed.minute)}';
 }
 
 class _CgRatingControl extends StatelessWidget {

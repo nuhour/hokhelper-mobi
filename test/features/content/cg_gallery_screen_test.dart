@@ -282,6 +282,7 @@ void main() {
     expect(find.text('https://example.test/lam.mp4'), findsOneWidget);
     expect(find.text('2,301 views'), findsOneWidget);
     expect(find.text('Great cinematic.'), findsOneWidget);
+    expect(find.text('2026-07-03 08:30'), findsOneWidget);
   });
 
   testWidgets('filters cgs from initial search query', (tester) async {
