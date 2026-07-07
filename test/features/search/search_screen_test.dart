@@ -75,7 +75,7 @@ void main() {
     expect(find.widgetWithText(TextField, 'arthur'), findsOneWidget);
     expect(repository.requestedKeyword, 'arthur');
     expect(repository.requestedRegionId, 2);
-    expect(find.text('Heroes'), findsOneWidget);
+    expect(find.text('Heroes (1)'), findsOneWidget);
     expect(find.text('Arthur'), findsOneWidget);
 
     await tester.tap(find.text('Arthur'));
@@ -116,10 +116,10 @@ void main() {
 
     expect(repository.requestedKeyword, 'arthur');
     expect(repository.requestedRegionId, 2);
-    expect(find.text('Heroes'), findsOneWidget);
+    expect(find.text('Heroes (1)'), findsOneWidget);
     expect(find.text('Arthur'), findsOneWidget);
     expect(find.text('Paladin captain'), findsOneWidget);
-    expect(find.text('Builds'), findsOneWidget);
+    expect(find.text('Builds (1)'), findsOneWidget);
     expect(find.text('Arthur Clash Build'), findsOneWidget);
 
     await tester.tap(find.text('Arthur Clash Build'));

@@ -175,7 +175,7 @@ class _SearchGroupCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              group.title,
+              '${group.title} (${group.items.length})',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: AppTheme.text,
                 fontWeight: FontWeight.w900,
