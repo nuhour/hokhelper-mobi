@@ -227,6 +227,42 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
   }
 }
 
+String _formatEventTime(String value) {
+  final text = value.trim();
+  if (text.isEmpty) {
+    return '';
+  }
+  final date = DateTime.tryParse(text);
+  if (date == null) {
+    return text;
+  }
+  final diff = DateTime.now().difference(date.toLocal());
+  if (diff.isNegative) {
+    return date.toLocal().toIso8601String().split('T').first;
+  }
+  if (diff.inSeconds < 60) {
+    return 'Just now';
+  }
+  if (diff.inMinutes < 60) {
+    return '${diff.inMinutes} min ago';
+  }
+  if (diff.inHours < 24) {
+    return '${diff.inHours} hr ago';
+  }
+  if (diff.inDays < 7) {
+    return '${diff.inDays} day(s) ago';
+  }
+  final weeks = diff.inDays ~/ 7;
+  if (weeks < 4) {
+    return '$weeks week(s) ago';
+  }
+  final months = diff.inDays ~/ 30;
+  if (months < 12) {
+    return '$months month(s) ago';
+  }
+  return '${diff.inDays ~/ 365} year(s) ago';
+}
+
 class _RecordCard extends ConsumerStatefulWidget {
   const _RecordCard({required this.record});
 
@@ -298,7 +334,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
             if (record.eventTime.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                record.eventTime,
+                _formatEventTime(record.eventTime),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(

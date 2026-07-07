@@ -213,4 +213,40 @@ void main() {
     expect(find.text('Reported'), findsOneWidget);
     expect(find.text('Record reported'), findsOneWidget);
   });
+
+  testWidgets('renders event times as relative labels like the hokx portal', (
+    tester,
+  ) async {
+    final recentTime = DateTime.now()
+        .subtract(const Duration(hours: 2, minutes: 5))
+        .toUtc()
+        .toIso8601String();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRecordsProvider.overrideWith((ref) async {
+            return [
+              EventAssistanceRecord(
+                id: '88',
+                regionId: 1,
+                content: 'Need help finishing the weekly task.',
+                eventTime: recentTime,
+                isReported: false,
+                rawText: 'Need help finishing the weekly task.',
+                sharedBy: 'teammate',
+                createdAt: recentTime,
+                updatedAt: recentTime,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 hr ago'), findsOneWidget);
+    expect(find.text(recentTime), findsNothing);
+  });
 }
