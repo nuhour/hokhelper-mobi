@@ -378,11 +378,11 @@ class _DownloadSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.qr_code_2_outlined, color: AppTheme.gold, size: 20),
+                Icon(Icons.android_outlined, color: AppTheme.gold, size: 20),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Scan to download',
+                    'Ready on this device',
                     style: TextStyle(
                       color: AppTheme.muted,
                       fontWeight: FontWeight.w900,
@@ -396,21 +396,21 @@ class _DownloadSection extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _ComingSoonQr(),
+                _InstalledCompanionBadge(),
                 SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     children: [
-                      _StoreButton(
-                        icon: Icons.apple,
-                        eyebrow: 'Download on the',
-                        label: 'App Store',
+                      _AccessButton(
+                        icon: Icons.android_rounded,
+                        eyebrow: 'Primary build',
+                        label: 'Android APK',
                       ),
                       SizedBox(height: 10),
-                      _StoreButton(
-                        icon: Icons.play_arrow_rounded,
-                        eyebrow: 'Get it on',
-                        label: 'Google Play',
+                      _AccessButton(
+                        icon: Icons.public_rounded,
+                        eyebrow: 'Fallback route',
+                        label: 'Web assistant',
                       ),
                     ],
                   ),
@@ -424,71 +424,47 @@ class _DownloadSection extends StatelessWidget {
   }
 }
 
-class _ComingSoonQr extends StatelessWidget {
-  const _ComingSoonQr();
+class _InstalledCompanionBadge extends StatelessWidget {
+  const _InstalledCompanionBadge();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Text(
-          'Coming soon',
-          style: TextStyle(color: AppTheme.gold, fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 8),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.32)),
+      ),
+      child: const SizedBox(
+        width: 112,
+        height: 112,
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(
-                width: 112,
-                height: 112,
-                child: CustomPaint(painter: _QrPlaceholderPainter()),
-              ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.48),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-              Transform.rotate(
-                angle: -0.24,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.panelAlt),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                    child: Text(
-                      'COMING SOON',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ),
+              Icon(Icons.check_circle_outline, color: AppTheme.gold, size: 32),
+              SizedBox(height: 10),
+              Text(
+                'Installed companion',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppTheme.text,
+                  fontSize: 12,
+                  height: 1.2,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-class _StoreButton extends StatelessWidget {
-  const _StoreButton({
+class _AccessButton extends StatelessWidget {
+  const _AccessButton({
     required this.icon,
     required this.eyebrow,
     required this.label,
@@ -545,61 +521,6 @@ class _StoreButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _QrPlaceholderPainter extends CustomPainter {
-  const _QrPlaceholderPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.black.withValues(alpha: 0.72);
-    final cell = size.width / 9;
-    const filled = <(int, int)>[
-      (0, 0),
-      (1, 0),
-      (2, 0),
-      (0, 1),
-      (2, 1),
-      (0, 2),
-      (1, 2),
-      (2, 2),
-      (6, 0),
-      (7, 0),
-      (8, 0),
-      (6, 1),
-      (8, 1),
-      (6, 2),
-      (7, 2),
-      (8, 2),
-      (0, 6),
-      (1, 6),
-      (2, 6),
-      (0, 7),
-      (2, 7),
-      (0, 8),
-      (1, 8),
-      (2, 8),
-      (4, 1),
-      (5, 3),
-      (3, 4),
-      (6, 5),
-      (4, 6),
-      (7, 7),
-      (5, 8),
-    ];
-    for (final (x, y) in filled) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(x * cell + 4, y * cell + 4, cell - 5, cell - 5),
-          const Radius.circular(2),
-        ),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _FeatureGrid extends StatelessWidget {
