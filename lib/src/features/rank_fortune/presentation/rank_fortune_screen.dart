@@ -135,6 +135,10 @@ class _FortunePanel extends StatelessWidget {
               const _FortuneJar()
             else
               _FortuneResult(record: today!),
+            if (isDrawing) ...[
+              const SizedBox(height: 16),
+              const _DrawingFeedback(),
+            ],
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
@@ -152,6 +156,45 @@ class _FortunePanel extends StatelessWidget {
                       ? "Draw Today's Fortune"
                       : 'Already drawn today',
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawingFeedback extends StatelessWidget {
+  const _DrawingFeedback();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.26)),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppTheme.gold,
+              ),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Shaking the fortune jar...',
+              style: TextStyle(
+                color: AppTheme.gold,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ],

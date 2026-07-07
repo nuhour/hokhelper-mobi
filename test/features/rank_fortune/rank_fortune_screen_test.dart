@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +34,25 @@ class _FakeRepository extends RankFortuneRepository {
       canDraw: false,
       catalog: [RankFortuneCatalogEntry(typeId: 'legendary', score: 99)],
     );
+  }
+}
+
+class _PendingRepository extends RankFortuneRepository {
+  _PendingRepository(this.completer)
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  final Completer<RankFortuneDraw> completer;
+
+  @override
+  Future<RankFortuneDraw> drawToday() {
+    return completer.future;
   }
 }
 
@@ -107,6 +128,55 @@ void main() {
     expect(find.text('Legendary Luck'), findsWidgets);
     expect(find.text('99'), findsWidgets);
     expect(find.text('Already drawn today'), findsOneWidget);
+  });
+
+  testWidgets('shows fortune drawing feedback while draw is pending', (
+    tester,
+  ) async {
+    final completer = Completer<RankFortuneDraw>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          rankFortuneRepositoryProvider.overrideWithValue(
+            _PendingRepository(completer),
+          ),
+          rankFortuneHistoryProvider.overrideWith((ref) async {
+            return const RankFortuneHistory(
+              rows: [],
+              today: null,
+              canDraw: true,
+              days: 30,
+              catalog: [],
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: RankFortuneScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text("Draw Today's Fortune"));
+    await tester.pump();
+
+    expect(find.text('Shaking the fortune jar...'), findsOneWidget);
+
+    completer.complete(
+      const RankFortuneDraw(
+        record: RankFortuneRecord(
+          id: 8,
+          date: '2026-07-05',
+          typeId: 'legendary',
+          score: 99,
+        ),
+        alreadyDrawn: false,
+        canDraw: false,
+        catalog: [RankFortuneCatalogEntry(typeId: 'legendary', score: 99)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Legendary Luck'), findsWidgets);
   });
 
   testWidgets('copies today fortune share links', (tester) async {
