@@ -40,6 +40,8 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 18),
           const _SearchEntryCard(),
           const SizedBox(height: 18),
+          const _HomePrimaryActions(),
+          const SizedBox(height: 18),
           const _HomeToolGrid(),
           const SizedBox(height: 18),
           const _HokWorldEntryCard(),
@@ -50,6 +52,95 @@ class HomeScreen extends ConsumerWidget {
             data: (stats) => _BackendSummary(stats: stats),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HomePrimaryActions extends StatelessWidget {
+  const _HomePrimaryActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: const [
+        Expanded(
+          child: _PrimaryActionCard(
+            title: 'View Core Stats',
+            subtitle: 'Home metrics',
+            route: '/tools/stats?entry=home_core',
+            icon: Icons.bar_chart_outlined,
+          ),
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: _PrimaryActionCard(
+            title: 'Enter Tier List',
+            subtitle: 'Hero tiers',
+            route: '/tier-list',
+            icon: Icons.leaderboard_outlined,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PrimaryActionCard extends StatelessWidget {
+  const _PrimaryActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.route,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final String route;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go(route),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: AppTheme.gold, size: 22),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

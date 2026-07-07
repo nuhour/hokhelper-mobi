@@ -26,6 +26,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('View Core Stats'), findsOneWidget);
+    expect(find.text('Enter Tier List'), findsOneWidget);
     expect(find.text('BP Simulator'), findsOneWidget);
     expect(find.text('Tier Editor'), findsOneWidget);
     expect(find.text('AI Prompts'), findsOneWidget);
