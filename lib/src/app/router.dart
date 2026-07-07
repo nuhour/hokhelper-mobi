@@ -100,6 +100,18 @@ String _heroGalleryTarget(Uri uri) {
   return Uri(path: '/heroes', queryParameters: {'q': query}).toString();
 }
 
+String _profileTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final userId = queryParameters.remove('user_id')?.trim();
+  if (userId == null || userId.isEmpty) {
+    return '/me';
+  }
+  return Uri(
+    path: '/profile/$userId',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
+}
+
 String? _cgGalleryRedirect(Uri uri) {
   final queryParameters = Map<String, String>.from(uri.queryParameters);
   final cgId = queryParameters.remove('cg_id')?.trim();
@@ -383,7 +395,10 @@ GoRouter createAppRouter() {
         builder: (context, state) =>
             ExternalLinkScreen(url: state.uri.queryParameters['url'] ?? ''),
       ),
-      GoRoute(path: '/profile', redirect: (context, state) => '/me'),
+      GoRoute(
+        path: '/profile',
+        redirect: (context, state) => _profileTarget(state.uri),
+      ),
       GoRoute(
         path: '/profile/:userId',
         builder: (context, state) {

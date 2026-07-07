@@ -10,6 +10,8 @@ import 'package:hok_helper_mobile/src/features/content/presentation/content_scre
 import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
+import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
+import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
@@ -28,6 +30,7 @@ void main() {
             String? entry,
             String? equipId,
             String? postId,
+            String? userId,
           })
         >{
           '/hero-gallery': (
@@ -36,6 +39,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/hero-gallery?hero_id=101': (
             path: '/heroes/101',
@@ -43,6 +47,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/skin-gallery?skin_id=1001': (
             path: '/skin-gallery/1001',
@@ -50,6 +55,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/community': (
             path: '/content/community',
@@ -57,6 +63,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/community?view=my': (
             path: '/content/community',
@@ -64,6 +71,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/community/leaks': (
             path: '/content/community',
@@ -71,6 +79,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/leaks': (
             path: '/content/community',
@@ -78,6 +87,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/skin-leaks': (
             path: '/content/community',
@@ -85,6 +95,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/event-assistance': (
             path: '/content/event-assistance',
@@ -92,6 +103,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/patch-notes': (
             path: '/content/patch-notes',
@@ -99,6 +111,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/patch-notes?post_id=31': (
             path: '/content/patch-notes',
@@ -106,6 +119,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: '31',
+            userId: null,
           ),
           '/versions': (
             path: '/content/patch-notes',
@@ -113,6 +127,15 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
+          ),
+          '/profile?user_id=42&tab=followers': (
+            path: '/profile/42',
+            tab: 'followers',
+            entry: null,
+            equipId: null,
+            postId: null,
+            userId: null,
           ),
           '/stats': (
             path: '/tools/stats',
@@ -120,6 +143,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/stats?entry=home_core': (
             path: '/tools/stats',
@@ -127,6 +151,7 @@ void main() {
             entry: 'home_core',
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/stats?entry=hero_trend': (
             path: '/trends',
@@ -134,6 +159,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/stats?entry=equip_rank&equip_id=88': (
             path: '/tools/stats',
@@ -141,6 +167,7 @@ void main() {
             entry: 'equip_rank',
             equipId: '88',
             postId: null,
+            userId: null,
           ),
           '/builds': (
             path: '/tools/builds',
@@ -148,6 +175,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/build-sim?hero_id=101&scheme=22': (
             path: '/tools/build-sim',
@@ -155,6 +183,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/bp-simulator': (
             path: '/tools/bp-simulator',
@@ -162,6 +191,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/rankings': (
             path: '/tools/rankings',
@@ -169,6 +199,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/game-assistant': (
             path: '/tools/game-assistant',
@@ -176,6 +207,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/rank-fortune': (
             path: '/tools/rank-fortune',
@@ -183,6 +215,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/curiosity-lab': (
             path: '/tools/curiosity-lab',
@@ -190,6 +223,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/team-builder': (
             path: '/tools/team-builder',
@@ -197,6 +231,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/prompts?tab=favorites': (
             path: '/tools/prompts',
@@ -204,6 +239,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/en/hero-gallery?hero_id=101': (
             path: '/heroes/101',
@@ -211,6 +247,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/zh/tools/build-sim?hero_id=101&scheme=22': (
             path: '/tools/build-sim',
@@ -218,6 +255,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/id/community/leaks': (
             path: '/content/community',
@@ -225,6 +263,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
           '/en/prompts?tab=favorites': (
             path: '/tools/prompts',
@@ -232,6 +271,7 @@ void main() {
             entry: null,
             equipId: null,
             postId: null,
+            userId: null,
           ),
         };
 
@@ -265,6 +305,33 @@ void main() {
               (ref) async => const [],
             ),
             patchNotesProvider.overrideWith((ref) async => const []),
+            publicUserProfileProvider(42).overrideWith((ref) async {
+              return const UserProfile(
+                id: 42,
+                username: 'lam',
+                displayName: 'Lam',
+                email: 'lam@example.test',
+                avatar: '',
+                level: 7,
+                points: 1200,
+                xpTotal: 1400,
+                xpCurrentLevel: 260,
+                xpToNextLevel: 740,
+                levelProgress: 26,
+                levelCap: false,
+                bio: 'Jungle main',
+                socialLinks: {},
+                stats: ProfileStats(
+                  posts: 3,
+                  following: 4,
+                  followers: 5,
+                  likes: 6,
+                ),
+                isFollowing: false,
+                isLiked: false,
+                isSelf: false,
+              );
+            }),
             statsDashboardProvider.overrideWith(
               (ref, entry) async => const StatsDashboard(),
             ),
@@ -305,6 +372,11 @@ void main() {
         router.routeInformationProvider.value.uri.queryParameters['post_id'],
         entry.value.postId,
         reason: '${entry.key} should preserve the focused portal post target',
+      );
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['user_id'],
+        entry.value.userId,
+        reason: '${entry.key} should move focused profile users into the path',
       );
       await tester.pumpWidget(const SizedBox.shrink());
     }
