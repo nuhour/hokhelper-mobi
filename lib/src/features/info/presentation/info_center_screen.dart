@@ -1362,21 +1362,58 @@ class _TermsDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _InfoPanel(
-      icon: Icons.description_outlined,
-      title: 'Community conduct',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _BodyText(
-            'Use HOK Helper for lawful strategy research, community discussion, and personal gameplay planning. Shared content should remain respectful and accurate.',
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _InfoPanel(
+          icon: Icons.description_outlined,
+          title: 'Community conduct',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BodyText(
+                'Use HOK Helper for lawful strategy research, community discussion, and personal gameplay planning. Shared content should remain respectful and accurate.',
+              ),
+              SizedBox(height: 12),
+              _BulletText(
+                'Do not upload abusive, illegal, or misleading content',
+              ),
+              _BulletText('AI and community tools should support fair play'),
+              _BulletText('HOK Helper is independent from the game publisher'),
+            ],
           ),
-          SizedBox(height: 12),
-          _BulletText('Do not upload abusive, illegal, or misleading content'),
-          _BulletText('AI and community tools should support fair play'),
-          _BulletText('HOK Helper is independent from the game publisher'),
-        ],
-      ),
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.check_circle_outline,
+          title: '1. Acceptance of Terms',
+          child: _BodyText(
+            'By accessing HOK Helper, you agree to comply with these terms. We provide strategic data for Honor of Kings. We are not responsible for any in-game outcomes based on our data.',
+          ),
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.auto_fix_high_outlined,
+          title: '2. Use of AI Tools',
+          child: _BodyText(
+            'Our AI Prompt Library is powered by external models. Users must not generate offensive or harmful content. Credits are non-refundable.',
+          ),
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.groups_2_outlined,
+          title: '3. Community Conduct',
+          child: _BodyText(
+            'Treat fellow heroes with respect. Harassment, scamming, or spreading misinformation will result in account termination.',
+          ),
+        ),
+        SizedBox(height: 12),
+        _InfoPanel(
+          icon: Icons.update_outlined,
+          title: 'Terms update',
+          child: _BodyText('Last updated: April 2026.'),
+        ),
+      ],
     );
   }
 }

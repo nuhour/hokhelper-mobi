@@ -121,6 +121,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Terms of Service'), findsOneWidget);
     expect(find.text('Community conduct'), findsOneWidget);
+    expect(find.text('1. Acceptance of Terms'), findsOneWidget);
+    expect(find.text('2. Use of AI Tools'), findsOneWidget);
+    expect(find.text('3. Community Conduct'), findsOneWidget);
+    expect(find.text('Last updated: April 2026.'), findsOneWidget);
 
     router.go('/links');
     await tester.pumpAndSettle();
