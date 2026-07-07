@@ -286,11 +286,13 @@ String? _resolveNotificationDestination(NotificationSummary notification) {
       classifier.contains('like') ||
       classifier.contains('liked') ||
       classifier.contains('点赞');
-  if (isLike && notification.actorId > 0) {
+  final link = normalizePortalLinkTarget(notification.link);
+  final isCommunityPostLike =
+      link.isEmpty || link.contains('/community/post/');
+  if (isLike && notification.actorId > 0 && isCommunityPostLike) {
     return '/profile/${notification.actorId}';
   }
 
-  final link = normalizePortalLinkTarget(notification.link);
   if (link.startsWith(RegExp('https?://', caseSensitive: false))) {
     return externalLinkRoute(link);
   }

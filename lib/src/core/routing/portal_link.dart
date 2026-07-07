@@ -32,5 +32,20 @@ String _normalizeInternalTarget(String target) {
     ).toString();
   }
 
+  final aliasPath = _mobileAliasPath(uri.path);
+  if (aliasPath != null) {
+    return uri.replace(path: aliasPath).toString();
+  }
+
   return target;
+}
+
+String? _mobileAliasPath(String path) {
+  return switch (path) {
+    '/build-sim' => '/tools/build-sim',
+    '/bp-simulator' => '/tools/bp-simulator',
+    '/event-assistance' => '/content/event-assistance',
+    '/patch-notes' || '/versions' => '/content/patch-notes',
+    _ => null,
+  };
 }

@@ -506,4 +506,80 @@ void main() {
     );
     expect(find.text('Post 99'), findsOneWidget);
   });
+
+  testWidgets('opens hokx tool hash notification links on mobile routes', (
+    tester,
+  ) async {
+    final repository = _FakeNotificationsRepository();
+    repository.page = const NotificationPage(
+      total: 1,
+      rows: [
+        NotificationSummary(
+          id: 15,
+          type: 'social',
+          targetType: 'build_like',
+          title: 'Build liked',
+          content: 'Coach liked your build',
+          link: '#/build-sim?hero_id=101&scheme=22',
+          isRead: false,
+          createdAt: '2026-07-06T08:30:00Z',
+          actorName: 'Coach',
+          actorAvatar: '',
+          actorId: 7,
+        ),
+      ],
+    );
+    final router = GoRouter(
+      initialLocation: '/notifications',
+      routes: [
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationsScreen(),
+        ),
+        GoRoute(
+          path: '/tools/build-sim',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              'Build Sim ${state.uri.queryParameters['hero_id']} ${state.uri.queryParameters['scheme']}',
+            ),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(
+              const AuthUser(
+                id: 42,
+                username: 'lam',
+                email: 'lam@example.test',
+                displayName: 'Lam',
+              ),
+            ),
+          ),
+          notificationsRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'View'));
+    await tester.pumpAndSettle();
+
+    expect(repository.markedIds, [15]);
+    expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['hero_id'],
+      '101',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['scheme'],
+      '22',
+    );
+    expect(find.text('Build Sim 101 22'), findsOneWidget);
+  });
 }
