@@ -338,6 +338,50 @@ void main() {
     expect(find.text('Tier list saved'), findsOneWidget);
   });
 
+  testWidgets('tier list edit mode removes heroes from rows', (tester) async {
+    final repository = _FakeTierListToolRepository();
+    final router = createAppRouter();
+    router.go('/tools/tier-list/42?mode=edit');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'Editable Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 3,
+                  heroIds: [111, 222, 333],
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hero #111'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('tier-row-remove-hero-r1-111')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(repository.savedScheme, isNotNull);
+    expect(repository.savedScheme!.rows.single.heroIds, [222, 333]);
+    expect(repository.savedScheme!.rows.single.heroCount, 2);
+    expect(find.text('Tier list saved'), findsOneWidget);
+  });
+
   testWidgets('copies tier list detail share links', (tester) async {
     MethodCall? clipboardCall;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

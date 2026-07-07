@@ -98,6 +98,7 @@ class _TierListSchemeDetailScreenState
                 labelControllers: _labelControllers,
                 onLabelChanged: _updateRowLabel,
                 onColorChanged: _updateRowColor,
+                onHeroRemoved: _removeHeroFromRow,
                 onMoveRow: _moveRow,
                 onSave: () => _saveScheme(_schemeWithEditedRows(displayScheme)),
               ),
@@ -173,6 +174,21 @@ class _TierListSchemeDetailScreenState
       _editedRows = [
         for (final row in _editedRows)
           row.id == rowId ? row.copyWith(color: color) : row,
+      ];
+    });
+  }
+
+  void _removeHeroFromRow(String rowId, int heroId) {
+    setState(() {
+      _editedRows = [
+        for (final row in _editedRows)
+          if (row.id == rowId)
+            row.copyWith(
+              heroIds: row.heroIds.where((id) => id != heroId).toList(),
+              heroCount: row.heroIds.where((id) => id != heroId).length,
+            )
+          else
+            row,
       ];
     });
   }
@@ -281,6 +297,7 @@ class _TierListDetailCard extends StatelessWidget {
     required this.labelControllers,
     required this.onLabelChanged,
     required this.onColorChanged,
+    required this.onHeroRemoved,
     required this.onMoveRow,
     required this.onSave,
   });
@@ -292,6 +309,7 @@ class _TierListDetailCard extends StatelessWidget {
   final Map<String, TextEditingController> labelControllers;
   final void Function(String rowId, String label) onLabelChanged;
   final void Function(String rowId, String color) onColorChanged;
+  final void Function(String rowId, int heroId) onHeroRemoved;
   final void Function(String rowId, int offset) onMoveRow;
   final VoidCallback onSave;
 
@@ -406,6 +424,7 @@ class _TierListDetailCard extends StatelessWidget {
                   canMoveDown: index < scheme.rows.length - 1,
                   onChanged: (value) => onLabelChanged(row.id, value),
                   onColorChanged: (color) => onColorChanged(row.id, color),
+                  onHeroRemoved: (heroId) => onHeroRemoved(row.id, heroId),
                   onMoveUp: () => onMoveRow(row.id, -1),
                   onMoveDown: () => onMoveRow(row.id, 1),
                 ),
@@ -447,6 +466,7 @@ class _TierRowEditor extends StatelessWidget {
     required this.canMoveDown,
     required this.onChanged,
     required this.onColorChanged,
+    required this.onHeroRemoved,
     required this.onMoveUp,
     required this.onMoveDown,
   });
@@ -458,6 +478,7 @@ class _TierRowEditor extends StatelessWidget {
   final bool canMoveDown;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onColorChanged;
+  final ValueChanged<int> onHeroRemoved;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
 
@@ -542,8 +563,52 @@ class _TierRowEditor extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 10),
+            _TierHeroIdEditor(row: row, onHeroRemoved: onHeroRemoved),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TierHeroIdEditor extends StatelessWidget {
+  const _TierHeroIdEditor({required this.row, required this.onHeroRemoved});
+
+  final TierListSchemeRowSummary row;
+  final ValueChanged<int> onHeroRemoved;
+
+  @override
+  Widget build(BuildContext context) {
+    if (row.heroIds.isEmpty) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'No heroes assigned',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+        ),
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final heroId in row.heroIds)
+            InputChip(
+              key: ValueKey('tier-row-remove-hero-${row.id}-$heroId'),
+              label: Text('Hero #$heroId'),
+              avatar: const Icon(Icons.sports_esports_outlined, size: 18),
+              onPressed: () => onHeroRemoved(heroId),
+              onDeleted: () => onHeroRemoved(heroId),
+              deleteIcon: const Icon(Icons.close_rounded, size: 18),
+              visualDensity: VisualDensity.compact,
+            ),
+        ],
       ),
     );
   }
