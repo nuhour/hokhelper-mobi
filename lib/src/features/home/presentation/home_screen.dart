@@ -83,6 +83,7 @@ class _HomePortalPreviews extends StatelessWidget {
         _HomePreviewSection(
           icon: Icons.bar_chart_outlined,
           title: 'Hero Rankings',
+          route: '/tools/stats?entry=home_core',
           rows: [
             for (final row in heroRows.take(3))
               _HomePreviewRow(
@@ -95,6 +96,7 @@ class _HomePortalPreviews extends StatelessWidget {
         _HomePreviewSection(
           icon: Icons.local_fire_department_outlined,
           title: 'Tier List Preview',
+          route: '/tier-list',
           rows: [
             for (final row in tierRows.take(4))
               _HomePreviewRow(
@@ -107,6 +109,7 @@ class _HomePortalPreviews extends StatelessWidget {
         _HomePreviewSection(
           icon: Icons.emoji_events_outlined,
           title: 'Leaderboard',
+          route: '/leaderboard',
           rows: [
             for (final row in peakPlayers.take(3))
               _HomePreviewRow(
@@ -119,6 +122,7 @@ class _HomePortalPreviews extends StatelessWidget {
         _HomePreviewSection(
           icon: Icons.forum_outlined,
           title: 'Community Hot',
+          route: '/content/community',
           rows: [
             for (final row in communityPosts.take(3))
               _HomePreviewRow(
@@ -131,6 +135,7 @@ class _HomePortalPreviews extends StatelessWidget {
         _HomePreviewSection(
           icon: Icons.newspaper_outlined,
           title: 'Latest Updates',
+          route: '/content/patch-notes',
           rows: [
             for (final row in patchNotes.take(3))
               _HomePreviewRow(
@@ -161,47 +166,65 @@ class _HomePreviewSection extends StatelessWidget {
   const _HomePreviewSection({
     required this.icon,
     required this.title,
+    required this.route,
     required this.rows,
   });
 
   final IconData icon;
   final String title;
+  final String route;
   final List<_HomePreviewRow> rows;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        onTap: () => context.go(route),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: AppTheme.gold, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
+                Row(
+                  children: [
+                    Icon(icon, color: AppTheme.gold, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppTheme.gold,
+                      size: 18,
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                for (var index = 0; index < rows.length; index++) ...[
+                  _HomePreviewTile(row: rows[index]),
+                  if (index != rows.length - 1) const SizedBox(height: 10),
+                ],
               ],
             ),
-            const SizedBox(height: 12),
-            for (var index = 0; index < rows.length; index++) ...[
-              _HomePreviewTile(row: rows[index]),
-              if (index != rows.length - 1) const SizedBox(height: 10),
-            ],
-          ],
+          ),
         ),
       ),
     );
