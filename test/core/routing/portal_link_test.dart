@@ -216,4 +216,21 @@ void main() {
       '/tools/bp-simulator/12?gameIndex=1',
     );
   });
+
+  test('normalizes esports query links to focused team and player routes', () {
+    expect(
+      normalizePortalLinkTarget('/esports?team_id=1&season=2026'),
+      '/esports/teams/1?season=2026',
+    );
+    expect(
+      normalizePortalLinkTarget('/tools/esports?player_id=8'),
+      '/tools/esports/players/8',
+    );
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/esports?player_id=8&league=kpl',
+      ),
+      '/esports/players/8?league=kpl',
+    );
+  });
 }

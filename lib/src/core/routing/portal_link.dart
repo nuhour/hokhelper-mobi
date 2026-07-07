@@ -118,6 +118,10 @@ String _normalizeInternalTarget(String target) {
     return _normalizeBpSimulatorTarget(uri).toString();
   }
 
+  if (uri.path == '/esports' || uri.path == '/tools/esports') {
+    return _normalizeEsportsTarget(uri).toString();
+  }
+
   final aliasPath = _mobileAliasPath(uri.path);
   if (aliasPath != null) {
     return uri.replace(path: aliasPath).toString();
@@ -204,6 +208,24 @@ bool _isBpSimulatorDetailPath(Uri uri) {
   return uri.pathSegments.length == 3 &&
       uri.pathSegments[0] == 'tools' &&
       uri.pathSegments[1] == 'bp-simulator';
+}
+
+Uri _normalizeEsportsTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final teamId = queryParameters.remove('team_id')?.trim();
+  final playerId = queryParameters.remove('player_id')?.trim();
+  final routeBase = uri.path == '/tools/esports'
+      ? '/tools/esports'
+      : '/esports';
+  final focusedPath = teamId != null && teamId.isNotEmpty
+      ? '$routeBase/teams/$teamId'
+      : playerId != null && playerId.isNotEmpty
+      ? '$routeBase/players/$playerId'
+      : routeBase;
+  return Uri(
+    path: focusedPath,
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  );
 }
 
 String? _mobileAliasPath(String path) {
