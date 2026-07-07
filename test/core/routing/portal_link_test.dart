@@ -132,4 +132,14 @@ void main() {
       '/hok-world/hok-world-tier-list',
     );
   });
+
+  test('normalizes personal profile portal links to the mobile me route', () {
+    expect(normalizePortalLinkTarget('/profile'), '/me');
+    expect(normalizePortalLinkTarget('/en/profile'), '/me');
+    expect(
+      normalizePortalLinkTarget('https://www.hok-helper.com/zh/profile'),
+      '/me',
+    );
+    expect(normalizePortalLinkTarget('/profile/42'), '/profile/42');
+  });
 }

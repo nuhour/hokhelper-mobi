@@ -96,6 +96,10 @@ String _normalizeInternalTarget(String target) {
     return uri.replace(path: '/hok-world/hok-world-tier-list').toString();
   }
 
+  if (uri.path == '/profile') {
+    return uri.replace(path: '/me').toString();
+  }
+
   final aliasPath = _mobileAliasPath(uri.path);
   if (aliasPath != null) {
     return uri.replace(path: aliasPath).toString();
