@@ -1065,6 +1065,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
   final _tagsController = TextEditingController();
   final _sourceImageController = TextEditingController();
   final _effectImageController = TextEditingController();
+  var _language = _PromptLanguage.english;
   var _isPublic = true;
   var _submitting = false;
 
@@ -1078,6 +1079,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
       _tagsController.text = prompt.tags
           .where((tag) => !tag.startsWith('Lang:'))
           .join(', ');
+      _language = _PromptLanguageOptionX.fromTag(prompt.tags);
       _sourceImageController.text = prompt.sourceImageUrl;
       _effectImageController.text = prompt.effectImageUrl;
       _isPublic = prompt.isPublic;
@@ -1162,6 +1164,29 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                   textInputAction: TextInputAction.done,
                 ),
                 const SizedBox(height: 12),
+                DropdownButtonFormField<_PromptLanguage>(
+                  initialValue: _language,
+                  decoration: const InputDecoration(
+                    labelText: 'Prompt language',
+                    prefixIcon: Icon(Icons.language_outlined),
+                  ),
+                  items: _PromptLanguage.values
+                      .map(
+                        (language) => DropdownMenuItem(
+                          value: language,
+                          child: Text(language.label),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: _submitting
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            setState(() => _language = value);
+                          }
+                        },
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _sourceImageController,
                   decoration: const InputDecoration(
@@ -1229,7 +1254,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
         content: _contentController.text,
         tags: tags,
         isPublic: _isPublic,
-        language: 'en',
+        language: _language.code,
         sourceImageUrl: _sourceImageController.text,
         effectImageUrl: _effectImageController.text,
       );
@@ -1264,6 +1289,37 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
         const SnackBar(content: Text('Failed to create prompt')),
       );
     }
+  }
+}
+
+enum _PromptLanguage {
+  english('en', 'English'),
+  chinese('zh', 'Chinese'),
+  indonesian('id', 'Indonesian');
+
+  const _PromptLanguage(this.code, this.label);
+
+  final String code;
+  final String label;
+}
+
+extension _PromptLanguageOptionX on _PromptLanguage {
+  static _PromptLanguage fromTag(List<String> tags) {
+    var langTag = '';
+    for (final tag in tags) {
+      if (!tag.toLowerCase().startsWith('lang:')) {
+        continue;
+      }
+      langTag = tag.substring(5).trim().toLowerCase();
+      if (langTag.isNotEmpty) {
+        break;
+      }
+    }
+    return switch (langTag) {
+      'zh' || 'chinese' || '中文' => _PromptLanguage.chinese,
+      'id' || 'indonesian' || 'bahasa' => _PromptLanguage.indonesian,
+      _ => _PromptLanguage.english,
+    };
   }
 }
 

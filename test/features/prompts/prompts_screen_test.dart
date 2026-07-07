@@ -580,6 +580,59 @@ void main() {
     expect(find.text('Prompt created'), findsOneWidget);
   });
 
+  testWidgets('creates prompts with the selected prompt language', (
+    tester,
+  ) async {
+    final repository = _FakePromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptsRepositoryProvider.overrideWithValue(repository),
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [];
+          }),
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
+            ref,
+          ) async {
+            return const [];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Title'),
+      'Indonesian prompt',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Prompt content'),
+      'Buat splash art hero Honor of Kings.',
+    );
+    await tester.tap(find.text('English').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Indonesian').last);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Save prompt'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Save prompt'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdDraft?.language, 'id');
+    expect(repository.createdDraft?.title, 'Indonesian prompt');
+  });
+
   testWidgets('edits my prompts from the mobile prompt form', (tester) async {
     final repository = _FakePromptsRepository();
 
