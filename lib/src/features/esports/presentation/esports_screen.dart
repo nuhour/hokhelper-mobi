@@ -779,7 +779,7 @@ class _MatchCard extends StatelessWidget {
           if (match.startTime.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              match.startTime,
+              _formatMatchShortTime(match.startTime),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
@@ -1659,6 +1659,16 @@ String _matchDateValue(String startTime) {
     return trimmed.substring(0, 10);
   }
   return trimmed;
+}
+
+String _formatMatchShortTime(String value) {
+  final parsed = DateTime.tryParse(value.trim());
+  if (parsed == null) {
+    return value.trim();
+  }
+  final hour = parsed.hour.toString().padLeft(2, '0');
+  final minute = parsed.minute.toString().padLeft(2, '0');
+  return '${parsed.month}/${parsed.day} $hour:$minute';
 }
 
 List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {
