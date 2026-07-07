@@ -723,7 +723,7 @@ class _MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
-      onTap: () => _showMatchDetailSheet(context, match),
+      onTap: () => _showMatchDetailSheet(context, match, isChampion),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -807,7 +807,11 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
-void _showMatchDetailSheet(BuildContext context, EsportsMatchSummary match) {
+void _showMatchDetailSheet(
+  BuildContext context,
+  EsportsMatchSummary match,
+  bool isChampion,
+) {
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: AppTheme.panel,
@@ -865,6 +869,11 @@ void _showMatchDetailSheet(BuildContext context, EsportsMatchSummary match) {
                         child: _TeamIdentity(
                           name: match.teamAName,
                           logoUrl: match.teamALogoUrl,
+                          highlightColor: match.winnerSide == 'a'
+                              ? Colors.greenAccent
+                              : null,
+                          showChampionIcon:
+                              isChampion && match.winnerSide == 'a',
                         ),
                       ),
                       Padding(
@@ -876,6 +885,11 @@ void _showMatchDetailSheet(BuildContext context, EsportsMatchSummary match) {
                           name: match.teamBName,
                           logoUrl: match.teamBLogoUrl,
                           alignEnd: true,
+                          highlightColor: match.winnerSide == 'b'
+                              ? Colors.greenAccent
+                              : null,
+                          showChampionIcon:
+                              isChampion && match.winnerSide == 'b',
                         ),
                       ),
                     ],

@@ -283,6 +283,57 @@ void main() {
     expect(find.byIcon(Icons.emoji_events), findsOneWidget);
   });
 
+  testWidgets('shows champion winner mark in match detail like hokx', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: 'old-final',
+                leagueName: 'KPL Spring',
+                stageName: 'Finals',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-20T11:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: 'champion-final',
+                leagueName: 'KPL Summer',
+                stageName: 'Finals',
+                teamAName: 'DRG',
+                teamALogoUrl: '',
+                teamBName: 'TTG',
+                teamBLogoUrl: '',
+                scoreA: 2,
+                scoreB: 4,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('KPL Summer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('KPL Summer'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Match Detail'), findsOneWidget);
+    expect(find.byIcon(Icons.emoji_events), findsNWidgets(2));
+  });
+
   testWidgets('filters esports matches by league like the hokx portal', (
     tester,
   ) async {
