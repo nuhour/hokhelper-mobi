@@ -35,6 +35,17 @@ class _NoopApiClient extends ApiClient {
       );
 }
 
+Future<void> _saveChanges(WidgetTester tester) async {
+  final saveButton = tester.widget<FloatingActionButton>(
+    find.byKey(
+      const ValueKey('tier-list-save-changes-floating'),
+      skipOffstage: false,
+    ),
+  );
+  saveButton.onPressed!();
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('tier list card opens its mobile scheme detail', (tester) async {
     final router = createAppRouter();
@@ -221,8 +232,7 @@ void main() {
         find.byKey(const ValueKey('tier-row-label-r1')),
         'S+',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
-      await tester.pumpAndSettle();
+      await _saveChanges(tester);
 
       expect(repository.savedScheme, isNotNull);
       expect(repository.savedScheme!.rows.first.label, 'S+');
@@ -269,8 +279,7 @@ void main() {
       find.byKey(const ValueKey('tier-list-name-field')),
       'Mobile Finals Meta',
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
-    await tester.pumpAndSettle();
+    await _saveChanges(tester);
 
     expect(repository.savedScheme, isNotNull);
     expect(repository.savedScheme!.name, 'Mobile Finals Meta');
@@ -325,11 +334,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('tier-row-move-down-r1')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.widgetWithText(FilledButton, 'Save changes'),
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
-    await tester.pumpAndSettle();
+    await _saveChanges(tester);
 
     expect(repository.savedScheme, isNotNull);
     expect(repository.savedScheme!.rows.map((row) => row.id), ['r2', 'r1']);
@@ -371,15 +376,72 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Hero #111'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('tier-row-remove-hero-r1-111')));
+    final heroChip = tester.widget<InputChip>(
+      find.byKey(
+        const ValueKey('tier-row-remove-hero-r1-111'),
+        skipOffstage: false,
+      ),
+    );
+    heroChip.onPressed!();
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
-    await tester.pumpAndSettle();
+    await _saveChanges(tester);
 
     expect(repository.savedScheme, isNotNull);
     expect(repository.savedScheme!.rows.single.heroIds, [222, 333]);
     expect(repository.savedScheme!.rows.single.heroCount, 2);
     expect(find.text('Tier list saved'), findsOneWidget);
+  });
+
+  testWidgets('tier list edit mode adds heroes to rows by id', (tester) async {
+    final repository = _FakeTierListToolRepository();
+    final router = createAppRouter();
+    router.go('/tools/tier-list/42?mode=edit');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'Editable Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 1,
+                  heroIds: [111],
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('tier-row-add-hero-r1')),
+      '999',
+    );
+    final addHeroButton = tester.widget<IconButton>(
+      find.byKey(
+        const ValueKey('tier-row-add-hero-button-r1'),
+        skipOffstage: false,
+      ),
+    );
+    addHeroButton.onPressed!();
+    await tester.pumpAndSettle();
+    await _saveChanges(tester);
+
+    expect(repository.savedScheme, isNotNull);
+    expect(repository.savedScheme!.rows.single.heroIds, [111, 999]);
+    expect(repository.savedScheme!.rows.single.heroCount, 2);
+    expect(find.text('Hero #999'), findsOneWidget);
   });
 
   testWidgets('copies tier list detail share links', (tester) async {

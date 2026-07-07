@@ -45,6 +45,7 @@ class _TierListSchemeDetailScreenState
     extends ConsumerState<TierListSchemeDetailScreen> {
   final TextEditingController _nameController = TextEditingController();
   final Map<String, TextEditingController> _labelControllers = {};
+  final Map<String, TextEditingController> _heroIdControllers = {};
   final Map<String, String> _editedLabels = {};
   List<TierListSchemeRowSummary> _editedRows = const [];
   String? _hydratedSchemeId;
@@ -55,6 +56,9 @@ class _TierListSchemeDetailScreenState
   void dispose() {
     _nameController.dispose();
     for (final controller in _labelControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _heroIdControllers.values) {
       controller.dispose();
     }
     super.dispose();
@@ -70,40 +74,70 @@ class _TierListSchemeDetailScreenState
           ref.invalidate(tierListSchemeDetailProvider(widget.schemeId)),
       data: (scheme) {
         final displayScheme = _displaySchemeFor(scheme);
-        return RefreshIndicator(
-          onRefresh: () =>
-              ref.refresh(tierListSchemeDetailProvider(widget.schemeId).future),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-            children: [
-              const AppSectionHeader(title: 'Tier List Detail'),
-              const SizedBox(height: 8),
-              Text(
-                'Inspect a shared portal tier list in a mobile-friendly layout.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+        void save() => _saveScheme(_schemeWithEditedRows(displayScheme));
+        return Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: () => ref.refresh(
+                tierListSchemeDetailProvider(widget.schemeId).future,
               ),
-              const SizedBox(height: 18),
-              if (widget.initialEditMode) ...[
-                _EditorModeBanner(isSaving: _isSaving),
-                const SizedBox(height: 12),
-              ],
-              _TierListDetailCard(
-                scheme: displayScheme,
-                isEditMode: widget.initialEditMode,
-                isSaving: _isSaving,
-                nameController: _nameController,
-                labelControllers: _labelControllers,
-                onLabelChanged: _updateRowLabel,
-                onColorChanged: _updateRowColor,
-                onHeroRemoved: _removeHeroFromRow,
-                onMoveRow: _moveRow,
-                onSave: () => _saveScheme(_schemeWithEditedRows(displayScheme)),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  20,
+                  20,
+                  widget.initialEditMode ? 104 : 28,
+                ),
+                children: [
+                  const AppSectionHeader(title: 'Tier List Detail'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Inspect a shared portal tier list in a mobile-friendly layout.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                  ),
+                  const SizedBox(height: 18),
+                  if (widget.initialEditMode) ...[
+                    _EditorModeBanner(isSaving: _isSaving, onSave: save),
+                    const SizedBox(height: 12),
+                  ],
+                  _TierListDetailCard(
+                    scheme: displayScheme,
+                    isEditMode: widget.initialEditMode,
+                    isSaving: _isSaving,
+                    nameController: _nameController,
+                    labelControllers: _labelControllers,
+                    heroIdControllers: _heroIdControllers,
+                    onLabelChanged: _updateRowLabel,
+                    onColorChanged: _updateRowColor,
+                    onHeroAdded: _addHeroToRow,
+                    onHeroRemoved: _removeHeroFromRow,
+                    onMoveRow: _moveRow,
+                    onSave: save,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            if (widget.initialEditMode)
+              Positioned(
+                right: 20,
+                bottom: 20,
+                child: FloatingActionButton.extended(
+                  key: const ValueKey('tier-list-save-changes-floating'),
+                  heroTag: 'tier-list-save-changes',
+                  onPressed: _isSaving ? null : save,
+                  icon: _isSaving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: const Text('Save changes'),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -127,6 +161,7 @@ class _TierListSchemeDetailScreenState
           .toList(growable: false);
       for (final rowId in removedIds) {
         _labelControllers.remove(rowId)?.dispose();
+        _heroIdControllers.remove(rowId)?.dispose();
       }
       for (final row in baseScheme.rows) {
         final controller = _labelControllers.putIfAbsent(
@@ -134,6 +169,7 @@ class _TierListSchemeDetailScreenState
           () => TextEditingController(),
         );
         controller.text = row.label;
+        _heroIdControllers.putIfAbsent(row.id, () => TextEditingController());
       }
     }
     return baseScheme.copyWith(
@@ -193,6 +229,25 @@ class _TierListSchemeDetailScreenState
     });
   }
 
+  void _addHeroToRow(String rowId, int heroId) {
+    if (heroId <= 0) {
+      return;
+    }
+    setState(() {
+      _editedRows = [
+        for (final row in _editedRows)
+          if (row.id == rowId && !row.heroIds.contains(heroId))
+            row.copyWith(
+              heroIds: [...row.heroIds, heroId],
+              heroCount: row.heroIds.length + 1,
+            )
+          else
+            row,
+      ];
+      _heroIdControllers[rowId]?.clear();
+    });
+  }
+
   void _moveRow(String rowId, int offset) {
     final index = _editedRows.indexWhere((row) => row.id == rowId);
     if (index < 0) {
@@ -249,9 +304,10 @@ class _TierListSchemeDetailScreenState
 }
 
 class _EditorModeBanner extends StatelessWidget {
-  const _EditorModeBanner({required this.isSaving});
+  const _EditorModeBanner({required this.isSaving, required this.onSave});
 
   final bool isSaving;
+  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +336,13 @@ class _EditorModeBanner extends StatelessWidget {
               const SizedBox.square(
                 dimension: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              IconButton.filledTonal(
+                key: const ValueKey('tier-list-save-changes-top'),
+                tooltip: 'Save changes',
+                onPressed: onSave,
+                icon: const Icon(Icons.save_outlined),
               ),
           ],
         ),
@@ -295,8 +358,10 @@ class _TierListDetailCard extends StatelessWidget {
     required this.isSaving,
     required this.nameController,
     required this.labelControllers,
+    required this.heroIdControllers,
     required this.onLabelChanged,
     required this.onColorChanged,
+    required this.onHeroAdded,
     required this.onHeroRemoved,
     required this.onMoveRow,
     required this.onSave,
@@ -307,8 +372,10 @@ class _TierListDetailCard extends StatelessWidget {
   final bool isSaving;
   final TextEditingController nameController;
   final Map<String, TextEditingController> labelControllers;
+  final Map<String, TextEditingController> heroIdControllers;
   final void Function(String rowId, String label) onLabelChanged;
   final void Function(String rowId, String color) onColorChanged;
+  final void Function(String rowId, int heroId) onHeroAdded;
   final void Function(String rowId, int heroId) onHeroRemoved;
   final void Function(String rowId, int offset) onMoveRow;
   final VoidCallback onSave;
@@ -407,6 +474,7 @@ class _TierListDetailCard extends StatelessWidget {
                 ),
                 if (isEditMode)
                   FilledButton.icon(
+                    key: const ValueKey('tier-list-save-changes'),
                     onPressed: isSaving ? null : onSave,
                     icon: const Icon(Icons.save_outlined, size: 18),
                     label: const Text('Save changes'),
@@ -419,11 +487,13 @@ class _TierListDetailCard extends StatelessWidget {
                 _TierRowEditor(
                   row: row,
                   controller: labelControllers[row.id],
+                  heroIdController: heroIdControllers[row.id],
                   index: index,
                   canMoveUp: index > 0,
                   canMoveDown: index < scheme.rows.length - 1,
                   onChanged: (value) => onLabelChanged(row.id, value),
                   onColorChanged: (color) => onColorChanged(row.id, color),
+                  onHeroAdded: (heroId) => onHeroAdded(row.id, heroId),
                   onHeroRemoved: (heroId) => onHeroRemoved(row.id, heroId),
                   onMoveUp: () => onMoveRow(row.id, -1),
                   onMoveDown: () => onMoveRow(row.id, 1),
@@ -461,11 +531,13 @@ class _TierRowEditor extends StatelessWidget {
   const _TierRowEditor({
     required this.row,
     required this.controller,
+    required this.heroIdController,
     required this.index,
     required this.canMoveUp,
     required this.canMoveDown,
     required this.onChanged,
     required this.onColorChanged,
+    required this.onHeroAdded,
     required this.onHeroRemoved,
     required this.onMoveUp,
     required this.onMoveDown,
@@ -473,11 +545,13 @@ class _TierRowEditor extends StatelessWidget {
 
   final TierListSchemeRowSummary row;
   final TextEditingController? controller;
+  final TextEditingController? heroIdController;
   final int index;
   final bool canMoveUp;
   final bool canMoveDown;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onColorChanged;
+  final ValueChanged<int> onHeroAdded;
   final ValueChanged<int> onHeroRemoved;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
@@ -564,7 +638,12 @@ class _TierRowEditor extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            _TierHeroIdEditor(row: row, onHeroRemoved: onHeroRemoved),
+            _TierHeroIdEditor(
+              row: row,
+              heroIdController: heroIdController,
+              onHeroAdded: onHeroAdded,
+              onHeroRemoved: onHeroRemoved,
+            ),
           ],
         ),
       ),
@@ -573,43 +652,94 @@ class _TierRowEditor extends StatelessWidget {
 }
 
 class _TierHeroIdEditor extends StatelessWidget {
-  const _TierHeroIdEditor({required this.row, required this.onHeroRemoved});
+  const _TierHeroIdEditor({
+    required this.row,
+    required this.heroIdController,
+    required this.onHeroAdded,
+    required this.onHeroRemoved,
+  });
 
   final TierListSchemeRowSummary row;
+  final TextEditingController? heroIdController;
+  final ValueChanged<int> onHeroAdded;
   final ValueChanged<int> onHeroRemoved;
 
   @override
   Widget build(BuildContext context) {
-    if (row.heroIds.isEmpty) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          'No heroes assigned',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-        ),
-      );
-    }
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final heroId in row.heroIds)
-            InputChip(
-              key: ValueKey('tier-row-remove-hero-${row.id}-$heroId'),
-              label: Text('Hero #$heroId'),
-              avatar: const Icon(Icons.sports_esports_outlined, size: 18),
-              onPressed: () => onHeroRemoved(heroId),
-              onDeleted: () => onHeroRemoved(heroId),
-              deleteIcon: const Icon(Icons.close_rounded, size: 18),
-              visualDensity: VisualDensity.compact,
+    final chips = row.heroIds.isEmpty
+        ? <Widget>[
+            Text(
+              'No heroes assigned',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
             ),
-        ],
-      ),
+          ]
+        : [
+            for (final heroId in row.heroIds)
+              InputChip(
+                key: ValueKey('tier-row-remove-hero-${row.id}-$heroId'),
+                label: Text('Hero #$heroId'),
+                avatar: const Icon(Icons.sports_esports_outlined, size: 18),
+                onPressed: () => onHeroRemoved(heroId),
+                onDeleted: () => onHeroRemoved(heroId),
+                deleteIcon: const Icon(Icons.close_rounded, size: 18),
+                visualDensity: VisualDensity.compact,
+              ),
+          ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(spacing: 8, runSpacing: 8, children: chips),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: ValueKey('tier-row-add-hero-${row.id}'),
+                controller: heroIdController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Add hero ID',
+                  prefixIcon: const Icon(Icons.person_add_alt_1_outlined),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.05),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.gold),
+                  ),
+                ),
+                style: const TextStyle(color: AppTheme.text),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              key: ValueKey('tier-row-add-hero-button-${row.id}'),
+              tooltip: 'Add hero',
+              onPressed: () {
+                final value = int.tryParse(heroIdController?.text ?? '');
+                if (value != null) {
+                  onHeroAdded(value);
+                }
+              },
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
