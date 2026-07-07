@@ -99,6 +99,59 @@ void main() {
     expect(find.text('Prompt opened from a hokx share link.'), findsOneWidget);
   });
 
+  testWidgets('legacy web prompt_id query pins the shared mobile prompt', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/prompts?prompt_id=42&tab=favorites');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptListProvider(PromptListAction.favorites).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Saved prompt',
+                content: 'Another favorite prompt.',
+                tags: [],
+                imageUrl: '',
+                authorName: 'collector',
+                likeCount: 3,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+              PromptSummary(
+                id: '42',
+                title: 'Legacy shared prompt',
+                content: 'Prompt opened from legacy prompt_id link.',
+                tags: ['share'],
+                imageUrl: '',
+                authorName: 'sharer',
+                likeCount: 12,
+                favoriteCount: 7,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/tools/prompts');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['promptId'],
+      '42',
+    );
+    expect(find.text('Favorites'), findsOneWidget);
+    expect(find.text('Shared prompt'), findsOneWidget);
+    expect(find.text('Legacy shared prompt'), findsOneWidget);
+  });
+
   testWidgets('prompt authors open public profile routes', (tester) async {
     final router = createAppRouter();
     router.go('/tools/prompts');

@@ -91,6 +91,20 @@ String _targetWithQuery(String path, Uri uri) {
   return query.isEmpty ? path : '$path?$query';
 }
 
+String _promptsTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final legacyPromptId = queryParameters.remove('prompt_id')?.trim();
+  if (legacyPromptId != null &&
+      legacyPromptId.isNotEmpty &&
+      (queryParameters['promptId']?.trim().isEmpty ?? true)) {
+    queryParameters['promptId'] = legacyPromptId;
+  }
+  return Uri(
+    path: '/tools/prompts',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
+}
+
 double? _initialMinRating(Uri uri) {
   final rating = double.tryParse(uri.queryParameters['min_rating'] ?? '');
   if (rating == null || rating <= 0) {
@@ -330,8 +344,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/prompts',
-        redirect: (context, state) =>
-            _targetWithQuery('/tools/prompts', state.uri),
+        redirect: (context, state) => _promptsTarget(state.uri),
       ),
       GoRoute(
         path: '/skin-gallery',
@@ -722,6 +735,12 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'prompts',
+                    redirect: (context, state) {
+                      if (state.uri.queryParameters.containsKey('prompt_id')) {
+                        return _promptsTarget(state.uri);
+                      }
+                      return null;
+                    },
                     builder: (context, state) => PromptsScreen(
                       initialAction: promptListActionFromRoute(
                         state.uri.queryParameters['tab'],
