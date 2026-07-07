@@ -184,4 +184,68 @@ void main() {
     expect(uri.queryParameters['tab'], 'history');
     expect(find.text('Patch history focus'), findsOneWidget);
   });
+
+  testWidgets('web hero lore tab deep link focuses mobile lore', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/hero-gallery/166?tab=lore');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
+            return {
+              'hero': {
+                'id': 166,
+                'name': 'Lam',
+                'title': 'Shark Rider',
+                'lore': 'Lam rides the waves between battlefields.',
+              },
+            };
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/heroes/166');
+    expect(find.text('Lore focus'), findsOneWidget);
+    expect(
+      find.text('Lam rides the waves between battlefields.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('legacy hero id query preserves lore tab on detail route', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/hero-gallery?hero_id=166&tab=lore');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
+            return {
+              'hero': {
+                'id': 166,
+                'name': 'Lam',
+                'title': 'Shark Rider',
+                'lore': 'Lam rides the waves between battlefields.',
+              },
+            };
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/heroes/166');
+    expect(uri.queryParameters['tab'], 'lore');
+    expect(find.text('Lore focus'), findsOneWidget);
+  });
 }

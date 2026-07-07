@@ -42,15 +42,27 @@ final selectedRegionHeroDetailProvider =
           .loadHeroDetail(heroId, settings.region.regionId);
     });
 
+enum HeroDetailFocus { skills, lore, history }
+
+HeroDetailFocus heroDetailFocusFromRoute(String? value) {
+  return switch ((value ?? '').trim().toLowerCase()) {
+    'lore' => HeroDetailFocus.lore,
+    'history' => HeroDetailFocus.history,
+    _ => HeroDetailFocus.skills,
+  };
+}
+
 class HeroDetailScreen extends ConsumerWidget {
   const HeroDetailScreen({
     required this.heroId,
     this.focusHistory = false,
+    this.initialFocus,
     super.key,
   });
 
   final String heroId;
   final bool focusHistory;
+  final HeroDetailFocus? initialFocus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,7 +76,9 @@ class HeroDetailScreen extends ConsumerWidget {
         data: (detail) => _HeroDetailContent(
           detail: detail,
           routeHeroId: heroId,
-          focusHistory: focusHistory,
+          focus: focusHistory
+              ? HeroDetailFocus.history
+              : initialFocus ?? HeroDetailFocus.skills,
         ),
       ),
     );
@@ -75,12 +89,12 @@ class _HeroDetailContent extends StatelessWidget {
   const _HeroDetailContent({
     required this.detail,
     required this.routeHeroId,
-    required this.focusHistory,
+    required this.focus,
   });
 
   final Map<String, dynamic> detail;
   final String routeHeroId;
-  final bool focusHistory;
+  final HeroDetailFocus focus;
 
   @override
   Widget build(BuildContext context) {
@@ -133,8 +147,11 @@ class _HeroDetailContent extends StatelessWidget {
           ratingCount: ratingCount,
         ),
         const SizedBox(height: 14),
-        if (focusHistory) ...[
+        if (focus == HeroDetailFocus.history) ...[
           const _HistoryFocusPanel(),
+          const SizedBox(height: 14),
+        ] else if (focus == HeroDetailFocus.lore) ...[
+          const _LoreFocusPanel(),
           const SizedBox(height: 14),
         ],
         _MetricGrid(
@@ -180,6 +197,53 @@ class _HeroDetailContent extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _LoreFocusPanel extends StatelessWidget {
+  const _LoreFocusPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.cyan.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.menu_book_outlined, color: AppTheme.cyan),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Lore focus',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Opened from a hero lore link. Story and background details are included below.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.muted,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -724,6 +724,9 @@ GoRouter createAppRouter() {
                         heroId: state.pathParameters['heroId'] ?? '',
                         focusHistory:
                             state.uri.queryParameters['tab'] == 'history',
+                        initialFocus: heroDetailFocusFromRoute(
+                          state.uri.queryParameters['tab'],
+                        ),
                       );
                     },
                   ),
