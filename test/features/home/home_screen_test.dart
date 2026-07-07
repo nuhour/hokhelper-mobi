@@ -12,6 +12,37 @@ Widget _buildHomeScreen(HomeStats stats) {
 }
 
 void main() {
+  testWidgets('home screen exposes hokx portal tool and topic entry points', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHomeScreen(
+        const HomeStats(
+          success: true,
+          message: 'Backend connected',
+          result: {'heroes': 128},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('BP Simulator'), findsOneWidget);
+    expect(find.text('Tier Editor'), findsOneWidget);
+    expect(find.text('AI Prompts'), findsOneWidget);
+    expect(find.text('Team Builder'), findsOneWidget);
+    expect(find.text('Build Sim'), findsOneWidget);
+    expect(find.text('Rank Fortune'), findsOneWidget);
+    expect(find.text('Event Assistance'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('HOK World'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('HOK World'), findsOneWidget);
+    expect(find.text('Enter HOK World Topic'), findsOneWidget);
+  });
+
   testWidgets('compact viewport handles many backend stats without overflow', (
     tester,
   ) async {
@@ -35,6 +66,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+      find.text('statistic_17'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.text('statistic_17'), findsOneWidget);
   });
 }
