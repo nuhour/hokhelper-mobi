@@ -632,7 +632,130 @@ class _AboutDetail extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        const _AboutFeatureHighlights(),
       ],
+    );
+  }
+}
+
+class _AboutFeatureHighlights extends StatelessWidget {
+  const _AboutFeatureHighlights();
+
+  static const _features = [
+    _AboutFeature(
+      icon: Icons.bar_chart_outlined,
+      title: 'Hero Analytics',
+      description: 'Track win, pick, and ban trends for heroes across regions.',
+    ),
+    _AboutFeature(
+      icon: Icons.format_list_bulleted_outlined,
+      title: 'Tier Lists',
+      description:
+          'Community-curated and data-driven tier evaluations updated every patch cycle.',
+    ),
+    _AboutFeature(
+      icon: Icons.sports_martial_arts_outlined,
+      title: 'BP Simulator',
+      description:
+          'Practice your draft strategy with a full pick/ban simulator mirroring the official sequence.',
+    ),
+    _AboutFeature(
+      icon: Icons.bolt_outlined,
+      title: 'Build Simulator',
+      description:
+          'Craft and share optimized equipment builds with community ratings and pro references.',
+    ),
+    _AboutFeature(
+      icon: Icons.auto_fix_high_outlined,
+      title: 'AI Prompts',
+      description:
+          'Generate high-quality skin concept art and hero illustrations with AI-powered prompt tools.',
+    ),
+    _AboutFeature(
+      icon: Icons.groups_2_outlined,
+      title: 'Team Builder',
+      description:
+          'Analyze team compositions and get data-backed recommendations for synergy and counter-picks.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return _InfoPanel(
+      icon: Icons.apps_outlined,
+      title: 'What We Offer',
+      child: Column(
+        children: [
+          for (var index = 0; index < _features.length; index++) ...[
+            _AboutFeatureTile(feature: _features[index]),
+            if (index != _features.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutFeature {
+  const _AboutFeature({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+}
+
+class _AboutFeatureTile extends StatelessWidget {
+  const _AboutFeatureTile({required this.feature});
+
+  final _AboutFeature feature;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppTheme.gold.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(feature.icon, color: AppTheme.gold, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    feature.title,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _BodyText(feature.description),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

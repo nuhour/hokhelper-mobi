@@ -44,6 +44,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('About HOK Helper'), findsOneWidget);
     expect(find.text('Global Community Intel'), findsOneWidget);
+    expect(find.text('Hero Analytics'), findsOneWidget);
+    expect(find.text('Tier Lists'), findsOneWidget);
+    expect(find.text('BP Simulator'), findsOneWidget);
+    expect(find.text('Build Simulator'), findsOneWidget);
+    expect(find.text('AI Prompts'), findsOneWidget);
+    expect(find.text('Team Builder'), findsOneWidget);
 
     router.go('/about?section=community');
     await tester.pumpAndSettle();
