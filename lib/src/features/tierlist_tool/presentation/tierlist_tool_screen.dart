@@ -20,24 +20,43 @@ final tierListToolSchemesProvider = FutureProvider<List<TierListSchemeSummary>>(
   },
 );
 
-class TierListToolScreen extends ConsumerWidget {
+class TierListToolScreen extends ConsumerStatefulWidget {
   const TierListToolScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TierListToolScreen> createState() => _TierListToolScreenState();
+}
+
+class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
+  List<TierListSchemeSummary>? _localSchemes;
+  var _isCreating = false;
+
+  @override
+  Widget build(BuildContext context) {
     final value = ref.watch(tierListToolSchemesProvider);
 
     return AppAsyncView<List<TierListSchemeSummary>>(
       value: value,
       retry: () => ref.invalidate(tierListToolSchemesProvider),
       data: (schemes) {
+        final visibleSchemes = _localSchemes ?? schemes;
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(tierListToolSchemesProvider.future),
+          onRefresh: () async {
+            _localSchemes = null;
+            await ref.refresh(tierListToolSchemesProvider.future).then((_) {});
+          },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
             children: [
-              const AppSectionHeader(title: 'Tier List Tool'),
+              AppSectionHeader(
+                title: 'Tier List Tool',
+                action: FilledButton.icon(
+                  onPressed: _isCreating ? null : () => _openCreateSheet(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Tier List'),
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 'Review saved custom tier lists and hero placement rows.',
@@ -46,7 +65,7 @@ class TierListToolScreen extends ConsumerWidget {
                 ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
               ),
               const SizedBox(height: 18),
-              if (schemes.isEmpty)
+              if (visibleSchemes.isEmpty)
                 const SizedBox(
                   height: 420,
                   child: AppEmptyState(
@@ -57,7 +76,7 @@ class TierListToolScreen extends ConsumerWidget {
                   ),
                 )
               else
-                ...schemes.map(
+                ...visibleSchemes.map(
                   (scheme) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _TierListSchemeCard(scheme: scheme),
@@ -68,6 +87,129 @@ class TierListToolScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _openCreateSheet() async {
+    final name = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _TierListCreateSheet(),
+    );
+    if (name == null || !mounted) {
+      return;
+    }
+    setState(() => _isCreating = true);
+    try {
+      final created = await ref
+          .read(tierListToolRepositoryProvider)
+          .createScheme(name: name);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        final existing =
+            _localSchemes ??
+            ref.read(tierListToolSchemesProvider).valueOrNull ??
+            const <TierListSchemeSummary>[];
+        _localSchemes = [created, ...existing];
+        _isCreating = false;
+      });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Tier list created')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isCreating = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to create tier list')),
+      );
+    }
+  }
+}
+
+class _TierListCreateSheet extends StatefulWidget {
+  const _TierListCreateSheet();
+
+  @override
+  State<_TierListCreateSheet> createState() => _TierListCreateSheetState();
+}
+
+class _TierListCreateSheetState extends State<_TierListCreateSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, bottom + 20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Create tier list',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Tier list name'),
+                validator: (value) =>
+                    (value ?? '').trim().isEmpty ? 'Enter a name' : null,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _submit,
+                      child: const Text('Create'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    Navigator.of(context).pop(_nameController.text.trim());
   }
 }
 

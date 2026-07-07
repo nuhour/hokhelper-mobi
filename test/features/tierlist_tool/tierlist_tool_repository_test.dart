@@ -52,6 +52,29 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     requestedPath = path;
     requestedBody = body;
+    if (path == '/tierlist/schemes/create') {
+      return const {
+        'success': true,
+        'message': 'success',
+        'result': {
+          'scheme': {
+            'id': '77',
+            'name': 'Mobile Tier List',
+            'createdAt': '2026-07-07T10:00:00Z',
+            'updatedAt': '2026-07-07T10:00:00Z',
+            'rows': [
+              {'id': 't0', 'label': 'T0', 'color': 'bg-red-600', 'heroIds': []},
+              {
+                'id': 't1',
+                'label': 'T1',
+                'color': 'bg-orange-500',
+                'heroIds': [111],
+              },
+            ],
+          },
+        },
+      };
+    }
     return const {
       'success': true,
       'message': 'success',
@@ -120,4 +143,28 @@ void main() {
     expect(scheme.rows.first.label, 'T0');
     expect(scheme.rows.first.heroCount, 3);
   });
+
+  test(
+    'creates a tier list scheme with hokx-compatible request fields',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = TierListToolRepository(apiClient: apiClient);
+
+      final scheme = await repository.createScheme(name: 'Mobile Tier List');
+
+      expect(apiClient.requestedPath, '/tierlist/schemes/create');
+      expect(apiClient.requestedBody, {
+        'name': 'Mobile Tier List',
+        'rows': [
+          {'id': 't0', 'label': 'T0', 'color': 'bg-red-600', 'heroIds': []},
+          {'id': 't1', 'label': 'T1', 'color': 'bg-orange-500', 'heroIds': []},
+          {'id': 't2', 'label': 'T2', 'color': 'bg-yellow-500', 'heroIds': []},
+          {'id': 't3', 'label': 'T3', 'color': 'bg-green-500', 'heroIds': []},
+        ],
+      });
+      expect(scheme.id, '77');
+      expect(scheme.name, 'Mobile Tier List');
+      expect(scheme.heroCountText, '1 hero');
+    },
+  );
 }

@@ -31,4 +31,22 @@ class TierListToolRepository {
     final result = json['result'];
     return TierListSchemeSummary.fromJson(result is Map ? result : json);
   }
+
+  Future<TierListSchemeSummary> createScheme({required String name}) async {
+    final json = await apiClient.postJson(
+      '/tierlist/schemes/create',
+      body: {
+        'name': name,
+        'rows': const [
+          {'id': 't0', 'label': 'T0', 'color': 'bg-red-600', 'heroIds': []},
+          {'id': 't1', 'label': 'T1', 'color': 'bg-orange-500', 'heroIds': []},
+          {'id': 't2', 'label': 'T2', 'color': 'bg-yellow-500', 'heroIds': []},
+          {'id': 't3', 'label': 'T3', 'color': 'bg-green-500', 'heroIds': []},
+        ],
+      },
+    );
+    final result = json['result'];
+    final scheme = result is Map ? result['scheme'] : json['scheme'];
+    return TierListSchemeSummary.fromJson(scheme is Map ? scheme : result);
+  }
 }
