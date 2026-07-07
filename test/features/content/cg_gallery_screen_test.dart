@@ -376,6 +376,35 @@ void main() {
     expect(repository.requestedHeroId, 199);
   });
 
+  testWidgets('filters cgs by hero from the mobile gallery controls', (
+    tester,
+  ) async {
+    final repository = _FakeContentRepository(cgs: _heroFilteredCgs);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(repository),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lam Cinematic'), findsOneWidget);
+    expect(find.text('Angela Trailer'), findsOneWidget);
+
+    await tester.tap(find.text('All heroes').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Angela').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedHeroId, 111);
+    expect(find.text('Lam Cinematic'), findsNothing);
+    expect(find.text('Angela Trailer'), findsOneWidget);
+  });
+
   testWidgets('loads more cgs after the first gallery page', (tester) async {
     final repository = _PagedCgRepository();
 

@@ -131,6 +131,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
   String _query = '';
   _CgSort _sort = _CgSort.updated;
   _CgSortOrder _sortOrder = _CgSortOrder.desc;
+  int? _heroId;
   int? _openedInitialCgId;
   final _extraCgs = <ContentItemSummary>[];
   var _nextPage = 2;
@@ -145,6 +146,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       _query = initialQuery;
       _searchController.text = initialQuery;
     }
+    _heroId = widget.initialHeroId;
   }
 
   @override
@@ -159,7 +161,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       sort: _sort,
       order: _sortOrder,
       search: _query,
-      heroId: widget.initialHeroId,
+      heroId: _heroId,
     );
     final galleryValue = ref.watch(cgGalleryQueryProvider(query));
     final initialCgId = widget.initialCgId;
@@ -269,27 +271,44 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                 _resetLoadedPages();
               }),
             ),
-            if (widget.initialHeroId != null) ...[
-              const SizedBox(height: 12),
-              _FocusedHeroBanner(heroId: widget.initialHeroId!),
-            ],
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
               value: galleryValue,
               retry: () => ref.invalidate(cgGalleryQueryProvider(query)),
               data: (items) {
                 final allItems = [...items, ..._extraCgs];
+                final heroOptions = _heroFilterOptions(allItems);
                 final cgs = _filterAndSort(allItems);
                 if (cgs.isEmpty) {
-                  return const AppEmptyState(
-                    icon: Icons.movie_creation_outlined,
-                    title: 'No CGs found',
-                    message: 'Try another hero or title.',
+                  return Column(
+                    children: [
+                      _HeroFilterDropdown(
+                        heroId: _heroId,
+                        options: heroOptions,
+                        onChanged: _changeHeroFilter,
+                      ),
+                      const SizedBox(height: 12),
+                      const AppEmptyState(
+                        icon: Icons.movie_creation_outlined,
+                        title: 'No CGs found',
+                        message: 'Try another hero or title.',
+                      ),
+                    ],
                   );
                 }
 
                 return Column(
                   children: [
+                    _HeroFilterDropdown(
+                      heroId: _heroId,
+                      options: heroOptions,
+                      onChanged: _changeHeroFilter,
+                    ),
+                    if (_heroId != null) ...[
+                      const SizedBox(height: 12),
+                      _FocusedHeroBanner(heroId: _heroId!),
+                    ],
+                    const SizedBox(height: 12),
                     ListView.separated(
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
@@ -333,10 +352,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
 
   List<ContentItemSummary> _filterAndSort(List<ContentItemSummary> items) {
     final normalizedQuery = _query.trim().toLowerCase();
-    final initialHeroId = widget.initialHeroId;
+    final heroId = _heroId;
     final filtered = items
         .where((cg) {
-          if (initialHeroId != null && cg.heroId != initialHeroId) {
+          if (heroId != null && cg.heroId != heroId) {
             return false;
           }
           if (normalizedQuery.isEmpty) {
@@ -354,6 +373,37 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
         _CgSort.updated || _CgSort.created => left.id.compareTo(right.id),
       };
       return _sortOrder == _CgSortOrder.asc ? comparison : -comparison;
+    });
+  }
+
+  List<_CgHeroFilterOption> _heroFilterOptions(List<ContentItemSummary> items) {
+    final optionsById = <int, _CgHeroFilterOption>{};
+    for (final cg in items) {
+      final heroId = cg.heroId;
+      if (heroId == null || optionsById.containsKey(heroId)) {
+        continue;
+      }
+      optionsById[heroId] = _CgHeroFilterOption(
+        heroId: heroId,
+        label: cg.heroName.isEmpty ? 'Hero #$heroId' : cg.heroName,
+      );
+    }
+    final selectedHeroId = _heroId;
+    if (selectedHeroId != null && !optionsById.containsKey(selectedHeroId)) {
+      optionsById[selectedHeroId] = _CgHeroFilterOption(
+        heroId: selectedHeroId,
+        label: 'Hero #$selectedHeroId',
+      );
+    }
+    final options = optionsById.values.toList(growable: false);
+    return [...options]
+      ..sort((left, right) => left.label.compareTo(right.label));
+  }
+
+  void _changeHeroFilter(int? heroId) {
+    setState(() {
+      _heroId = heroId;
+      _resetLoadedPages();
     });
   }
 
@@ -426,7 +476,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
             sort: _sort.apiValue,
             order: _sortOrder.apiValue,
             search: _query,
-            heroId: widget.initialHeroId,
+            heroId: _heroId,
           );
 
       if (!mounted) {
@@ -449,6 +499,45 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       );
     }
   }
+}
+
+class _HeroFilterDropdown extends StatelessWidget {
+  const _HeroFilterDropdown({
+    required this.heroId,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final int? heroId;
+  final List<_CgHeroFilterOption> options;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int?>(
+      initialValue: heroId,
+      decoration: const InputDecoration(
+        labelText: 'Hero filter',
+        prefixIcon: Icon(Icons.person_search_outlined),
+      ),
+      items: [
+        const DropdownMenuItem<int?>(value: null, child: Text('All heroes')),
+        for (final option in options)
+          DropdownMenuItem<int?>(
+            value: option.heroId,
+            child: Text(option.label),
+          ),
+      ],
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _CgHeroFilterOption {
+  const _CgHeroFilterOption({required this.heroId, required this.label});
+
+  final int heroId;
+  final String label;
 }
 
 class _FocusedHeroBanner extends StatelessWidget {
