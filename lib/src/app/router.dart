@@ -271,6 +271,11 @@ int? _initialLanePosition(Uri uri) {
   );
 }
 
+bool _aboutCommunityFocused(Uri uri) {
+  return uri.queryParameters['section'] == 'community' ||
+      uri.fragment.trim().toLowerCase() == 'community';
+}
+
 String _localizedTargetWithQuery(Uri uri, List<String> segments) {
   final path = segments.isEmpty ? '/' : '/${segments.join('/')}';
   return _targetWithQuery(path, uri);
@@ -654,8 +659,7 @@ GoRouter createAppRouter() {
         path: '/about',
         builder: (context, state) => InfoStaticPage(
           section: InfoStaticSection.about,
-          highlightCommunity:
-              state.uri.queryParameters['section'] == 'community',
+          highlightCommunity: _aboutCommunityFocused(state.uri),
         ),
       ),
       GoRoute(

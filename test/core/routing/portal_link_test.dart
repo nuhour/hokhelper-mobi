@@ -172,6 +172,16 @@ void main() {
     );
   });
 
+  test('preserves portal URL fragments for static page anchors', () {
+    expect(normalizePortalLinkTarget('/about#community'), '/about#community');
+    expect(
+      normalizePortalLinkTarget(
+        'https://www.hok-helper.com/en/about#community',
+      ),
+      '/about#community',
+    );
+  });
+
   test('normalizes personal profile portal links to the mobile me route', () {
     expect(normalizePortalLinkTarget('/profile'), '/me');
     expect(normalizePortalLinkTarget('/en/profile'), '/me');

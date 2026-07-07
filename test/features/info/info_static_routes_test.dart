@@ -67,6 +67,11 @@ void main() {
     expect(find.text('Community channel focus'), findsOneWidget);
     expect(find.text('Open Community'), findsOneWidget);
 
+    router.go('/about#community');
+    await tester.pumpAndSettle();
+    expect(find.text('Community channel focus'), findsOneWidget);
+    expect(find.text('Open Community'), findsOneWidget);
+
     router.go('/faq');
     await tester.pumpAndSettle();
     expect(find.text('FAQ'), findsOneWidget);

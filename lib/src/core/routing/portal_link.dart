@@ -14,10 +14,11 @@ String normalizePortalLinkTarget(String url) {
   if (_isPortalHost(parsed.host)) {
     return _normalizeInternalTarget(
       Uri(
-        path: parsed.path.isEmpty ? '/' : parsed.path,
+        path: _stripLocalePath(parsed.path.isEmpty ? '/' : parsed.path),
         queryParameters: parsed.queryParameters.isEmpty
             ? null
             : parsed.queryParameters,
+        fragment: parsed.fragment.isEmpty ? null : parsed.fragment,
       ).toString(),
     );
   }
@@ -296,15 +297,27 @@ bool _isPortalHost(String host) {
 }
 
 Uri? _stripLocalePrefix(Uri? uri) {
-  if (uri == null || uri.pathSegments.isEmpty) {
+  if (uri == null) {
     return uri;
   }
-  final locale = uri.pathSegments.first.toLowerCase();
-  if (locale != 'en' && locale != 'zh' && locale != 'id') {
-    return uri;
+  final strippedPath = _stripLocalePath(uri.path);
+  if (strippedPath != uri.path) {
+    return uri.replace(path: strippedPath);
   }
-  final remainingPath = uri.pathSegments.skip(1).join('/');
-  return uri.replace(path: remainingPath.isEmpty ? '/' : '/$remainingPath');
+  return uri;
+}
+
+String _stripLocalePath(String path) {
+  for (final locale in const ['en', 'zh', 'id']) {
+    final prefix = '/$locale';
+    if (path == prefix) {
+      return '/';
+    }
+    if (path.startsWith('$prefix/')) {
+      return path.substring(prefix.length);
+    }
+  }
+  return path;
 }
 
 String _moveQueryIdToPath(Uri uri, String path, String idKey) {
