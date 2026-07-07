@@ -20,6 +20,18 @@ final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
 
 const _communityPostsPageSize = 30;
 const _leakPostsPageSize = 30;
+const _recommendedPostTags = [
+  'Ranked Tips',
+  'Hero Matchups',
+  'Patch Meta',
+  'Item Build Ideas',
+  'Team Comp',
+  'Jungle Pathing',
+  'Lane Tricks',
+  'Teamfight Review',
+  'Esports Watch',
+  'Squad Finder',
+];
 
 final communityPostsRegionProvider = FutureProvider<int>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
@@ -204,11 +216,13 @@ class _PostsTab extends ConsumerStatefulWidget {
 
 class _PostsTabState extends ConsumerState<_PostsTab> {
   final _contentController = TextEditingController();
+  final _customTagController = TextEditingController();
   final _searchController = TextEditingController();
   final _titleController = TextEditingController();
   final _createdPosts = <CommunityPostSummary>[];
   final _extraPosts = <CommunityPostSummary>[];
   final _deletedPostIds = <String>{};
+  final _selectedPostTags = <String>{_recommendedPostTags.first};
   var _search = '';
   var _sort = CommunityPostSort.newest;
   var _isCreateOpen = false;
@@ -220,6 +234,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   @override
   void dispose() {
     _contentController.dispose();
+    _customTagController.dispose();
     _searchController.dispose();
     _titleController.dispose();
     super.dispose();
@@ -285,10 +300,14 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
               if (widget.initialView != CommunityInitialView.likedPosts) ...[
                 _CreatePostCard(
                   contentController: _contentController,
+                  customTagController: _customTagController,
                   isExpanded: _isCreateOpen,
                   isSubmitting: _createSubmitting,
                   onExpand: () => setState(() => _isCreateOpen = true),
+                  onCustomTagAdd: _addCustomTag,
                   onSubmit: () => _createPost(context),
+                  onTagToggled: _togglePostTag,
+                  selectedTags: _selectedPostTags,
                   titleController: _titleController,
                 ),
                 const SizedBox(height: 12),
@@ -420,7 +439,9 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
           .createPost(
             title: title,
             content: content,
-            tags: const ['Guide'],
+            tags: _selectedPostTags.isEmpty
+                ? [_recommendedPostTags.first]
+                : _selectedPostTags.toList(growable: false),
             regionId: settings.region.regionId,
           );
       if (!mounted || !context.mounted) {
@@ -428,10 +449,14 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
       }
       _titleController.clear();
       _contentController.clear();
+      _customTagController.clear();
       setState(() {
         _createdPosts.insert(0, createdPost);
         _isCreateOpen = false;
         _createSubmitting = false;
+        _selectedPostTags
+          ..clear()
+          ..add(_recommendedPostTags.first);
       });
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
@@ -487,6 +512,30 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   bool _matchesTag(CommunityPostSummary post, String tag) {
     final needle = tag.toLowerCase();
     return post.tags.any((value) => value.toLowerCase() == needle);
+  }
+
+  void _togglePostTag(String tag) {
+    setState(() {
+      if (_selectedPostTags.contains(tag)) {
+        _selectedPostTags.remove(tag);
+      } else {
+        _selectedPostTags.add(tag);
+      }
+      if (_selectedPostTags.isEmpty) {
+        _selectedPostTags.add(_recommendedPostTags.first);
+      }
+    });
+  }
+
+  void _addCustomTag() {
+    final tag = _customTagController.text.trim();
+    if (tag.isEmpty) {
+      return;
+    }
+    setState(() {
+      _selectedPostTags.add(tag);
+      _customTagController.clear();
+    });
   }
 }
 
@@ -634,18 +683,26 @@ class _ModePill extends StatelessWidget {
 class _CreatePostCard extends StatelessWidget {
   const _CreatePostCard({
     required this.contentController,
+    required this.customTagController,
     required this.isExpanded,
     required this.isSubmitting,
+    required this.onCustomTagAdd,
     required this.onExpand,
     required this.onSubmit,
+    required this.onTagToggled,
+    required this.selectedTags,
     required this.titleController,
   });
 
   final TextEditingController contentController;
+  final TextEditingController customTagController;
   final bool isExpanded;
   final bool isSubmitting;
+  final VoidCallback onCustomTagAdd;
   final VoidCallback onExpand;
   final VoidCallback onSubmit;
+  final ValueChanged<String> onTagToggled;
+  final Set<String> selectedTags;
   final TextEditingController titleController;
 
   @override
@@ -702,10 +759,66 @@ class _CreatePostCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
+              Text(
+                'Tags',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final tag in _recommendedPostTags)
+                    ChoiceChip(
+                      label: Text(tag),
+                      selected: selectedTags.contains(tag),
+                      onSelected: (_) => onTagToggled(tag),
+                      avatar: selectedTags.contains(tag)
+                          ? const Icon(Icons.check, size: 16)
+                          : const Icon(Icons.tag_outlined, size: 16),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
               Row(
                 children: [
-                  const _Pill(label: 'Guide'),
-                  const Spacer(),
+                  Expanded(
+                    child: TextField(
+                      controller: customTagController,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => onCustomTagAdd(),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        labelText: 'Custom tag',
+                        prefixIcon: Icon(Icons.add_circle_outline, size: 20),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: onCustomTagAdd,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Tag'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final tag in selectedTags) _Pill(label: tag),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: isSubmitting ? null : onSubmit,
                     icon: const Icon(Icons.send_outlined, size: 16),
@@ -1107,11 +1220,7 @@ class _PostAuthorName extends StatelessWidget {
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           textStyle: textStyle,
         ),
-        child: Text(
-          authorName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        child: Text(authorName, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

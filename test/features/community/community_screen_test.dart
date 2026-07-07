@@ -666,8 +666,10 @@ void main() {
     await tester.pumpAndSettle();
     tester.testTextInput.hide();
     await tester.pump();
-    await tester.ensureVisible(find.byType(FilledButton).last);
-    await tester.tap(find.byType(FilledButton).last);
+    final submitButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Create').last,
+    );
+    submitButton.onPressed!();
     await tester.pumpAndSettle();
 
     expect(repository.createdTitle, 'Mobile macro notes');
@@ -675,7 +677,7 @@ void main() {
       repository.createdContent,
       'Rotate after clearing mid and protect river vision.',
     );
-    expect(repository.createdTags, ['Guide']);
+    expect(repository.createdTags, ['Ranked Tips']);
     expect(repository.createdRegionId, isNotNull);
     expect(find.text('Mobile macro notes'), findsOneWidget);
     expect(
@@ -683,6 +685,62 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Post created'), findsOneWidget);
+  });
+
+  testWidgets('creates community posts with recommended and custom tags', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'selected_region_id': 2});
+    final repository = _FakeCommunityRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityRepositoryProvider.overrideWithValue(repository),
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: CommunityScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Post'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hero Matchups'));
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Custom tag'),
+      'Squad Finder',
+    );
+    final addTagButton = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Add Tag'),
+    );
+    addTagButton.onPressed!();
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Title'),
+      'Mobile tag notes',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Content'),
+      'Use multiple labels so the post lands in the right community filters.',
+    );
+    await tester.pumpAndSettle();
+    tester.testTextInput.hide();
+    await tester.pump();
+    final submitButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Create').last,
+    );
+    submitButton.onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(repository.createdTags, [
+      'Ranked Tips',
+      'Hero Matchups',
+      'Squad Finder',
+    ]);
+    expect(find.text('Hero Matchups'), findsWidgets);
+    expect(find.text('Squad Finder'), findsWidgets);
   });
 
   testWidgets('deletes own community posts from my posts mode', (tester) async {
