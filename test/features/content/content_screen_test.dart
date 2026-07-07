@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/patch_note_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
@@ -85,5 +86,88 @@ void main() {
     expect(find.text('Version 1.2.3 Patch Notes'), findsOneWidget);
     expect(find.text('V1.2.3 · 2026-07-01'), findsOneWidget);
     expect(find.text('2 hero changes'), findsOneWidget);
+  });
+
+  testWidgets('content media preview cards open their detail routes', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (context, state) => const ContentScreen()),
+        GoRoute(
+          path: '/skin-gallery/:skinId',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+        GoRoute(
+          path: '/cg/:cgId',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          skinsProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 11,
+                kind: ContentKind.skin,
+                title: 'Starlit Blade',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Galaxy',
+                rating: 4.5,
+                ratingCount: 18,
+                viewCount: 0,
+              ),
+            ];
+          }),
+          cgsProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 21,
+                kind: ContentKind.cg,
+                title: 'Origin Story',
+                heroName: 'Angela',
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 4,
+                ratingCount: 9,
+                viewCount: 300,
+              ),
+            ];
+          }),
+          patchNotesProvider.overrideWith((ref) async => const []),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    final mainScroll = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(
+      find.text('Starlit Blade'),
+      300,
+      scrollable: mainScroll,
+    );
+
+    await tester.tap(find.text('Starlit Blade'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(router.routeInformationProvider.value.uri.path, '/skin-gallery/11');
+
+    router.go('/');
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Origin Story'),
+      300,
+      scrollable: mainScroll,
+    );
+
+    await tester.tap(find.text('Origin Story'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(router.routeInformationProvider.value.uri.path, '/cg/21');
   });
 }

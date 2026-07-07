@@ -481,70 +481,79 @@ class _ContentCard extends StatelessWidget {
     final metric = item.kind == ContentKind.cg
         ? '${item.viewCount} views'
         : '${item.rating.toStringAsFixed(1)} · ${item.ratingCount} ratings';
+    final route = item.kind == ContentKind.cg
+        ? '/cg/${item.id}'
+        : '/skin-gallery/${item.id}';
 
     return SizedBox(
       width: 152,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppTheme.panel,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppImage(
-                url: item.imageUrl,
-                height: 112,
-                width: double.infinity,
-                borderRadius: 12,
-                semanticLabel: item.title,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.heroName.isEmpty ? item.subtitle : item.heroName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-              ),
-              const Spacer(),
-              Row(
+          onTap: () => context.go(route),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: AppTheme.panel,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    item.kind == ContentKind.cg
-                        ? Icons.visibility_outlined
-                        : Icons.star_border_rounded,
-                    size: 15,
-                    color: AppTheme.gold,
+                  AppImage(
+                    url: item.imageUrl,
+                    height: 112,
+                    width: double.infinity,
+                    borderRadius: 12,
+                    semanticLabel: item.title,
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      metric,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  const SizedBox(height: 10),
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.heroName.isEmpty ? item.subtitle : item.heroName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Icon(
+                        item.kind == ContentKind.cg
+                            ? Icons.visibility_outlined
+                            : Icons.star_border_rounded,
+                        size: 15,
+                        color: AppTheme.gold,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          metric,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
