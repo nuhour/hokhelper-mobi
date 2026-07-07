@@ -105,6 +105,20 @@ String _promptsTarget(Uri uri) {
   ).toString();
 }
 
+String _buildSimTarget(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final legacySchemeId = queryParameters.remove('scheme_id')?.trim();
+  if (legacySchemeId != null &&
+      legacySchemeId.isNotEmpty &&
+      (queryParameters['scheme']?.trim().isEmpty ?? true)) {
+    queryParameters['scheme'] = legacySchemeId;
+  }
+  return Uri(
+    path: '/tools/build-sim',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
+}
+
 double? _initialMinRating(Uri uri) {
   final rating = double.tryParse(uri.queryParameters['min_rating'] ?? '');
   if (rating == null || rating <= 0) {
@@ -309,8 +323,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/build-sim',
-        redirect: (context, state) =>
-            _targetWithQuery('/tools/build-sim', state.uri),
+        redirect: (context, state) => _buildSimTarget(state.uri),
       ),
       GoRoute(
         path: '/bp-simulator',
@@ -662,6 +675,12 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'build-sim',
+                    redirect: (context, state) {
+                      if (state.uri.queryParameters.containsKey('scheme_id')) {
+                        return _buildSimTarget(state.uri);
+                      }
+                      return null;
+                    },
                     builder: (context, state) => BuildSimulatorScreen(
                       initialHeroId: int.tryParse(
                         state.uri.queryParameters['hero_id'] ?? '',

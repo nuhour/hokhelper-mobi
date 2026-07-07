@@ -350,6 +350,72 @@ void main() {
     expect(find.text('sharer'), findsOneWidget);
   });
 
+  testWidgets('legacy build simulator scheme_id query pins shared scheme', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+
+    router.go('/build-sim?scheme_id=42&hero_id=166');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '166',
+                heroId: '166',
+                name: 'Angela',
+                avatar: '',
+                title: 'Blazing Mage',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async {
+            return const [
+              BuildSchemeSummary(
+                id: 42,
+                title: 'Legacy shared route build',
+                heroName: 'Angela',
+                authorName: 'sharer',
+                equipmentIcons: [],
+                likeCount: 12,
+                favoriteCount: 8,
+                cloneCount: 4,
+                isPublic: true,
+              ),
+            ];
+          }),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            return const [null, null, null];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(
+              equips: [],
+              runes: [],
+              summonerSkills: [],
+            );
+          }),
+          buildSimSaveSchemeProvider.overrideWith((ref) {
+            return (_) async {};
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/tools/build-sim');
+    expect(uri.queryParameters['scheme'], '42');
+    expect(uri.queryParameters['hero_id'], '166');
+    expect(find.text('Shared build'), findsOneWidget);
+    expect(find.text('Legacy shared route build'), findsOneWidget);
+  });
+
   testWidgets('build simulator route opens favorite builds filter', (
     tester,
   ) async {
