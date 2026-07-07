@@ -166,15 +166,22 @@ class EsportsScreen extends ConsumerWidget {
   }
 }
 
-class _MatchesTab extends ConsumerWidget {
+class _MatchesTab extends ConsumerStatefulWidget {
   const _MatchesTab({required this.value});
 
   final AsyncValue<List<EsportsMatchSummary>> value;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MatchesTab> createState() => _MatchesTabState();
+}
+
+class _MatchesTabState extends ConsumerState<_MatchesTab> {
+  String _leagueFilter = 'all';
+
+  @override
+  Widget build(BuildContext context) {
     return AppAsyncView<List<EsportsMatchSummary>>(
-      value: value,
+      value: widget.value,
       retry: () => ref.invalidate(esportsMatchesProvider),
       data: (matches) {
         if (matches.isEmpty) {
@@ -184,13 +191,47 @@ class _MatchesTab extends ConsumerWidget {
             message: 'Pull to refresh and try again.',
           );
         }
+        final leagueOptions = _matchLeagueOptions(matches);
+        final selectedLeague = leagueOptions.contains(_leagueFilter)
+            ? _leagueFilter
+            : 'all';
+        final filteredMatches = selectedLeague == 'all'
+            ? matches
+            : matches
+                  .where((match) => match.leagueName.trim() == selectedLeague)
+                  .toList();
+        final cards = <Widget>[
+          _FilterCard(
+            children: [
+              _FilterDropdown(
+                width: 180,
+                value: selectedLeague,
+                fallbackLabel: 'All Leagues',
+                options: leagueOptions,
+                onChanged: (value) {
+                  setState(() {
+                    _leagueFilter = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          if (filteredMatches.isEmpty)
+            const AppEmptyState(
+              icon: Icons.sports_esports_outlined,
+              title: 'No matches found',
+              message: 'Try another league filter.',
+            )
+          else
+            ...filteredMatches.map((match) => _MatchCard(match: match)),
+        ];
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsMatchesProvider.future),
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            itemBuilder: (context, index) => _MatchCard(match: matches[index]),
+            itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemCount: matches.length,
+            itemCount: cards.length,
           ),
         );
       },
@@ -324,21 +365,31 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
         }).toList();
         final focusedPlayer = _findPlayer(players, widget.focusedPlayerId);
         final cards = <Widget>[
-          _PlayerFilterCard(
-            teamOptions: teamOptions,
-            roleOptions: roleOptions,
-            selectedTeam: selectedTeam,
-            selectedRole: selectedRole,
-            onTeamChanged: (value) {
-              setState(() {
-                _teamFilter = value;
-              });
-            },
-            onRoleChanged: (value) {
-              setState(() {
-                _roleFilter = value;
-              });
-            },
+          _FilterCard(
+            children: [
+              _FilterDropdown(
+                width: 160,
+                value: selectedTeam,
+                fallbackLabel: 'All Teams',
+                options: teamOptions,
+                onChanged: (value) {
+                  setState(() {
+                    _teamFilter = value;
+                  });
+                },
+              ),
+              _FilterDropdown(
+                width: 150,
+                value: selectedRole,
+                fallbackLabel: 'All Roles',
+                options: roleOptions,
+                onChanged: (value) {
+                  setState(() {
+                    _roleFilter = value;
+                  });
+                },
+              ),
+            ],
           ),
           if (focusedPlayer != null) _FocusedPlayerCard(player: focusedPlayer),
           if (filteredPlayers.isEmpty)
@@ -366,22 +417,10 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
   }
 }
 
-class _PlayerFilterCard extends StatelessWidget {
-  const _PlayerFilterCard({
-    required this.teamOptions,
-    required this.roleOptions,
-    required this.selectedTeam,
-    required this.selectedRole,
-    required this.onTeamChanged,
-    required this.onRoleChanged,
-  });
+class _FilterCard extends StatelessWidget {
+  const _FilterCard({required this.children});
 
-  final List<String> teamOptions;
-  final List<String> roleOptions;
-  final String selectedTeam;
-  final String selectedRole;
-  final ValueChanged<String> onTeamChanged;
-  final ValueChanged<String> onRoleChanged;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
@@ -403,34 +442,15 @@ class _PlayerFilterCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _PlayerFilterDropdown(
-                width: 160,
-                value: selectedTeam,
-                fallbackLabel: 'All Teams',
-                options: teamOptions,
-                onChanged: onTeamChanged,
-              ),
-              _PlayerFilterDropdown(
-                width: 150,
-                value: selectedRole,
-                fallbackLabel: 'All Roles',
-                options: roleOptions,
-                onChanged: onRoleChanged,
-              ),
-            ],
-          ),
+          Wrap(spacing: 10, runSpacing: 10, children: children),
         ],
       ),
     );
   }
 }
 
-class _PlayerFilterDropdown extends StatelessWidget {
-  const _PlayerFilterDropdown({
+class _FilterDropdown extends StatelessWidget {
+  const _FilterDropdown({
     required this.width,
     required this.value,
     required this.fallbackLabel,
@@ -1368,6 +1388,17 @@ EsportsPlayerSummary? _findPlayer(
     }
   }
   return null;
+}
+
+List<String> _matchLeagueOptions(List<EsportsMatchSummary> matches) {
+  final leagues = <String>{};
+  for (final match in matches) {
+    final leagueName = match.leagueName.trim();
+    if (leagueName.isNotEmpty) {
+      leagues.add(leagueName);
+    }
+  }
+  return leagues.toList()..sort();
 }
 
 List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {
