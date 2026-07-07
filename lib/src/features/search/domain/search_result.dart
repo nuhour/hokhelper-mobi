@@ -37,12 +37,15 @@ class SearchResultItem {
     return SearchResultItem(
       id: _readString(json['id'] ?? json['pk']),
       title: _readString(
-        json['title'] ?? json['name'] ?? json['heroName'] ?? json['label'],
+        json['title'] ??
+            json['name'] ??
+            json['heroName'] ??
+            json['hero_name'] ??
+            json['player_name'] ??
+            json['label'],
         fallback: 'Untitled result',
       ),
-      subtitle: _readString(
-        json['subtitle'] ?? json['description'] ?? json['summary'],
-      ),
+      subtitle: _readSubtitle(json, groupKey),
       url: _readUrl(json, groupKey),
     );
   }
@@ -84,6 +87,33 @@ List<SearchResultGroup> parseSearchResultGroups(Map<String, dynamic> json) {
 String _readString(Object? value, {String fallback = ''}) {
   final text = value?.toString() ?? '';
   return text.trim().isEmpty ? fallback : text.trim();
+}
+
+String _readSubtitle(Map<String, dynamic> json, String groupKey) {
+  final explicit = _readString(
+    json['subtitle'] ??
+        json['description'] ??
+        json['summary'] ??
+        json['content_preview'],
+  );
+  if (explicit.isNotEmpty) {
+    return explicit;
+  }
+
+  final parts = switch (groupKey) {
+    'pro_players' => [
+      _readString(json['team_name']),
+      _readString(json['position'] ?? json['role']),
+    ],
+    'players' => [
+      _readString(json['rank_type']),
+      _readString(json['area'] ?? json['server_name']),
+    ],
+    'skins' => [_readString(json['hero_name']), _readString(json['rating'])],
+    'equips' => [_readString(json['equip_id']), _readString(json['price'])],
+    _ => const <String>[],
+  };
+  return parts.where((part) => part.isNotEmpty).join(' · ');
 }
 
 String _readUrl(Map<String, dynamic> json, String groupKey) {

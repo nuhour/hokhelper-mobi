@@ -61,8 +61,20 @@ void main() {
           'teams': [
             {'id': 'kpl-ag', 'name': 'AG Super Play'},
           ],
+          'players': [
+            {
+              'player_id': 'ranked-1',
+              'player_name': 'PeakPlayer',
+              'rank_type': 'peak',
+            },
+          ],
           'pro_players': [
-            {'player_id': 'cat', 'player_name': 'Cat'},
+            {
+              'player_id': 'cat',
+              'player_name': 'Cat',
+              'team_name': 'eStar',
+              'position': 'Mid',
+            },
           ],
           'leaks': [
             {
@@ -90,5 +102,14 @@ void main() {
     expect(urlFor('teams'), '/esports/teams/kpl-ag');
     expect(urlFor('pro_players'), '/esports/players/cat');
     expect(urlFor('leaks'), 'https://example.test/leak');
+
+    SearchResultItem itemFor(String groupKey) {
+      return groups.singleWhere((group) => group.key == groupKey).items.single;
+    }
+
+    expect(itemFor('players').title, 'PeakPlayer');
+    expect(itemFor('players').subtitle, 'peak');
+    expect(itemFor('pro_players').title, 'Cat');
+    expect(itemFor('pro_players').subtitle, 'eStar · Mid');
   });
 }
