@@ -730,10 +730,10 @@ class _MatchCard extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    if (match.stageName.isNotEmpty) ...[
+                    if (_matchMetaText(match).isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
-                        match.stageName,
+                        _matchMetaText(match),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(
@@ -1669,6 +1669,13 @@ String _formatMatchShortTime(String value) {
   final hour = parsed.hour.toString().padLeft(2, '0');
   final minute = parsed.minute.toString().padLeft(2, '0');
   return '${parsed.month}/${parsed.day} $hour:$minute';
+}
+
+String _matchMetaText(EsportsMatchSummary match) {
+  return [
+    match.stageName.trim(),
+    match.boText,
+  ].where((value) => value.isNotEmpty).join(' · ');
 }
 
 List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {

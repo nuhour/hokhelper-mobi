@@ -158,6 +158,39 @@ void main() {
     expect(find.textContaining('2026-06-28T11:00:00'), findsNothing);
   });
 
+  testWidgets('shows esports match best-of text like the hokx portal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00',
+                bestOf: 7,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('BO7'), findsOneWidget);
+  });
+
   testWidgets('filters esports matches by league like the hokx portal', (
     tester,
   ) async {

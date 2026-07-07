@@ -11,6 +11,7 @@ class EsportsMatchSummary {
     required this.scoreB,
     required this.statusKey,
     required this.startTime,
+    this.bestOf = 0,
   });
 
   final String id;
@@ -24,6 +25,7 @@ class EsportsMatchSummary {
   final int? scoreB;
   final String statusKey;
   final String startTime;
+  final int bestOf;
 
   String get title {
     if (leagueName.isNotEmpty && stageName.isNotEmpty) {
@@ -38,6 +40,8 @@ class EsportsMatchSummary {
     }
     return '$scoreA - $scoreB';
   }
+
+  String get boText => bestOf > 0 ? 'BO$bestOf' : '';
 
   String get statusLabel {
     return switch (statusKey.toLowerCase()) {
@@ -71,6 +75,7 @@ class EsportsMatchSummary {
       scoreB: _readNullableInt(map['score_b']),
       statusKey: _readString(map['status_key'] ?? map['status']),
       startTime: _readString(map['start_time'] ?? map['scheduled_at']),
+      bestOf: _readInt(map['bo'] ?? map['best_of']),
     );
   }
 }
@@ -99,6 +104,13 @@ int? _readNullableInt(Object? value) {
     return value;
   }
   return int.tryParse(value.toString());
+}
+
+int _readInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  return int.tryParse(value?.toString() ?? '') ?? 0;
 }
 
 String _readString(Object? value, {String fallback = ''}) {
