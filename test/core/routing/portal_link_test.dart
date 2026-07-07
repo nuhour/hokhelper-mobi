@@ -64,4 +64,15 @@ void main() {
       '/tools/prompts?tab=favorites',
     );
   });
+
+  test('normalizes media gallery detail query links', () {
+    expect(
+      normalizePortalLinkTarget('/skin-gallery?skin_id=1001&q=Lam'),
+      '/skin-gallery/1001?q=Lam',
+    );
+    expect(
+      normalizePortalLinkTarget('https://hok.example/#/cg?cg_id=501'),
+      '/cg/501',
+    );
+  });
 }

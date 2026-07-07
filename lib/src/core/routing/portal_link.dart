@@ -56,6 +56,20 @@ String _normalizeInternalTarget(String target) {
         .toString();
   }
 
+  if (uri.path == '/skin-gallery') {
+    final skinId = uri.queryParameters['skin_id']?.trim();
+    if (skinId != null && skinId.isNotEmpty) {
+      return _moveQueryIdToPath(uri, '/skin-gallery/$skinId', 'skin_id');
+    }
+  }
+
+  if (uri.path == '/cg') {
+    final cgId = uri.queryParameters['cg_id']?.trim();
+    if (cgId != null && cgId.isNotEmpty) {
+      return _moveQueryIdToPath(uri, '/cg/$cgId', 'cg_id');
+    }
+  }
+
   if (uri.path == '/community/leaks' ||
       uri.path == '/leaks' ||
       uri.path == '/skin-leaks') {
@@ -94,4 +108,13 @@ String? _mobileAliasPath(String path) {
     '/patch-notes' || '/versions' => '/content/patch-notes',
     _ => null,
   };
+}
+
+String _moveQueryIdToPath(Uri uri, String path, String idKey) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters)
+    ..remove(idKey);
+  return Uri(
+    path: path,
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
 }
