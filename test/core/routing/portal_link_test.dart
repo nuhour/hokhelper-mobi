@@ -15,6 +15,10 @@ void main() {
 
   test('normalizes hokx web aliases to mobile shell routes', () {
     expect(
+      normalizePortalLinkTarget('/builds?hero_id=166'),
+      '/tools/builds?hero_id=166',
+    );
+    expect(
       normalizePortalLinkTarget('#/build-sim?hero_id=101&scheme=22'),
       '/tools/build-sim?hero_id=101&scheme=22',
     );
@@ -29,6 +33,22 @@ void main() {
     expect(
       normalizePortalLinkTarget('/patch-notes?note_id=31'),
       '/content/patch-notes?note_id=31',
+    );
+    expect(
+      normalizePortalLinkTarget('/community/leaks?q=Lam'),
+      '/content/community?tab=leaks&q=Lam',
+    );
+    expect(
+      normalizePortalLinkTarget('/stats?entry=equip_rank&equip_id=88'),
+      '/tools/stats?entry=equip_rank&equip_id=88',
+    );
+    expect(
+      normalizePortalLinkTarget('/rankings?lane=mid'),
+      '/tools/rankings?lane=mid',
+    );
+    expect(
+      normalizePortalLinkTarget('/prompts?tab=favorites'),
+      '/tools/prompts?tab=favorites',
     );
   });
 }

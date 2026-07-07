@@ -32,6 +32,20 @@ String _normalizeInternalTarget(String target) {
     ).toString();
   }
 
+  if (uri.path == '/community/leaks' ||
+      uri.path == '/leaks' ||
+      uri.path == '/skin-leaks') {
+    return uri
+        .replace(
+          path: '/content/community',
+          queryParameters: {
+            'tab': 'leaks',
+            ...uri.queryParameters,
+          },
+        )
+        .toString();
+  }
+
   final aliasPath = _mobileAliasPath(uri.path);
   if (aliasPath != null) {
     return uri.replace(path: aliasPath).toString();
@@ -42,8 +56,16 @@ String _normalizeInternalTarget(String target) {
 
 String? _mobileAliasPath(String path) {
   return switch (path) {
+    '/builds' => '/tools/builds',
     '/build-sim' => '/tools/build-sim',
     '/bp-simulator' => '/tools/bp-simulator',
+    '/rankings' => '/tools/rankings',
+    '/game-assistant' => '/tools/game-assistant',
+    '/rank-fortune' => '/tools/rank-fortune',
+    '/curiosity-lab' => '/tools/curiosity-lab',
+    '/team-builder' => '/tools/team-builder',
+    '/prompts' => '/tools/prompts',
+    '/stats' => '/tools/stats',
     '/event-assistance' => '/content/event-assistance',
     '/patch-notes' || '/versions' => '/content/patch-notes',
     _ => null,
