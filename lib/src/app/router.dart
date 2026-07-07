@@ -86,6 +86,18 @@ String _heroGalleryTarget(Uri uri) {
   return Uri(path: '/heroes', queryParameters: {'q': query}).toString();
 }
 
+String? _cgGalleryRedirect(Uri uri) {
+  final queryParameters = Map<String, String>.from(uri.queryParameters);
+  final cgId = queryParameters.remove('cg_id')?.trim();
+  if (cgId == null || cgId.isEmpty) {
+    return null;
+  }
+  return Uri(
+    path: '/cg/$cgId',
+    queryParameters: queryParameters.isEmpty ? null : queryParameters,
+  ).toString();
+}
+
 String _targetWithQuery(String path, Uri uri) {
   final query = uri.query;
   return query.isEmpty ? path : '$path?$query';
@@ -431,6 +443,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/cg',
+        redirect: (context, state) => _cgGalleryRedirect(state.uri),
         builder: (context, state) => CgGalleryScreen(
           initialHeroId: int.tryParse(
             state.uri.queryParameters['hero_id'] ?? '',

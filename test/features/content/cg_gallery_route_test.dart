@@ -165,6 +165,51 @@ void main() {
     expect(find.text('Angela Trailer'), findsNothing);
   });
 
+  testWidgets('legacy cg_id query opens the mobile cg detail route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/cg?cg_id=501&q=Lam');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteCgRepository(const [
+              ContentItemSummary(
+                id: 501,
+                kind: ContentKind.cg,
+                title: 'Lam Cinematic',
+                heroName: 'Lam',
+                imageUrl: '',
+                subtitle: 'Playable video',
+                rating: 4.8,
+                ratingCount: 17,
+                viewCount: 2300,
+              ),
+            ]),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/cg/501');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['q'],
+      'Lam',
+    );
+    expect(find.text('CG Detail'), findsOneWidget);
+    expect(find.text('Lam Cinematic'), findsWidgets);
+  });
+
   testWidgets('cg detail sheet synchronizes the web detail route', (
     tester,
   ) async {
