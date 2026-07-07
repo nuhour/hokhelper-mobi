@@ -503,7 +503,13 @@ class _HeroChangeWrap extends StatelessWidget {
       runSpacing: 8,
       children: [
         for (final change in changes.take(6))
-          _ChangeChip(label: change.heroName, changeType: change.changeType),
+          _ChangeChip(
+            label: change.heroName,
+            changeType: change.changeType,
+            route: change.heroId > 0
+                ? '/heroes/${change.heroId}?tab=history'
+                : null,
+          ),
         if (changes.length > 6)
           _ChangeChip(label: '+${changes.length - 6}', changeType: 'adjust'),
       ],
@@ -604,10 +610,15 @@ class _VersionPill extends StatelessWidget {
 }
 
 class _ChangeChip extends StatelessWidget {
-  const _ChangeChip({required this.label, required this.changeType});
+  const _ChangeChip({
+    required this.label,
+    required this.changeType,
+    this.route,
+  });
 
   final String label;
   final String changeType;
+  final String? route;
 
   @override
   Widget build(BuildContext context) {
@@ -617,7 +628,7 @@ class _ChangeChip extends StatelessWidget {
       _ => AppTheme.gold,
     };
 
-    return DecoratedBox(
+    final chip = DecoratedBox(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
         border: Border.all(color: color.withValues(alpha: 0.26)),
@@ -635,6 +646,17 @@ class _ChangeChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    final destination = route;
+    if (destination == null) {
+      return chip;
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.go(destination),
+      child: chip,
     );
   }
 }

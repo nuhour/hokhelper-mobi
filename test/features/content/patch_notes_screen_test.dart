@@ -257,6 +257,65 @@ void main() {
     );
   });
 
+  testWidgets('patch timeline hero chips open hero history routes', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/content/patch-notes',
+          builder: (context, state) => const PatchNotesScreen(),
+        ),
+        GoRoute(
+          path: '/heroes/:heroId',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+      ],
+      initialLocation: '/content/patch-notes',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          patchNotesProvider.overrideWith((ref) async {
+            return const [
+              PatchNoteSummary(
+                id: 32,
+                version: '1.2.4',
+                title: 'Version 1.2.4 Patch Notes',
+                date: '2026-07-02',
+                preview: 'Arthur adjusted.',
+                content: 'Arthur changes only.',
+                changeCount: 1,
+                tags: ['Patch Notes'],
+                heroChanges: [
+                  PatchHeroChange(
+                    heroId: 10,
+                    heroName: 'Arthur',
+                    avatarUrl: '',
+                    changeType: 'adjust',
+                  ),
+                ],
+              ),
+            ];
+          }),
+          contentRepositoryProvider.overrideWithValue(_StaticPatchRepository()),
+          patchNotesRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Arthur'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/heroes/10');
+    expect(uri.queryParameters['tab'], 'history');
+  });
+
   testWidgets('patch detail hero adjustments open hero history routes', (
     tester,
   ) async {
