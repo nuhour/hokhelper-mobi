@@ -25,12 +25,23 @@ final eventAssistanceRecordsProvider =
           .loadRecords(regionId: settings.region.regionId);
     });
 
-class EventAssistanceScreen extends ConsumerWidget {
-  const EventAssistanceScreen({super.key});
+class EventAssistanceScreen extends ConsumerStatefulWidget {
+  const EventAssistanceScreen({this.initialShareText, super.key});
+
+  final String? initialShareText;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EventAssistanceScreen> createState() =>
+      _EventAssistanceScreenState();
+}
+
+class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
+  var _didOpenInitialShareSheet = false;
+
+  @override
+  Widget build(BuildContext context) {
     final recordsValue = ref.watch(eventAssistanceRecordsProvider);
+    _openInitialShareSheet();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -52,7 +63,7 @@ class EventAssistanceScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     FilledButton.icon(
-                      onPressed: () => _showShareSheet(context, ref),
+                      onPressed: () => _showShareSheet(context),
                       icon: const Icon(Icons.add_comment_outlined, size: 18),
                       label: const Text('Share Text'),
                     ),
@@ -87,7 +98,23 @@ class EventAssistanceScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showShareSheet(BuildContext context, WidgetRef ref) async {
+  void _openInitialShareSheet() {
+    final initialText = widget.initialShareText?.trim() ?? '';
+    if (_didOpenInitialShareSheet || initialText.isEmpty) {
+      return;
+    }
+    _didOpenInitialShareSheet = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showShareSheet(context, initialText: initialText);
+      }
+    });
+  }
+
+  Future<void> _showShareSheet(
+    BuildContext context, {
+    String? initialText,
+  }) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -95,13 +122,16 @@ class EventAssistanceScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetContext) => const _ShareAssistanceSheet(),
+      builder: (sheetContext) =>
+          _ShareAssistanceSheet(initialText: initialText),
     );
   }
 }
 
 class _ShareAssistanceSheet extends ConsumerStatefulWidget {
-  const _ShareAssistanceSheet();
+  const _ShareAssistanceSheet({this.initialText});
+
+  final String? initialText;
 
   @override
   ConsumerState<_ShareAssistanceSheet> createState() =>
@@ -112,6 +142,15 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
   final _controller = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   var _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialText = widget.initialText?.trim() ?? '';
+    if (initialText.isNotEmpty) {
+      _controller.text = initialText;
+    }
+  }
 
   @override
   void dispose() {

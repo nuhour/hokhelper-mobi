@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/activity/data/event_assistance_repository.dart';
@@ -134,6 +136,58 @@ void main() {
 
     expect(find.text('Share Assistance Text'), findsNothing);
     expect(repository.submittedText, isNull);
+  });
+
+  testWidgets('opens share sheet with initial hokx assistance text', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRepositoryProvider.overrideWithValue(repository),
+          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: EventAssistanceScreen(
+              initialShareText: 'Join my activity code ABCD.',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Share Assistance Text'), findsOneWidget);
+    expect(find.text('Join my activity code ABCD.'), findsOneWidget);
+  });
+
+  testWidgets('web event assistance alias opens prefilled share sheet', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+    final router = createAppRouter()
+      ..go('/event-assistance?text=Join%20my%20activity%20code%20ABCD.');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRepositoryProvider.overrideWithValue(repository),
+          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/content/event-assistance',
+    );
+    expect(find.text('Share Assistance Text'), findsOneWidget);
+    expect(find.text('Join my activity code ABCD.'), findsOneWidget);
   });
 
   testWidgets('keeps share sheet open and shows feedback on submit failure', (

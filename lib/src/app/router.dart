@@ -423,7 +423,8 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/event-assistance',
-        redirect: (context, state) => '/content/event-assistance',
+        redirect: (context, state) =>
+            _targetWithQuery('/content/event-assistance', state.uri),
       ),
       GoRoute(
         path: '/patch-notes',
@@ -766,7 +767,9 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'event-assistance',
-                    builder: (context, state) => const EventAssistanceScreen(),
+                    builder: (context, state) => EventAssistanceScreen(
+                      initialShareText: state.uri.queryParameters['text'],
+                    ),
                   ),
                   GoRoute(
                     path: 'skins',

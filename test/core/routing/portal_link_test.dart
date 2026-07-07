@@ -40,6 +40,10 @@ void main() {
       '/content/event-assistance',
     );
     expect(
+      normalizePortalLinkTarget('/event-assistance?text=Join%20ABCD'),
+      '/content/event-assistance?text=Join%20ABCD',
+    );
+    expect(
       normalizePortalLinkTarget('/patch-notes?note_id=31'),
       '/content/patch-notes?note_id=31',
     );
