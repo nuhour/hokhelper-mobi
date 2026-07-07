@@ -29,6 +29,8 @@ class TeamBuilderDraft {
   const TeamBuilderDraft({
     this.allyPicks = const [null, null, null, null, null],
     this.enemyPicks = const [null, null, null, null, null],
+    this.bans = const [null, null, null, null, null],
+    this.activeSlotType = TeamBuilderSlotType.pick,
     this.activeSide = TeamBuilderSide.ally,
     this.activeIndex = 0,
     this.recommendType = TeamRecommendType.balanced,
@@ -36,6 +38,8 @@ class TeamBuilderDraft {
 
   final List<TeamBuildHero?> allyPicks;
   final List<TeamBuildHero?> enemyPicks;
+  final List<TeamBuildHero?> bans;
+  final TeamBuilderSlotType activeSlotType;
   final TeamBuilderSide activeSide;
   final int activeIndex;
   final TeamRecommendType recommendType;
@@ -43,6 +47,8 @@ class TeamBuilderDraft {
   TeamBuilderDraft copyWith({
     List<TeamBuildHero?>? allyPicks,
     List<TeamBuildHero?>? enemyPicks,
+    List<TeamBuildHero?>? bans,
+    TeamBuilderSlotType? activeSlotType,
     TeamBuilderSide? activeSide,
     int? activeIndex,
     TeamRecommendType? recommendType,
@@ -50,6 +56,8 @@ class TeamBuilderDraft {
     return TeamBuilderDraft(
       allyPicks: allyPicks ?? this.allyPicks,
       enemyPicks: enemyPicks ?? this.enemyPicks,
+      bans: bans ?? this.bans,
+      activeSlotType: activeSlotType ?? this.activeSlotType,
       activeSide: activeSide ?? this.activeSide,
       activeIndex: activeIndex ?? this.activeIndex,
       recommendType: recommendType ?? this.recommendType,
@@ -65,9 +73,21 @@ class TeamBuilderDraft {
       .whereType<TeamBuildHero>()
       .map((hero) => hero.id)
       .toList(growable: false);
+
+  List<int> get banIds => bans
+      .whereType<TeamBuildHero>()
+      .map((hero) => hero.id)
+      .toList(growable: false);
 }
 
 enum TeamBuilderSide { ally, enemy }
+
+enum TeamBuilderSlotType {
+  pick,
+  ban;
+
+  String get apiValue => name;
+}
 
 final teamBuilderDraftProvider = StateProvider<TeamBuilderDraft>((ref) {
   return const TeamBuilderDraft();
@@ -88,6 +108,8 @@ final teamRecommendationsProvider = FutureProvider<TeamRecommendationResult>((
         enemyPicks: draft.activeSide == TeamBuilderSide.ally
             ? draft.enemyIds
             : draft.allyIds,
+        bans: draft.banIds,
+        slotType: draft.activeSlotType.apiValue,
         slotIndex: draft.activeIndex,
         recommendType: draft.recommendType,
       );
@@ -118,11 +140,22 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
     final draft = ref.read(teamBuilderDraftProvider);
     final ally = List<TeamBuildHero?>.of(draft.allyPicks);
     final enemy = List<TeamBuildHero?>.of(draft.enemyPicks);
+    if (draft.activeSlotType == TeamBuilderSlotType.ban) {
+      final bans = List<TeamBuildHero?>.of(draft.bans);
+      bans[draft.activeIndex] = hero;
+      ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
+        bans: bans,
+        activeIndex: (draft.activeIndex + 1).clamp(0, bans.length - 1),
+      );
+      return;
+    }
+
     final slots = draft.activeSide == TeamBuilderSide.ally ? ally : enemy;
     slots[draft.activeIndex] = hero;
     ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
       allyPicks: ally,
       enemyPicks: enemy,
+      activeSlotType: TeamBuilderSlotType.pick,
       activeIndex: (draft.activeIndex + 1).clamp(0, 4),
     );
   }
@@ -130,7 +163,16 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   void _setActiveSlot(WidgetRef ref, TeamBuilderSide side, int index) {
     final draft = ref.read(teamBuilderDraftProvider);
     ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
+      activeSlotType: TeamBuilderSlotType.pick,
       activeSide: side,
+      activeIndex: index,
+    );
+  }
+
+  void _setActiveBanSlot(WidgetRef ref, int index) {
+    final draft = ref.read(teamBuilderDraftProvider);
+    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
+      activeSlotType: TeamBuilderSlotType.ban,
       activeIndex: index,
     );
   }
@@ -224,6 +266,7 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
           _PickPanel(
             title: 'Ally Picks',
             slots: draft.allyPicks,
+            activeSlotType: draft.activeSlotType,
             activeSide: draft.activeSide,
             activeIndex: draft.activeIndex,
             side: TeamBuilderSide.ally,
@@ -233,15 +276,18 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
           _PickPanel(
             title: 'Enemy Picks',
             slots: draft.enemyPicks,
+            activeSlotType: draft.activeSlotType,
             activeSide: draft.activeSide,
             activeIndex: draft.activeIndex,
             side: TeamBuilderSide.enemy,
             onSlotTap: (side, index) => _setActiveSlot(ref, side, index),
           ),
-          const SizedBox(height: 20),
-          _RecommendationTypePanel(
-            selected: draft.recommendType,
-            onChanged: (type) => _setRecommendType(ref, type),
+          const SizedBox(height: 12),
+          _BanPanel(
+            bans: draft.bans,
+            activeSlotType: draft.activeSlotType,
+            activeIndex: draft.activeIndex,
+            onSlotTap: (index) => _setActiveBanSlot(ref, index),
           ),
           const SizedBox(height: 20),
           AppAsyncView<List<TeamBuildHero>>(
@@ -251,6 +297,11 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
               heroes: heroes,
               onHeroTap: (hero) => _selectHero(ref, hero),
             ),
+          ),
+          const SizedBox(height: 20),
+          _RecommendationTypePanel(
+            selected: draft.recommendType,
+            onChanged: (type) => _setRecommendType(ref, type),
           ),
           const SizedBox(height: 20),
           _RecommendationsPanel(value: recommendations),
@@ -281,6 +332,7 @@ class _PickPanel extends StatelessWidget {
   const _PickPanel({
     required this.title,
     required this.slots,
+    required this.activeSlotType,
     required this.activeSide,
     required this.activeIndex,
     required this.side,
@@ -289,6 +341,7 @@ class _PickPanel extends StatelessWidget {
 
   final String title;
   final List<TeamBuildHero?> slots;
+  final TeamBuilderSlotType activeSlotType;
   final TeamBuilderSide activeSide;
   final int activeIndex;
   final TeamBuilderSide side;
@@ -321,7 +374,10 @@ class _PickPanel extends StatelessWidget {
               runSpacing: 8,
               children: List.generate(slots.length, (index) {
                 final hero = slots[index];
-                final isActive = side == activeSide && index == activeIndex;
+                final isActive =
+                    activeSlotType == TeamBuilderSlotType.pick &&
+                    side == activeSide &&
+                    index == activeIndex;
                 return SizedBox(
                   width: 128,
                   child: Material(
@@ -347,6 +403,98 @@ class _PickPanel extends StatelessWidget {
                             hero == null
                                 ? 'Slot ${index + 1}: Empty'
                                 : 'Slot ${index + 1}: ${hero.name}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: hero == null
+                                      ? AppTheme.muted
+                                      : AppTheme.text,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BanPanel extends StatelessWidget {
+  const _BanPanel({
+    required this.bans,
+    required this.activeSlotType,
+    required this.activeIndex,
+    required this.onSlotTap,
+  });
+
+  final List<TeamBuildHero?> bans;
+  final TeamBuilderSlotType activeSlotType;
+  final int activeIndex;
+  final ValueChanged<int> onSlotTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Bans',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(bans.length, (index) {
+                final hero = bans[index];
+                final isActive =
+                    activeSlotType == TeamBuilderSlotType.ban &&
+                    index == activeIndex;
+                return SizedBox(
+                  width: 128,
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: () => onSlotTap(index),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: isActive ? AppTheme.panelAlt : Colors.black12,
+                          border: Border.all(
+                            color: isActive ? AppTheme.gold : Colors.white10,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            hero == null
+                                ? 'Ban ${index + 1}: Empty'
+                                : 'Ban ${index + 1}: ${hero.name}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.labelMedium

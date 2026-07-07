@@ -52,11 +52,26 @@ void main() {
     expect(find.text('Team Builder'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.text('Lam'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
     await tester.tap(find.text('Lam'));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Ally Picks'),
+      -200,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.text('Ally Picks'), findsOneWidget);
     expect(find.text('Slot 1: Lam'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Dolia'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.text('Dolia'), findsOneWidget);
     expect(find.text('Score 88.5'), findsOneWidget);
     expect(find.text('Blue 57.0%'), findsOneWidget);
@@ -117,13 +132,107 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Dolia'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.text('Dolia'), findsOneWidget);
+    await tester.ensureVisible(find.text('Counter'));
     await tester.tap(find.text('Counter'));
     await tester.pumpAndSettle();
 
     expect(requestedTypes, contains(TeamRecommendType.counter));
     expect(find.text('Anti-carry'), findsOneWidget);
     expect(find.text('Counter enemy burst'), findsOneWidget);
+  });
+
+  testWidgets('selects ban slots and sends bans to recommendations', (
+    tester,
+  ) async {
+    final requestedBans = <List<int>>[];
+    final requestedSlotTypes = <String>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          teamBuilderHeroesProvider.overrideWith((ref) async {
+            return const [
+              TeamBuildHero(
+                id: 42,
+                externalHeroId: '142',
+                name: 'Lam',
+                mainJob: 3,
+                avatarUrl: '',
+              ),
+              TeamBuildHero(
+                id: 7,
+                externalHeroId: '107',
+                name: 'Marco Polo',
+                mainJob: 1,
+                avatarUrl: '',
+              ),
+            ];
+          }),
+          teamRecommendationsProvider.overrideWith((ref) async {
+            final draft = ref.watch(teamBuilderDraftProvider);
+            requestedBans.add(draft.banIds);
+            requestedSlotTypes.add(draft.activeSlotType.apiValue);
+            return TeamRecommendationResult(
+              recommendations: [
+                TeamRecommendation(
+                  heroId: draft.banIds.contains(42) ? 7 : 99,
+                  externalHeroId: draft.banIds.contains(42) ? '107' : '199',
+                  name: draft.banIds.contains(42) ? 'Marco Polo' : 'Dolia',
+                  mainJob: 1,
+                  score: 76,
+                  reason: draft.banIds.contains(42)
+                      ? 'Lam is removed from the pool'
+                      : 'Default suggestion',
+                  pickRate: 0.11,
+                  banRate: 0.02,
+                  synergy: 0.4,
+                  counter: 0.7,
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TeamBuilderScreen())),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ban 1: Empty'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Lam'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.text('Lam'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Ban 1: Lam'),
+      -200,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Bans'), findsOneWidget);
+    expect(find.text('Ban 1: Lam'), findsOneWidget);
+    expect(
+      requestedBans,
+      contains(predicate<List<int>>((ids) => ids.length == 1 && ids[0] == 42)),
+    );
+    expect(requestedSlotTypes, contains('ban'));
+    await tester.scrollUntilVisible(
+      find.text('Lam is removed from the pool'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Marco Polo'), findsWidgets);
+    expect(find.text('Lam is removed from the pool'), findsOneWidget);
   });
 
   testWidgets('hydrates draft from hokx team builder route query', (
