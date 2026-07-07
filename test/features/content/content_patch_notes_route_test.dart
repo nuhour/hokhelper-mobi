@@ -58,7 +58,9 @@ GoRouter _buildRouter() {
             path: 'patch-notes',
             builder: (context, state) => PatchNotesScreen(
               initialNoteId: int.tryParse(
-                state.uri.queryParameters['note_id'] ?? '',
+                state.uri.queryParameters['note_id'] ??
+                    state.uri.queryParameters['post_id'] ??
+                    '',
               ),
             ),
           ),
@@ -168,6 +170,51 @@ void main() {
   ) async {
     final router = _buildRouter();
     router.go('/content/patch-notes?note_id=31');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          patchNotesProvider.overrideWith((ref) async {
+            return const [
+              PatchNoteSummary(
+                id: 31,
+                version: '1.2.3',
+                title: 'Version 1.2.3 Patch Notes',
+                date: '2026-07-01',
+                preview: 'Lam and Angela adjusted.',
+                content: 'List patch note body.',
+                changeCount: 1,
+                tags: ['Patch Notes'],
+                heroChanges: [
+                  PatchHeroChange(
+                    heroId: 42,
+                    heroName: 'Lam',
+                    avatarUrl: '',
+                    changeType: 'buff',
+                  ),
+                ],
+              ),
+            ];
+          }),
+          contentRepositoryProvider.overrideWithValue(_PatchDetailRepository()),
+          patchNotesRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Full patch note body loaded from the focused route.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('patch notes post_id route opens the focused detail sheet', (
+    tester,
+  ) async {
+    final router = _buildRouter();
+    router.go('/content/patch-notes?post_id=31');
 
     await tester.pumpWidget(
       ProviderScope(

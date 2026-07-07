@@ -437,11 +437,13 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/patch-notes',
-        redirect: (context, state) => '/content/patch-notes',
+        redirect: (context, state) =>
+            _targetWithQuery('/content/patch-notes', state.uri),
       ),
       GoRoute(
         path: '/versions',
-        redirect: (context, state) => '/content/patch-notes',
+        redirect: (context, state) =>
+            _targetWithQuery('/content/patch-notes', state.uri),
       ),
       GoRoute(
         path: '/stats',
@@ -807,7 +809,9 @@ GoRouter createAppRouter() {
                     path: 'patch-notes',
                     builder: (context, state) => PatchNotesScreen(
                       initialNoteId: int.tryParse(
-                        state.uri.queryParameters['note_id'] ?? '',
+                        state.uri.queryParameters['note_id'] ??
+                            state.uri.queryParameters['post_id'] ??
+                            '',
                       ),
                     ),
                   ),
