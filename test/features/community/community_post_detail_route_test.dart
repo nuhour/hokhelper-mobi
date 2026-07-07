@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_detail.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/leak_post_summary.dart';
@@ -41,6 +43,61 @@ GoRouter _buildRouter() {
 }
 
 void main() {
+  testWidgets('legacy community post_id route opens the post detail', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/community?post_id=99&source=home');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async {
+            return const <CommunityPostSummary>[];
+          }),
+          leakPostsProvider.overrideWith(
+            (ref) async => const <LeakPostSummary>[],
+          ),
+          postDetailProvider('99').overrideWith((ref) async {
+            return const CommunityPostDetail(
+              post: CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 2,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/content/community/post/99',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['source'],
+      'home',
+    );
+    expect(
+      find.text('Start blue, punish mid wave, then invade.'),
+      findsOneWidget,
+    );
+    expect(find.text('Comments'), findsOneWidget);
+  });
+
   testWidgets('community post cards open the detail route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
