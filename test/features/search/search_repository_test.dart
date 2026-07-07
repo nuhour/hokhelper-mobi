@@ -123,7 +123,7 @@ void main() {
     expect(urlFor('heroes'), '/hero-gallery/166');
     expect(urlFor('skins'), '/skin-gallery/77');
     expect(urlFor('equips'), '/stats?entry=equip_rank&equip_id=1337');
-    expect(urlFor('posts'), '/community/post/42');
+    expect(urlFor('posts'), '/content/community/post/42');
     expect(urlFor('teams'), '/esports/teams/kpl-ag');
     expect(urlFor('pro_players'), '/esports/players/cat');
     expect(urlFor('leaks'), 'https://example.test/leak');

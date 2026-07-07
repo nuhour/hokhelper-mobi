@@ -193,7 +193,10 @@ String _readUrl(Map<String, dynamic> json, String groupKey) {
     'heroes' => _idPath('/hero-gallery', json['id'] ?? json['hero_id']),
     'skins' => _idPath('/skin-gallery', json['id'] ?? json['skin_id']),
     'equips' => _equipStatsPath(json['equip_id'] ?? json['id']),
-    'posts' => _idPath('/community/post', json['id'] ?? json['post_id']),
+    'posts' => _idPath(
+      '/content/community/post',
+      json['id'] ?? json['post_id'],
+    ),
     'teams' => _idPath('/esports/teams', json['id'] ?? json['team_id']),
     'pro_players' => _idPath(
       '/esports/players',
