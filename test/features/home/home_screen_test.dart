@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/features/home/data/home_repository.dart';
 import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dart';
 
@@ -88,20 +89,47 @@ void main() {
     expect(find.text('Read Notes'), findsOneWidget);
   });
 
-  testWidgets('home top tabs switch in place and support horizontal swipe', (
+  testWidgets('home top tabs are centered and open primary pages directly', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _buildHomeScreen(
-        const HomeStats(
-          success: true,
-          message: 'Home portal ready',
-          result: {},
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(body: HomeScreen()),
         ),
+        GoRoute(
+          path: '/heroes',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+        GoRoute(
+          path: '/content/skins',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+        GoRoute(
+          path: '/esports/schedule',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeStatsProvider.overrideWith((ref) async {
+            return const HomeStats(
+              success: true,
+              message: 'Home portal ready',
+              result: {},
+            );
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('home-top-tab-strip')), findsOneWidget);
     expect(find.text('Dominate the Rift'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('home-top-tab-indicator-3')),
@@ -110,21 +138,19 @@ void main() {
 
     await tester.tap(find.text('英雄'));
     await tester.pumpAndSettle();
-    expect(find.text('英雄图鉴'), findsAtLeastNWidgets(1));
-    expect(find.text('Dominate the Rift'), findsNothing);
-    expect(
-      find.byKey(const ValueKey('home-top-tab-indicator-2')),
-      findsOneWidget,
-    );
+    expect(router.routeInformationProvider.value.uri.path, '/heroes');
 
-    await tester.fling(find.byType(PageView), const Offset(700, 0), 1000);
+    router.go('/');
     await tester.pumpAndSettle();
-    expect(find.text('皮肤图鉴'), findsAtLeastNWidgets(1));
-    expect(find.text('英雄图鉴'), findsNothing);
-    expect(
-      find.byKey(const ValueKey('home-top-tab-indicator-1')),
-      findsOneWidget,
-    );
+    await tester.tap(find.text('皮肤'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/content/skins');
+
+    router.go('/');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('电竞'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/esports/schedule');
   });
 
   testWidgets('home menu lists filtered hokx portal menu groups', (
