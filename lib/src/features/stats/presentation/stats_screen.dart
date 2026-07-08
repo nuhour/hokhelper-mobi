@@ -9,6 +9,7 @@ import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../rankings/presentation/hero_ranking_screen.dart';
+import '../../rankings/presentation/player_leaderboard_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/stats_repository.dart';
 import '../domain/stats_dashboard.dart';
@@ -341,7 +342,7 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
               });
             },
             children: const [
-              HeroRankingScreen(),
+              PlayerLeaderboardScreen(),
               HeroTrendsScreen(),
               HeroRankingScreen(initialTabIndex: 3),
             ],

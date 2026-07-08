@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/rankings/domain/player_leaderboard_result.dart';
+import 'package:hok_helper_mobile/src/features/rankings/domain/player_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
+import 'package:hok_helper_mobile/src/features/rankings/presentation/player_leaderboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/hero_trend_row.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
@@ -75,6 +78,31 @@ void main() {
               ),
             ];
           }),
+          playerLeaderboardProvider.overrideWith((ref) async {
+            return const PlayerLeaderboardResult(
+              players: [
+                PlayerRankingEntry(
+                  playerId: 'p-100',
+                  playerName: 'Top Mid',
+                  avatarUrl: '',
+                  peakScore: 2490,
+                  rankStars: 112,
+                  winRate: 0.684,
+                  avgKda: 7.2,
+                  playCount: 380,
+                  grade: 15.3,
+                  mvpCount: 98,
+                  region: 44,
+                  playerTypeLabel: 'Pro',
+                  bestHeroes: [],
+                ),
+              ],
+              total: 1,
+              regionId: 0,
+              rankType: 'rank',
+              regionOptions: [44, 62],
+            );
+          }),
         ],
         child: HokHelperApp(router: router),
       ),
@@ -105,7 +133,12 @@ void main() {
     await tester.tap(find.text('排行榜'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
-    expect(find.text('Hero Rankings'), findsOneWidget);
+    expect(find.text('Player Leaderboard'), findsOneWidget);
+    expect(find.text('Ranked'), findsAtLeastNWidgets(1));
+    expect(find.text('Peak'), findsOneWidget);
+    expect(find.text('Region +44'), findsOneWidget);
+    expect(find.text('Top Mid'), findsOneWidget);
+    expect(find.text('112 stars'), findsOneWidget);
 
     await tester.tap(find.text('梯度榜'));
     await tester.pumpAndSettle();

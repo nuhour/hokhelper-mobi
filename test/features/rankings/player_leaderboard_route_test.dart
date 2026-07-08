@@ -52,6 +52,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Player Leaderboard'),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
     await tester.tap(find.text('Player Leaderboard'));
     await tester.pumpAndSettle();
 
