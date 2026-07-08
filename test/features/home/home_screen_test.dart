@@ -11,7 +11,73 @@ Widget _buildHomeScreen(HomeStats stats) {
   );
 }
 
+Finder _mainScrollable() {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is Scrollable && widget.axisDirection == AxisDirection.down,
+  );
+}
+
 void main() {
+  testWidgets('home screen follows the hokx mobile portal framework', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHomeScreen(
+        const HomeStats(
+          success: true,
+          message: 'Home portal ready',
+          result: {
+            'hero_ranking_table': {
+              'rows': [
+                {
+                  'hero': {'name': 'Angela', 'main_job': 'Mage'},
+                  'win_rate': 0.56,
+                },
+              ],
+            },
+            'patch_notes': [
+              {
+                'title': 'Patch 1.2',
+                'content_preview': 'Balance update',
+                'version': '1.2',
+              },
+            ],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('电竞'), findsOneWidget);
+    expect(find.text('皮肤'), findsOneWidget);
+    expect(find.text('英雄'), findsOneWidget);
+    expect(find.text('首页'), findsOneWidget);
+    expect(find.text('Dominate the Rift'), findsOneWidget);
+    expect(find.text('Search heroes, items, guides...'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Trending Heroes'),
+      240,
+      scrollable: _mainScrollable(),
+    );
+    expect(find.text('Trending Heroes'), findsOneWidget);
+    expect(find.text('Angela'), findsAtLeastNWidgets(1));
+    expect(find.text('View All'), findsOneWidget);
+
+    expect(find.text('BP Simulator'), findsAtLeastNWidgets(1));
+    expect(find.text('Tier List'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Latest Patch'),
+      240,
+      scrollable: _mainScrollable(),
+    );
+    expect(find.text('Latest Patch'), findsOneWidget);
+    expect(find.text('Patch 1.2'), findsAtLeastNWidgets(1));
+    expect(find.text('Read Notes'), findsOneWidget);
+  });
+
   testWidgets('home screen renders hokx portal preview sections', (
     tester,
   ) async {
@@ -57,15 +123,15 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Hero Rankings'),
       240,
-      scrollable: find.byType(Scrollable),
+      scrollable: _mainScrollable(),
     );
     expect(find.text('Hero Rankings'), findsOneWidget);
-    expect(find.text('Angela'), findsOneWidget);
+    expect(find.text('Angela'), findsAtLeastNWidgets(1));
 
     await tester.scrollUntilVisible(
       find.text('Tier List Preview'),
       240,
-      scrollable: find.byType(Scrollable),
+      scrollable: _mainScrollable(),
     );
     expect(find.text('Tier List Preview'), findsOneWidget);
     expect(find.text('Dolia'), findsOneWidget);
@@ -73,7 +139,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Leaderboard'),
       240,
-      scrollable: find.byType(Scrollable),
+      scrollable: _mainScrollable(),
     );
     expect(find.text('Leaderboard'), findsOneWidget);
     expect(find.text('Top Player'), findsOneWidget);
@@ -81,7 +147,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Community Hot'),
       240,
-      scrollable: find.byType(Scrollable),
+      scrollable: _mainScrollable(),
     );
     expect(find.text('Community Hot'), findsOneWidget);
     expect(find.text('Draft talk'), findsOneWidget);
@@ -89,10 +155,10 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Latest Updates'),
       240,
-      scrollable: find.byType(Scrollable),
+      scrollable: _mainScrollable(),
     );
     expect(find.text('Latest Updates'), findsOneWidget);
-    expect(find.text('Patch 1.2'), findsOneWidget);
+    expect(find.text('Patch 1.2'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('home screen exposes hokx portal tool and topic entry points', (
@@ -111,7 +177,7 @@ void main() {
 
     expect(find.text('View Core Stats'), findsOneWidget);
     expect(find.text('Enter Tier List'), findsOneWidget);
-    expect(find.text('BP Simulator'), findsOneWidget);
+    expect(find.text('BP Simulator'), findsAtLeastNWidgets(1));
     expect(find.text('Tier Editor'), findsOneWidget);
     expect(find.text('AI Prompts'), findsOneWidget);
     expect(find.text('Team Builder'), findsOneWidget);
@@ -122,7 +188,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('HOK World'),
       240,
-      scrollable: find.byType(Scrollable),
+      scrollable: _mainScrollable(),
     );
     expect(find.text('HOK World'), findsOneWidget);
     expect(find.text('Enter HOK World Topic'), findsOneWidget);
@@ -154,7 +220,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('statistic_17'),
       240,
-      scrollable: find.byType(Scrollable),
+      scrollable: _mainScrollable(),
     );
     expect(find.text('statistic_17'), findsOneWidget);
   });

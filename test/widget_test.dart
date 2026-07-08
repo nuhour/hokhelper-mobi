@@ -27,11 +27,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Home'), findsAtLeastNWidgets(1));
-    expect(find.text('Heroes'), findsOneWidget);
-    expect(find.text('Content'), findsOneWidget);
-    expect(find.text('Tools'), findsOneWidget);
-    expect(find.text('Me'), findsOneWidget);
+    expect(find.text('首页'), findsAtLeastNWidgets(1));
+    expect(find.text('统计'), findsOneWidget);
+    expect(find.text('社区'), findsOneWidget);
+    expect(find.text('工具'), findsOneWidget);
+    expect(find.text('我的'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 }

@@ -8,44 +8,73 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+
     return Scaffold(
       body: SafeArea(child: navigationShell),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
+        selectedIndex: _selectedIndex(location),
         onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
+          context.go(_destinationRoute(index));
         },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            label: '首页',
           ),
           NavigationDestination(
-            icon: Icon(Icons.shield_outlined),
-            selectedIcon: Icon(Icons.shield),
-            label: 'Heroes',
+            icon: Icon(Icons.query_stats_outlined),
+            selectedIcon: Icon(Icons.query_stats),
+            label: '统计',
           ),
           NavigationDestination(
-            icon: Icon(Icons.collections_outlined),
-            selectedIcon: Icon(Icons.collections),
-            label: 'Content',
+            icon: Icon(Icons.forum_outlined),
+            selectedIcon: Icon(Icons.forum),
+            label: '社区',
           ),
           NavigationDestination(
             icon: Icon(Icons.auto_awesome_outlined),
             selectedIcon: Icon(Icons.auto_awesome),
-            label: 'Tools',
+            label: '工具',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
-            label: 'Me',
+            label: '我的',
           ),
         ],
       ),
     );
+  }
+
+  int _selectedIndex(String location) {
+    if (location == '/me') {
+      return 4;
+    }
+    if (location == '/tools') {
+      return 3;
+    }
+    if (location.startsWith('/tools/') &&
+        !location.startsWith('/tools/stats')) {
+      return 3;
+    }
+    if (location.startsWith('/content/community')) {
+      return 2;
+    }
+    if (location.startsWith('/tools/stats')) {
+      return 1;
+    }
+    return 0;
+  }
+
+  String _destinationRoute(int index) {
+    return switch (index) {
+      1 => '/tools/stats',
+      2 => '/content/community',
+      3 => '/tools',
+      4 => '/me',
+      _ => '/',
+    };
   }
 }

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
-import '../../../core/widgets/app_section_header.dart';
 import '../data/home_repository.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
@@ -29,29 +28,20 @@ class HomeScreen extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
-          const AppSectionHeader(title: 'HOK Helper'),
-          const SizedBox(height: 12),
-          Text(
-            'Mobile companion for heroes, builds, content, tools, and your account.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
-          ),
-          const SizedBox(height: 18),
-          const _SearchEntryCard(),
-          const SizedBox(height: 18),
-          const _HomePrimaryActions(),
-          const SizedBox(height: 18),
-          const _HomeToolGrid(),
-          const SizedBox(height: 18),
-          const _HokWorldEntryCard(),
-          const SizedBox(height: 24),
           AppAsyncView<HomeStats>(
             value: statsValue,
             retry: () => ref.invalidate(homeStatsProvider),
             data: (stats) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _HomePortalFramework(result: stats.result),
+                const SizedBox(height: 18),
+                const _HomePrimaryActions(),
+                const SizedBox(height: 18),
+                const _HomeToolGrid(),
+                const SizedBox(height: 18),
+                const _HokWorldEntryCard(),
+                const SizedBox(height: 24),
                 _HomePortalPreviews(result: stats.result),
                 if (_hasHomePortalPreviews(stats.result))
                   const SizedBox(height: 18),
@@ -60,6 +50,484 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HomePortalFramework extends StatelessWidget {
+  const _HomePortalFramework({required this.result});
+
+  final Map<String, dynamic> result;
+
+  @override
+  Widget build(BuildContext context) {
+    final heroRows = _readList(_readMap(result['hero_ranking_table'])['rows']);
+    final patchNotes = _readList(result['patch_notes']);
+    final trendingHero = heroRows.isNotEmpty
+        ? heroRows.first
+        : const <String, dynamic>{};
+    final latestPatch = patchNotes.isNotEmpty
+        ? patchNotes.first
+        : const <String, dynamic>{};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _HomePortalTopBar(),
+        const SizedBox(height: 18),
+        const _HomeHeroBanner(),
+        const SizedBox(height: 18),
+        _HomeBentoGrid(trendingHero: trendingHero, latestPatch: latestPatch),
+      ],
+    );
+  }
+}
+
+class _HomePortalTopBar extends StatelessWidget {
+  const _HomePortalTopBar();
+
+  static const _entries = [
+    _TopNavEntry('电竞', '/tools/esports'),
+    _TopNavEntry('皮肤', '/content/skins'),
+    _TopNavEntry('英雄', '/heroes'),
+    _TopNavEntry('首页', '/'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _RoundIconButton(
+          icon: Icons.menu_rounded,
+          onTap: () => context.go('/content'),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final entry in _entries) ...[
+                  _PortalNavPill(entry: entry),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        _RoundIconButton(
+          icon: Icons.search_rounded,
+          onTap: () => context.go('/search'),
+        ),
+      ],
+    );
+  }
+}
+
+class _TopNavEntry {
+  const _TopNavEntry(this.label, this.route);
+
+  final String label;
+  final String route;
+}
+
+class _PortalNavPill extends StatelessWidget {
+  const _PortalNavPill({required this.entry});
+
+  final _TopNavEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final isHome = entry.route == '/';
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => context.go(entry.route),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: isHome ? AppTheme.gold : AppTheme.panel,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Text(
+            entry.label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: isHome ? AppTheme.bg : AppTheme.text,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  const _RoundIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Ink(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Icon(icon, color: AppTheme.text, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeroBanner extends StatelessWidget {
+  const _HomeHeroBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.22)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dominate the Rift',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Master every matchup with heroes, skins, esports, tools, and live strategy updates.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+            ),
+            const SizedBox(height: 18),
+            const _HeroSearchBar(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroSearchBar extends StatelessWidget {
+  const _HeroSearchBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go('/search'),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panelAlt,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              const Icon(Icons.search_rounded, color: AppTheme.gold, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Search heroes, items, guides...',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeBentoGrid extends StatelessWidget {
+  const _HomeBentoGrid({required this.trendingHero, required this.latestPatch});
+
+  final Map<String, dynamic> trendingHero;
+  final Map<String, dynamic> latestPatch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _TrendingHeroCard(row: trendingHero),
+        const SizedBox(height: 10),
+        Row(
+          children: const [
+            Expanded(
+              child: _BentoShortcutCard(
+                title: 'BP Simulator',
+                route: '/tools/bp-simulator',
+                icon: Icons.sports_esports_outlined,
+              ),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: _BentoShortcutCard(
+                title: 'Tier List',
+                route: '/tier-list',
+                icon: Icons.leaderboard_outlined,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _LatestPatchCard(row: latestPatch),
+      ],
+    );
+  }
+}
+
+class _TrendingHeroCard extends StatelessWidget {
+  const _TrendingHeroCard({required this.row});
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _readHeroName(row, fallback: 'Featured Hero');
+    final role = _readHeroRole(row);
+    final winRate = _readRateDetail(row);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => context.go('/tools/stats?entry=home_core'),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppTheme.panelAlt,
+                  child: Icon(
+                    Icons.shield_outlined,
+                    color: AppTheme.gold,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Trending Heroes',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppTheme.gold,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (role.isNotEmpty || winRate.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          [
+                            role,
+                            winRate,
+                          ].where((item) => item.isNotEmpty).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'View All',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppTheme.gold,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BentoShortcutCard extends StatelessWidget {
+  const _BentoShortcutCard({
+    required this.title,
+    required this.route,
+    required this.icon,
+  });
+
+  final String title;
+  final String route;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => context.go(route),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: AppTheme.gold, size: 24),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LatestPatchCard extends StatelessWidget {
+  const _LatestPatchCard({required this.row});
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = _readString(row['title'], fallback: 'Latest balance update');
+    final summary = _readString(
+      row['content_preview'] ?? row['summary'],
+      fallback: 'Track the newest hero, item, and battlefield changes.',
+    );
+    final version = _readPatchVersion(row);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          context.go(_patchNoteRoute(row['id']) ?? '/content/patch-notes');
+        },
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Latest Patch',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppTheme.gold,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (version.isNotEmpty)
+                      Text(
+                        version,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: AppTheme.muted,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  summary,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Read Notes',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppTheme.gold,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -600,61 +1068,6 @@ class _HokWorldEntryCard extends StatelessWidget {
   }
 }
 
-class _SearchEntryCard extends StatelessWidget {
-  const _SearchEntryCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go('/search'),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Icon(Icons.manage_search_outlined, color: AppTheme.gold),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Global Search',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: AppTheme.text,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Find heroes, builds, guides, and community content.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: AppTheme.gold),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _BackendSummary extends StatelessWidget {
   const _BackendSummary({required this.stats});
 
@@ -826,6 +1239,23 @@ String _readHeroName(Map<String, dynamic> row, {required String fallback}) {
     hero['name'] ?? row['name'] ?? row['hero_name'],
     fallback: fallback,
   );
+}
+
+String _readHeroRole(Map<String, dynamic> row) {
+  final hero = _readMap(row['hero']);
+  return _readString(
+    hero['main_job'] ??
+        hero['role'] ??
+        hero['lane'] ??
+        row['main_job'] ??
+        row['role'] ??
+        row['lane'],
+  );
+}
+
+String _readPatchVersion(Map<String, dynamic> row) {
+  final version = _readString(row['version'] ?? row['patch_version']);
+  return version.isEmpty ? '' : 'v$version';
 }
 
 String _readRateDetail(Map<String, dynamic> row) {
