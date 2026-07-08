@@ -831,6 +831,18 @@ GoRouter createAppRouter() {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/stats-home',
+                builder: (context, state) => StatsScreen(
+                  showPortalTabs: state.uri.queryParameters.isEmpty,
+                  initialEntry: StatsEntry.fromRoute(
+                    state.uri.queryParameters['entry'],
+                    dimension: state.uri.queryParameters['dimension'],
+                  ),
+                  initialEquipId: state.uri.queryParameters['equip_id'],
+                  initialHeroId: state.uri.queryParameters['hero_id'],
+                ),
+              ),
+              GoRoute(
                 path: '/heroes',
                 builder: (context, state) => HeroGalleryScreen(
                   initialSearchQuery: state.uri.queryParameters['q'],

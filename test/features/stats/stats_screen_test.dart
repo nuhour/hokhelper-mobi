@@ -10,6 +10,40 @@ import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_sc
 import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
 
 void main() {
+  testWidgets(
+    'bottom stats tab opens the main stats page without back button',
+    (tester) async {
+      final router = createAppRouter();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            heroRankingProvider.overrideWith((ref) async => const []),
+            playerRankingProvider.overrideWith((ref) async => const []),
+            equipRankingProvider.overrideWith((ref) async => const []),
+            tierRankingProvider.overrideWith((ref) async => const []),
+            statsDashboardProvider.overrideWith(
+              (ref, entry) async => const StatsDashboard(),
+            ),
+            heroTrendsProvider.overrideWith((ref) async => const []),
+          ],
+          child: HokHelperApp(router: router),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.text('统计'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(router.routeInformationProvider.value.uri.path, '/stats-home');
+      expect(
+        find.byKey(const ValueKey('standalone-back-button')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('stats-top-tab-strip')), findsOneWidget);
+    },
+  );
+
   testWidgets('stats route opens top tabs and defaults to trends', (
     tester,
   ) async {

@@ -62,6 +62,9 @@ class AppShell extends StatelessWidget {
     if (location.startsWith('/content/community')) {
       return 2;
     }
+    if (location.startsWith('/stats-home')) {
+      return 1;
+    }
     if (location.startsWith('/tools/stats')) {
       return 1;
     }
@@ -70,7 +73,7 @@ class AppShell extends StatelessWidget {
 
   String _destinationRoute(int index) {
     return switch (index) {
-      1 => '/tools/stats',
+      1 => '/stats-home',
       2 => '/content/community',
       3 => '/tools',
       4 => '/me',
