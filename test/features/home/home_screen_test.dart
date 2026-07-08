@@ -2,6 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
+import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_stat_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
+import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
+import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/home/data/home_repository.dart';
 import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dart';
 
@@ -12,11 +21,22 @@ Widget _buildHomeScreen(HomeStats stats) {
   );
 }
 
-Finder _mainScrollable() {
-  return find.byWidgetPredicate(
-    (widget) =>
-        widget is Scrollable && widget.axisDirection == AxisDirection.down,
-  );
+Future<void> _scrollHomeUntilVisible(
+  WidgetTester tester,
+  Finder finder, {
+  double delta = 260,
+  int maxScrolls = 16,
+}) async {
+  for (var attempt = 0; attempt < maxScrolls; attempt++) {
+    if (tester.any(finder)) {
+      return;
+    }
+    await tester.drag(
+      find.byKey(const ValueKey('home-main-scroll-view')),
+      Offset(0, -delta),
+    );
+    await tester.pumpAndSettle();
+  }
 }
 
 Finder _portalMenuScrollable() {
@@ -67,11 +87,7 @@ void main() {
     expect(find.text('Dominate the Rift'), findsOneWidget);
     expect(find.text('Search heroes, items, guides...'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Trending Heroes'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('Trending Heroes'));
     expect(find.text('Trending Heroes'), findsOneWidget);
     expect(find.text('Angela'), findsAtLeastNWidgets(1));
     expect(find.text('View All'), findsOneWidget);
@@ -79,17 +95,13 @@ void main() {
     expect(find.text('BP Simulator'), findsAtLeastNWidgets(1));
     expect(find.text('Tier List'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Latest Patch'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('Latest Patch'));
     expect(find.text('Latest Patch'), findsOneWidget);
     expect(find.text('Patch 1.2'), findsAtLeastNWidgets(1));
     expect(find.text('Read Notes'), findsOneWidget);
   });
 
-  testWidgets('home top tabs are centered and open primary pages directly', (
+  testWidgets('home top tabs are centered and switch pages in place', (
     tester,
   ) async {
     final router = GoRouter(
@@ -110,6 +122,10 @@ void main() {
           path: '/esports/schedule',
           builder: (context, state) => const SizedBox.shrink(),
         ),
+        GoRoute(
+          path: '/search',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
       ],
     );
 
@@ -123,6 +139,57 @@ void main() {
               result: {},
             );
           }),
+          heroGalleryProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '1',
+                name: 'Angela',
+                avatar: '',
+                title: 'Arcane Mage',
+              ),
+            ];
+          }),
+          skinGalleryProvider.overrideWith((ref) async {
+            return const [
+              ContentItemSummary(
+                id: 1,
+                kind: ContentKind.skin,
+                title: 'Starlight',
+                heroName: 'Angela',
+                imageUrl: '',
+                subtitle: 'Epic',
+                rating: 4.8,
+                ratingCount: 12,
+                viewCount: 99,
+              ),
+            ];
+          }),
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: 'm1',
+                leagueName: 'KPL',
+                stageName: 'Playoffs',
+                teamAName: 'Team A',
+                teamALogoUrl: '',
+                teamBName: 'Team B',
+                teamBLogoUrl: '',
+                scoreA: 1,
+                scoreB: 0,
+                statusKey: 'live',
+                startTime: '2026-07-08T12:00:00Z',
+              ),
+            ];
+          }),
+          esportsStatsProvider.overrideWith(
+            (ref) async => const <EsportsStatSummary>[],
+          ),
+          esportsTeamsProvider.overrideWith(
+            (ref) async => const <EsportsTeamSummary>[],
+          ),
+          esportsPlayersProvider.overrideWith(
+            (ref) async => const <EsportsPlayerSummary>[],
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -138,19 +205,36 @@ void main() {
 
     await tester.tap(find.text('英雄'));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/heroes');
+    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(find.text('Heroes'), findsOneWidget);
+    expect(find.text('Angela'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('home-top-tab-indicator-2')),
+      findsOneWidget,
+    );
 
-    router.go('/');
+    await tester.drag(
+      find.byKey(const ValueKey('home-tab-page-view')),
+      const Offset(500, 0),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('皮肤'));
-    await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/content/skins');
+    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(find.text('Skin Gallery'), findsOneWidget);
+    expect(find.text('Starlight'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('home-top-tab-indicator-1')),
+      findsOneWidget,
+    );
 
-    router.go('/');
-    await tester.pumpAndSettle();
     await tester.tap(find.text('电竞'));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/esports/schedule');
+    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('Matches'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('home-top-tab-indicator-0')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('home menu lists filtered hokx portal menu groups', (
@@ -251,43 +335,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Hero Rankings'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('Hero Rankings'));
     expect(find.text('Hero Rankings'), findsOneWidget);
     expect(find.text('Angela'), findsAtLeastNWidgets(1));
 
-    await tester.scrollUntilVisible(
-      find.text('Tier List Preview'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('Tier List Preview'));
     expect(find.text('Tier List Preview'), findsOneWidget);
     expect(find.text('Dolia'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Leaderboard'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('Leaderboard'));
     expect(find.text('Leaderboard'), findsOneWidget);
     expect(find.text('Top Player'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Community Hot'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('Community Hot'));
     expect(find.text('Community Hot'), findsOneWidget);
     expect(find.text('Draft talk'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Latest Updates'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('Latest Updates'));
     expect(find.text('Latest Updates'), findsOneWidget);
     expect(find.text('Patch 1.2'), findsAtLeastNWidgets(1));
   });
@@ -316,11 +380,7 @@ void main() {
     expect(find.text('Rank Fortune'), findsOneWidget);
     expect(find.text('Event Assistance'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('HOK World'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('HOK World'));
     expect(find.text('HOK World'), findsOneWidget);
     expect(find.text('Enter HOK World Topic'), findsOneWidget);
   });
@@ -348,11 +408,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    await tester.scrollUntilVisible(
-      find.text('statistic_17'),
-      240,
-      scrollable: _mainScrollable(),
-    );
+    await _scrollHomeUntilVisible(tester, find.text('statistic_17'));
     expect(find.text('statistic_17'), findsOneWidget);
   });
 }

@@ -67,11 +67,13 @@ class EsportsScreen extends ConsumerWidget {
     this.initialTab = EsportsInitialTab.matches,
     this.initialTeamId,
     this.initialPlayerId,
+    this.syncRouteOnTabTap = true,
   });
 
   final EsportsInitialTab initialTab;
   final String? initialTeamId;
   final String? initialPlayerId;
+  final bool syncRouteOnTabTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -109,7 +111,9 @@ class EsportsScreen extends ConsumerWidget {
                           dividerColor: Colors.transparent,
                           labelColor: AppTheme.gold,
                           unselectedLabelColor: AppTheme.muted,
-                          onTap: (index) => _syncRouteWithTab(context, index),
+                          onTap: syncRouteOnTabTap
+                              ? (index) => _syncRouteWithTab(context, index)
+                              : null,
                           tabs: [
                             Tab(text: 'Matches'),
                             Tab(text: 'Stats'),

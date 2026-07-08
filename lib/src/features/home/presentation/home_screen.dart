@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../content/presentation/skin_gallery_screen.dart';
+import '../../esports/presentation/esports_screen.dart';
+import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../data/home_repository.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
@@ -25,6 +28,7 @@ class HomeScreen extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => ref.refresh(homeStatsProvider.future),
       child: ListView(
+        key: const ValueKey('home-main-scroll-view'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
@@ -55,44 +59,110 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _HomePortalFramework extends StatelessWidget {
+class _HomePortalFramework extends StatefulWidget {
   const _HomePortalFramework({required this.result});
 
   final Map<String, dynamic> result;
 
   @override
+  State<_HomePortalFramework> createState() => _HomePortalFrameworkState();
+}
+
+class _HomePortalFrameworkState extends State<_HomePortalFramework> {
+  late final PageController _pageController;
+  int _selectedPage = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _selectPage(int index) {
+    if (_selectedPage != index) {
+      setState(() {
+        _selectedPage = index;
+      });
+    }
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final heroRows = _readList(_readMap(result['hero_ranking_table'])['rows']);
-    final patchNotes = _readList(result['patch_notes']);
+    final heroRows = _readList(
+      _readMap(widget.result['hero_ranking_table'])['rows'],
+    );
+    final patchNotes = _readList(widget.result['patch_notes']);
     final trendingHero = heroRows.isNotEmpty
         ? heroRows.first
         : const <String, dynamic>{};
     final latestPatch = patchNotes.isNotEmpty
         ? patchNotes.first
         : const <String, dynamic>{};
+    final pageHeight = (MediaQuery.sizeOf(context).height - 96).clamp(
+      620.0,
+      980.0,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _HomePortalTopBar(),
+        _HomePortalTopBar(
+          selectedIndex: _selectedPage,
+          onSelected: _selectPage,
+        ),
         const SizedBox(height: 18),
-        const _HomeHeroBanner(),
-        const SizedBox(height: 18),
-        _HomeBentoGrid(trendingHero: trendingHero, latestPatch: latestPatch),
+        SizedBox(
+          key: const ValueKey('home-tab-page-view'),
+          height: pageHeight,
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _selectedPage = index;
+              });
+            },
+            children: [
+              const EsportsScreen(syncRouteOnTabTap: false),
+              const SkinGalleryScreen(),
+              const HeroGalleryScreen(),
+              _HomeLandingTab(
+                trendingHero: trendingHero,
+                latestPatch: latestPatch,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
 class _HomePortalTopBar extends StatelessWidget {
-  const _HomePortalTopBar();
+  const _HomePortalTopBar({
+    required this.selectedIndex,
+    required this.onSelected,
+  });
 
   static const _entries = [
-    _TopNavEntry('电竞', '/esports/schedule'),
-    _TopNavEntry('皮肤', '/content/skins'),
-    _TopNavEntry('英雄', '/heroes'),
-    _TopNavEntry('首页', null),
+    _TopNavEntry('电竞'),
+    _TopNavEntry('皮肤'),
+    _TopNavEntry('英雄'),
+    _TopNavEntry('首页'),
   ];
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -115,13 +185,8 @@ class _HomePortalTopBar extends StatelessWidget {
                     _PortalNavPill(
                       index: index,
                       entry: _entries[index],
-                      selected: _entries[index].route == null,
-                      onTap: () {
-                        final route = _entries[index].route;
-                        if (route != null) {
-                          context.go(route);
-                        }
-                      },
+                      selected: index == selectedIndex,
+                      onTap: () => onSelected(index),
                     ),
                     if (index != _entries.length - 1) const SizedBox(width: 18),
                   ],
@@ -135,6 +200,29 @@ class _HomePortalTopBar extends StatelessWidget {
           icon: Icons.search_rounded,
           onTap: () => context.go('/search'),
         ),
+      ],
+    );
+  }
+}
+
+class _HomeLandingTab extends StatelessWidget {
+  const _HomeLandingTab({
+    required this.trendingHero,
+    required this.latestPatch,
+  });
+
+  final Map<String, dynamic> trendingHero;
+  final Map<String, dynamic> latestPatch;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.zero,
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const _HomeHeroBanner(),
+        const SizedBox(height: 18),
+        _HomeBentoGrid(trendingHero: trendingHero, latestPatch: latestPatch),
       ],
     );
   }
@@ -348,10 +436,9 @@ class _PortalMenuChip extends StatelessWidget {
 }
 
 class _TopNavEntry {
-  const _TopNavEntry(this.label, this.route);
+  const _TopNavEntry(this.label);
 
   final String label;
-  final String? route;
 }
 
 class _PortalNavPill extends StatelessWidget {
