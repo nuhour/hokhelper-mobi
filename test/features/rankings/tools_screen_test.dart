@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
@@ -177,6 +179,64 @@ List<Override> _toolOverrides({
 }
 
 void main() {
+  testWidgets('standalone tool pages expose button and system back', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _toolOverrides(
+          bpSchemes: (ref) async {
+            return const [
+              BpSchemeSummary(
+                id: '12',
+                name: 'KPL Finals Draft',
+                createdAt: '2026-07-03T10:00:00Z',
+                boMode: 7,
+                teamAName: 'Wolves',
+                teamBName: 'AG',
+                sideSelectionRule: 'loser_selects',
+                gameNumber: 3,
+                historyCount: 2,
+                currentStepIndex: 4,
+                blueBanCount: 1,
+                redBanCount: 1,
+                bluePickCount: 1,
+                redPickCount: 1,
+              ),
+            ];
+          },
+        ),
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('BP Simulator'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/bp-simulator',
+    );
+    expect(
+      find.byKey(const ValueKey('standalone-back-button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('standalone-back-button')));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/tools');
+
+    await tester.tap(find.text('BP Simulator'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/tools');
+  });
+
   testWidgets('tools screen renders hokx style nine grid', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

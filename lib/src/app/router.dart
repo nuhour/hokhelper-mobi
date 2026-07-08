@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/activity/presentation/event_assistance_screen.dart';
@@ -43,6 +44,19 @@ import '../features/tierlist_tool/presentation/tierlist_tool_screen.dart';
 import '../features/topics/presentation/topic_article_screen.dart';
 import '../features/topics/presentation/topic_hub_screen.dart';
 import 'app_shell.dart';
+import 'standalone_page_shell.dart';
+
+Widget _standalonePage({
+  required String fallbackRoute,
+  required Widget child,
+  String? title,
+}) {
+  return StandalonePageShell(
+    fallbackRoute: fallbackRoute,
+    title: title,
+    child: child,
+  );
+}
 
 String _communityLeaksTarget(Uri uri) {
   final queryParameters = <String, String>{'tab': 'leaks'};
@@ -396,21 +410,33 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/me',
+          child: const SettingsScreen(),
+        ),
       ),
       GoRoute(
         path: '/search',
-        builder: (context, state) =>
-            SearchScreen(initialQuery: state.uri.queryParameters['q']),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/',
+          child: SearchScreen(initialQuery: state.uri.queryParameters['q']),
+        ),
       ),
       GoRoute(
         path: '/notifications',
-        builder: (context, state) => const NotificationsScreen(),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/me',
+          child: const NotificationsScreen(),
+        ),
       ),
       GoRoute(
         path: '/external-link',
-        builder: (context, state) =>
-            ExternalLinkScreen(url: state.uri.queryParameters['url'] ?? ''),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/',
+          child: ExternalLinkScreen(
+            url: state.uri.queryParameters['url'] ?? '',
+          ),
+        ),
       ),
       GoRoute(
         path: '/profile',
@@ -419,10 +445,13 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/profile/:userId',
         builder: (context, state) {
-          return PublicProfileScreen(
-            userId: int.tryParse(state.pathParameters['userId'] ?? '') ?? 0,
-            initialFollowListType: profileFollowListTypeFromRoute(
-              state.uri.queryParameters['tab'],
+          return _standalonePage(
+            fallbackRoute: '/me',
+            child: PublicProfileScreen(
+              userId: int.tryParse(state.pathParameters['userId'] ?? '') ?? 0,
+              initialFollowListType: profileFollowListTypeFromRoute(
+                state.uri.queryParameters['tab'],
+              ),
             ),
           );
         },
@@ -430,8 +459,11 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/community/post/:postId',
         builder: (context, state) {
-          return CommunityPostDetailScreen(
-            postId: state.pathParameters['postId'] ?? '',
+          return _standalonePage(
+            fallbackRoute: '/content/community',
+            child: CommunityPostDetailScreen(
+              postId: state.pathParameters['postId'] ?? '',
+            ),
           );
         },
       ),
@@ -496,8 +528,10 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/tier-list',
-        builder: (context, state) =>
-            const HeroRankingScreen(initialTabIndex: 3),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/tools/stats',
+          child: const HeroRankingScreen(initialTabIndex: 3),
+        ),
       ),
       GoRoute(
         path: '/builds',
@@ -558,22 +592,28 @@ GoRouter createAppRouter() {
           }
           return null;
         },
-        builder: (context, state) => SkinGalleryScreen(
-          initialMinRating: _initialMinRating(state.uri),
-          initialLanePosition: _initialLanePosition(state.uri),
-          initialSearchQuery: state.uri.queryParameters['q'],
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/content',
+          child: SkinGalleryScreen(
+            initialMinRating: _initialMinRating(state.uri),
+            initialLanePosition: _initialLanePosition(state.uri),
+            initialSearchQuery: state.uri.queryParameters['q'],
+          ),
         ),
         routes: [
           GoRoute(
             path: ':skinId',
             builder: (context, state) {
-              return SkinGalleryScreen(
-                initialSkinId: int.tryParse(
-                  state.pathParameters['skinId'] ?? '',
+              return _standalonePage(
+                fallbackRoute: '/skin-gallery',
+                child: SkinGalleryScreen(
+                  initialSkinId: int.tryParse(
+                    state.pathParameters['skinId'] ?? '',
+                  ),
+                  initialMinRating: _initialMinRating(state.uri),
+                  initialLanePosition: _initialLanePosition(state.uri),
+                  initialSearchQuery: state.uri.queryParameters['q'],
                 ),
-                initialMinRating: _initialMinRating(state.uri),
-                initialLanePosition: _initialLanePosition(state.uri),
-                initialSearchQuery: state.uri.queryParameters['q'],
               );
             },
           ),
@@ -582,22 +622,28 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/cg',
         redirect: (context, state) => _cgGalleryRedirect(state.uri),
-        builder: (context, state) => CgGalleryScreen(
-          initialHeroId: int.tryParse(
-            state.uri.queryParameters['hero_id'] ?? '',
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/content',
+          child: CgGalleryScreen(
+            initialHeroId: int.tryParse(
+              state.uri.queryParameters['hero_id'] ?? '',
+            ),
+            initialSearchQuery: state.uri.queryParameters['q'],
           ),
-          initialSearchQuery: state.uri.queryParameters['q'],
         ),
         routes: [
           GoRoute(
             path: ':cgId',
             builder: (context, state) {
-              return CgGalleryScreen(
-                initialCgId: int.tryParse(state.pathParameters['cgId'] ?? ''),
-                initialHeroId: int.tryParse(
-                  state.uri.queryParameters['hero_id'] ?? '',
+              return _standalonePage(
+                fallbackRoute: '/cg',
+                child: CgGalleryScreen(
+                  initialCgId: int.tryParse(state.pathParameters['cgId'] ?? ''),
+                  initialHeroId: int.tryParse(
+                    state.uri.queryParameters['hero_id'] ?? '',
+                  ),
+                  initialSearchQuery: state.uri.queryParameters['q'],
                 ),
-                initialSearchQuery: state.uri.queryParameters['q'],
               );
             },
           ),
@@ -605,62 +651,87 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/relationships',
-        builder: (context, state) => HeroRelationshipsScreen(
-          initialHeroId: state.uri.queryParameters['hero_id'],
-          initialHeroName:
-              state.uri.queryParameters['hero'] ??
-              state.uri.queryParameters['hero_name'],
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/heroes',
+          child: HeroRelationshipsScreen(
+            initialHeroId: state.uri.queryParameters['hero_id'],
+            initialHeroName:
+                state.uri.queryParameters['hero'] ??
+                state.uri.queryParameters['hero_name'],
+          ),
         ),
       ),
       GoRoute(
         path: '/world-map',
-        builder: (context, state) =>
-            WorldMapScreen(initialHeroId: state.uri.queryParameters['hero_id']),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/heroes',
+          child: WorldMapScreen(
+            initialHeroId: state.uri.queryParameters['hero_id'],
+          ),
+        ),
       ),
       GoRoute(
         path: '/trends',
-        builder: (context, state) => HeroTrendsScreen(
-          initialHeroId: int.tryParse(
-            state.uri.queryParameters['hero_id'] ?? '',
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/tools/stats',
+          child: HeroTrendsScreen(
+            initialHeroId: int.tryParse(
+              state.uri.queryParameters['hero_id'] ?? '',
+            ),
           ),
         ),
       ),
       GoRoute(
         path: '/leaderboard',
-        builder: (context, state) => PlayerLeaderboardScreen(
-          initialRankType: _playerLeaderboardRankType(state.uri),
-          initialRegionId: _playerLeaderboardRegionId(state.uri),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/tools/stats',
+          child: PlayerLeaderboardScreen(
+            initialRankType: _playerLeaderboardRankType(state.uri),
+            initialRegionId: _playerLeaderboardRegionId(state.uri),
+          ),
         ),
       ),
       GoRoute(
         path: '/esports',
         redirect: (context, state) => _esportsTarget(state.uri, '/esports'),
-        builder: (context, state) => const EsportsScreen(),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/tools',
+          child: const EsportsScreen(),
+        ),
         routes: [
           GoRoute(
             path: 'teams/:teamId',
             builder: (context, state) {
-              return EsportsScreen(
-                initialTab: EsportsInitialTab.teams,
-                initialTeamId: state.pathParameters['teamId'],
+              return _standalonePage(
+                fallbackRoute: '/esports',
+                child: EsportsScreen(
+                  initialTab: EsportsInitialTab.teams,
+                  initialTeamId: state.pathParameters['teamId'],
+                ),
               );
             },
           ),
           GoRoute(
             path: 'players/:playerId',
             builder: (context, state) {
-              return EsportsScreen(
-                initialTab: EsportsInitialTab.players,
-                initialPlayerId: state.pathParameters['playerId'],
+              return _standalonePage(
+                fallbackRoute: '/esports',
+                child: EsportsScreen(
+                  initialTab: EsportsInitialTab.players,
+                  initialPlayerId: state.pathParameters['playerId'],
+                ),
               );
             },
           ),
           GoRoute(
             path: ':tab',
             builder: (context, state) {
-              return EsportsScreen(
-                initialTab: esportsInitialTabFromRoute(
-                  state.pathParameters['tab'],
+              return _standalonePage(
+                fallbackRoute: '/esports',
+                child: EsportsScreen(
+                  initialTab: esportsInitialTabFromRoute(
+                    state.pathParameters['tab'],
+                  ),
                 ),
               );
             },
@@ -768,12 +839,15 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: ':heroId',
                     builder: (context, state) {
-                      return HeroDetailScreen(
-                        heroId: state.pathParameters['heroId'] ?? '',
-                        focusHistory:
-                            state.uri.queryParameters['tab'] == 'history',
-                        initialFocus: heroDetailFocusFromRoute(
-                          state.uri.queryParameters['tab'],
+                      return _standalonePage(
+                        fallbackRoute: '/heroes',
+                        child: HeroDetailScreen(
+                          heroId: state.pathParameters['heroId'] ?? '',
+                          focusHistory:
+                              state.uri.queryParameters['tab'] == 'history',
+                          initialFocus: heroDetailFocusFromRoute(
+                            state.uri.queryParameters['tab'],
+                          ),
                         ),
                       );
                     },
@@ -817,8 +891,11 @@ GoRouter createAppRouter() {
                       GoRoute(
                         path: 'post/:postId',
                         builder: (context, state) {
-                          return CommunityPostDetailScreen(
-                            postId: state.pathParameters['postId'] ?? '',
+                          return _standalonePage(
+                            fallbackRoute: '/content/community',
+                            child: CommunityPostDetailScreen(
+                              postId: state.pathParameters['postId'] ?? '',
+                            ),
                           );
                         },
                       ),
@@ -826,37 +903,52 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'event-assistance',
-                    builder: (context, state) => EventAssistanceScreen(
-                      initialShareText: state.uri.queryParameters['text'],
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/content/community?tab=event',
+                      child: EventAssistanceScreen(
+                        initialShareText: state.uri.queryParameters['text'],
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'skins',
-                    builder: (context, state) => SkinGalleryScreen(
-                      initialMinRating: _initialMinRating(state.uri),
-                      initialLanePosition: _initialLanePosition(state.uri),
-                      initialSearchQuery: state.uri.queryParameters['q'],
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/content',
+                      child: SkinGalleryScreen(
+                        initialMinRating: _initialMinRating(state.uri),
+                        initialLanePosition: _initialLanePosition(state.uri),
+                        initialSearchQuery: state.uri.queryParameters['q'],
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'cgs',
-                    builder: (context, state) => CgGalleryScreen(
-                      initialSearchQuery: state.uri.queryParameters['q'],
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/content',
+                      child: CgGalleryScreen(
+                        initialSearchQuery: state.uri.queryParameters['q'],
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'patch-notes',
-                    builder: (context, state) => PatchNotesScreen(
-                      initialNoteId: int.tryParse(
-                        state.uri.queryParameters['note_id'] ??
-                            state.uri.queryParameters['post_id'] ??
-                            '',
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/content',
+                      child: PatchNotesScreen(
+                        initialNoteId: int.tryParse(
+                          state.uri.queryParameters['note_id'] ??
+                              state.uri.queryParameters['post_id'] ??
+                              '',
+                        ),
                       ),
                     ),
                   ),
                   GoRoute(
                     path: 'info',
-                    builder: (context, state) => const InfoCenterScreen(),
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/content',
+                      child: const InfoCenterScreen(),
+                    ),
                   ),
                 ],
               ),
@@ -870,9 +962,12 @@ GoRouter createAppRouter() {
                 routes: [
                   GoRoute(
                     path: 'builds',
-                    builder: (context, state) => BuildExplorerScreen(
-                      initialHeroId: int.tryParse(
-                        state.uri.queryParameters['hero_id'] ?? '',
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: BuildExplorerScreen(
+                        initialHeroId: int.tryParse(
+                          state.uri.queryParameters['hero_id'] ?? '',
+                        ),
                       ),
                     ),
                   ),
@@ -884,17 +979,20 @@ GoRouter createAppRouter() {
                       }
                       return null;
                     },
-                    builder: (context, state) => BuildSimulatorScreen(
-                      initialHeroId: int.tryParse(
-                        state.uri.queryParameters['hero_id'] ?? '',
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: BuildSimulatorScreen(
+                        initialHeroId: int.tryParse(
+                          state.uri.queryParameters['hero_id'] ?? '',
+                        ),
+                        initialSchemeId: int.tryParse(
+                          state.uri.queryParameters['scheme'] ?? '',
+                        ),
+                        initialCommunityFilter:
+                            state.uri.queryParameters['filter'] == 'favorites'
+                            ? BuildSimCommunityFilter.favorites
+                            : BuildSimCommunityFilter.explore,
                       ),
-                      initialSchemeId: int.tryParse(
-                        state.uri.queryParameters['scheme'] ?? '',
-                      ),
-                      initialCommunityFilter:
-                          state.uri.queryParameters['filter'] == 'favorites'
-                          ? BuildSimCommunityFilter.favorites
-                          : BuildSimCommunityFilter.explore,
                     ),
                   ),
                   GoRoute(
@@ -906,7 +1004,10 @@ GoRouter createAppRouter() {
                       }
                       return null;
                     },
-                    builder: (context, state) => const BpDashboardScreen(),
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: const BpDashboardScreen(),
+                    ),
                     routes: [
                       GoRoute(
                         path: ':schemeId',
@@ -919,10 +1020,13 @@ GoRouter createAppRouter() {
                           return null;
                         },
                         builder: (context, state) {
-                          return BpSchemeDetailScreen(
-                            schemeId: state.pathParameters['schemeId'] ?? '',
-                            initialGameIndex: int.tryParse(
-                              state.uri.queryParameters['gameIndex'] ?? '',
+                          return _standalonePage(
+                            fallbackRoute: '/tools/bp-simulator',
+                            child: BpSchemeDetailScreen(
+                              schemeId: state.pathParameters['schemeId'] ?? '',
+                              initialGameIndex: int.tryParse(
+                                state.uri.queryParameters['gameIndex'] ?? '',
+                              ),
                             ),
                           );
                         },
@@ -938,15 +1042,21 @@ GoRouter createAppRouter() {
                       }
                       return null;
                     },
-                    builder: (context, state) => const TierListToolScreen(),
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: const TierListToolScreen(),
+                    ),
                     routes: [
                       GoRoute(
                         path: ':schemeId',
                         builder: (context, state) {
-                          return TierListSchemeDetailScreen(
-                            schemeId: state.pathParameters['schemeId'] ?? '',
-                            initialEditMode:
-                                state.uri.queryParameters['mode'] == 'edit',
+                          return _standalonePage(
+                            fallbackRoute: '/tools/tier-list',
+                            child: TierListSchemeDetailScreen(
+                              schemeId: state.pathParameters['schemeId'] ?? '',
+                              initialEditMode:
+                                  state.uri.queryParameters['mode'] == 'edit',
+                            ),
                           );
                         },
                       ),
@@ -954,56 +1064,74 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'game-assistant',
-                    builder: (context, state) => GameAssistantScreen(
-                      initialTrack: state.uri.queryParameters['track'],
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: GameAssistantScreen(
+                        initialTrack: state.uri.queryParameters['track'],
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'rank-fortune',
-                    builder: (context, state) => RankFortuneScreen(
-                      initialDays: _rankFortuneDays(state.uri),
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: RankFortuneScreen(
+                        initialDays: _rankFortuneDays(state.uri),
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'curiosity-lab',
-                    builder: (context, state) => CuriosityLabScreen(
-                      initialQuestion: state.uri.queryParameters['q'],
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: CuriosityLabScreen(
+                        initialQuestion: state.uri.queryParameters['q'],
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'rankings',
-                    builder: (context, state) => HeroRankingScreen(
-                      initialTabIndex: _rankingsTabIndex(state.uri),
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: HeroRankingScreen(
+                        initialTabIndex: _rankingsTabIndex(state.uri),
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'leaderboard',
-                    builder: (context, state) => PlayerLeaderboardScreen(
-                      initialRankType: _playerLeaderboardRankType(state.uri),
-                      initialRegionId: _playerLeaderboardRegionId(state.uri),
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: PlayerLeaderboardScreen(
+                        initialRankType: _playerLeaderboardRankType(state.uri),
+                        initialRegionId: _playerLeaderboardRegionId(state.uri),
+                      ),
                     ),
                   ),
                   GoRoute(
                     path: 'team-builder',
-                    builder: (context, state) => TeamBuilderScreen(
-                      initialAllyHeroIds: _teamBuilderHeroIds(
-                        state.uri,
-                        'ally_ids',
-                        'ally_id',
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: TeamBuilderScreen(
+                        initialAllyHeroIds: _teamBuilderHeroIds(
+                          state.uri,
+                          'ally_ids',
+                          'ally_id',
+                        ),
+                        initialEnemyHeroIds: _teamBuilderHeroIds(
+                          state.uri,
+                          'enemy_ids',
+                          'enemy_id',
+                        ),
+                        initialBanHeroIds: _teamBuilderHeroIds(
+                          state.uri,
+                          'ban_ids',
+                          'ban_id',
+                        ),
+                        initialSlotType: _teamBuilderSlotType(state.uri),
+                        initialSide: _teamBuilderSide(state.uri),
+                        initialSlotIndex: _teamBuilderSlotIndex(state.uri),
                       ),
-                      initialEnemyHeroIds: _teamBuilderHeroIds(
-                        state.uri,
-                        'enemy_ids',
-                        'enemy_id',
-                      ),
-                      initialBanHeroIds: _teamBuilderHeroIds(
-                        state.uri,
-                        'ban_ids',
-                        'ban_id',
-                      ),
-                      initialSlotType: _teamBuilderSlotType(state.uri),
-                      initialSide: _teamBuilderSide(state.uri),
-                      initialSlotIndex: _teamBuilderSlotIndex(state.uri),
                     ),
                   ),
                   GoRoute(
@@ -1014,43 +1142,58 @@ GoRouter createAppRouter() {
                       }
                       return null;
                     },
-                    builder: (context, state) => PromptsScreen(
-                      initialAction: promptListActionFromRoute(
-                        state.uri.queryParameters['tab'],
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: PromptsScreen(
+                        initialAction: promptListActionFromRoute(
+                          state.uri.queryParameters['tab'],
+                        ),
+                        initialPromptId: state.uri.queryParameters['promptId'],
                       ),
-                      initialPromptId: state.uri.queryParameters['promptId'],
                     ),
                   ),
                   GoRoute(
                     path: 'esports',
                     redirect: (context, state) =>
                         _esportsTarget(state.uri, '/tools/esports'),
-                    builder: (context, state) => const EsportsScreen(),
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: const EsportsScreen(),
+                    ),
                     routes: [
                       GoRoute(
                         path: 'teams/:teamId',
                         builder: (context, state) {
-                          return EsportsScreen(
-                            initialTab: EsportsInitialTab.teams,
-                            initialTeamId: state.pathParameters['teamId'],
+                          return _standalonePage(
+                            fallbackRoute: '/tools/esports',
+                            child: EsportsScreen(
+                              initialTab: EsportsInitialTab.teams,
+                              initialTeamId: state.pathParameters['teamId'],
+                            ),
                           );
                         },
                       ),
                       GoRoute(
                         path: 'players/:playerId',
                         builder: (context, state) {
-                          return EsportsScreen(
-                            initialTab: EsportsInitialTab.players,
-                            initialPlayerId: state.pathParameters['playerId'],
+                          return _standalonePage(
+                            fallbackRoute: '/tools/esports',
+                            child: EsportsScreen(
+                              initialTab: EsportsInitialTab.players,
+                              initialPlayerId: state.pathParameters['playerId'],
+                            ),
                           );
                         },
                       ),
                       GoRoute(
                         path: ':tab',
                         builder: (context, state) {
-                          return EsportsScreen(
-                            initialTab: esportsInitialTabFromRoute(
-                              state.pathParameters['tab'],
+                          return _standalonePage(
+                            fallbackRoute: '/tools/esports',
+                            child: EsportsScreen(
+                              initialTab: esportsInitialTabFromRoute(
+                                state.pathParameters['tab'],
+                              ),
                             ),
                           );
                         },
@@ -1059,14 +1202,17 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'stats',
-                    builder: (context, state) => StatsScreen(
-                      showPortalTabs: state.uri.queryParameters.isEmpty,
-                      initialEntry: StatsEntry.fromRoute(
-                        state.uri.queryParameters['entry'],
-                        dimension: state.uri.queryParameters['dimension'],
+                    builder: (context, state) => _standalonePage(
+                      fallbackRoute: '/tools',
+                      child: StatsScreen(
+                        showPortalTabs: state.uri.queryParameters.isEmpty,
+                        initialEntry: StatsEntry.fromRoute(
+                          state.uri.queryParameters['entry'],
+                          dimension: state.uri.queryParameters['dimension'],
+                        ),
+                        initialEquipId: state.uri.queryParameters['equip_id'],
+                        initialHeroId: state.uri.queryParameters['hero_id'],
                       ),
-                      initialEquipId: state.uri.queryParameters['equip_id'],
-                      initialHeroId: state.uri.queryParameters['hero_id'],
                     ),
                   ),
                 ],
