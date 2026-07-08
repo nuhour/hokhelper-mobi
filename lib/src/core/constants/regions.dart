@@ -23,3 +23,11 @@ HokRegion hokRegionFromId(int regionId) {
 
   return HokRegion.en;
 }
+
+HokRegion hokRegionFromLanguageCode(String languageCode) {
+  return switch (languageCode) {
+    'zh' => HokRegion.cn,
+    'id' => HokRegion.id,
+    _ => HokRegion.en,
+  };
+}

@@ -59,27 +59,24 @@ class AppSettingsController extends AsyncNotifier<AppSettings> {
   @override
   Future<AppSettings> build() async {
     final store = await ref.watch(preferencesStoreProvider.future);
+    final languageCode = store.selectedLanguageCode;
     return AppSettings(
-      region: hokRegionFromId(store.selectedRegionId),
-      languageCode: store.selectedLanguageCode,
+      region: hokRegionFromLanguageCode(languageCode),
+      languageCode: languageCode,
       theme: appThemeModeFromStorage(store.selectedTheme),
     );
   }
 
-  Future<void> setRegion(HokRegion region) async {
-    final previous = await future;
-    state = AsyncData(previous.copyWith(region: region));
-
-    final store = await ref.read(preferencesStoreProvider.future);
-    await store.setSelectedRegionId(region.id);
-  }
-
   Future<void> setLanguageCode(String languageCode) async {
     final previous = await future;
-    state = AsyncData(previous.copyWith(languageCode: languageCode));
+    final region = hokRegionFromLanguageCode(languageCode);
+    state = AsyncData(
+      previous.copyWith(region: region, languageCode: languageCode),
+    );
 
     final store = await ref.read(preferencesStoreProvider.future);
     await store.setSelectedLanguageCode(languageCode);
+    await store.setSelectedRegionId(region.id);
   }
 
   Future<void> setTheme(AppThemeMode theme) async {

@@ -33,50 +33,52 @@ class _FakeApiClient extends ApiClient {
 }
 
 void main() {
-  test('restores and persists selected region language and theme', () async {
-    SharedPreferences.setMockInitialValues({
-      PreferencesStore.selectedRegionIdKey: HokRegion.id.id,
-      PreferencesStore.selectedLanguageCodeKey: 'id',
-      PreferencesStore.selectedThemeKey: 'versus',
-    });
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  test(
+    'language restores and persists the matching region and theme',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        PreferencesStore.selectedRegionIdKey: HokRegion.en.id,
+        PreferencesStore.selectedLanguageCodeKey: 'zh',
+        PreferencesStore.selectedThemeKey: 'versus',
+      });
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    final restored = await container.read(appSettingsControllerProvider.future);
+      final restored = await container.read(
+        appSettingsControllerProvider.future,
+      );
 
-    expect(restored.region, HokRegion.id);
-    expect(restored.languageCode, 'id');
-    expect(restored.theme, AppThemeMode.versus);
+      expect(restored.region, HokRegion.cn);
+      expect(restored.languageCode, 'zh');
+      expect(restored.theme, AppThemeMode.versus);
 
-    await container
-        .read(appSettingsControllerProvider.notifier)
-        .setRegion(HokRegion.cn);
-    await container
-        .read(appSettingsControllerProvider.notifier)
-        .setLanguageCode('zh');
-    await container
-        .read(appSettingsControllerProvider.notifier)
-        .setTheme(AppThemeMode.classic);
+      await container
+          .read(appSettingsControllerProvider.notifier)
+          .setLanguageCode('id');
+      await container
+          .read(appSettingsControllerProvider.notifier)
+          .setTheme(AppThemeMode.classic);
 
-    final updated = container.read(appSettingsControllerProvider).valueOrNull;
-    final preferences = await SharedPreferences.getInstance();
+      final updated = container.read(appSettingsControllerProvider).valueOrNull;
+      final preferences = await SharedPreferences.getInstance();
 
-    expect(updated?.region, HokRegion.cn);
-    expect(updated?.languageCode, 'zh');
-    expect(updated?.theme, AppThemeMode.classic);
-    expect(
-      preferences.getInt(PreferencesStore.selectedRegionIdKey),
-      HokRegion.cn.id,
-    );
-    expect(
-      preferences.getString(PreferencesStore.selectedLanguageCodeKey),
-      'zh',
-    );
-    expect(
-      preferences.getString(PreferencesStore.selectedThemeKey),
-      AppThemeMode.classic.storageValue,
-    );
-  });
+      expect(updated?.region, HokRegion.id);
+      expect(updated?.languageCode, 'id');
+      expect(updated?.theme, AppThemeMode.classic);
+      expect(
+        preferences.getInt(PreferencesStore.selectedRegionIdKey),
+        HokRegion.id.id,
+      );
+      expect(
+        preferences.getString(PreferencesStore.selectedLanguageCodeKey),
+        'id',
+      );
+      expect(
+        preferences.getString(PreferencesStore.selectedThemeKey),
+        AppThemeMode.classic.storageValue,
+      );
+    },
+  );
 
   test(
     'hero gallery provider uses the selected region from settings',

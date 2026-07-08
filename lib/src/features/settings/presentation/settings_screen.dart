@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/regions.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -25,20 +24,6 @@ class SettingsScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _SettingsSegment<HokRegion>(
-                  icon: Icons.public_outlined,
-                  title: l10n.settingsRegionTitle,
-                  subtitle: l10n.settingsRegionSubtitle,
-                  selected: settings.region,
-                  values: HokRegion.values,
-                  labelBuilder: (region) => region.label,
-                  onChanged: (region) {
-                    ref
-                        .read(appSettingsControllerProvider.notifier)
-                        .setRegion(region);
-                  },
-                ),
-                const SizedBox(height: 12),
                 _SettingsSegment<String>(
                   icon: Icons.language_outlined,
                   title: l10n.settingsLanguageTitle,
@@ -176,10 +161,11 @@ class _SettingsSegment<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = _SettingsColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: colors.panel,
+        border: Border.all(color: colors.border),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -189,7 +175,7 @@ class _SettingsSegment<T> extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: AppTheme.gold),
+                Icon(icon, color: colors.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -199,8 +185,8 @@ class _SettingsSegment<T> extends StatelessWidget {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppTheme.text,
+                        style: TextStyle(
+                          color: colors.text,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -209,7 +195,7 @@ class _SettingsSegment<T> extends StatelessWidget {
                         subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppTheme.muted),
+                        style: TextStyle(color: colors.muted),
                       ),
                     ],
                   ),
@@ -243,16 +229,16 @@ class _SettingsSegment<T> extends StatelessWidget {
                   minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
                   foregroundColor: WidgetStateProperty.resolveWith((states) {
                     return states.contains(WidgetState.selected)
-                        ? AppTheme.bg
-                        : AppTheme.text;
+                        ? colors.onPrimary
+                        : colors.text;
                   }),
                   backgroundColor: WidgetStateProperty.resolveWith((states) {
                     return states.contains(WidgetState.selected)
-                        ? AppTheme.gold
+                        ? colors.primary
                         : Colors.transparent;
                   }),
                   side: WidgetStatePropertyAll(
-                    BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+                    BorderSide(color: colors.border),
                   ),
                 ),
               ),
@@ -283,34 +269,63 @@ class _SettingsActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = _SettingsColors.of(context);
     return Material(
-      color: AppTheme.panel,
+      color: colors.panel,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        side: BorderSide(color: colors.border),
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
         key: tileKey,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Icon(icon, color: AppTheme.gold),
+        leading: Icon(icon, color: colors.primary),
         title: Text(
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppTheme.text,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: colors.text, fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
           subtitle,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: AppTheme.muted),
+          style: TextStyle(color: colors.muted),
         ),
         trailing: TextButton(onPressed: onTap, child: Text(actionLabel)),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+class _SettingsColors {
+  const _SettingsColors({
+    required this.panel,
+    required this.border,
+    required this.primary,
+    required this.onPrimary,
+    required this.text,
+    required this.muted,
+  });
+
+  final Color panel;
+  final Color border;
+  final Color primary;
+  final Color onPrimary;
+  final Color text;
+  final Color muted;
+
+  static _SettingsColors of(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    return _SettingsColors(
+      panel: colorScheme.surface,
+      border: colorScheme.outlineVariant,
+      primary: colorScheme.primary,
+      onPrimary: colorScheme.onPrimary,
+      text: colorScheme.onSurface,
+      muted: isLight ? AppTheme.lightMuted : AppTheme.muted,
     );
   }
 }
