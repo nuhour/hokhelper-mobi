@@ -103,16 +103,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Dominate the Rift'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home-top-tab-indicator-3')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('英雄'));
     await tester.pumpAndSettle();
     expect(find.text('英雄图鉴'), findsAtLeastNWidgets(1));
     expect(find.text('Dominate the Rift'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('home-top-tab-indicator-2')),
+      findsOneWidget,
+    );
 
     await tester.fling(find.byType(PageView), const Offset(700, 0), 1000);
     await tester.pumpAndSettle();
     expect(find.text('皮肤图鉴'), findsAtLeastNWidgets(1));
     expect(find.text('英雄图鉴'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('home-top-tab-indicator-1')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('home menu lists filtered hokx portal menu groups', (

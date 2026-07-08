@@ -193,11 +193,12 @@ class _HomePortalTopBar extends StatelessWidget {
               children: [
                 for (var index = 0; index < _entries.length; index++) ...[
                   _PortalNavPill(
+                    index: index,
                     entry: _entries[index],
                     selected: index == selectedIndex,
                     onTap: () => onSelected(index),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 18),
                 ],
               ],
             ),
@@ -535,36 +536,47 @@ class _TopNavEntry {
 
 class _PortalNavPill extends StatelessWidget {
   const _PortalNavPill({
+    required this.index,
     required this.entry,
     required this.selected,
     required this.onTap,
   });
 
+  final int index;
   final _TopNavEntry entry;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: selected ? AppTheme.gold : AppTheme.panel,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(
-            entry.label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: selected ? AppTheme.bg : AppTheme.text,
-              fontWeight: FontWeight.w900,
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              entry.label,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: selected ? AppTheme.text : AppTheme.muted,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              ),
             ),
-          ),
+            const SizedBox(height: 5),
+            AnimatedContainer(
+              key: selected ? ValueKey('home-top-tab-indicator-$index') : null,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              width: selected ? 20 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: selected ? AppTheme.text : Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ],
         ),
       ),
     );
