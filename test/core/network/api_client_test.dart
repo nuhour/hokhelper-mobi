@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
@@ -50,6 +51,28 @@ class _UnauthorizedInterceptor extends Interceptor {
 }
 
 void main() {
+  test(
+    'allows local development certificates for configured lan https hosts',
+    () {
+      final dio = Dio();
+      ApiClient(
+        dio: dio,
+        config: const AppConfig(
+          apiBaseUrl: 'https://192.168.1.180:8000',
+          apiPrefix: '/hokx',
+        ),
+      );
+
+      final adapter = dio.httpClientAdapter;
+      expect(adapter, isA<IOHttpClientAdapter>());
+
+      final callback = (adapter as IOHttpClientAdapter).validateCertificate;
+      expect(callback, isNotNull);
+      expect(callback!(null, '192.168.1.180', 8000), isTrue);
+      expect(callback(null, 'api.example.com', 443), isFalse);
+    },
+  );
+
   test('maps token read failures without hanging the request', () async {
     final client = ApiClient(
       dio: Dio(),

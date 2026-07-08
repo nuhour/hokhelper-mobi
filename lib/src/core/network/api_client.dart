@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 import '../storage/secure_token_store.dart';
@@ -15,6 +19,7 @@ class ApiClient {
   }) : _dio = dio ?? Dio(BaseOptions(baseUrl: config.apiRoot)),
        _tokenStore = tokenStore ?? SecureTokenStore() {
     _dio.options.baseUrl = config.apiRoot;
+    _configureDevelopmentCertificates(_dio, config);
     _dio.interceptors.removeWhere(
       (interceptor) => interceptor is _ApiClientAuthInterceptor,
     );
@@ -132,6 +137,43 @@ class ApiClient {
 
     await onAuthFailure?.call(error);
   }
+}
+
+void _configureDevelopmentCertificates(Dio dio, AppConfig config) {
+  if (kReleaseMode || !config.apiBaseUrl.startsWith('https://')) {
+    return;
+  }
+
+  final uri = Uri.tryParse(config.apiBaseUrl);
+  final host = uri?.host;
+  if (host == null || !_isDevelopmentHost(host)) {
+    return;
+  }
+
+  final adapter = dio.httpClientAdapter;
+  if (adapter is! IOHttpClientAdapter) {
+    return;
+  }
+
+  adapter.validateCertificate = (certificate, certificateHost, port) {
+    return certificateHost == host;
+  };
+}
+
+bool _isDevelopmentHost(String host) {
+  if (host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2') {
+    return true;
+  }
+
+  final address = InternetAddress.tryParse(host);
+  if (address == null || address.type != InternetAddressType.IPv4) {
+    return false;
+  }
+
+  final parts = host.split('.').map(int.parse).toList(growable: false);
+  return parts[0] == 10 ||
+      (parts[0] == 172 && parts[1] >= 16 && parts[1] <= 31) ||
+      (parts[0] == 192 && parts[1] == 168);
 }
 
 class _ApiClientAuthInterceptor extends Interceptor {
