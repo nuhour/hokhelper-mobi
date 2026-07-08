@@ -17,7 +17,7 @@ class HokHelperApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsControllerProvider).valueOrNull;
     final theme = settings?.theme == AppThemeMode.versus
-        ? AppTheme.dark(primary: AppTheme.cyan, secondary: AppTheme.gold)
+        ? AppTheme.light()
         : AppTheme.dark();
 
     return MaterialApp.router(

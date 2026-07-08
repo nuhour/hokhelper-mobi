@@ -54,7 +54,7 @@ class SettingsScreen extends ConsumerWidget {
                 _SettingsSegment<AppThemeMode>(
                   icon: Icons.palette_outlined,
                   title: 'Theme',
-                  subtitle: 'Presentation mode for future classic/versus UI.',
+                  subtitle: 'Switches between hokx dark and light palettes.',
                   selected: settings.theme,
                   values: AppThemeMode.values,
                   labelBuilder: (mode) => mode.label,

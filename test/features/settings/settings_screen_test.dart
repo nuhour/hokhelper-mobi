@@ -20,7 +20,7 @@ void main() {
 
     await tester.tap(find.text('China'));
     await tester.tap(find.text('中文'));
-    await tester.tap(find.text('Versus'));
+    await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();
 
     final preferences = await SharedPreferences.getInstance();
