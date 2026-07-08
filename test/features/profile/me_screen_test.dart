@@ -206,6 +206,27 @@ Widget _buildMeScreenRouter(AuthUser user, UserProfile profile) {
   );
 }
 
+Widget _buildMeSettingsRouter(AuthUser? user) {
+  final router = GoRouter(
+    initialLocation: '/me',
+    routes: [
+      GoRoute(path: '/me', builder: (context, state) => const MeScreen()),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) =>
+            const Scaffold(body: Text('Settings screen')),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [
+      authControllerProvider.overrideWith(() => _TestAuthController(user)),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
 const _profile = UserProfile(
   id: 42,
   username: 'lam',
@@ -258,6 +279,37 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.widgetWithText(FilledButton, 'Login'), findsOneWidget);
+  });
+
+  testWidgets('signed-out profile can open settings from header', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildMeSettingsRouter(null));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('me-settings-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings screen'), findsOneWidget);
+  });
+
+  testWidgets('signed-in profile can open settings from header', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+
+    await tester.pumpWidget(_buildMeSettingsRouter(user));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('me-settings-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings screen'), findsOneWidget);
   });
 
   testWidgets('signed-in profile renders backend stats and growth', (

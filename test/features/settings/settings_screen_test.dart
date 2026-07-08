@@ -41,6 +41,56 @@ void main() {
       AppThemeMode.versus.storageValue,
     );
   });
+
+  testWidgets('settings screen exposes common app actions', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+
+    await tester.pumpWidget(
+      const ProviderScope(child: _LocalizedSettingsHost()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clear Cache'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('settings-clear-cache-tile')));
+    await tester.pump();
+    expect(find.text('Cache cleared'), findsOneWidget);
+    ScaffoldMessenger.of(
+      tester.element(find.byType(SettingsScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('settings-check-updates-tile')),
+      500,
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('settings-check-updates-tile')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Check for Updates'), findsOneWidget);
+    await tester.tap(
+      find.widgetWithText(TextButton, 'Check for Updates').hitTestable(),
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    expect(find.text('You are using the latest version'), findsOneWidget);
+    ScaffoldMessenger.of(
+      tester.element(find.byType(SettingsScreen)),
+    ).clearSnackBars();
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('settings-about-tile')),
+      500,
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('settings-about-tile')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('About'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('settings-about-tile')));
+    await tester.pumpAndSettle();
+    expect(find.text('HOK Helper Mobile'), findsOneWidget);
+  });
 }
 
 class _LocalizedSettingsHost extends StatelessWidget {

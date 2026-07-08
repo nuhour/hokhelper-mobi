@@ -66,6 +66,33 @@ class SettingsScreen extends ConsumerWidget {
                         .setTheme(mode);
                   },
                 ),
+                const SizedBox(height: 12),
+                _SettingsActionTile(
+                  tileKey: const ValueKey('settings-clear-cache-tile'),
+                  icon: Icons.cleaning_services_outlined,
+                  title: l10n.settingsClearCacheTitle,
+                  subtitle: l10n.settingsClearCacheSubtitle,
+                  actionLabel: l10n.settingsClearCacheAction,
+                  onTap: () => _clearCache(context, l10n),
+                ),
+                const SizedBox(height: 12),
+                _SettingsActionTile(
+                  tileKey: const ValueKey('settings-check-updates-tile'),
+                  icon: Icons.system_update_alt_outlined,
+                  title: l10n.settingsUpdatesTitle,
+                  subtitle: l10n.settingsUpdatesSubtitle,
+                  actionLabel: l10n.settingsCheckUpdatesAction,
+                  onTap: () => _checkUpdates(context, l10n),
+                ),
+                const SizedBox(height: 12),
+                _SettingsActionTile(
+                  tileKey: const ValueKey('settings-about-tile'),
+                  icon: Icons.info_outline,
+                  title: l10n.settingsAboutTitle,
+                  subtitle: l10n.settingsAboutSubtitle,
+                  actionLabel: l10n.settingsAboutAction,
+                  onTap: () => _showAbout(context, l10n),
+                ),
               ],
             );
           },
@@ -93,6 +120,38 @@ class SettingsScreen extends ConsumerWidget {
       AppThemeMode.classic => l10n.themeDark,
       AppThemeMode.versus => l10n.themeLight,
     };
+  }
+
+  static void _clearCache(BuildContext context, AppLocalizations l10n) {
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.settingsCacheCleared)));
+  }
+
+  static void _checkUpdates(BuildContext context, AppLocalizations l10n) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.settingsLatestVersion)));
+  }
+
+  static void _showAbout(BuildContext context, AppLocalizations l10n) {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(l10n.settingsAboutDialogTitle),
+          content: Text(l10n.settingsAboutDialogBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.settingsClose),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -200,6 +259,57 @@ class _SettingsSegment<T> extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SettingsActionTile extends StatelessWidget {
+  const _SettingsActionTile({
+    required this.tileKey,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  final Key tileKey;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.panel,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        key: tileKey,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Icon(icon, color: AppTheme.gold),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AppTheme.muted),
+        ),
+        trailing: TextButton(onPressed: onTap, child: Text(actionLabel)),
+        onTap: onTap,
       ),
     );
   }

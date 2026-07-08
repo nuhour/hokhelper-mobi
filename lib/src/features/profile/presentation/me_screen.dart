@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../auth/domain/auth_user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/profile_repository.dart';
@@ -27,11 +28,20 @@ class MeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authValue = ref.watch(authControllerProvider);
+    final l10n = AppLocalizations.of(context);
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const AppSectionHeader(title: 'Me'),
+        AppSectionHeader(
+          title: l10n.navMe,
+          action: IconButton(
+            key: const ValueKey('me-settings-button'),
+            tooltip: l10n.settingsTitle,
+            onPressed: () => context.go('/settings'),
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ),
         const SizedBox(height: 24),
         AppAsyncView<AuthUser?>(
           value: authValue,
