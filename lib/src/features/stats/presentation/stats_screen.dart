@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -356,13 +357,18 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
 class _StatsTopTabs extends StatelessWidget {
   const _StatsTopTabs({required this.selectedIndex, required this.onSelected});
 
-  static const _labels = ['排行榜', '趋势', '梯度榜'];
-
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final labels = [
+      l10n.statsTabRankings,
+      l10n.statsTabTrends,
+      l10n.statsTabTier,
+    ];
+
     return Center(
       child: SingleChildScrollView(
         key: const ValueKey('stats-top-tab-strip'),
@@ -370,14 +376,14 @@ class _StatsTopTabs extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (var index = 0; index < _labels.length; index++) ...[
+            for (var index = 0; index < labels.length; index++) ...[
               _StatsTabButton(
                 index: index,
-                label: _labels[index],
+                label: labels[index],
                 selected: index == selectedIndex,
                 onTap: () => onSelected(index),
               ),
-              if (index != _labels.length - 1) const SizedBox(width: 26),
+              if (index != labels.length - 1) const SizedBox(width: 26),
             ],
           ],
         ),

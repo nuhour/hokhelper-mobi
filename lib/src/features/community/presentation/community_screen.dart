@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -272,13 +273,18 @@ class _CommunityTopTabs extends StatelessWidget {
     required this.onSelected,
   });
 
-  static const _labels = ['爆料', '论坛', '活动互助'];
-
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final labels = [
+      l10n.communityTabLeaks,
+      l10n.communityTabForum,
+      l10n.communityTabEvents,
+    ];
+
     return Center(
       child: SingleChildScrollView(
         key: const ValueKey('community-top-tab-strip'),
@@ -286,14 +292,14 @@ class _CommunityTopTabs extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (var index = 0; index < _labels.length; index++) ...[
+            for (var index = 0; index < labels.length; index++) ...[
               _CommunityTabButton(
                 index: index,
-                label: _labels[index],
+                label: labels[index],
                 selected: index == selectedIndex,
                 onTap: () => onSelected(index),
               ),
-              if (index != _labels.length - 1) const SizedBox(width: 24),
+              if (index != labels.length - 1) const SizedBox(width: 24),
             ],
           ],
         ),

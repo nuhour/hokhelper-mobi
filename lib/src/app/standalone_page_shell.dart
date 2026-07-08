@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/i18n/app_localizations.dart';
 import '../core/theme/app_theme.dart';
 
 class StandalonePageShell extends StatelessWidget {
@@ -17,6 +18,8 @@ class StandalonePageShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -28,7 +31,7 @@ class StandalonePageShell extends StatelessWidget {
         appBar: AppBar(
           leading: IconButton(
             key: const ValueKey('standalone-back-button'),
-            tooltip: 'Back',
+            tooltip: l10n.back,
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () => _goBack(context),
           ),

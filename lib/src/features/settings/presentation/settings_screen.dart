@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/regions.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import 'settings_controller.dart';
@@ -12,9 +13,10 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsValue = ref.watch(appSettingsControllerProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: SafeArea(
         child: AppAsyncView<AppSettings>(
           value: settingsValue,
@@ -25,8 +27,8 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 _SettingsSegment<HokRegion>(
                   icon: Icons.public_outlined,
-                  title: 'Region',
-                  subtitle: 'Changes region_id for roster, content, and tools.',
+                  title: l10n.settingsRegionTitle,
+                  subtitle: l10n.settingsRegionSubtitle,
                   selected: settings.region,
                   values: HokRegion.values,
                   labelBuilder: (region) => region.label,
@@ -39,10 +41,10 @@ class SettingsScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 _SettingsSegment<String>(
                   icon: Icons.language_outlined,
-                  title: 'Language',
-                  subtitle: 'Applies the app locale for supported UI strings.',
+                  title: l10n.settingsLanguageTitle,
+                  subtitle: l10n.settingsLanguageSubtitle,
                   selected: settings.languageCode,
-                  values: const ['en', 'zh', 'id'],
+                  values: AppLocalizations.supportedLanguageCodes,
                   labelBuilder: _languageLabel,
                   onChanged: (languageCode) {
                     ref
@@ -53,11 +55,11 @@ class SettingsScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 _SettingsSegment<AppThemeMode>(
                   icon: Icons.palette_outlined,
-                  title: 'Theme',
-                  subtitle: 'Switches between hokx dark and light palettes.',
+                  title: l10n.settingsThemeTitle,
+                  subtitle: l10n.settingsThemeSubtitle,
                   selected: settings.theme,
                   values: AppThemeMode.values,
-                  labelBuilder: (mode) => mode.label,
+                  labelBuilder: (mode) => _themeLabel(mode, l10n),
                   onChanged: (mode) {
                     ref
                         .read(appSettingsControllerProvider.notifier)
@@ -76,7 +78,20 @@ class SettingsScreen extends ConsumerWidget {
     return switch (languageCode) {
       'zh' => '中文',
       'id' => 'ID',
+      'fil' => 'Filipino',
+      'pt' => 'PT',
+      'es' => 'ES',
+      'ar' => 'العربية',
+      'ru' => 'RU',
+      'ms' => 'MS',
       _ => 'EN',
+    };
+  }
+
+  static String _themeLabel(AppThemeMode mode, AppLocalizations l10n) {
+    return switch (mode) {
+      AppThemeMode.classic => l10n.themeDark,
+      AppThemeMode.versus => l10n.themeLight,
     };
   }
 }

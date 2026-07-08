@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -154,18 +155,19 @@ class _HomePortalTopBar extends StatelessWidget {
     required this.onSelected,
   });
 
-  static const _entries = [
-    _TopNavEntry('电竞'),
-    _TopNavEntry('皮肤'),
-    _TopNavEntry('英雄'),
-    _TopNavEntry('首页'),
-  ];
-
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final entries = [
+      _TopNavEntry(l10n.homeTabEsports),
+      _TopNavEntry(l10n.homeTabSkins),
+      _TopNavEntry(l10n.homeTabHeroes),
+      _TopNavEntry(l10n.homeTabHome),
+    ];
+
     return Row(
       children: [
         _RoundIconButton(
@@ -181,14 +183,14 @@ class _HomePortalTopBar extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (var index = 0; index < _entries.length; index++) ...[
+                  for (var index = 0; index < entries.length; index++) ...[
                     _PortalNavPill(
                       index: index,
-                      entry: _entries[index],
+                      entry: entries[index],
                       selected: index == selectedIndex,
                       onTap: () => onSelected(index),
                     ),
-                    if (index != _entries.length - 1) const SizedBox(width: 18),
+                    if (index != entries.length - 1) const SizedBox(width: 18),
                   ],
                 ],
               ),

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/i18n/app_localizations.dart';
 import '../core/theme/app_theme.dart';
 import '../features/settings/presentation/settings_controller.dart';
 import 'router.dart';
@@ -27,11 +28,12 @@ class HokHelperApp extends ConsumerWidget {
       locale: settings == null ? null : Locale(settings.languageCode),
       routerConfig: _router,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('en'), Locale('zh'), Locale('id')],
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }

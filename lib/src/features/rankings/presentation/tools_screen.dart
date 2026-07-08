@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_section_header.dart';
 
@@ -99,10 +100,12 @@ class ToolsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const AppSectionHeader(title: 'Tools'),
+        AppSectionHeader(title: l10n.toolsTitle),
         const SizedBox(height: 16),
         LayoutBuilder(
           key: const ValueKey('tools-nine-grid'),
@@ -120,6 +123,8 @@ class ToolsScreen extends StatelessWidget {
                     child: _ToolGridCard(
                       key: ValueKey('tool-grid-card-${tool.title}'),
                       tool: tool,
+                      title: l10n.toolTitle(tool.route),
+                      subtitle: l10n.toolSubtitle(tool.route),
                     ),
                   ),
               ],
@@ -128,7 +133,7 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(
-          'More',
+          l10n.toolsMore,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             color: AppTheme.text,
             fontWeight: FontWeight.w900,
@@ -136,7 +141,11 @@ class ToolsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         for (final tool in _secondaryTools) ...[
-          _ToolTile(tool: tool),
+          _ToolTile(
+            tool: tool,
+            title: l10n.toolTitle(tool.route),
+            subtitle: l10n.toolSubtitle(tool.route),
+          ),
           if (tool != _secondaryTools.last) const SizedBox(height: 12),
         ],
       ],
@@ -159,9 +168,16 @@ class _ToolItem {
 }
 
 class _ToolGridCard extends StatelessWidget {
-  const _ToolGridCard({required this.tool, super.key});
+  const _ToolGridCard({
+    required this.tool,
+    required this.title,
+    required this.subtitle,
+    super.key,
+  });
 
   final _ToolItem tool;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +201,7 @@ class _ToolGridCard extends StatelessWidget {
                 Icon(tool.icon, color: AppTheme.gold, size: 28),
                 const SizedBox(height: 10),
                 Text(
-                  tool.title,
+                  title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -198,7 +214,7 @@ class _ToolGridCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  tool.subtitle,
+                  subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -218,9 +234,15 @@ class _ToolGridCard extends StatelessWidget {
 }
 
 class _ToolTile extends StatelessWidget {
-  const _ToolTile({required this.tool});
+  const _ToolTile({
+    required this.tool,
+    required this.title,
+    required this.subtitle,
+  });
 
   final _ToolItem tool;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +260,7 @@ class _ToolTile extends StatelessWidget {
           leading: Icon(tool.icon, color: AppTheme.gold),
           trailing: const Icon(Icons.chevron_right, color: AppTheme.muted),
           title: Text(
-            tool.title,
+            title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -247,7 +269,7 @@ class _ToolTile extends StatelessWidget {
             ),
           ),
           subtitle: Text(
-            tool.subtitle,
+            subtitle,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted),

@@ -35,7 +35,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.tap(find.text('统计'));
+      await tester.tap(find.text('Stats'));
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(router.routeInformationProvider.value.uri.path, '/stats-home');
@@ -114,23 +114,22 @@ void main() {
       find.byKey(const ValueKey('stats-top-tab-indicator-1')),
       findsOneWidget,
     );
-    expect(find.text('排行榜'), findsOneWidget);
-    expect(find.text('梯度榜'), findsOneWidget);
-    expect(find.text('趋势'), findsOneWidget);
-    expect(find.text('Stats'), findsNothing);
+    expect(find.text('Rankings'), findsOneWidget);
+    expect(find.text('Tier'), findsOneWidget);
+    expect(find.text('Trends'), findsOneWidget);
     expect(
       find.text('Browse rankings, tier lists, and hero trend signals.'),
       findsNothing,
     );
-    final rankingTopLeft = tester.getTopLeft(find.text('排行榜'));
-    final trendTopLeft = tester.getTopLeft(find.text('趋势'));
-    final tierTopLeft = tester.getTopLeft(find.text('梯度榜'));
+    final rankingTopLeft = tester.getTopLeft(find.text('Rankings'));
+    final trendTopLeft = tester.getTopLeft(find.text('Trends'));
+    final tierTopLeft = tester.getTopLeft(find.text('Tier'));
     expect(rankingTopLeft.dx, lessThan(trendTopLeft.dx));
     expect(trendTopLeft.dx, lessThan(tierTopLeft.dx));
     expect(find.text('Hero Trends'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
 
-    await tester.tap(find.text('排行榜'));
+    await tester.tap(find.text('Rankings'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
     expect(find.text('Player Leaderboard'), findsOneWidget);
@@ -140,7 +139,7 @@ void main() {
     expect(find.text('Top Mid'), findsOneWidget);
     expect(find.text('112 stars'), findsOneWidget);
 
-    await tester.tap(find.text('梯度榜'));
+    await tester.tap(find.text('Tier'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
     expect(find.text('Tier'), findsWidgets);

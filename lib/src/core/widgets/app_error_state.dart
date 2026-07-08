@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class AppErrorState extends StatelessWidget {
@@ -11,6 +12,7 @@ class AppErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context);
 
     return Center(
       child: Padding(
@@ -30,7 +32,7 @@ class AppErrorState extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: retry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(l10n.retry),
               ),
             ],
           ],

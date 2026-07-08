@@ -215,12 +215,12 @@ void main() {
       find.byKey(const ValueKey('community-top-tab-indicator-1')),
       findsOneWidget,
     );
-    expect(find.text('论坛'), findsOneWidget);
-    expect(find.text('爆料'), findsOneWidget);
-    expect(find.text('活动互助'), findsOneWidget);
-    final leakTopLeft = tester.getTopLeft(find.text('爆料'));
-    final forumTopLeft = tester.getTopLeft(find.text('论坛'));
-    final eventTopLeft = tester.getTopLeft(find.text('活动互助'));
+    expect(find.text('Forum'), findsOneWidget);
+    expect(find.text('Leaks'), findsOneWidget);
+    expect(find.text('Event Help'), findsOneWidget);
+    final leakTopLeft = tester.getTopLeft(find.text('Leaks'));
+    final forumTopLeft = tester.getTopLeft(find.text('Forum'));
+    final eventTopLeft = tester.getTopLeft(find.text('Event Help'));
     expect(leakTopLeft.dx, lessThan(forumTopLeft.dx));
     expect(forumTopLeft.dx, lessThan(eventTopLeft.dx));
     expect(find.text('Best jungle rotation'), findsOneWidget);
@@ -228,7 +228,7 @@ void main() {
     expect(find.text('18 likes · 7 comments'), findsOneWidget);
     expect(find.text('Guide'), findsOneWidget);
 
-    await tester.tap(find.text('爆料'));
+    await tester.tap(find.text('Leaks'));
     await tester.pumpAndSettle();
 
     expect(find.text('New Lam skin teaser'), findsOneWidget);
@@ -238,7 +238,7 @@ void main() {
     expect(find.text('skin'), findsWidgets);
     expect(find.text('Lam'), findsOneWidget);
 
-    await tester.tap(find.text('活动互助'));
+    await tester.tap(find.text('Event Help'));
     await tester.pumpAndSettle();
 
     expect(find.text('Event Assistance'), findsOneWidget);

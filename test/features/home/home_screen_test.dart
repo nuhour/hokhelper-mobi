@@ -80,10 +80,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('电竞'), findsOneWidget);
-    expect(find.text('皮肤'), findsOneWidget);
-    expect(find.text('英雄'), findsOneWidget);
-    expect(find.text('首页'), findsOneWidget);
+    expect(find.text('Esports'), findsWidgets);
+    expect(find.text('Skins'), findsOneWidget);
+    expect(find.text('Heroes'), findsWidgets);
+    expect(find.text('Home'), findsOneWidget);
     expect(find.text('Dominate the Rift'), findsOneWidget);
     expect(find.text('Search heroes, items, guides...'), findsOneWidget);
 
@@ -203,10 +203,10 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(find.text('英雄'));
+    await tester.tap(find.text('Heroes'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/');
-    expect(find.text('Heroes'), findsOneWidget);
+    expect(find.text('Heroes'), findsWidgets);
     expect(find.text('Angela'), findsWidgets);
     expect(
       find.byKey(const ValueKey('home-top-tab-indicator-2')),
@@ -226,10 +226,10 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(find.text('电竞'));
+    await tester.tap(find.text('Esports'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/');
-    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('Esports'), findsWidgets);
     expect(find.text('Matches'), findsWidgets);
     expect(
       find.byKey(const ValueKey('home-top-tab-indicator-0')),

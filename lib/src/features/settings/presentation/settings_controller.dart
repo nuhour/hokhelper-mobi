@@ -4,13 +4,12 @@ import '../../../core/constants/regions.dart';
 import '../../../core/storage/preferences_store.dart';
 
 enum AppThemeMode {
-  classic('classic', 'Dark'),
-  versus('versus', 'Light');
+  classic('classic'),
+  versus('versus');
 
-  const AppThemeMode(this.storageValue, this.label);
+  const AppThemeMode(this.storageValue);
 
   final String storageValue;
-  final String label;
 }
 
 AppThemeMode appThemeModeFromStorage(String value) {
