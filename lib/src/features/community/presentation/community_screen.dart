@@ -8,6 +8,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../activity/presentation/event_assistance_screen.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/community_repository.dart';
@@ -147,7 +148,7 @@ class CommunityPostsQuery {
 
 enum CommunityInitialView { hot, myPosts, likedPosts }
 
-class CommunityScreen extends ConsumerWidget {
+class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({
     this.initialTabIndex = 0,
     this.initialView = CommunityInitialView.hot,
@@ -166,64 +167,92 @@ class CommunityScreen extends ConsumerWidget {
   final String? initialPostTag;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 2,
-      initialIndex: initialTabIndex.clamp(0, 1),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const AppSectionHeader(title: 'Community'),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Read hot posts and track community leak signals.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-                      ),
-                      const SizedBox(height: 16),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppTheme.panel,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TabBar(
-                          indicatorSize: TabBarIndicatorSize.tab,
-                          dividerColor: Colors.transparent,
-                          labelColor: AppTheme.gold,
-                          unselectedLabelColor: AppTheme.muted,
-                          onTap: (index) => _syncRouteWithTab(context, index),
-                          tabs: [
-                            Tab(text: 'Posts'),
-                            Tab(text: 'Leaks'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+  ConsumerState<CommunityScreen> createState() => _CommunityScreenState();
+}
+
+class _CommunityScreenState extends ConsumerState<CommunityScreen> {
+  late final PageController _pageController;
+  late int _selectedPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPage = widget.initialTabIndex.clamp(0, 2);
+    _pageController = PageController(initialPage: _selectedPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _selectPage(int index) {
+    if (_selectedPage != index) {
+      setState(() {
+        _selectedPage = index;
+      });
+    }
+    _syncRouteWithTab(context, index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AppSectionHeader(title: 'Community'),
+                const SizedBox(height: 8),
+                Text(
+                  'Read hot posts, track leaks, and share event help.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
                 ),
-              ),
-            ];
-          },
-          body: TabBarView(
-            children: [
-              _PostsTab(initialView: initialView, initialTag: initialPostTag),
-              _LeaksTab(
-                initialQuery: initialLeakQuery,
-                initialCategory: initialLeakCategory,
-                initialPlatform: initialLeakPlatform,
-              ),
-            ],
+                const SizedBox(height: 16),
+                _CommunityTopTabs(
+                  selectedIndex: _selectedPage,
+                  onSelected: _selectPage,
+                ),
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _selectedPage = index;
+                });
+                _syncRouteWithTab(context, index);
+              },
+              children: [
+                _PostsTab(
+                  initialView: widget.initialView,
+                  initialTag: widget.initialPostTag,
+                ),
+                _LeaksTab(
+                  initialQuery: widget.initialLeakQuery,
+                  initialCategory: widget.initialLeakCategory,
+                  initialPlatform: widget.initialLeakPlatform,
+                ),
+                const EventAssistanceScreen(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -233,17 +262,102 @@ class CommunityScreen extends ConsumerWidget {
     if (router == null) {
       return;
     }
-    final nextUri = index == 1
-        ? Uri(
-            path: '/content/community',
-            queryParameters: const {'tab': 'leaks'},
-          )
-        : Uri(path: '/content/community');
+    final nextUri = switch (index) {
+      1 => Uri(
+        path: '/content/community',
+        queryParameters: const {'tab': 'leaks'},
+      ),
+      2 => Uri(
+        path: '/content/community',
+        queryParameters: const {'tab': 'event'},
+      ),
+      _ => Uri(path: '/content/community'),
+    };
     final currentUri = router.routeInformationProvider.value.uri;
     if (nextUri == currentUri) {
       return;
     }
     router.go(nextUri.toString());
+  }
+}
+
+class _CommunityTopTabs extends StatelessWidget {
+  const _CommunityTopTabs({
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  static const _labels = ['论坛', '爆料', '活动互助'];
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        key: const ValueKey('community-top-tab-strip'),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < _labels.length; index++) ...[
+              _CommunityTabButton(
+                label: _labels[index],
+                selected: index == selectedIndex,
+                onTap: () => onSelected(index),
+              ),
+              if (index != _labels.length - 1) const SizedBox(width: 24),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommunityTabButton extends StatelessWidget {
+  const _CommunityTabButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: selected ? AppTheme.text : AppTheme.muted,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 5),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: selected ? 20 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: AppTheme.gold,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -320,6 +434,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
             return ref.refresh(communityPostsQueryProvider(query).future);
           },
           child: ListView(
+            key: const ValueKey('community-posts-scroll-view'),
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
               _PostSearchSortBar(
@@ -965,6 +1080,7 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
 
         if (visibleLeaks.isEmpty) {
           return ListView(
+            key: const ValueKey('community-leaks-scroll-view'),
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
               _LeakFilterControls(
@@ -991,6 +1107,7 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
             return ref.refresh(leakPostsQueryProvider(leakQuery).future);
           },
           child: ListView(
+            key: const ValueKey('community-leaks-scroll-view'),
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
               _LeakFilterControls(

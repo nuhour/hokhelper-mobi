@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/activity/domain/event_assistance_record.dart';
+import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
 import 'package:hok_helper_mobile/src/features/community/data/community_repository.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
@@ -128,8 +130,18 @@ class _NoopApiClient extends ApiClient {
       );
 }
 
+Finder _scrollableUnder(ValueKey<String> key) {
+  return find.descendant(
+    of: find.byKey(key),
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+    ),
+  );
+}
+
 void main() {
-  testWidgets('renders community posts and leak tabs', (tester) async {
+  testWidgets('renders community top tabs with forum default', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -169,6 +181,21 @@ void main() {
               ),
             ];
           }),
+          eventAssistanceRecordsProvider.overrideWith((ref) async {
+            return const [
+              EventAssistanceRecord(
+                id: '1',
+                content: 'Join my activity code ABCD.',
+                eventTime: '2026-07-08T10:00:00Z',
+                isReported: false,
+                rawText: 'Help with weekly code ABCD.',
+                regionId: 2,
+                sharedBy: 'helper',
+                createdAt: '2026-07-08T10:00:00Z',
+                updatedAt: '2026-07-08T10:00:00Z',
+              ),
+            ];
+          }),
         ],
         child: const MaterialApp(home: Scaffold(body: CommunityScreen())),
       ),
@@ -176,12 +203,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Community'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('community-top-tab-strip')),
+      findsOneWidget,
+    );
+    expect(find.text('论坛'), findsOneWidget);
+    expect(find.text('爆料'), findsOneWidget);
+    expect(find.text('活动互助'), findsOneWidget);
     expect(find.text('Best jungle rotation'), findsOneWidget);
     expect(find.text('coach'), findsOneWidget);
     expect(find.text('18 likes · 7 comments'), findsOneWidget);
     expect(find.text('Guide'), findsOneWidget);
 
-    await tester.tap(find.text('Leaks'));
+    await tester.tap(find.text('爆料'));
     await tester.pumpAndSettle();
 
     expect(find.text('New Lam skin teaser'), findsOneWidget);
@@ -190,6 +224,12 @@ void main() {
     expect(find.text('1200 views'), findsOneWidget);
     expect(find.text('skin'), findsWidgets);
     expect(find.text('Lam'), findsOneWidget);
+
+    await tester.tap(find.text('活动互助'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Event Assistance'), findsOneWidget);
+    expect(find.text('Join my activity code ABCD.'), findsOneWidget);
   });
 
   testWidgets('can open directly on the leaks tab', (tester) async {
@@ -680,7 +720,9 @@ void main() {
     await tester.scrollUntilVisible(
       find.widgetWithText(FilledButton, 'Load more', skipOffstage: false),
       900,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: _scrollableUnder(
+        const ValueKey('community-posts-scroll-view'),
+      ),
     );
     final loadMore = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Load more'),
@@ -741,7 +783,9 @@ void main() {
     await tester.scrollUntilVisible(
       find.widgetWithText(FilledButton, 'Load more'),
       900,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: _scrollableUnder(
+        const ValueKey('community-leaks-scroll-view'),
+      ),
     );
     final loadMore = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Load more'),
@@ -903,7 +947,9 @@ void main() {
     await tester.scrollUntilVisible(
       find.widgetWithText(OutlinedButton, 'Delete', skipOffstage: false),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: _scrollableUnder(
+        const ValueKey('community-posts-scroll-view'),
+      ),
     );
     final deleteButton = tester.widget<OutlinedButton>(
       find.widgetWithText(OutlinedButton, 'Delete'),

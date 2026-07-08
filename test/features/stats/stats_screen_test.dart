@@ -3,10 +3,68 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
+import 'package:hok_helper_mobile/src/features/stats/domain/hero_trend_row.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
+import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
 
 void main() {
+  testWidgets('stats route opens top tabs and defaults to trends', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/stats');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroRankingProvider.overrideWith((ref) async => const []),
+          playerRankingProvider.overrideWith((ref) async => const []),
+          equipRankingProvider.overrideWith((ref) async => const []),
+          tierRankingProvider.overrideWith((ref) async => const []),
+          statsDashboardProvider.overrideWith(
+            (ref, entry) async => const StatsDashboard(),
+          ),
+          heroTrendsProvider.overrideWith((ref) async {
+            return const [
+              HeroTrendRow(
+                id: 199,
+                name: 'Lam',
+                avatarUrl: '',
+                winRate: 56.1,
+                mvpScore: 13.8,
+                mvpRate: 22.5,
+                dmgShare: 31.4,
+                takeDmgShare: 28.7,
+                ecoShare: 24.1,
+              ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('stats-top-tab-strip')), findsOneWidget);
+    expect(find.text('排行榜'), findsOneWidget);
+    expect(find.text('梯度榜'), findsOneWidget);
+    expect(find.text('趋势'), findsOneWidget);
+    expect(find.text('Hero Trends'), findsOneWidget);
+    expect(find.text('Lam'), findsOneWidget);
+
+    await tester.tap(find.text('排行榜'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
+    expect(find.text('Hero Rankings'), findsOneWidget);
+
+    await tester.tap(find.text('梯度榜'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
+    expect(find.text('Tier'), findsWidgets);
+  });
+
   testWidgets('renders stats dashboard sections', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -300,7 +358,7 @@ void main() {
     tester,
   ) async {
     final router = createAppRouter();
-    router.go('/tools/stats');
+    router.go('/tools/stats?entry=home_core');
 
     await tester.pumpWidget(
       ProviderScope(
@@ -360,7 +418,7 @@ void main() {
     'stats equipment cards open focused equipment usage detail route',
     (tester) async {
       final router = createAppRouter();
-      router.go('/tools/stats');
+      router.go('/tools/stats?entry=home_core');
 
       await tester.pumpWidget(
         ProviderScope(

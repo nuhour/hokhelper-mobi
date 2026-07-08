@@ -792,7 +792,11 @@ GoRouter createAppRouter() {
                     path: 'community',
                     builder: (context, state) {
                       final tab = state.uri.queryParameters['tab'];
-                      final initialTabIndex = tab == 'leaks' ? 1 : 0;
+                      final initialTabIndex = switch (tab) {
+                        'leaks' => 1,
+                        'event' || 'events' || 'assistance' => 2,
+                        _ => 0,
+                      };
                       final initialView = switch (tab) {
                         'my' => CommunityInitialView.myPosts,
                         'likes' => CommunityInitialView.likedPosts,
@@ -1056,6 +1060,7 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'stats',
                     builder: (context, state) => StatsScreen(
+                      showPortalTabs: state.uri.queryParameters.isEmpty,
                       initialEntry: StatsEntry.fromRoute(
                         state.uri.queryParameters['entry'],
                         dimension: state.uri.queryParameters['dimension'],

@@ -7,6 +7,96 @@ import '../../../core/widgets/app_section_header.dart';
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
+  static const _primaryTools = [
+    _ToolItem(
+      icon: Icons.account_tree_outlined,
+      title: 'BP Simulator',
+      subtitle: 'Draft schemes',
+      route: '/tools/bp-simulator',
+    ),
+    _ToolItem(
+      icon: Icons.format_list_numbered_outlined,
+      title: 'Tier List Tool',
+      subtitle: 'Edit tiers',
+      route: '/tools/tier-list',
+    ),
+    _ToolItem(
+      icon: Icons.auto_awesome_outlined,
+      title: 'Prompts',
+      subtitle: 'AI templates',
+      route: '/tools/prompts',
+    ),
+    _ToolItem(
+      icon: Icons.groups_2_outlined,
+      title: 'Team Builder',
+      subtitle: 'Lineup advice',
+      route: '/tools/team-builder',
+    ),
+    _ToolItem(
+      icon: Icons.tune_outlined,
+      title: 'Build Simulator',
+      subtitle: 'Hero slots',
+      route: '/tools/build-sim',
+    ),
+    _ToolItem(
+      icon: Icons.smartphone_outlined,
+      title: 'Game Assistant',
+      subtitle: 'Match helper',
+      route: '/tools/game-assistant',
+    ),
+    _ToolItem(
+      icon: Icons.auto_fix_high_outlined,
+      title: 'Rank Fortune',
+      subtitle: 'Daily draw',
+      route: '/tools/rank-fortune',
+    ),
+    _ToolItem(
+      icon: Icons.event_available_outlined,
+      title: 'Event Assistance',
+      subtitle: 'Help board',
+      route: '/content/event-assistance',
+    ),
+    _ToolItem(
+      icon: Icons.psychology_outlined,
+      title: 'Curiosity Lab',
+      subtitle: 'Mechanics Q&A',
+      route: '/tools/curiosity-lab',
+    ),
+  ];
+
+  static const _secondaryTools = [
+    _ToolItem(
+      icon: Icons.construction_outlined,
+      title: 'Build Explorer',
+      subtitle: 'Browse public build schemes',
+      route: '/tools/builds',
+    ),
+    _ToolItem(
+      icon: Icons.leaderboard_outlined,
+      title: 'Rankings',
+      subtitle: 'Compare hero performance metrics',
+      route: '/tools/rankings',
+    ),
+    _ToolItem(
+      icon: Icons.emoji_events_outlined,
+      title: 'Player Leaderboard',
+      subtitle: 'Browse ranked and peak score players',
+      route: '/tools/leaderboard',
+    ),
+    _ToolItem(
+      icon: Icons.emoji_events_outlined,
+      title: 'Esports',
+      subtitle: 'Matches, teams, and pro players',
+      route: '/tools/esports',
+    ),
+    _ToolItem(
+      icon: Icons.query_stats_outlined,
+      title: 'Stats',
+      subtitle: 'Rankings, tier list, and trends',
+      route: '/tools/stats',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -14,113 +104,123 @@ class ToolsScreen extends StatelessWidget {
       children: [
         const AppSectionHeader(title: 'Tools'),
         const SizedBox(height: 16),
-        _ToolTile(
-          icon: Icons.leaderboard_outlined,
-          title: 'Rankings',
-          subtitle: 'Compare hero performance metrics',
-          onTap: () => context.go('/tools/rankings'),
+        LayoutBuilder(
+          key: const ValueKey('tools-nine-grid'),
+          builder: (context, constraints) {
+            const spacing = 10.0;
+            final cardWidth = (constraints.maxWidth - spacing * 2) / 3;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: [
+                for (final tool in _primaryTools)
+                  SizedBox(
+                    width: cardWidth,
+                    height: cardWidth * 1.14,
+                    child: _ToolGridCard(
+                      key: ValueKey('tool-grid-card-${tool.title}'),
+                      tool: tool,
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'More',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.emoji_events_outlined,
-          title: 'Player Leaderboard',
-          subtitle: 'Browse ranked and peak score players',
-          onTap: () => context.go('/tools/leaderboard'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.construction_outlined,
-          title: 'Build Explorer',
-          subtitle: 'Browse public build schemes',
-          onTap: () => context.go('/tools/builds'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.tune_outlined,
-          title: 'Build Simulator',
-          subtitle: 'Manage hero slots and clone community builds',
-          onTap: () => context.go('/tools/build-sim'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.account_tree_outlined,
-          title: 'BP Simulator',
-          subtitle: 'Review pick/ban schemes and draft progress',
-          onTap: () => context.go('/tools/bp-simulator'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.format_list_numbered_outlined,
-          title: 'Tier List Tool',
-          subtitle: 'Review custom hero tier list schemes',
-          onTap: () => context.go('/tools/tier-list'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.smartphone_outlined,
-          title: 'Game Assistant',
-          subtitle: 'Preview timers, economy, cooldowns, and AI tips',
-          onTap: () => context.go('/tools/game-assistant'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.auto_fix_high_outlined,
-          title: 'Rank Fortune',
-          subtitle: "Draw today's ranked match fortune",
-          onTap: () => context.go('/tools/rank-fortune'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.psychology_outlined,
-          title: 'Curiosity Lab',
-          subtitle: 'Query mechanics, interactions, and replay evidence',
-          onTap: () => context.go('/tools/curiosity-lab'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.groups_2_outlined,
-          title: 'Team Builder',
-          subtitle: 'Draft picks and review lineup recommendations',
-          onTap: () => context.go('/tools/team-builder'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.auto_awesome_outlined,
-          title: 'Prompts',
-          subtitle: 'Explore public AI prompt templates',
-          onTap: () => context.go('/tools/prompts'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.emoji_events_outlined,
-          title: 'Esports',
-          subtitle: 'Matches, teams, and pro players',
-          onTap: () => context.go('/tools/esports'),
-        ),
-        const SizedBox(height: 12),
-        _ToolTile(
-          icon: Icons.query_stats_outlined,
-          title: 'Stats',
-          subtitle: 'Hero, equipment, and combo trends',
-          onTap: () => context.go('/tools/stats'),
-        ),
+        for (final tool in _secondaryTools) ...[
+          _ToolTile(tool: tool),
+          if (tool != _secondaryTools.last) const SizedBox(height: 12),
+        ],
       ],
     );
   }
 }
 
-class _ToolTile extends StatelessWidget {
-  const _ToolTile({
+class _ToolItem {
+  const _ToolItem({
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.onTap,
+    required this.route,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback? onTap;
+  final String route;
+}
+
+class _ToolGridCard extends StatelessWidget {
+  const _ToolGridCard({required this.tool, super.key});
+
+  final _ToolItem tool;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go(tool.route),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(tool.icon, color: AppTheme.gold, size: 28),
+                const SizedBox(height: 10),
+                Text(
+                  tool.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    height: 1.12,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  tool.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppTheme.muted,
+                    fontSize: 11,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolTile extends StatelessWidget {
+  const _ToolTile({required this.tool});
+
+  final _ToolItem tool;
 
   @override
   Widget build(BuildContext context) {
@@ -134,13 +234,11 @@ class _ToolTile extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: ListTile(
-          onTap: onTap,
-          leading: Icon(icon, color: AppTheme.gold),
-          trailing: onTap == null
-              ? null
-              : const Icon(Icons.chevron_right, color: AppTheme.muted),
+          onTap: () => context.go(tool.route),
+          leading: Icon(tool.icon, color: AppTheme.gold),
+          trailing: const Icon(Icons.chevron_right, color: AppTheme.muted),
           title: Text(
-            title,
+            tool.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -149,7 +247,7 @@ class _ToolTile extends StatelessWidget {
             ),
           ),
           subtitle: Text(
-            subtitle,
+            tool.subtitle,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppTheme.muted),

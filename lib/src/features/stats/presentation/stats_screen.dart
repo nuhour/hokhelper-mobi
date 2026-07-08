@@ -8,9 +8,11 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../rankings/presentation/hero_ranking_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/stats_repository.dart';
 import '../domain/stats_dashboard.dart';
+import 'hero_trends_screen.dart';
 
 final statsRepositoryProvider = Provider<StatsRepository>((ref) {
   return StatsRepository(apiClient: ref.watch(apiClientProvider));
@@ -99,15 +101,21 @@ class StatsScreen extends ConsumerWidget {
     this.initialEntry = StatsEntry.overview,
     this.initialEquipId,
     this.initialHeroId,
+    this.showPortalTabs = false,
     super.key,
   });
 
   final StatsEntry initialEntry;
   final String? initialEquipId;
   final String? initialHeroId;
+  final bool showPortalTabs;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (showPortalTabs) {
+      return const _StatsPortalTabs();
+    }
+
     final dashboardProvider = statsDashboardProvider(
       initialEntry.dashboardEntry,
     );
@@ -273,6 +281,165 @@ class StatsScreen extends ConsumerWidget {
         (initialEntry == StatsEntry.tierRank ||
             initialEntry == StatsEntry.powerRank ||
             initialEntry == StatsEntry.homeCore);
+  }
+}
+
+class _StatsPortalTabs extends StatefulWidget {
+  const _StatsPortalTabs();
+
+  @override
+  State<_StatsPortalTabs> createState() => _StatsPortalTabsState();
+}
+
+class _StatsPortalTabsState extends State<_StatsPortalTabs> {
+  late final PageController _pageController;
+  var _selectedPage = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _selectPage(int index) {
+    if (_selectedPage != index) {
+      setState(() {
+        _selectedPage = index;
+      });
+    }
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppSectionHeader(title: 'Stats'),
+              const SizedBox(height: 8),
+              Text(
+                'Browse rankings, tier lists, and hero trend signals.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+              ),
+              const SizedBox(height: 16),
+              _StatsTopTabs(
+                selectedIndex: _selectedPage,
+                onSelected: _selectPage,
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _selectedPage = index;
+              });
+            },
+            children: const [
+              HeroRankingScreen(),
+              HeroRankingScreen(initialTabIndex: 3),
+              HeroTrendsScreen(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatsTopTabs extends StatelessWidget {
+  const _StatsTopTabs({required this.selectedIndex, required this.onSelected});
+
+  static const _labels = ['排行榜', '梯度榜', '趋势'];
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        key: const ValueKey('stats-top-tab-strip'),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < _labels.length; index++) ...[
+              _StatsTabButton(
+                label: _labels[index],
+                selected: index == selectedIndex,
+                onTap: () => onSelected(index),
+              ),
+              if (index != _labels.length - 1) const SizedBox(width: 26),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatsTabButton extends StatelessWidget {
+  const _StatsTabButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: selected ? AppTheme.text : AppTheme.muted,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 5),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: selected ? 20 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: AppTheme.gold,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -177,6 +177,35 @@ List<Override> _toolOverrides({
 }
 
 void main() {
+  testWidgets('tools screen renders hokx style nine grid', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _emptyToolOverrides(),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('tools-nine-grid')), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            key.value.startsWith('tool-grid-card-');
+      }),
+      findsNWidgets(9),
+    );
+    expect(find.text('BP Simulator'), findsOneWidget);
+    expect(find.text('Tier List Tool'), findsOneWidget);
+    expect(find.text('Prompts'), findsOneWidget);
+    expect(find.text('Team Builder'), findsOneWidget);
+    expect(find.text('Build Simulator'), findsOneWidget);
+    expect(find.text('Game Assistant'), findsOneWidget);
+    expect(find.text('Rank Fortune'), findsOneWidget);
+    expect(find.text('Event Assistance'), findsOneWidget);
+    expect(find.text('Curiosity Lab'), findsOneWidget);
+  });
+
   testWidgets('build explorer tile opens the build explorer route', (
     tester,
   ) async {
@@ -188,6 +217,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('Build Explorer'), 120);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Build Explorer'));
     await tester.pumpAndSettle();
 
@@ -339,6 +370,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('Rankings'), 120);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Rankings'));
     await tester.pumpAndSettle();
 
