@@ -88,6 +88,33 @@ void main() {
     expect(find.text('Read Notes'), findsOneWidget);
   });
 
+  testWidgets('home top tabs switch in place and support horizontal swipe', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHomeScreen(
+        const HomeStats(
+          success: true,
+          message: 'Home portal ready',
+          result: {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dominate the Rift'), findsOneWidget);
+
+    await tester.tap(find.text('英雄'));
+    await tester.pumpAndSettle();
+    expect(find.text('英雄图鉴'), findsAtLeastNWidgets(1));
+    expect(find.text('Dominate the Rift'), findsNothing);
+
+    await tester.fling(find.byType(PageView), const Offset(700, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('皮肤图鉴'), findsAtLeastNWidgets(1));
+    expect(find.text('英雄图鉴'), findsNothing);
+  });
+
   testWidgets('home menu lists filtered hokx portal menu groups', (
     tester,
   ) async {

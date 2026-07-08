@@ -55,15 +55,48 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _HomePortalFramework extends StatelessWidget {
+class _HomePortalFramework extends StatefulWidget {
   const _HomePortalFramework({required this.result});
 
   final Map<String, dynamic> result;
 
   @override
+  State<_HomePortalFramework> createState() => _HomePortalFrameworkState();
+}
+
+class _HomePortalFrameworkState extends State<_HomePortalFramework> {
+  late final PageController _pageController;
+  int _selectedPage = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _selectPage(int index) {
+    setState(() {
+      _selectedPage = index;
+    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final heroRows = _readList(_readMap(result['hero_ranking_table'])['rows']);
-    final patchNotes = _readList(result['patch_notes']);
+    final heroRows = _readList(
+      _readMap(widget.result['hero_ranking_table'])['rows'],
+    );
+    final patchNotes = _readList(widget.result['patch_notes']);
     final trendingHero = heroRows.isNotEmpty
         ? heroRows.first
         : const <String, dynamic>{};
@@ -74,25 +107,75 @@ class _HomePortalFramework extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _HomePortalTopBar(),
+        _HomePortalTopBar(
+          selectedIndex: _selectedPage,
+          onSelected: _selectPage,
+        ),
         const SizedBox(height: 18),
-        const _HomeHeroBanner(),
-        const SizedBox(height: 18),
-        _HomeBentoGrid(trendingHero: trendingHero, latestPatch: latestPatch),
+        SizedBox(
+          height: 920,
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _selectedPage = index;
+              });
+            },
+            children: [
+              const _PortalSwitchPage(
+                title: '电竞中心',
+                subtitle: '赛程、赛事统计、战队与职业选手集中浏览。',
+                links: [
+                  _PortalMenuLink('赛程', '/esports/schedule'),
+                  _PortalMenuLink('赛事统计', '/esports/stats'),
+                  _PortalMenuLink('战队', '/esports/teams'),
+                  _PortalMenuLink('职业选手', '/esports/players'),
+                ],
+              ),
+              const _PortalSwitchPage(
+                title: '皮肤图鉴',
+                subtitle: '浏览皮肤图鉴、海报、CG 与收藏内容。',
+                links: [
+                  _PortalMenuLink('皮肤图鉴', '/content/skins'),
+                  _PortalMenuLink('CG', '/content/cgs'),
+                ],
+              ),
+              const _PortalSwitchPage(
+                title: '英雄图鉴',
+                subtitle: '查看英雄图鉴、梯度榜和强度趋势。',
+                links: [
+                  _PortalMenuLink('英雄图鉴', '/heroes'),
+                  _PortalMenuLink('梯度榜', '/tier-list'),
+                  _PortalMenuLink('强度趋势', '/tools/stats?entry=hero_trend'),
+                ],
+              ),
+              _PortalHomePage(
+                trendingHero: trendingHero,
+                latestPatch: latestPatch,
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
 class _HomePortalTopBar extends StatelessWidget {
-  const _HomePortalTopBar();
+  const _HomePortalTopBar({
+    required this.selectedIndex,
+    required this.onSelected,
+  });
 
   static const _entries = [
-    _TopNavEntry('电竞', '/tools/esports'),
-    _TopNavEntry('皮肤', '/content/skins'),
-    _TopNavEntry('英雄', '/heroes'),
-    _TopNavEntry('首页', '/'),
+    _TopNavEntry('电竞'),
+    _TopNavEntry('皮肤'),
+    _TopNavEntry('英雄'),
+    _TopNavEntry('首页'),
   ];
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -108,8 +191,12 @@ class _HomePortalTopBar extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (final entry in _entries) ...[
-                  _PortalNavPill(entry: entry),
+                for (var index = 0; index < _entries.length; index++) ...[
+                  _PortalNavPill(
+                    entry: _entries[index],
+                    selected: index == selectedIndex,
+                    onTap: () => onSelected(index),
+                  ),
                   const SizedBox(width: 8),
                 ],
               ],
@@ -122,6 +209,113 @@ class _HomePortalTopBar extends StatelessWidget {
           onTap: () => context.go('/search'),
         ),
       ],
+    );
+  }
+}
+
+class _PortalHomePage extends StatelessWidget {
+  const _PortalHomePage({
+    required this.trendingHero,
+    required this.latestPatch,
+  });
+
+  final Map<String, dynamic> trendingHero;
+  final Map<String, dynamic> latestPatch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _HomeHeroBanner(),
+        const SizedBox(height: 18),
+        _HomeBentoGrid(trendingHero: trendingHero, latestPatch: latestPatch),
+      ],
+    );
+  }
+}
+
+class _PortalSwitchPage extends StatelessWidget {
+  const _PortalSwitchPage({
+    required this.title,
+    required this.subtitle,
+    required this.links,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<_PortalMenuLink> links;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.outline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final link in links) _PortalRouteChip(link: link),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PortalRouteChip extends StatelessWidget {
+  const _PortalRouteChip({required this.link});
+
+  final _PortalMenuLink link;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => context.go(link.route),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panelAlt,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppTheme.outline),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+          child: Text(
+            link.label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: AppTheme.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -334,28 +528,32 @@ class _PortalMenuChip extends StatelessWidget {
 }
 
 class _TopNavEntry {
-  const _TopNavEntry(this.label, this.route);
+  const _TopNavEntry(this.label);
 
   final String label;
-  final String route;
 }
 
 class _PortalNavPill extends StatelessWidget {
-  const _PortalNavPill({required this.entry});
+  const _PortalNavPill({
+    required this.entry,
+    required this.selected,
+    required this.onTap,
+  });
 
   final _TopNavEntry entry;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isHome = entry.route == '/';
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
-        onTap: () => context.go(entry.route),
+        onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            color: isHome ? AppTheme.gold : AppTheme.panel,
+            color: selected ? AppTheme.gold : AppTheme.panel,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
@@ -363,7 +561,7 @@ class _PortalNavPill extends StatelessWidget {
           child: Text(
             entry.label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: isHome ? AppTheme.bg : AppTheme.text,
+              color: selected ? AppTheme.bg : AppTheme.text,
               fontWeight: FontWeight.w900,
             ),
           ),
