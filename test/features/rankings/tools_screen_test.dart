@@ -266,6 +266,36 @@ void main() {
     expect(find.text('Curiosity Lab'), findsOneWidget);
   });
 
+  testWidgets('tools screen uses copied hokx icon assets', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _emptyToolOverrides(),
+        child: MaterialApp.router(routerConfig: _buildRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final assetPath in const [
+      'assets/tools/bp.png',
+      'assets/tools/tier.png',
+      'assets/tools/prompt.png',
+      'assets/tools/team.png',
+      'assets/tools/build.png',
+      'assets/tools/fortune.png',
+      'assets/tools/event.png',
+    ]) {
+      expect(
+        find.byWidgetPredicate((widget) {
+          return widget is Image &&
+              widget.image is AssetImage &&
+              (widget.image as AssetImage).assetName == assetPath;
+        }),
+        findsOneWidget,
+        reason: assetPath,
+      );
+    }
+  });
+
   testWidgets('build explorer tile opens the build explorer route', (
     tester,
   ) async {

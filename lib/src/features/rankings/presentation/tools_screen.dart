@@ -11,30 +11,35 @@ class ToolsScreen extends StatelessWidget {
   static const _primaryTools = [
     _ToolItem(
       icon: Icons.account_tree_outlined,
+      assetIcon: 'assets/tools/bp.png',
       title: 'BP Simulator',
       subtitle: 'Draft schemes',
       route: '/tools/bp-simulator',
     ),
     _ToolItem(
       icon: Icons.format_list_numbered_outlined,
+      assetIcon: 'assets/tools/tier.png',
       title: 'Tier List Tool',
       subtitle: 'Edit tiers',
       route: '/tools/tier-list',
     ),
     _ToolItem(
       icon: Icons.auto_awesome_outlined,
+      assetIcon: 'assets/tools/prompt.png',
       title: 'Prompts',
       subtitle: 'AI templates',
       route: '/tools/prompts',
     ),
     _ToolItem(
       icon: Icons.groups_2_outlined,
+      assetIcon: 'assets/tools/team.png',
       title: 'Team Builder',
       subtitle: 'Lineup advice',
       route: '/tools/team-builder',
     ),
     _ToolItem(
       icon: Icons.tune_outlined,
+      assetIcon: 'assets/tools/build.png',
       title: 'Build Simulator',
       subtitle: 'Hero slots',
       route: '/tools/build-sim',
@@ -47,12 +52,14 @@ class ToolsScreen extends StatelessWidget {
     ),
     _ToolItem(
       icon: Icons.auto_fix_high_outlined,
+      assetIcon: 'assets/tools/fortune.png',
       title: 'Rank Fortune',
       subtitle: 'Daily draw',
       route: '/tools/rank-fortune',
     ),
     _ToolItem(
       icon: Icons.event_available_outlined,
+      assetIcon: 'assets/tools/event.png',
       title: 'Event Assistance',
       subtitle: 'Help board',
       route: '/content/event-assistance',
@@ -159,9 +166,11 @@ class _ToolItem {
     required this.title,
     required this.subtitle,
     required this.route,
+    this.assetIcon,
   });
 
   final IconData icon;
+  final String? assetIcon;
   final String title;
   final String subtitle;
   final String route;
@@ -198,7 +207,7 @@ class _ToolGridCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(tool.icon, color: AppTheme.gold, size: 28),
+                _ToolIcon(tool: tool, size: 34),
                 const SizedBox(height: 10),
                 Text(
                   title,
@@ -257,7 +266,7 @@ class _ToolTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: ListTile(
           onTap: () => context.go(tool.route),
-          leading: Icon(tool.icon, color: AppTheme.gold),
+          leading: _ToolIcon(tool: tool, size: 28),
           trailing: const Icon(Icons.chevron_right, color: AppTheme.muted),
           title: Text(
             title,
@@ -277,5 +286,27 @@ class _ToolTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _ToolIcon extends StatelessWidget {
+  const _ToolIcon({required this.tool, required this.size});
+
+  final _ToolItem tool;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetIcon = tool.assetIcon;
+    if (assetIcon != null) {
+      return Image.asset(
+        assetIcon,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Icon(tool.icon, color: AppTheme.gold, size: size);
   }
 }
