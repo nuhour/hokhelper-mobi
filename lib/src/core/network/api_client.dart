@@ -155,8 +155,12 @@ void _configureDevelopmentCertificates(Dio dio, AppConfig config) {
     return;
   }
 
-  adapter.validateCertificate = (certificate, certificateHost, port) {
-    return certificateHost == host;
+  adapter.createHttpClient = () {
+    final client = HttpClient();
+    client.badCertificateCallback = (certificate, certificateHost, port) {
+      return certificateHost == host;
+    };
+    return client;
   };
 }
 

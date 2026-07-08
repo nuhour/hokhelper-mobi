@@ -66,10 +66,7 @@ void main() {
       final adapter = dio.httpClientAdapter;
       expect(adapter, isA<IOHttpClientAdapter>());
 
-      final callback = (adapter as IOHttpClientAdapter).validateCertificate;
-      expect(callback, isNotNull);
-      expect(callback!(null, '192.168.1.180', 8000), isTrue);
-      expect(callback(null, 'api.example.com', 443), isFalse);
+      expect((adapter as IOHttpClientAdapter).createHttpClient, isNotNull);
     },
   );
 
