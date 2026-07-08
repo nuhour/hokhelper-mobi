@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../domain/bp_scheme_summary.dart';
 
 class BpRepository {
@@ -7,15 +8,23 @@ class BpRepository {
   final ApiClient apiClient;
 
   Future<List<BpSchemeSummary>> loadSchemes() async {
-    final json = await apiClient.postJson(
-      '/bp/scheme',
-      body: const {
-        'page': 1,
-        'pageSize': 20,
-        'sort': 'created_at',
-        'order': 'desc',
-      },
-    );
+    final Map<String, dynamic> json;
+    try {
+      json = await apiClient.postJson(
+        '/bp/scheme',
+        body: const {
+          'page': 1,
+          'pageSize': 20,
+          'sort': 'created_at',
+          'order': 'desc',
+        },
+      );
+    } on ApiError catch (error) {
+      if (_isGuestReadableListError(error)) {
+        return const [];
+      }
+      rethrow;
+    }
 
     final result = json['result'];
     final schemes = result is Map ? result['schemes'] : json['schemes'];
@@ -117,6 +126,11 @@ class BpRepository {
       body: {'schemeId': schemeId},
     );
   }
+}
+
+bool _isGuestReadableListError(ApiError error) {
+  return error.kind == ApiErrorKind.authExpired ||
+      error.kind == ApiErrorKind.forbidden;
 }
 
 List<String> _mobileDraftSlots(String prefix, int count) {

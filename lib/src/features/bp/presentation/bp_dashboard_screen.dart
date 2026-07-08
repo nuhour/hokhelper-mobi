@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_error.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -130,7 +131,7 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
       messenger.showSnackBar(
         const SnackBar(content: Text('BP scheme created')),
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
@@ -138,7 +139,7 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to create BP scheme')),
+        SnackBar(content: Text(_writeFailureMessage(error))),
       );
     }
   }
@@ -186,17 +187,26 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
       messenger.showSnackBar(
         const SnackBar(content: Text('BP scheme deleted')),
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to delete BP scheme')),
+        SnackBar(content: Text(_writeFailureMessage(error))),
       );
     }
   }
+}
+
+String _writeFailureMessage(Object error) {
+  if (error is ApiError &&
+      (error.kind == ApiErrorKind.authExpired ||
+          error.kind == ApiErrorKind.forbidden)) {
+    return 'Sign in to save BP schemes';
+  }
+  return 'Failed to save BP scheme';
 }
 
 class _BpCreateDraft {

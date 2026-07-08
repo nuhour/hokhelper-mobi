@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/data/tierlist_tool_repository.dart';
 
 class _FakeApiClient extends ApiClient {
@@ -138,7 +139,30 @@ class _FakeApiClient extends ApiClient {
   }
 }
 
+class _UnauthorizedApiClient extends _FakeApiClient {
+  @override
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    requestedPath = path;
+    requestedBody = body;
+    throw const ApiError(
+      kind: ApiErrorKind.authExpired,
+      message: 'Authentication credentials were not provided.',
+      statusCode: 401,
+    );
+  }
+}
+
 void main() {
+  test('treats unauthorized tier list schemes as empty for guests', () async {
+    final apiClient = _UnauthorizedApiClient();
+    final repository = TierListToolRepository(apiClient: apiClient);
+
+    final schemes = await repository.loadSchemes();
+
+    expect(apiClient.requestedPath, '/tierlist/schemes');
+    expect(schemes, isEmpty);
+  });
+
   test('loads tier list schemes with backend-compatible POST body', () async {
     final apiClient = _FakeApiClient();
     final repository = TierListToolRepository(apiClient: apiClient);

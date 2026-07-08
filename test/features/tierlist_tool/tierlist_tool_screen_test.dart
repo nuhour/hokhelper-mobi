@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/data/tierlist_tool_repository.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_tool_screen.dart';
@@ -12,9 +13,14 @@ class _FakeTierListToolRepository extends TierListToolRepository {
 
   String? createdName;
   String? deletedSchemeId;
+  Object? createError;
 
   @override
   Future<TierListSchemeSummary> createScheme({required String name}) async {
+    final error = createError;
+    if (error != null) {
+      throw error;
+    }
     createdName = name;
     return TierListSchemeSummary(
       id: '77',
@@ -127,6 +133,39 @@ void main() {
     expect(find.text('Mobile Tier List'), findsOneWidget);
     expect(find.text('0 heroes'), findsOneWidget);
     expect(find.text('Tier list created'), findsOneWidget);
+  });
+
+  testWidgets('asks guests to sign in before saving tier lists', (
+    tester,
+  ) async {
+    final repository = _FakeTierListToolRepository()
+      ..createError = const ApiError(
+        kind: ApiErrorKind.authExpired,
+        message: 'Authentication credentials were not provided.',
+        statusCode: 401,
+      );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListToolSchemesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TierListToolScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Tier List'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Tier list name'),
+      'Guest Tier List',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in to save tier lists'), findsOneWidget);
   });
 
   testWidgets('deletes tier list schemes from mobile cards', (tester) async {

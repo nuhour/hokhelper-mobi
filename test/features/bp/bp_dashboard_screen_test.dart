@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/features/bp/data/bp_repository.dart';
 import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
@@ -16,6 +17,7 @@ class _FakeBpRepository extends BpRepository {
   String? createdTeamBName;
   String? createdSideSelectionRule;
   String? deletedSchemeId;
+  Object? createError;
 
   @override
   Future<BpSchemeSummary> createScheme({
@@ -25,6 +27,10 @@ class _FakeBpRepository extends BpRepository {
     required String teamBName,
     required String sideSelectionRule,
   }) async {
+    final error = createError;
+    if (error != null) {
+      throw error;
+    }
     createdName = name;
     createdBoMode = boMode;
     createdTeamAName = teamAName;
@@ -148,6 +154,39 @@ void main() {
     expect(find.text('Team Alpha vs Team Beta'), findsOneWidget);
     expect(find.text('BO5'), findsOneWidget);
     expect(find.text('BP scheme created'), findsOneWidget);
+  });
+
+  testWidgets('asks guests to sign in before saving BP schemes', (
+    tester,
+  ) async {
+    final repository = _FakeBpRepository()
+      ..createError = const ApiError(
+        kind: ApiErrorKind.authExpired,
+        message: 'Authentication credentials were not provided.',
+        statusCode: 401,
+      );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpRepositoryProvider.overrideWithValue(repository),
+          bpSchemesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BpDashboardScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create BP'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Scheme name'),
+      'Guest Draft',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in to save BP schemes'), findsOneWidget);
   });
 
   testWidgets('deletes BP schemes after confirmation', (tester) async {
