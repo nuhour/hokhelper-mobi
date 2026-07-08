@@ -119,6 +119,36 @@ class _StaticPatchRepository extends ContentRepository {
   }
 }
 
+class _PatchLinkRepository extends ContentRepository {
+  _PatchLinkRepository()
+    : super(
+        apiClient: ApiClient(
+          config: const AppConfig(
+            apiBaseUrl: 'https://example.test',
+            apiPrefix: '',
+          ),
+        ),
+      );
+
+  @override
+  Future<PatchNoteSummary> loadPatchNoteDetail(
+    int noteId, {
+    required int regionId,
+  }) async {
+    return PatchNoteSummary(
+      id: noteId,
+      version: '1.2.5',
+      title: 'Version 1.2.5 Patch Notes',
+      date: '2026-07-03',
+      preview: 'Official notes linked.',
+      content:
+          'Read the [official notes](https://updates.example/hok/125) before playing.',
+      changeCount: 0,
+      tags: const ['Patch Notes'],
+    );
+  }
+}
+
 void main() {
   testWidgets('renders patch timeline, filters heroes, and opens detail', (
     tester,
@@ -375,5 +405,59 @@ void main() {
     final uri = router.routeInformationProvider.value.uri;
     expect(uri.path, '/heroes/10');
     expect(uri.queryParameters['tab'], 'history');
+  });
+
+  testWidgets('patch detail markdown links open through the mobile link route', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/content/patch-notes',
+          builder: (context, state) => const PatchNotesScreen(),
+        ),
+        GoRoute(
+          path: '/external-link',
+          builder: (context, state) => const SizedBox.shrink(),
+        ),
+      ],
+      initialLocation: '/content/patch-notes',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          patchNotesProvider.overrideWith((ref) async {
+            return const [
+              PatchNoteSummary(
+                id: 33,
+                version: '1.2.5',
+                title: 'Version 1.2.5 Patch Notes',
+                date: '2026-07-03',
+                preview: 'Official notes linked.',
+                content:
+                    'Read the [official notes](https://updates.example/hok/125) before playing.',
+                changeCount: 0,
+                tags: ['Patch Notes'],
+              ),
+            ];
+          }),
+          contentRepositoryProvider.overrideWithValue(_PatchLinkRepository()),
+          patchNotesRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Version 1.2.5 Patch Notes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('official notes'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/external-link');
+    expect(uri.queryParameters['url'], 'https://updates.example/hok/125');
   });
 }
