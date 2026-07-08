@@ -793,9 +793,9 @@ GoRouter createAppRouter() {
                     builder: (context, state) {
                       final tab = state.uri.queryParameters['tab'];
                       final initialTabIndex = switch (tab) {
-                        'leaks' => 1,
+                        'leaks' => 0,
                         'event' || 'events' || 'assistance' => 2,
-                        _ => 0,
+                        _ => 1,
                       };
                       final initialView = switch (tab) {
                         'my' => CommunityInitialView.myPosts,

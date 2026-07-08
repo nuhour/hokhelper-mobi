@@ -24,6 +24,8 @@ class _FakeAuthRepository implements AuthRepository {
   var didRegister = false;
   var didReset = false;
   var didOAuthLogin = false;
+  var requestedOAuthProvider = '';
+  var requestedOAuthRedirectUri = '';
   String? oauthProvider;
   String? oauthCode;
   String? oauthRedirectUri;
@@ -69,6 +71,16 @@ class _FakeAuthRepository implements AuthRepository {
       email: 'oauth@example.test',
       displayName: 'OAuth User',
     );
+  }
+
+  @override
+  Future<String> getOAuthAuthorizationUrl({
+    required String provider,
+    required String redirectUri,
+  }) async {
+    requestedOAuthProvider = provider;
+    requestedOAuthRedirectUri = redirectUri;
+    return 'https://oauth.example.test/$provider?redirect_uri=$redirectUri';
   }
 }
 
@@ -154,6 +166,64 @@ void main() {
       router.routerDelegate.currentConfiguration.uri.path,
       '/forgot-password',
     );
+  });
+
+  testWidgets('login screen starts Google and Discord OAuth', (tester) async {
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final openedUrls = <String>[];
+    final router = GoRouter(
+      initialLocation: '/login',
+      routes: [
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (_, _) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+          oauthUrlOpenerProvider.overrideWithValue((url) async {
+            openedUrls.add(url);
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.ensureVisible(
+      find.widgetWithText(OutlinedButton, 'Sign in with Google'),
+    );
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Sign in with Google'),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(repository.requestedOAuthProvider, 'google');
+    expect(
+      repository.requestedOAuthRedirectUri,
+      'hokhelper://auth/google/callback',
+    );
+    expect(openedUrls.single, contains('https://oauth.example.test/google'));
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Sign in with Discord'),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(repository.requestedOAuthProvider, 'discord');
+    expect(
+      repository.requestedOAuthRedirectUri,
+      'hokhelper://auth/discord/callback',
+    );
+    expect(openedUrls.last, contains('https://oauth.example.test/discord'));
   });
 
   testWidgets('register screen submits email registration', (tester) async {

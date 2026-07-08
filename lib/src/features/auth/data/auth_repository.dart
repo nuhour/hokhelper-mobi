@@ -40,6 +40,35 @@ class AuthRepository {
     return _readAuthResponse(json, fallbackMessage: 'OAuth login failed');
   }
 
+  Future<String> getOAuthAuthorizationUrl({
+    required String provider,
+    required String redirectUri,
+  }) async {
+    final normalizedProvider = provider.trim().toLowerCase();
+    if (!{'google', 'discord'}.contains(normalizedProvider)) {
+      throw const ApiError(
+        kind: ApiErrorKind.backend,
+        message: 'Unsupported OAuth provider',
+      );
+    }
+
+    final json = await apiClient.postJson(
+      '/auth/$normalizedProvider/auth_url',
+      body: {'redirect_uri': redirectUri},
+    );
+    final result = json['result'];
+    final payload = result is Map ? Map<String, dynamic>.from(result) : json;
+    final authUrl = payload['auth_url']?.toString().trim() ?? '';
+    if (authUrl.isEmpty) {
+      throw const ApiError(
+        kind: ApiErrorKind.backend,
+        message: 'OAuth authorization URL is missing',
+      );
+    }
+
+    return authUrl;
+  }
+
   Future<void> sendRegisterCode({
     required String email,
     required String turnstileToken,

@@ -7,7 +7,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
 import '../../activity/presentation/event_assistance_screen.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -150,7 +149,7 @@ enum CommunityInitialView { hot, myPosts, likedPosts }
 
 class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({
-    this.initialTabIndex = 0,
+    this.initialTabIndex = 1,
     this.initialView = CommunityInitialView.hot,
     this.initialLeakQuery,
     this.initialLeakCategory,
@@ -210,23 +209,9 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppSectionHeader(title: 'Community'),
-                const SizedBox(height: 8),
-                Text(
-                  'Read hot posts, track leaks, and share event help.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-                ),
-                const SizedBox(height: 16),
-                _CommunityTopTabs(
-                  selectedIndex: _selectedPage,
-                  onSelected: _selectPage,
-                ),
-              ],
+            child: _CommunityTopTabs(
+              selectedIndex: _selectedPage,
+              onSelected: _selectPage,
             ),
           ),
           Expanded(
@@ -239,14 +224,14 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                 _syncRouteWithTab(context, index);
               },
               children: [
-                _PostsTab(
-                  initialView: widget.initialView,
-                  initialTag: widget.initialPostTag,
-                ),
                 _LeaksTab(
                   initialQuery: widget.initialLeakQuery,
                   initialCategory: widget.initialLeakCategory,
                   initialPlatform: widget.initialLeakPlatform,
+                ),
+                _PostsTab(
+                  initialView: widget.initialView,
+                  initialTag: widget.initialPostTag,
                 ),
                 const EventAssistanceScreen(),
               ],
@@ -263,7 +248,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       return;
     }
     final nextUri = switch (index) {
-      1 => Uri(
+      0 => Uri(
         path: '/content/community',
         queryParameters: const {'tab': 'leaks'},
       ),
@@ -287,7 +272,7 @@ class _CommunityTopTabs extends StatelessWidget {
     required this.onSelected,
   });
 
-  static const _labels = ['论坛', '爆料', '活动互助'];
+  static const _labels = ['爆料', '论坛', '活动互助'];
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
@@ -303,6 +288,7 @@ class _CommunityTopTabs extends StatelessWidget {
           children: [
             for (var index = 0; index < _labels.length; index++) ...[
               _CommunityTabButton(
+                index: index,
                 label: _labels[index],
                 selected: index == selectedIndex,
                 onTap: () => onSelected(index),
@@ -318,11 +304,13 @@ class _CommunityTopTabs extends StatelessWidget {
 
 class _CommunityTabButton extends StatelessWidget {
   const _CommunityTabButton({
+    required this.index,
     required this.label,
     required this.selected,
     required this.onTap,
   });
 
+  final int index;
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -346,6 +334,9 @@ class _CommunityTabButton extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             AnimatedContainer(
+              key: selected
+                  ? ValueKey('community-top-tab-indicator-$index')
+                  : null,
               duration: const Duration(milliseconds: 180),
               width: selected ? 20 : 0,
               height: 3,

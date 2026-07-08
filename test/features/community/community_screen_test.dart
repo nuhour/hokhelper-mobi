@@ -202,14 +202,27 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Community'), findsOneWidget);
+    expect(find.text('Community'), findsNothing);
+    expect(
+      find.text('Read hot posts, track leaks, and share event help.'),
+      findsNothing,
+    );
     expect(
       find.byKey(const ValueKey('community-top-tab-strip')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('community-top-tab-indicator-1')),
       findsOneWidget,
     );
     expect(find.text('论坛'), findsOneWidget);
     expect(find.text('爆料'), findsOneWidget);
     expect(find.text('活动互助'), findsOneWidget);
+    final leakTopLeft = tester.getTopLeft(find.text('爆料'));
+    final forumTopLeft = tester.getTopLeft(find.text('论坛'));
+    final eventTopLeft = tester.getTopLeft(find.text('活动互助'));
+    expect(leakTopLeft.dx, lessThan(forumTopLeft.dx));
+    expect(forumTopLeft.dx, lessThan(eventTopLeft.dx));
     expect(find.text('Best jungle rotation'), findsOneWidget);
     expect(find.text('coach'), findsOneWidget);
     expect(find.text('18 likes · 7 comments'), findsOneWidget);
@@ -259,7 +272,7 @@ void main() {
           }),
         ],
         child: const MaterialApp(
-          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 0)),
         ),
       ),
     );
@@ -298,7 +311,7 @@ void main() {
           }),
         ],
         child: const MaterialApp(
-          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 0)),
         ),
       ),
     );
@@ -359,7 +372,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: Scaffold(
-            body: CommunityScreen(initialTabIndex: 1, initialLeakQuery: 'Lam'),
+            body: CommunityScreen(initialTabIndex: 0, initialLeakQuery: 'Lam'),
           ),
         ),
       ),
@@ -421,7 +434,7 @@ void main() {
           leakPostsRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
-          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 0)),
         ),
       ),
     );
@@ -771,7 +784,7 @@ void main() {
           leakPostsRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
-          home: Scaffold(body: CommunityScreen(initialTabIndex: 1)),
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 0)),
         ),
       ),
     );

@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'auth_controller.dart';
+
+typedef OAuthUrlOpener = Future<void> Function(String url);
+
+final oauthUrlOpenerProvider = Provider<OAuthUrlOpener>((ref) {
+  return (url) async {
+    const channel = MethodChannel('hokhelper/open_url');
+    final launched = await channel.invokeMethod<bool>('openUrl', {'url': url});
+    if (launched != true) {
+      throw StateError('Unable to open OAuth authorization URL.');
+    }
+  };
+});
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +27,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _oauthLoadingProvider;
+  String? _oauthError;
 
   @override
   void dispose() {
@@ -26,6 +41,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
+    final isOAuthLoading = _oauthLoadingProvider != null;
     final error = authState.hasError ? authState.error.toString() : null;
 
     ref.listen(authControllerProvider, (previous, next) {
@@ -84,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
                 const SizedBox(height: 24),
                 FilledButton(
-                  onPressed: isLoading ? null : _submit,
+                  onPressed: isLoading || isOAuthLoading ? null : _submit,
                   child: isLoading
                       ? const SizedBox.square(
                           dimension: 20,
@@ -92,6 +108,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : const Text('Login'),
                 ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'or',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _OAuthButton(
+                  label: 'Sign in with Google',
+                  icon: Icons.g_mobiledata_rounded,
+                  isLoading: _oauthLoadingProvider == 'google',
+                  enabled: !isLoading && !isOAuthLoading,
+                  onPressed: () => _startOAuth('google'),
+                ),
+                const SizedBox(height: 10),
+                _OAuthButton(
+                  label: 'Sign in with Discord',
+                  icon: Icons.discord_rounded,
+                  isLoading: _oauthLoadingProvider == 'discord',
+                  enabled: !isLoading && !isOAuthLoading,
+                  onPressed: () => _startOAuth('discord'),
+                ),
+                if (_oauthError != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _oauthError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: isLoading
@@ -115,5 +170,64 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     ref.read(authControllerProvider.notifier).login(email, password);
+  }
+
+  Future<void> _startOAuth(String provider) async {
+    setState(() {
+      _oauthLoadingProvider = provider;
+      _oauthError = null;
+    });
+
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      final redirectUri = 'hokhelper://auth/$provider/callback';
+      final authUrl = await repository.getOAuthAuthorizationUrl(
+        provider: provider,
+        redirectUri: redirectUri,
+      );
+      await ref.read(oauthUrlOpenerProvider)(authUrl);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _oauthError = 'Failed to start OAuth login.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _oauthLoadingProvider = null;
+        });
+      }
+    }
+  }
+}
+
+class _OAuthButton extends StatelessWidget {
+  const _OAuthButton({
+    required this.label,
+    required this.icon,
+    required this.isLoading,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isLoading;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: enabled ? onPressed : null,
+      icon: isLoading
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon),
+      label: Text(label),
+    );
   }
 }

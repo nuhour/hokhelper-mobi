@@ -293,7 +293,7 @@ class _StatsPortalTabs extends StatefulWidget {
 
 class _StatsPortalTabsState extends State<_StatsPortalTabs> {
   late final PageController _pageController;
-  var _selectedPage = 2;
+  var _selectedPage = 1;
 
   @override
   void initState() {
@@ -327,23 +327,9 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AppSectionHeader(title: 'Stats'),
-              const SizedBox(height: 8),
-              Text(
-                'Browse rankings, tier lists, and hero trend signals.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-              ),
-              const SizedBox(height: 16),
-              _StatsTopTabs(
-                selectedIndex: _selectedPage,
-                onSelected: _selectPage,
-              ),
-            ],
+          child: _StatsTopTabs(
+            selectedIndex: _selectedPage,
+            onSelected: _selectPage,
           ),
         ),
         Expanded(
@@ -356,8 +342,8 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
             },
             children: const [
               HeroRankingScreen(),
-              HeroRankingScreen(initialTabIndex: 3),
               HeroTrendsScreen(),
+              HeroRankingScreen(initialTabIndex: 3),
             ],
           ),
         ),
@@ -369,7 +355,7 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
 class _StatsTopTabs extends StatelessWidget {
   const _StatsTopTabs({required this.selectedIndex, required this.onSelected});
 
-  static const _labels = ['排行榜', '梯度榜', '趋势'];
+  static const _labels = ['排行榜', '趋势', '梯度榜'];
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
@@ -385,6 +371,7 @@ class _StatsTopTabs extends StatelessWidget {
           children: [
             for (var index = 0; index < _labels.length; index++) ...[
               _StatsTabButton(
+                index: index,
                 label: _labels[index],
                 selected: index == selectedIndex,
                 onTap: () => onSelected(index),
@@ -400,11 +387,13 @@ class _StatsTopTabs extends StatelessWidget {
 
 class _StatsTabButton extends StatelessWidget {
   const _StatsTabButton({
+    required this.index,
     required this.label,
     required this.selected,
     required this.onTap,
   });
 
+  final int index;
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -428,6 +417,7 @@ class _StatsTabButton extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             AnimatedContainer(
+              key: selected ? ValueKey('stats-top-tab-indicator-$index') : null,
               duration: const Duration(milliseconds: 180),
               width: selected ? 20 : 0,
               height: 3,

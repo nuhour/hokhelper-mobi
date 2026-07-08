@@ -48,9 +48,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('stats-top-tab-strip')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('stats-top-tab-indicator-1')),
+      findsOneWidget,
+    );
     expect(find.text('排行榜'), findsOneWidget);
     expect(find.text('梯度榜'), findsOneWidget);
     expect(find.text('趋势'), findsOneWidget);
+    expect(find.text('Stats'), findsNothing);
+    expect(
+      find.text('Browse rankings, tier lists, and hero trend signals.'),
+      findsNothing,
+    );
+    final rankingTopLeft = tester.getTopLeft(find.text('排行榜'));
+    final trendTopLeft = tester.getTopLeft(find.text('趋势'));
+    final tierTopLeft = tester.getTopLeft(find.text('梯度榜'));
+    expect(rankingTopLeft.dx, lessThan(trendTopLeft.dx));
+    expect(trendTopLeft.dx, lessThan(tierTopLeft.dx));
     expect(find.text('Hero Trends'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
 
