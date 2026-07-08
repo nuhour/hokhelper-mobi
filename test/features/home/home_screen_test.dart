@@ -18,6 +18,16 @@ Finder _mainScrollable() {
   );
 }
 
+Finder _portalMenuScrollable() {
+  return find.descendant(
+    of: find.byType(BottomSheet),
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+    ),
+  );
+}
+
 void main() {
   testWidgets('home screen follows the hokx mobile portal framework', (
     tester,
@@ -76,6 +86,62 @@ void main() {
     expect(find.text('Latest Patch'), findsOneWidget);
     expect(find.text('Patch 1.2'), findsAtLeastNWidgets(1));
     expect(find.text('Read Notes'), findsOneWidget);
+  });
+
+  testWidgets('home menu lists filtered hokx portal menu groups', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildHomeScreen(
+        const HomeStats(
+          success: true,
+          message: 'Home portal ready',
+          result: {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.menu_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('站点菜单'), findsOneWidget);
+    expect(find.text('首页'), findsWidgets);
+    expect(find.text('英雄'), findsWidgets);
+    expect(find.text('图鉴'), findsWidgets);
+    expect(find.text('梯度榜'), findsOneWidget);
+    expect(find.text('强度趋势'), findsOneWidget);
+    expect(find.text('皮肤'), findsWidgets);
+    expect(find.text('CG'), findsOneWidget);
+    expect(find.text('社区'), findsWidgets);
+    expect(find.text('玩家排行榜'), findsOneWidget);
+    expect(find.text('论坛'), findsOneWidget);
+    expect(find.text('爆料'), findsOneWidget);
+    expect(find.text('活动互助'), findsOneWidget);
+    expect(find.text('赛事'), findsOneWidget);
+    expect(find.text('赛程'), findsOneWidget);
+    expect(find.text('赛事统计'), findsOneWidget);
+    expect(find.text('战队'), findsOneWidget);
+    expect(find.text('职业选手'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('工具'),
+      180,
+      scrollable: _portalMenuScrollable(),
+    );
+    expect(find.text('工具'), findsWidgets);
+    expect(find.text('全局 BP 模拟器'), findsOneWidget);
+    expect(find.text('梯度编辑器'), findsOneWidget);
+    expect(find.text('AI 提示词'), findsOneWidget);
+    expect(find.text('阵容搭配'), findsOneWidget);
+    expect(find.text('出装方案'), findsOneWidget);
+    expect(find.text('局内助手'), findsOneWidget);
+    expect(find.text('上分运势'), findsOneWidget);
+
+    expect(find.text('友链'), findsNothing);
+    expect(find.text('关于站点'), findsNothing);
+    expect(find.text('关系图谱'), findsNothing);
+    expect(find.text('王者大陆'), findsNothing);
   });
 
   testWidgets('home screen renders hokx portal preview sections', (

@@ -100,7 +100,7 @@ class _HomePortalTopBar extends StatelessWidget {
       children: [
         _RoundIconButton(
           icon: Icons.menu_rounded,
-          onTap: () => context.go('/content'),
+          onTap: () => _showPortalMenu(context),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -122,6 +122,213 @@ class _HomePortalTopBar extends StatelessWidget {
           onTap: () => context.go('/search'),
         ),
       ],
+    );
+  }
+}
+
+void _showPortalMenu(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    backgroundColor: AppTheme.panel,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) => const _PortalMenuSheet(),
+  );
+}
+
+class _PortalMenuSheet extends StatelessWidget {
+  const _PortalMenuSheet();
+
+  static const _groups = [
+    _PortalMenuGroup(title: '首页', links: [_PortalMenuLink('首页', '/')]),
+    _PortalMenuGroup(
+      title: '英雄',
+      links: [
+        _PortalMenuLink('图鉴', '/heroes'),
+        _PortalMenuLink('梯度榜', '/tier-list'),
+        _PortalMenuLink('强度趋势', '/tools/stats?entry=hero_trend'),
+      ],
+    ),
+    _PortalMenuGroup(
+      title: '皮肤',
+      links: [
+        _PortalMenuLink('图鉴', '/content/skins'),
+        _PortalMenuLink('CG', '/content/cgs'),
+      ],
+    ),
+    _PortalMenuGroup(
+      title: '社区',
+      links: [
+        _PortalMenuLink('玩家排行榜', '/leaderboard'),
+        _PortalMenuLink('论坛', '/content/community'),
+        _PortalMenuLink('爆料', '/content/community?tab=leaks'),
+        _PortalMenuLink('活动互助', '/content/event-assistance'),
+      ],
+    ),
+    _PortalMenuGroup(
+      title: '赛事',
+      links: [
+        _PortalMenuLink('赛程', '/esports/schedule'),
+        _PortalMenuLink('赛事统计', '/esports/stats'),
+        _PortalMenuLink('战队', '/esports/teams'),
+        _PortalMenuLink('职业选手', '/esports/players'),
+      ],
+    ),
+    _PortalMenuGroup(
+      title: '工具',
+      links: [
+        _PortalMenuLink('全局 BP 模拟器', '/tools/bp-simulator'),
+        _PortalMenuLink('梯度编辑器', '/tools/tier-list'),
+        _PortalMenuLink('AI 提示词', '/tools/prompts'),
+        _PortalMenuLink('阵容搭配', '/tools/team-builder'),
+        _PortalMenuLink('出装方案', '/tools/build-sim'),
+        _PortalMenuLink('局内助手', '/tools/game-assistant'),
+        _PortalMenuLink('上分运势', '/tools/rank-fortune'),
+      ],
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.muted.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.menu_book_outlined, color: AppTheme.gold),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '站点菜单',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: AppTheme.muted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _groups.length,
+                separatorBuilder: (context, index) => Divider(
+                  color: AppTheme.outline.withValues(alpha: 0.75),
+                  height: 22,
+                ),
+                itemBuilder: (context, index) {
+                  return _PortalMenuGroupView(group: _groups[index]);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PortalMenuGroup {
+  const _PortalMenuGroup({required this.title, required this.links});
+
+  final String title;
+  final List<_PortalMenuLink> links;
+}
+
+class _PortalMenuLink {
+  const _PortalMenuLink(this.label, this.route);
+
+  final String label;
+  final String route;
+}
+
+class _PortalMenuGroupView extends StatelessWidget {
+  const _PortalMenuGroupView({required this.group});
+
+  final _PortalMenuGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          group.title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final link in group.links) _PortalMenuChip(link: link),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PortalMenuChip extends StatelessWidget {
+  const _PortalMenuChip({required this.link});
+
+  final _PortalMenuLink link;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          Navigator.of(context).pop();
+          context.go(link.route);
+        },
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppTheme.panelAlt,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppTheme.outline),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Text(
+            link.label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: AppTheme.muted,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
