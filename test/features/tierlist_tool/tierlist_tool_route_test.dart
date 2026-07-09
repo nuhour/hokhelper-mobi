@@ -6,6 +6,8 @@ import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
+import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/data/tierlist_tool_repository.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_scheme_detail_screen.dart';
@@ -43,6 +45,15 @@ Future<void> _saveChanges(WidgetTester tester) async {
     ),
   );
   saveButton.onPressed!();
+  await tester.pumpAndSettle();
+}
+
+Future<void> _scrollToEditorControl(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    260,
+    scrollable: find.byType(Scrollable).first,
+  );
   await tester.pumpAndSettle();
 }
 
@@ -227,7 +238,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Editor mode'), findsOneWidget);
+      expect(find.byKey(const ValueKey('tier-editor-toolbar')), findsOneWidget);
+      await _scrollToEditorControl(
+        tester,
+        find.byKey(const ValueKey('tier-row-label-r1')),
+      );
       await tester.enterText(
         find.byKey(const ValueKey('tier-row-label-r1')),
         'S+',
@@ -275,10 +290,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.byKey(const ValueKey('tier-list-name-field')),
-      'Mobile Finals Meta',
-    );
+    final nameFieldFinder = find.byKey(const ValueKey('tier-list-name-field'));
+    await _scrollToEditorControl(tester, nameFieldFinder);
+    await tester.enterText(nameFieldFinder, 'Mobile Finals Meta');
     await _saveChanges(tester);
 
     expect(repository.savedScheme, isNotNull);
@@ -328,11 +342,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.byKey(const ValueKey('tier-row-color-r1-bg-blue-500')),
+    final colorFinder = find.byKey(
+      const ValueKey('tier-row-color-r1-bg-blue-500'),
     );
+    await _scrollToEditorControl(tester, colorFinder);
+    await tester.tap(colorFinder);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('tier-row-move-down-r1')));
+    final moveDownButton = tester.widget<IconButton>(
+      find.byKey(const ValueKey('tier-row-move-down-r1'), skipOffstage: false),
+    );
+    moveDownButton.onPressed!();
     await tester.pumpAndSettle();
     await _saveChanges(tester);
 
@@ -375,13 +394,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Hero #111'), findsOneWidget);
-    final heroChip = tester.widget<InputChip>(
-      find.byKey(
-        const ValueKey('tier-row-remove-hero-r1-111'),
-        skipOffstage: false,
-      ),
+    final heroChipFinder = find.byKey(
+      const ValueKey('tier-row-remove-hero-r1-111'),
+      skipOffstage: false,
     );
+    await _scrollToEditorControl(tester, heroChipFinder);
+    expect(find.text('Hero #111'), findsOneWidget);
+    final heroChip = tester.widget<InputChip>(heroChipFinder);
     heroChip.onPressed!();
     await tester.pumpAndSettle();
     await _saveChanges(tester);
@@ -424,10 +443,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.byKey(const ValueKey('tier-row-add-hero-r1')),
-      '999',
+    final addHeroFieldFinder = find.byKey(
+      const ValueKey('tier-row-add-hero-r1'),
     );
+    await _scrollToEditorControl(tester, addHeroFieldFinder);
+    await tester.enterText(addHeroFieldFinder, '999');
     final addHeroButton = tester.widget<IconButton>(
       find.byKey(
         const ValueKey('tier-row-add-hero-button-r1'),
@@ -442,6 +462,119 @@ void main() {
     expect(repository.savedScheme!.rows.single.heroIds, [111, 999]);
     expect(repository.savedScheme!.rows.single.heroCount, 2);
     expect(find.text('Hero #999'), findsOneWidget);
+  });
+
+  testWidgets('tier list edit mode renders hokx style board and hero pool', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/tier-list/42?mode=edit');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroGalleryProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '999',
+                heroId: '999',
+                name: 'Dolia',
+                avatar: 'https://example.test/dolia.png',
+                title: 'Support',
+              ),
+            ];
+          }),
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'Editable Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 1,
+                  heroIds: [111],
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('tier-editor-toolbar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tier-editor-board')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tier-row-drop-r1')), findsOneWidget);
+    expect(find.text('Hero Pool'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('hero-pool-draggable-999')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tier list edit mode drags heroes from pool into rows', (
+    tester,
+  ) async {
+    final repository = _FakeTierListToolRepository();
+    final router = createAppRouter();
+    router.go('/tools/tier-list/42?mode=edit');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          heroGalleryProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '999',
+                heroId: '999',
+                name: 'Dolia',
+                avatar: 'https://example.test/dolia.png',
+                title: 'Support',
+              ),
+            ];
+          }),
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'Editable Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 1,
+                  heroIds: [111],
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('hero-pool-draggable-999')),
+      tester.getCenter(find.byKey(const ValueKey('tier-row-drop-r1'))) -
+          tester.getCenter(
+            find.byKey(const ValueKey('hero-pool-draggable-999')),
+          ),
+    );
+    await tester.pumpAndSettle();
+    await _saveChanges(tester);
+
+    expect(repository.savedScheme, isNotNull);
+    expect(repository.savedScheme!.rows.single.heroIds, [111, 999]);
+    expect(repository.savedScheme!.rows.single.heroCount, 2);
   });
 
   testWidgets('copies tier list detail share links', (tester) async {

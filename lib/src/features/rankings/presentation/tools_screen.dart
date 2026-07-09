@@ -45,63 +45,11 @@ class ToolsScreen extends StatelessWidget {
       route: '/tools/build-sim',
     ),
     _ToolItem(
-      icon: Icons.smartphone_outlined,
-      title: 'Game Assistant',
-      subtitle: 'Match helper',
-      route: '/tools/game-assistant',
-    ),
-    _ToolItem(
       icon: Icons.auto_fix_high_outlined,
       assetIcon: 'assets/tools/fortune.png',
       title: 'Rank Fortune',
       subtitle: 'Daily draw',
       route: '/tools/rank-fortune',
-    ),
-    _ToolItem(
-      icon: Icons.event_available_outlined,
-      assetIcon: 'assets/tools/event.png',
-      title: 'Event Assistance',
-      subtitle: 'Help board',
-      route: '/content/event-assistance',
-    ),
-    _ToolItem(
-      icon: Icons.psychology_outlined,
-      title: 'Curiosity Lab',
-      subtitle: 'Mechanics Q&A',
-      route: '/tools/curiosity-lab',
-    ),
-  ];
-
-  static const _secondaryTools = [
-    _ToolItem(
-      icon: Icons.construction_outlined,
-      title: 'Build Explorer',
-      subtitle: 'Browse public build schemes',
-      route: '/tools/builds',
-    ),
-    _ToolItem(
-      icon: Icons.leaderboard_outlined,
-      title: 'Rankings',
-      subtitle: 'Compare hero performance metrics',
-      route: '/tools/rankings',
-    ),
-    _ToolItem(
-      icon: Icons.emoji_events_outlined,
-      title: 'Player Leaderboard',
-      subtitle: 'Browse ranked and peak score players',
-      route: '/tools/leaderboard',
-    ),
-    _ToolItem(
-      icon: Icons.emoji_events_outlined,
-      title: 'Esports',
-      subtitle: 'Matches, teams, and pro players',
-      route: '/tools/esports',
-    ),
-    _ToolItem(
-      icon: Icons.query_stats_outlined,
-      title: 'Stats',
-      subtitle: 'Rankings, tier list, and trends',
-      route: '/tools/stats',
     ),
   ];
 
@@ -118,7 +66,7 @@ class ToolsScreen extends StatelessWidget {
           key: const ValueKey('tools-nine-grid'),
           builder: (context, constraints) {
             const spacing = 10.0;
-            final cardWidth = (constraints.maxWidth - spacing * 2) / 3;
+            final cardWidth = (constraints.maxWidth - spacing) / 2;
             return Wrap(
               spacing: spacing,
               runSpacing: spacing,
@@ -138,23 +86,6 @@ class ToolsScreen extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 20),
-        Text(
-          l10n.toolsMore,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.text,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 12),
-        for (final tool in _secondaryTools) ...[
-          _ToolTile(
-            tool: tool,
-            title: l10n.toolTitle(tool.route),
-            subtitle: l10n.toolSubtitle(tool.route),
-          ),
-          if (tool != _secondaryTools.last) const SizedBox(height: 12),
-        ],
       ],
     );
   }
@@ -235,53 +166,6 @@ class _ToolGridCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ToolTile extends StatelessWidget {
-  const _ToolTile({
-    required this.tool,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final _ToolItem tool;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: ListTile(
-          onTap: () => context.go(tool.route),
-          leading: _ToolIcon(tool: tool, size: 28),
-          trailing: const Icon(Icons.chevron_right, color: AppTheme.muted),
-          title: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppTheme.text,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppTheme.muted),
           ),
         ),
       ),

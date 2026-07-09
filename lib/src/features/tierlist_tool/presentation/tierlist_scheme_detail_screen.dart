@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../heroes/domain/hero_summary.dart';
+import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../domain/tierlist_scheme_summary.dart';
 import 'tierlist_tool_screen.dart';
 
@@ -51,6 +55,7 @@ class _TierListSchemeDetailScreenState
   String? _hydratedSchemeId;
   TierListSchemeSummary? _savedScheme;
   bool _isSaving = false;
+  bool _isHeroPoolOpen = true;
 
   @override
   void dispose() {
@@ -75,6 +80,109 @@ class _TierListSchemeDetailScreenState
       data: (scheme) {
         final displayScheme = _displaySchemeFor(scheme);
         void save() => _saveScheme(_schemeWithEditedRows(displayScheme));
+        final heroesValue = widget.initialEditMode
+            ? ref.watch(heroGalleryProvider)
+            : const AsyncValue<List<HeroSummary>>.data(<HeroSummary>[]);
+        final heroes = heroesValue.valueOrNull ?? const <HeroSummary>[];
+        final heroesById = _heroesById(heroes);
+
+        if (widget.initialEditMode) {
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  _TierListEditorToolbar(
+                    isSaving: _isSaving,
+                    isHeroPoolOpen: _isHeroPoolOpen,
+                    onBack: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/tools/tier-list');
+                      }
+                    },
+                    onToggleHeroPool: () {
+                      setState(() {
+                        _isHeroPoolOpen = !_isHeroPoolOpen;
+                      });
+                    },
+                    onSave: save,
+                  ),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () => ref.refresh(
+                        tierListSchemeDetailProvider(widget.schemeId).future,
+                      ),
+                      child: ListView(
+                        key: const ValueKey('tier-editor-scroll'),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 104),
+                        children: [
+                          const AppSectionHeader(title: 'Tier List Detail'),
+                          const SizedBox(height: 6),
+                          Text(
+                            displayScheme.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: AppTheme.text,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          _TierListEditorWorkspace(
+                            scheme: displayScheme,
+                            heroes: heroes,
+                            heroesById: heroesById,
+                            heroesValue: heroesValue,
+                            isHeroPoolOpen: _isHeroPoolOpen,
+                            onHeroAdded: _addHeroToRow,
+                          ),
+                          const SizedBox(height: 14),
+                          _EditorModeBanner(isSaving: _isSaving, onSave: save),
+                          const SizedBox(height: 12),
+                          _TierListDetailCard(
+                            scheme: displayScheme,
+                            heroesById: heroesById,
+                            isEditMode: true,
+                            isSaving: _isSaving,
+                            nameController: _nameController,
+                            labelControllers: _labelControllers,
+                            heroIdControllers: _heroIdControllers,
+                            onLabelChanged: _updateRowLabel,
+                            onColorChanged: _updateRowColor,
+                            onHeroAdded: _addHeroToRow,
+                            onHeroRemoved: _removeHeroFromRow,
+                            onMoveRow: _moveRow,
+                            onSave: save,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                right: 20,
+                bottom: 20,
+                child: FloatingActionButton.extended(
+                  key: const ValueKey('tier-list-save-changes-floating'),
+                  heroTag: 'tier-list-save-changes',
+                  onPressed: _isSaving ? null : save,
+                  icon: _isSaving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: const Text('Save changes'),
+                ),
+              ),
+            ],
+          );
+        }
+
         return Stack(
           children: [
             RefreshIndicator(
@@ -105,6 +213,7 @@ class _TierListSchemeDetailScreenState
                   ],
                   _TierListDetailCard(
                     scheme: displayScheme,
+                    heroesById: heroesById,
                     isEditMode: widget.initialEditMode,
                     isSaving: _isSaving,
                     nameController: _nameController,
@@ -303,6 +412,399 @@ class _TierListSchemeDetailScreenState
   }
 }
 
+Map<int, HeroSummary> _heroesById(List<HeroSummary> heroes) {
+  final result = <int, HeroSummary>{};
+  for (final hero in heroes) {
+    final ids = [
+      int.tryParse(hero.id),
+      int.tryParse(hero.heroId),
+    ].whereType<int>();
+    for (final id in ids) {
+      result[id] = hero;
+    }
+  }
+  return result;
+}
+
+class _TierListEditorToolbar extends StatelessWidget {
+  const _TierListEditorToolbar({
+    required this.isSaving,
+    required this.isHeroPoolOpen,
+    required this.onBack,
+    required this.onToggleHeroPool,
+    required this.onSave,
+  });
+
+  final bool isSaving;
+  final bool isHeroPoolOpen;
+  final VoidCallback onBack;
+  final VoidCallback onToggleHeroPool;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      key: const ValueKey('tier-editor-toolbar'),
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 12, 10),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Back',
+                onPressed: onBack,
+                icon: const Icon(Icons.close_rounded),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Tier List',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _ToolbarButton(
+                tooltip: 'Board',
+                isSelected: true,
+                icon: Icons.grid_view_rounded,
+                onPressed: () {},
+              ),
+              const SizedBox(width: 8),
+              _ToolbarButton(
+                tooltip: 'Hero pool',
+                isSelected: isHeroPoolOpen,
+                icon: Icons.view_sidebar_outlined,
+                onPressed: onToggleHeroPool,
+              ),
+              const SizedBox(width: 8),
+              _ToolbarButton(
+                tooltip: 'Export',
+                icon: Icons.file_download_outlined,
+                onPressed: () {},
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                key: const ValueKey('tier-list-save-changes-top'),
+                onPressed: isSaving ? null : onSave,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: const Size(48, 44),
+                ),
+                child: isSaving
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolbarButton extends StatelessWidget {
+  const _ToolbarButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.isSelected = false,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton.filledTonal(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: isSelected
+            ? AppTheme.gold
+            : Colors.white.withValues(alpha: 0.05),
+        foregroundColor: isSelected ? Colors.white : AppTheme.text,
+        minimumSize: const Size(44, 44),
+      ),
+      icon: Icon(icon),
+    );
+  }
+}
+
+class _TierListEditorWorkspace extends StatelessWidget {
+  const _TierListEditorWorkspace({
+    required this.scheme,
+    required this.heroes,
+    required this.heroesById,
+    required this.heroesValue,
+    required this.isHeroPoolOpen,
+    required this.onHeroAdded,
+  });
+
+  final TierListSchemeSummary scheme;
+  final List<HeroSummary> heroes;
+  final Map<int, HeroSummary> heroesById;
+  final AsyncValue<List<HeroSummary>> heroesValue;
+  final bool isHeroPoolOpen;
+  final void Function(String rowId, int heroId) onHeroAdded;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final poolWidth = constraints.maxWidth < 520
+            ? constraints.maxWidth * 0.62
+            : 316.0;
+        final boardHeight = (scheme.rows.length * 102.0 + 24).clamp(
+          360.0,
+          820.0,
+        );
+        return SizedBox(
+          key: const ValueKey('tier-editor-board'),
+          height: boardHeight,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                right: isHeroPoolOpen ? poolWidth - 18 : 0,
+                child: _TierBoardPanel(
+                  scheme: scheme,
+                  heroesById: heroesById,
+                  onHeroAdded: onHeroAdded,
+                ),
+              ),
+              if (isHeroPoolOpen)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: poolWidth,
+                  child: _HeroPoolPanel(value: heroesValue, heroes: heroes),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TierBoardPanel extends StatelessWidget {
+  const _TierBoardPanel({
+    required this.scheme,
+    required this.heroesById,
+    required this.onHeroAdded,
+  });
+
+  final TierListSchemeSummary scheme;
+  final Map<int, HeroSummary> heroesById;
+  final void Function(String rowId, int heroId) onHeroAdded;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            for (final row in scheme.rows) ...[
+              _TierRowDetail(
+                row: row,
+                heroesById: heroesById,
+                isEditMode: true,
+                exposeDropKey: true,
+                onHeroAdded: (heroId) => onHeroAdded(row.id, heroId),
+              ),
+              if (row != scheme.rows.last) const SizedBox(height: 10),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroPoolPanel extends StatefulWidget {
+  const _HeroPoolPanel({required this.value, required this.heroes});
+
+  final AsyncValue<List<HeroSummary>> value;
+  final List<HeroSummary> heroes;
+
+  @override
+  State<_HeroPoolPanel> createState() => _HeroPoolPanelState();
+}
+
+class _HeroPoolPanelState extends State<_HeroPoolPanel> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredHeroes = widget.heroes
+        .where((hero) {
+          final query = _query.trim().toLowerCase();
+          if (query.isEmpty) {
+            return true;
+          }
+          return hero.name.toLowerCase().contains(query) ||
+              hero.id.contains(query) ||
+              hero.heroId.contains(query);
+        })
+        .toList(growable: false);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.32),
+            blurRadius: 24,
+            offset: const Offset(-8, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.refresh_rounded, color: AppTheme.gold),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Hero Pool',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const ValueKey('hero-pool-search'),
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: InputDecoration(
+                    hintText: 'Search...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: Colors.black.withValues(alpha: 0.16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.gold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: widget.value.when(
+              data: (_) => GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                ),
+                itemCount: filteredHeroes.length,
+                itemBuilder: (context, index) {
+                  return _HeroPoolDraggable(hero: filteredHeroes[index]);
+                },
+              ),
+              loading: () => Center(
+                child: Text(
+                  'Loading heroes...',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                ),
+              ),
+              error: (_, _) => Center(
+                child: Text(
+                  'Failed to load heroes',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+            child: Text(
+              'DRAG HEROES FROM HERE',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroPoolDraggable extends StatelessWidget {
+  const _HeroPoolDraggable({required this.hero});
+
+  final HeroSummary hero;
+
+  @override
+  Widget build(BuildContext context) {
+    final heroId = int.tryParse(hero.heroId) ?? int.tryParse(hero.id) ?? 0;
+    final token = _TierHeroToken(heroId: heroId, hero: hero, size: 40);
+    return Draggable<int>(
+      key: ValueKey('hero-pool-draggable-$heroId'),
+      data: heroId,
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(scale: 1.08, child: token),
+      ),
+      childWhenDragging: Opacity(opacity: 0.36, child: token),
+      child: token,
+    );
+  }
+}
+
 class _EditorModeBanner extends StatelessWidget {
   const _EditorModeBanner({required this.isSaving, required this.onSave});
 
@@ -354,6 +856,7 @@ class _EditorModeBanner extends StatelessWidget {
 class _TierListDetailCard extends StatelessWidget {
   const _TierListDetailCard({
     required this.scheme,
+    required this.heroesById,
     required this.isEditMode,
     required this.isSaving,
     required this.nameController,
@@ -368,6 +871,7 @@ class _TierListDetailCard extends StatelessWidget {
   });
 
   final TierListSchemeSummary scheme;
+  final Map<int, HeroSummary> heroesById;
   final bool isEditMode;
   final bool isSaving;
   final TextEditingController nameController;
@@ -500,7 +1004,13 @@ class _TierListDetailCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
               ],
-              _TierRowDetail(row: row),
+              _TierRowDetail(
+                row: row,
+                heroesById: heroesById,
+                isEditMode: false,
+                exposeDropKey: false,
+                onHeroAdded: (heroId) => onHeroAdded(row.id, heroId),
+              ),
               const SizedBox(height: 10),
             ],
           ],
@@ -791,70 +1301,166 @@ class _TierColorButton extends StatelessWidget {
 }
 
 class _TierRowDetail extends StatelessWidget {
-  const _TierRowDetail({required this.row});
+  const _TierRowDetail({
+    required this.row,
+    required this.heroesById,
+    required this.isEditMode,
+    required this.exposeDropKey,
+    required this.onHeroAdded,
+  });
 
   final TierListSchemeRowSummary row;
+  final Map<int, HeroSummary> heroesById;
+  final bool isEditMode;
+  final bool exposeDropKey;
+  final ValueChanged<int> onHeroAdded;
 
   @override
   Widget build(BuildContext context) {
-    final heroText = row.heroCount == 1 ? '1 hero' : '${row.heroCount} heroes';
     final color = _tierColorToken(row.color, fallbackLabel: row.label);
-
-    return DecoratedBox(
+    final content = DecoratedBox(
+      key: exposeDropKey ? ValueKey('tier-row-drop-${row.id}') : null,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        color: const Color(0xFF071027),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+      child: SizedBox(
+        height: 92,
         child: Row(
           children: [
             Container(
-              width: 52,
-              height: 42,
+              width: 94,
+              height: double.infinity,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withValues(alpha: 0.36)),
+                color: color,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(12),
+                ),
               ),
               child: Text(
                 row.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: color,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontStyle: FontStyle.italic,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    heroText,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      minHeight: 6,
-                      value: row.heroCount <= 0 ? 0.04 : row.heroCount / 8,
-                      color: color,
-                      backgroundColor: Colors.white.withValues(alpha: 0.06),
-                    ),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isEditMode) ...[
+                      Text(
+                        row.heroCount == 1
+                            ? '1 hero'
+                            : '${row.heroCount} heroes',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (row.heroIds.isEmpty)
+                      Text(
+                        isEditMode ? 'Drag heroes here' : 'No heroes assigned',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.muted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      )
+                    else
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final heroId in row.heroIds) ...[
+                              _TierHeroToken(
+                                heroId: heroId,
+                                hero: heroesById[heroId],
+                                size: 44,
+                              ),
+                              const SizedBox(width: 10),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+
+    if (!isEditMode) {
+      return content;
+    }
+
+    return DragTarget<int>(
+      onAcceptWithDetails: (details) => onHeroAdded(details.data),
+      builder: (context, candidateData, rejectedData) {
+        if (candidateData.isEmpty) {
+          return content;
+        }
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.34),
+                blurRadius: 18,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: content,
+        );
+      },
+    );
+  }
+}
+
+class _TierHeroToken extends StatelessWidget {
+  const _TierHeroToken({required this.heroId, required this.size, this.hero});
+
+  final int heroId;
+  final double size;
+  final HeroSummary? hero;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = hero?.name.trim().isNotEmpty == true
+        ? hero!.name
+        : 'Hero #$heroId';
+    return Tooltip(
+      message: label,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(11),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.24),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: AppImage(
+          url: hero?.avatar,
+          width: size,
+          height: size,
+          borderRadius: 10,
+          semanticLabel: label,
         ),
       ),
     );

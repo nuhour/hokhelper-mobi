@@ -8,7 +8,6 @@ import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart'
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_simulator_screen.dart';
-import 'package:hok_helper_mobile/src/features/curiosity/domain/curiosity.dart';
 import 'package:hok_helper_mobile/src/features/curiosity/presentation/curiosity_lab_screen.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
@@ -237,7 +236,7 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/tools');
   });
 
-  testWidgets('tools screen renders hokx style nine grid', (tester) async {
+  testWidgets('tools screen renders a 2 by 3 core tools grid', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: _emptyToolOverrides(),
@@ -253,17 +252,18 @@ void main() {
         return key is ValueKey<String> &&
             key.value.startsWith('tool-grid-card-');
       }),
-      findsNWidgets(9),
+      findsNWidgets(6),
     );
     expect(find.text('BP Simulator'), findsOneWidget);
     expect(find.text('Tier List Tool'), findsOneWidget);
     expect(find.text('Prompts'), findsOneWidget);
     expect(find.text('Team Builder'), findsOneWidget);
     expect(find.text('Build Simulator'), findsOneWidget);
-    expect(find.text('Game Assistant'), findsOneWidget);
     expect(find.text('Rank Fortune'), findsOneWidget);
-    expect(find.text('Event Assistance'), findsOneWidget);
-    expect(find.text('Curiosity Lab'), findsOneWidget);
+    expect(find.text('Game Assistant'), findsNothing);
+    expect(find.text('Event Assistance'), findsNothing);
+    expect(find.text('Curiosity Lab'), findsNothing);
+    expect(find.text('More'), findsNothing);
   });
 
   testWidgets('tools screen uses copied hokx icon assets', (tester) async {
@@ -282,7 +282,6 @@ void main() {
       'assets/tools/team.png',
       'assets/tools/build.png',
       'assets/tools/fortune.png',
-      'assets/tools/event.png',
     ]) {
       expect(
         find.byWidgetPredicate((widget) {
@@ -294,26 +293,6 @@ void main() {
         reason: assetPath,
       );
     }
-  });
-
-  testWidgets('build explorer tile opens the build explorer route', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _emptyToolOverrides(),
-        child: MaterialApp.router(routerConfig: _buildRouter()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(find.text('Build Explorer'), 120);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Build Explorer'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Build Explorer'), findsOneWidget);
-    expect(find.text('No public builds'), findsOneWidget);
   });
 
   testWidgets('build simulator tile opens the build simulator route', (
@@ -413,62 +392,6 @@ void main() {
     expect(find.text('2 heroes'), findsOneWidget);
   });
 
-  testWidgets('game assistant tile opens the game assistant route', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _emptyToolOverrides(),
-        child: MaterialApp.router(routerConfig: _buildRouter()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(find.text('Game Assistant'), 120);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Game Assistant'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Mobile Companion App'), findsOneWidget);
-    expect(find.text('Jungle timers'), findsOneWidget);
-  });
-
-  testWidgets('rankings tile opens the hero rankings route', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _toolOverrides(
-          heroRanking: (ref) async {
-            return const [
-              HeroRankingEntry(
-                heroId: 42,
-                externalHeroId: '199',
-                name: 'Lam',
-                mainJob: 'Assassin',
-                winRate: 0.54,
-                pickRate: 0.12,
-                banRate: 0.03,
-                mvpRate: 0.2,
-                avgKills: 8,
-                avgAssists: 5,
-                avgGrade: 13,
-              ),
-            ];
-          },
-        ),
-        child: MaterialApp.router(routerConfig: _buildRouter()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(find.text('Rankings'), 120);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Rankings'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Hero Rankings'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
-  });
-
   testWidgets('rank fortune tile opens the rank fortune route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -499,31 +422,6 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Fortune Jar'), findsOneWidget);
-  });
-
-  testWidgets('curiosity lab tile opens the curiosity lab route', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          ..._emptyToolOverrides(),
-          curiosityOptionsProvider.overrideWith((ref) async {
-            return const CuriosityOptionResult(rows: [], verbs: []);
-          }),
-        ],
-        child: MaterialApp.router(routerConfig: _buildRouter()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(find.text('Curiosity Lab'), 120);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Curiosity Lab'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('HOK Curiosity Lab'), findsOneWidget);
-    expect(find.text('Advanced Mode'), findsOneWidget);
   });
 
   testWidgets('team builder tile opens the team builder route', (tester) async {
@@ -588,109 +486,5 @@ void main() {
 
     expect(find.text('Prompts'), findsOneWidget);
     expect(find.text('Cyber skin concept'), findsOneWidget);
-  });
-
-  testWidgets('esports tile opens the esports route', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _toolOverrides(
-          esportsMatches: (ref) async {
-            return const [
-              EsportsMatchSummary(
-                id: '10',
-                leagueName: 'KPL Spring',
-                stageName: 'Playoffs',
-                teamAName: 'Wolves',
-                teamALogoUrl: '',
-                teamBName: 'AG',
-                teamBLogoUrl: '',
-                scoreA: 4,
-                scoreB: 3,
-                statusKey: 'finished',
-                startTime: '2026-06-28T11:00:00Z',
-              ),
-            ];
-          },
-          esportsTeams: (ref) async {
-            return const [
-              EsportsTeamSummary(
-                id: '1',
-                name: 'Wolves',
-                shortName: 'WOL',
-                logoUrl: '',
-                leagueName: 'KPL Spring',
-                club: 'Chongqing Wolves',
-                wins: 12,
-                losses: 3,
-                winRate: 0.8,
-              ),
-            ];
-          },
-          esportsPlayers: (ref) async {
-            return const [
-              EsportsPlayerSummary(
-                id: '8',
-                name: 'Fly',
-                avatarUrl: '',
-                teamName: 'Wolves',
-                teamLogoUrl: '',
-                role: 'Clash Lane',
-                grade: 91.5,
-                kda: 6.8,
-                winRate: 0.76,
-              ),
-            ];
-          },
-        ),
-        child: MaterialApp.router(routerConfig: _buildRouter()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(find.text('Esports'), 120);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Esports'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Esports'), findsOneWidget);
-    expect(find.text('KPL Spring'), findsOneWidget);
-    expect(find.text('4'), findsOneWidget);
-    expect(find.text(' : '), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
-  });
-
-  testWidgets('stats tile opens the stats route', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _toolOverrides(
-          statsDashboard: (ref, entry) async {
-            return const StatsDashboard(
-              heroes: [
-                StatsHeroRow(
-                  id: '199',
-                  name: 'Lam',
-                  avatarUrl: '',
-                  winRate: 0.561,
-                  pickRate: 0.18,
-                  banRate: 0.07,
-                  score: 91.4,
-                ),
-              ],
-            );
-          },
-        ),
-        child: MaterialApp.router(routerConfig: _buildRouter()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(find.text('Stats'), 120);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Stats'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Stats Dashboard'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
-    expect(find.text('56.1% WR'), findsOneWidget);
   });
 }
