@@ -209,10 +209,11 @@ class _TierListSchemeDetailScreenState
   }
 
   TierListSchemeSummary _displaySchemeFor(TierListSchemeSummary loadedScheme) {
+    final loadedWithRows = _schemeWithDefaultRows(loadedScheme);
     final baseScheme =
-        _savedScheme != null && _savedScheme!.id == loadedScheme.id
-        ? _savedScheme!
-        : loadedScheme;
+        _savedScheme != null && _savedScheme!.id == loadedWithRows.id
+        ? _schemeWithDefaultRows(_savedScheme!)
+        : loadedWithRows;
     if (_hydratedSchemeId != baseScheme.id) {
       _hydratedSchemeId = baseScheme.id;
       _editedLabels
@@ -366,6 +367,46 @@ class _TierListSchemeDetailScreenState
       );
     }
   }
+}
+
+TierListSchemeSummary _schemeWithDefaultRows(TierListSchemeSummary scheme) {
+  if (scheme.rows.isNotEmpty) {
+    return scheme;
+  }
+  return scheme.copyWith(
+    rows: const [
+      TierListSchemeRowSummary(
+        id: 'default-t0',
+        label: 'T0',
+        color: 'bg-red-600',
+        heroCount: 0,
+      ),
+      TierListSchemeRowSummary(
+        id: 'default-t1',
+        label: 'T1',
+        color: 'bg-orange-500',
+        heroCount: 0,
+      ),
+      TierListSchemeRowSummary(
+        id: 'default-t2',
+        label: 'T2',
+        color: 'bg-yellow-500',
+        heroCount: 0,
+      ),
+      TierListSchemeRowSummary(
+        id: 'default-t3',
+        label: 'T3',
+        color: 'bg-green-500',
+        heroCount: 0,
+      ),
+      TierListSchemeRowSummary(
+        id: 'default-t4',
+        label: 'T4',
+        color: 'bg-slate-500',
+        heroCount: 0,
+      ),
+    ],
+  );
 }
 
 Map<int, HeroSummary> _heroesById(List<HeroSummary> heroes) {

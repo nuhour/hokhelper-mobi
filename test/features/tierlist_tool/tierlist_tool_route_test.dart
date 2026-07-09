@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
@@ -99,7 +98,7 @@ void main() {
     expect(find.byKey(const ValueKey('tier-editor-toolbar')), findsOneWidget);
   });
 
-  testWidgets('tier list card opens its mobile scheme detail', (tester) async {
+  testWidgets('tier list card opens its fullscreen editor', (tester) async {
     final router = createAppRouter();
     router.go('/tools/tier-list');
 
@@ -149,11 +148,16 @@ void main() {
     await tester.tap(find.text('KIC Knockout Meta'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Tier List Detail'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('tier-editor-fullscreen')),
+      findsOneWidget,
+    );
     expect(find.text('KIC Knockout Meta Detail'), findsOneWidget);
+    expect(find.text('Home'), findsNothing);
+    expect(find.text('Tools'), findsNothing);
   });
 
-  testWidgets('tier list deep link opens a mobile scheme detail', (
+  testWidgets('tier list deep link opens the fullscreen editor', (
     tester,
   ) async {
     final router = createAppRouter();
@@ -190,17 +194,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Tier List Detail'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('tier-editor-fullscreen')),
+      findsOneWidget,
+    );
     expect(find.text('KIC Knockout Meta'), findsOneWidget);
-    expect(find.text('4 heroes'), findsOneWidget);
-    expect(find.text('Updated 2026-07-04'), findsOneWidget);
+    expect(find.text('Home'), findsNothing);
+    expect(find.text('Tools'), findsNothing);
     expect(find.text('T0'), findsOneWidget);
-    expect(find.text('3 heroes'), findsOneWidget);
     expect(find.text('T1'), findsOneWidget);
-    expect(find.text('1 hero'), findsOneWidget);
   });
 
-  testWidgets('legacy tier list id query opens mobile scheme detail', (
+  testWidgets('legacy tier list id query opens the fullscreen editor', (
     tester,
   ) async {
     final router = createAppRouter();
@@ -233,7 +238,6 @@ void main() {
 
     final uri = router.routeInformationProvider.value.uri;
     expect(uri.path, '/tools/tier-list/42');
-    expect(uri.queryParameters['mode'], 'edit');
     expect(
       find.byKey(const ValueKey('tier-editor-fullscreen')),
       findsOneWidget,
@@ -252,7 +256,7 @@ void main() {
     });
 
     final router = createAppRouter();
-    router.go('/tools/tier-list/42?mode=edit');
+    router.go('/tools/tier-list/42');
 
     await tester.pumpWidget(
       ProviderScope(
@@ -304,6 +308,52 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('tier-row-color-strip-r2')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tier list edit mode shows default tiers for empty schemes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final router = createAppRouter();
+    router.go('/tools/tier-list/77');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListSchemeDetailProvider('77').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '77',
+              name: 'Untitled Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('T0'), findsOneWidget);
+    expect(find.text('T1'), findsOneWidget);
+    expect(find.text('T2'), findsOneWidget);
+    expect(find.text('T3'), findsOneWidget);
+    expect(find.text('T4'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('tier-row-color-strip-default-t0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('tier-row-color-strip-default-t4')),
       findsOneWidget,
     );
   });
@@ -500,55 +550,5 @@ void main() {
     expect(repository.savedScheme, isNotNull);
     expect(repository.savedScheme!.rows.single.heroIds, [111, 999]);
     expect(repository.savedScheme!.rows.single.heroCount, 2);
-  });
-
-  testWidgets('copies tier list detail share links', (tester) async {
-    MethodCall? clipboardCall;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-          if (call.method == 'Clipboard.setData') {
-            clipboardCall = call;
-          }
-          return null;
-        });
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
-    });
-
-    final router = createAppRouter();
-    router.go('/tools/tier-list/42');
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          tierListSchemeDetailProvider('42').overrideWith((ref) async {
-            return const TierListSchemeSummary(
-              id: '42',
-              name: 'KIC Knockout Meta',
-              createdAt: '2026-07-02T08:00:00Z',
-              updatedAt: '2026-07-04T12:00:00Z',
-              rows: [
-                TierListSchemeRowSummary(
-                  id: 'r1',
-                  label: 'T0',
-                  color: 'bg-red-600',
-                  heroCount: 3,
-                ),
-              ],
-            );
-          }),
-        ],
-        child: HokHelperApp(router: router),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
-    await tester.pumpAndSettle();
-
-    expect(clipboardCall, isNotNull);
-    expect(clipboardCall!.arguments, {'text': '/tools/tier-list/42'});
-    expect(find.text('Tier list link copied'), findsOneWidget);
   });
 }

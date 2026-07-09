@@ -72,9 +72,7 @@ GoRouter _buildTierListCreateRouter() {
           GoRoute(
             path: ':schemeId',
             builder: (context, state) => Scaffold(
-              body: Text(
-                'Editing ${state.pathParameters['schemeId']} ${state.uri.queryParameters['mode']}',
-              ),
+              body: Text('Editing ${state.pathParameters['schemeId']}'),
             ),
           ),
         ],
@@ -159,11 +157,8 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/tools/tier-list/77',
     );
-    expect(
-      router.routeInformationProvider.value.uri.queryParameters['mode'],
-      'edit',
-    );
-    expect(find.text('Editing 77 edit'), findsOneWidget);
+    expect(router.routeInformationProvider.value.uri.queryParameters, isEmpty);
+    expect(find.text('Editing 77'), findsOneWidget);
     expect(find.text('Tier list created'), findsOneWidget);
   });
 

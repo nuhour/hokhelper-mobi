@@ -547,6 +547,15 @@ GoRouter createAppRouter() {
         redirect: (context, state) => _bpSimulatorTarget(state.uri),
       ),
       GoRoute(
+        path: '/tools/tier-list/:schemeId',
+        builder: (context, state) {
+          return TierListSchemeDetailScreen(
+            schemeId: state.pathParameters['schemeId'] ?? '',
+            initialEditMode: true,
+          );
+        },
+      ),
+      GoRoute(
         path: '/rankings',
         redirect: (context, state) =>
             _targetWithQuery('/tools/rankings', state.uri),
@@ -1061,22 +1070,8 @@ GoRouter createAppRouter() {
                     routes: [
                       GoRoute(
                         path: ':schemeId',
-                        builder: (context, state) {
-                          final isEditMode =
-                              state.uri.queryParameters['mode'] == 'edit';
-                          if (isEditMode) {
-                            return TierListSchemeDetailScreen(
-                              schemeId: state.pathParameters['schemeId'] ?? '',
-                              initialEditMode: true,
-                            );
-                          }
-                          return _standalonePage(
-                            fallbackRoute: '/tools/tier-list',
-                            child: TierListSchemeDetailScreen(
-                              schemeId: state.pathParameters['schemeId'] ?? '',
-                            ),
-                          );
-                        },
+                        redirect: (context, state) =>
+                            '/tools/tier-list/${state.pathParameters['schemeId'] ?? ''}',
                       ),
                     ],
                   ),
