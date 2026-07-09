@@ -1,4 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
+
+@immutable
+class HokThemeColors extends ThemeExtension<HokThemeColors> {
+  const HokThemeColors({
+    required this.backgroundDeep,
+    required this.surfaceSlate,
+    required this.surfaceRaised,
+    required this.surfaceMuted,
+    required this.onSurfaceStrong,
+    required this.onSurfaceMuted,
+    required this.outlineSoft,
+    required this.accentRed,
+    required this.success,
+  });
+
+  final Color backgroundDeep;
+  final Color surfaceSlate;
+  final Color surfaceRaised;
+  final Color surfaceMuted;
+  final Color onSurfaceStrong;
+  final Color onSurfaceMuted;
+  final Color outlineSoft;
+  final Color accentRed;
+  final Color success;
+
+  @override
+  HokThemeColors copyWith({
+    Color? backgroundDeep,
+    Color? surfaceSlate,
+    Color? surfaceRaised,
+    Color? surfaceMuted,
+    Color? onSurfaceStrong,
+    Color? onSurfaceMuted,
+    Color? outlineSoft,
+    Color? accentRed,
+    Color? success,
+  }) {
+    return HokThemeColors(
+      backgroundDeep: backgroundDeep ?? this.backgroundDeep,
+      surfaceSlate: surfaceSlate ?? this.surfaceSlate,
+      surfaceRaised: surfaceRaised ?? this.surfaceRaised,
+      surfaceMuted: surfaceMuted ?? this.surfaceMuted,
+      onSurfaceStrong: onSurfaceStrong ?? this.onSurfaceStrong,
+      onSurfaceMuted: onSurfaceMuted ?? this.onSurfaceMuted,
+      outlineSoft: outlineSoft ?? this.outlineSoft,
+      accentRed: accentRed ?? this.accentRed,
+      success: success ?? this.success,
+    );
+  }
+
+  @override
+  HokThemeColors lerp(ThemeExtension<HokThemeColors>? other, double t) {
+    if (other is! HokThemeColors) {
+      return this;
+    }
+    return HokThemeColors(
+      backgroundDeep: Color.lerp(backgroundDeep, other.backgroundDeep, t)!,
+      surfaceSlate: Color.lerp(surfaceSlate, other.surfaceSlate, t)!,
+      surfaceRaised: Color.lerp(surfaceRaised, other.surfaceRaised, t)!,
+      surfaceMuted: Color.lerp(surfaceMuted, other.surfaceMuted, t)!,
+      onSurfaceStrong: Color.lerp(onSurfaceStrong, other.onSurfaceStrong, t)!,
+      onSurfaceMuted: Color.lerp(onSurfaceMuted, other.onSurfaceMuted, t)!,
+      outlineSoft: Color.lerp(outlineSoft, other.outlineSoft, t)!,
+      accentRed: Color.lerp(accentRed, other.accentRed, t)!,
+      success: Color.lerp(success, other.success, t)!,
+    );
+  }
+}
 
 class AppTheme {
   const AppTheme._();
@@ -11,37 +80,71 @@ class AppTheme {
   static const text = Color(0xFFF8FAFC);
   static const muted = Color(0xFF94A3B8);
   static const error = Color(0xFFDC2626);
+  static const success = Color(0xFF22C55E);
   static const outline = Color(0xFF1E293B);
-  static const lightBg = Color(0xFFF8FAFC);
+  static const lightBg = Color(0xFFF6F8FC);
   static const lightPanel = Colors.white;
-  static const lightPanelAlt = Color(0xFFE2E8F0);
+  static const lightPanelAlt = Color(0xFFEAF0F8);
   static const lightText = Color(0xFF0F172A);
-  static const lightMuted = Color(0xFF64748B);
-  static const lightOutline = Color(0xFFCBD5E1);
+  static const lightMuted = Color(0xFF5F6F86);
+  static const lightOutline = Color(0xFFD7E0EC);
+
+  static const _darkTokens = HokThemeColors(
+    backgroundDeep: bg,
+    surfaceSlate: panel,
+    surfaceRaised: panelAlt,
+    surfaceMuted: Color(0xFF111C2D),
+    onSurfaceStrong: text,
+    onSurfaceMuted: muted,
+    outlineSoft: outline,
+    accentRed: error,
+    success: success,
+  );
+
+  static const _lightTokens = HokThemeColors(
+    backgroundDeep: lightBg,
+    surfaceSlate: lightPanel,
+    surfaceRaised: lightPanelAlt,
+    surfaceMuted: Color(0xFFF1F5FB),
+    onSurfaceStrong: lightText,
+    onSurfaceMuted: lightMuted,
+    outlineSoft: lightOutline,
+    accentRed: error,
+    success: Color(0xFF168A45),
+  );
 
   static ThemeData dark({Color primary = gold, Color secondary = cyan}) {
-    final base = ThemeData.dark(useMaterial3: true);
+    final base = FlexThemeData.dark(
+      colorScheme: ColorScheme.dark(
+        primary: primary,
+        secondary: secondary,
+        tertiary: success,
+        surface: panel,
+        surfaceContainerLowest: bg,
+        surfaceContainerLow: panel,
+        surfaceContainer: panel,
+        surfaceContainerHigh: panelAlt,
+        surfaceContainerHighest: const Color(0xFF253445),
+        outline: outline,
+        outlineVariant: outline,
+        error: error,
+        onPrimary: text,
+        onSecondary: bg,
+        onTertiary: bg,
+        onSurface: text,
+      ),
+      subThemesData: _subThemesData,
+      visualDensity: FlexColorScheme.comfortablePlatformDensity,
+      useMaterial3: true,
+    );
     final textTheme = base.textTheme.apply(bodyColor: text, displayColor: text);
 
     return base.copyWith(
       scaffoldBackgroundColor: bg,
       dividerColor: outline,
       cardColor: panel,
-      colorScheme: ColorScheme.dark(
-        primary: primary,
-        secondary: secondary,
-        surface: panel,
-        surfaceContainerLowest: bg,
-        surfaceContainerLow: panel,
-        surfaceContainer: panel,
-        surfaceContainerHigh: panelAlt,
-        outline: outline,
-        outlineVariant: outline,
-        error: error,
-        onPrimary: text,
-        onSecondary: bg,
-        onSurface: text,
-      ),
+      extensions: const [_darkTokens],
+      cardTheme: _cardTheme(panel, outline),
       appBarTheme: const AppBarTheme(
         backgroundColor: panel,
         foregroundColor: text,
@@ -65,6 +168,8 @@ class AppTheme {
         ),
         hintStyle: const TextStyle(color: muted),
       ),
+      filledButtonTheme: _filledButtonTheme(primary, text),
+      outlinedButtonTheme: _outlinedButtonTheme(primary, outline),
       textTheme: textTheme.copyWith(
         bodySmall: textTheme.bodySmall?.copyWith(color: muted),
         bodyMedium: textTheme.bodyMedium?.copyWith(color: text),
@@ -89,7 +194,29 @@ class AppTheme {
   }
 
   static ThemeData light({Color primary = gold, Color secondary = cyan}) {
-    final base = ThemeData.light(useMaterial3: true);
+    final base = FlexThemeData.light(
+      colorScheme: ColorScheme.light(
+        primary: primary,
+        secondary: secondary,
+        tertiary: const Color(0xFF168A45),
+        surface: lightPanel,
+        surfaceContainerLowest: lightBg,
+        surfaceContainerLow: lightPanel,
+        surfaceContainer: lightPanel,
+        surfaceContainerHigh: lightPanelAlt,
+        surfaceContainerHighest: const Color(0xFFDDE7F3),
+        outline: lightOutline,
+        outlineVariant: lightOutline,
+        error: error,
+        onPrimary: text,
+        onSecondary: lightText,
+        onTertiary: text,
+        onSurface: lightText,
+      ),
+      subThemesData: _subThemesData,
+      visualDensity: FlexColorScheme.comfortablePlatformDensity,
+      useMaterial3: true,
+    );
     final textTheme = base.textTheme.apply(
       bodyColor: lightText,
       displayColor: lightText,
@@ -99,21 +226,8 @@ class AppTheme {
       scaffoldBackgroundColor: lightBg,
       dividerColor: lightOutline,
       cardColor: lightPanel,
-      colorScheme: ColorScheme.light(
-        primary: primary,
-        secondary: secondary,
-        surface: lightPanel,
-        surfaceContainerLowest: lightBg,
-        surfaceContainerLow: lightPanel,
-        surfaceContainer: lightPanel,
-        surfaceContainerHigh: lightPanelAlt,
-        outline: lightOutline,
-        outlineVariant: lightOutline,
-        error: error,
-        onPrimary: text,
-        onSecondary: lightText,
-        onSurface: lightText,
-      ),
+      extensions: const [_lightTokens],
+      cardTheme: _cardTheme(lightPanel, lightOutline),
       appBarTheme: const AppBarTheme(
         backgroundColor: lightPanel,
         foregroundColor: lightText,
@@ -137,6 +251,8 @@ class AppTheme {
         ),
         hintStyle: const TextStyle(color: lightMuted),
       ),
+      filledButtonTheme: _filledButtonTheme(primary, text),
+      outlinedButtonTheme: _outlinedButtonTheme(primary, lightOutline),
       textTheme: textTheme.copyWith(
         bodySmall: textTheme.bodySmall?.copyWith(color: lightMuted),
         bodyMedium: textTheme.bodyMedium?.copyWith(color: lightText),
@@ -160,6 +276,59 @@ class AppTheme {
               : lightMuted;
           return IconThemeData(color: color);
         }),
+      ),
+    );
+  }
+
+  static const _subThemesData = FlexSubThemesData(
+    defaultRadius: 10,
+    adaptiveRemoveElevationTint: FlexAdaptive.all(),
+    adaptiveAppBarScrollUnderOff: FlexAdaptive.all(),
+    blendOnLevel: 8,
+    blendOnColors: false,
+    inputDecoratorIsFilled: true,
+    inputDecoratorBorderType: FlexInputBorderType.outline,
+    navigationBarMutedUnselectedIcon: true,
+    navigationBarMutedUnselectedLabel: true,
+  );
+
+  static CardThemeData _cardTheme(Color color, Color borderColor) {
+    return CardThemeData(
+      color: color,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: borderColor.withValues(alpha: 0.72)),
+      ),
+    );
+  }
+
+  static FilledButtonThemeData _filledButtonTheme(
+    Color primary,
+    Color foreground,
+  ) {
+    return FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: primary,
+        foregroundColor: foreground,
+        minimumSize: const Size(44, 44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  static OutlinedButtonThemeData _outlinedButtonTheme(
+    Color primary,
+    Color outlineColor,
+  ) {
+    return OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: primary,
+        minimumSize: const Size(44, 44),
+        side: BorderSide(color: outlineColor),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

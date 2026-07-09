@@ -17,14 +17,16 @@ class HokHelperApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsControllerProvider).valueOrNull;
-    final theme = settings?.theme == AppThemeMode.versus
-        ? AppTheme.light()
-        : AppTheme.dark();
+    final themeMode = settings?.theme == AppThemeMode.versus
+        ? ThemeMode.light
+        : ThemeMode.dark;
 
     return MaterialApp.router(
       title: 'HOK Helper',
       debugShowCheckedModeBanner: false,
-      theme: theme,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: themeMode,
       locale: settings == null ? null : Locale(settings.languageCode),
       routerConfig: _router,
       localizationsDelegates: const [

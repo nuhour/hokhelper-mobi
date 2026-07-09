@@ -458,34 +458,39 @@ class _PortalNavPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              entry.label,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: selected ? AppTheme.text : AppTheme.muted,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                entry.label,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: selected ? AppTheme.text : AppTheme.muted,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                ),
               ),
-            ),
-            const SizedBox(height: 5),
-            AnimatedContainer(
-              key: selected ? ValueKey('home-top-tab-indicator-$index') : null,
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              width: selected ? 20 : 0,
-              height: 3,
-              decoration: BoxDecoration(
-                color: selected ? AppTheme.text : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
+              const SizedBox(height: 5),
+              AnimatedContainer(
+                key: selected
+                    ? ValueKey('home-top-tab-indicator-$index')
+                    : null,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: selected ? 20 : 0,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: selected ? AppTheme.text : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
