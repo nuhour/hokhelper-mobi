@@ -1062,12 +1062,18 @@ GoRouter createAppRouter() {
                       GoRoute(
                         path: ':schemeId',
                         builder: (context, state) {
+                          final isEditMode =
+                              state.uri.queryParameters['mode'] == 'edit';
+                          if (isEditMode) {
+                            return TierListSchemeDetailScreen(
+                              schemeId: state.pathParameters['schemeId'] ?? '',
+                              initialEditMode: true,
+                            );
+                          }
                           return _standalonePage(
                             fallbackRoute: '/tools/tier-list',
                             child: TierListSchemeDetailScreen(
                               schemeId: state.pathParameters['schemeId'] ?? '',
-                              initialEditMode:
-                                  state.uri.queryParameters['mode'] == 'edit',
                             ),
                           );
                         },
