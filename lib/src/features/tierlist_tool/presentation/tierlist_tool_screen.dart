@@ -127,6 +127,7 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
       messenger.showSnackBar(
         const SnackBar(content: Text('Tier list created')),
       );
+      context.go('/tools/tier-list/${created.id}?mode=edit');
     } catch (error) {
       if (!mounted) {
         return;

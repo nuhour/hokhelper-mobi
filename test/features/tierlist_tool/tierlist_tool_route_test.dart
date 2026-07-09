@@ -58,6 +58,62 @@ Future<void> _scrollToEditorControl(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets('tier list edit mode asks portrait users to rotate landscape', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final router = createAppRouter();
+    router.go('/tools/tier-list/42?mode=edit');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return const TierListSchemeSummary(
+              id: '42',
+              name: 'Editable Tier List',
+              createdAt: '2026-07-02T08:00:00Z',
+              updatedAt: '2026-07-04T12:00:00Z',
+              rows: [
+                TierListSchemeRowSummary(
+                  id: 'r1',
+                  label: 'T0',
+                  color: 'bg-red-600',
+                  heroCount: 1,
+                  heroIds: [111],
+                ),
+              ],
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('tier-editor-landscape-prompt')),
+      findsOneWidget,
+    );
+    expect(find.text('Rotate to landscape'), findsOneWidget);
+    expect(find.byKey(const ValueKey('tier-editor-toolbar')), findsNothing);
+
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('tier-editor-landscape-prompt')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('tier-editor-toolbar')), findsOneWidget);
+  });
+
   testWidgets('tier list card opens its mobile scheme detail', (tester) async {
     final router = createAppRouter();
     router.go('/tools/tier-list');

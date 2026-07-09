@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/network/api_error.dart';
@@ -60,6 +61,28 @@ class _NoopApiClient extends ApiClient {
       );
 }
 
+GoRouter _buildTierListCreateRouter() {
+  return GoRouter(
+    initialLocation: '/tools/tier-list',
+    routes: [
+      GoRoute(
+        path: '/tools/tier-list',
+        builder: (context, state) => const Scaffold(body: TierListToolScreen()),
+        routes: [
+          GoRoute(
+            path: ':schemeId',
+            builder: (context, state) => Scaffold(
+              body: Text(
+                'Editing ${state.pathParameters['schemeId']} ${state.uri.queryParameters['mode']}',
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 void main() {
   testWidgets('renders tier list scheme cards', (tester) async {
     await tester.pumpWidget(
@@ -108,13 +131,15 @@ void main() {
   ) async {
     final repository = _FakeTierListToolRepository();
 
+    final router = _buildTierListCreateRouter();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           tierListToolRepositoryProvider.overrideWithValue(repository),
           tierListToolSchemesProvider.overrideWith((ref) async => const []),
         ],
-        child: const MaterialApp(home: Scaffold(body: TierListToolScreen())),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -130,8 +155,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.createdName, 'Mobile Tier List');
-    expect(find.text('Mobile Tier List'), findsOneWidget);
-    expect(find.text('0 heroes'), findsOneWidget);
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/tier-list/77',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['mode'],
+      'edit',
+    );
+    expect(find.text('Editing 77 edit'), findsOneWidget);
     expect(find.text('Tier list created'), findsOneWidget);
   });
 
