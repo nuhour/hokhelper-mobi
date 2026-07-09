@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
@@ -38,6 +39,51 @@ class _NoopApiClient extends ApiClient {
 
 Future<void> _saveChanges(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('tier-list-save-changes-top')));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpEditableTierList(
+  WidgetTester tester, {
+  _FakeTierListToolRepository? repository,
+  List<HeroSummary> heroes = const [],
+}) async {
+  tester.view.physicalSize = const Size(844, 390);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
+  final router = createAppRouter();
+  router.go('/tools/tier-list/42');
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        if (repository != null)
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+        heroGalleryProvider.overrideWith((ref) async => heroes),
+        tierListSchemeDetailProvider('42').overrideWith((ref) async {
+          return const TierListSchemeSummary(
+            id: '42',
+            name: 'Editable Tier List',
+            createdAt: '2026-07-02T08:00:00Z',
+            updatedAt: '2026-07-04T12:00:00Z',
+            rows: [
+              TierListSchemeRowSummary(
+                id: 'r1',
+                label: 'T0',
+                color: 'bg-red-600',
+                heroCount: 2,
+                heroIds: [301, 401],
+              ),
+            ],
+          );
+        }),
+      ],
+      child: HokHelperApp(router: router),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -297,10 +343,11 @@ void main() {
     );
     expect(find.byKey(const ValueKey('standalone-back-button')), findsNothing);
     expect(find.text('Tier List Detail'), findsNothing);
-    expect(find.byKey(const ValueKey('tier-list-name-field')), findsNothing);
+    expect(find.byKey(const ValueKey('tier-list-name-field')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tier-row-label-r1')), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('tier-row-color-r1-bg-blue-500')),
-      findsNothing,
+      find.byKey(const ValueKey('tier-row-color-menu-r1')),
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('tier-row-color-strip-r1')),
@@ -492,6 +539,86 @@ void main() {
     );
   });
 
+  testWidgets('tier list fullscreen editor saves scheme and tier edits', (
+    tester,
+  ) async {
+    final repository = _FakeTierListToolRepository();
+    await _pumpEditableTierList(tester, repository: repository);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('tier-list-name-field')),
+      'My Jungle Meta',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('tier-row-label-r1')),
+      'S',
+    );
+    await tester.tap(find.byKey(const ValueKey('tier-row-color-menu-r1')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('tier-row-color-r1-bg-blue-500')),
+    );
+    await tester.pumpAndSettle();
+    await _saveChanges(tester);
+
+    expect(repository.savedScheme, isNotNull);
+    expect(repository.savedScheme!.name, 'My Jungle Meta');
+    expect(repository.savedScheme!.rows.single.label, 'S');
+    expect(repository.savedScheme!.rows.single.color, 'bg-blue-500');
+  });
+
+  testWidgets('tier list fullscreen editor exports the board image', (
+    tester,
+  ) async {
+    await _pumpEditableTierList(tester);
+
+    final exportButton = find.byKey(const ValueKey('tier-list-download-image'));
+    expect(exportButton, findsOneWidget);
+    await tester.tap(exportButton);
+    for (var index = 0; index < 24; index++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.textContaining('Tier list image saved'), findsOneWidget);
+  });
+
+  testWidgets('tier list fullscreen editor filters board by lane', (
+    tester,
+  ) async {
+    await _pumpEditableTierList(
+      tester,
+      heroes: const [
+        HeroSummary(
+          id: '301',
+          heroId: '301',
+          name: 'Jungle Hero',
+          avatar: 'https://example.test/jungle.png',
+          title: 'Jungle',
+          position: 3,
+        ),
+        HeroSummary(
+          id: '401',
+          heroId: '401',
+          name: 'Support Hero',
+          avatar: 'https://example.test/support.png',
+          title: 'Support',
+          position: 4,
+        ),
+      ],
+    );
+
+    expect(find.byKey(const ValueKey('tier-board-token-301')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tier-board-token-401')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('tier-lane-board-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('tier-board-lane-filter-4')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('tier-board-token-301')), findsNothing);
+    expect(find.byKey(const ValueKey('tier-board-token-401')), findsOneWidget);
+  });
+
   testWidgets('tier list edit mode drags heroes from pool into rows', (
     tester,
   ) async {
@@ -537,18 +664,49 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(
-      find.byKey(const ValueKey('hero-pool-draggable-999')),
-      tester.getCenter(find.byKey(const ValueKey('tier-row-drop-r1'))) -
-          tester.getCenter(
-            find.byKey(const ValueKey('hero-pool-draggable-999')),
-          ),
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('hero-pool-draggable-999'))),
     );
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+    await gesture.moveTo(
+      tester.getCenter(find.byKey(const ValueKey('tier-row-drop-r1'))),
+    );
+    await gesture.up();
     await tester.pumpAndSettle();
     await _saveChanges(tester);
 
     expect(repository.savedScheme, isNotNull);
     expect(repository.savedScheme!.rows.single.heroIds, [111, 999]);
     expect(repository.savedScheme!.rows.single.heroCount, 2);
+  });
+
+  testWidgets('hero pool scroll does not start a drag without long press', (
+    tester,
+  ) async {
+    final repository = _FakeTierListToolRepository();
+    await _pumpEditableTierList(
+      tester,
+      repository: repository,
+      heroes: [
+        for (var index = 0; index < 80; index++)
+          HeroSummary(
+            id: '${900 + index}',
+            heroId: '${900 + index}',
+            name: 'Hero $index',
+            avatar: 'https://example.test/$index.png',
+            title: 'Hero',
+          ),
+      ],
+    );
+
+    await tester.drag(
+      find.byKey(const ValueKey('hero-pool-draggable-900')),
+      const Offset(0, -120),
+    );
+    await tester.pump();
+    await _saveChanges(tester);
+
+    expect(repository.savedScheme, isNotNull);
+    expect(repository.savedScheme!.rows.single.heroIds, [301, 401]);
   });
 }

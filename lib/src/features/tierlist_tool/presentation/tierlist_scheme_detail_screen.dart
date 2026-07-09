@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -48,6 +51,7 @@ class TierListSchemeDetailScreen extends ConsumerStatefulWidget {
 class _TierListSchemeDetailScreenState
     extends ConsumerState<TierListSchemeDetailScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final GlobalKey _boardBoundaryKey = GlobalKey();
   final Map<String, TextEditingController> _labelControllers = {};
   final Map<String, TextEditingController> _heroIdControllers = {};
   final Map<String, String> _editedLabels = {};
@@ -55,6 +59,8 @@ class _TierListSchemeDetailScreenState
   String? _hydratedSchemeId;
   TierListSchemeSummary? _savedScheme;
   bool _isSaving = false;
+  bool _showLaneBoard = false;
+  int? _boardLanePosition;
 
   @override
   void dispose() {
@@ -111,7 +117,9 @@ class _TierListSchemeDetailScreenState
                 children: [
                   _TierListEditorToolbar(
                     schemeName: displayScheme.name,
+                    nameController: _nameController,
                     isSaving: _isSaving,
+                    isLaneBoardMode: _showLaneBoard,
                     onBack: () {
                       if (context.canPop()) {
                         context.pop();
@@ -120,6 +128,15 @@ class _TierListSchemeDetailScreenState
                       }
                     },
                     onSave: save,
+                    onExport: () => _exportBoardImage(displayScheme),
+                    onToggleLaneBoard: () {
+                      setState(() {
+                        _showLaneBoard = !_showLaneBoard;
+                        if (!_showLaneBoard) {
+                          _boardLanePosition = null;
+                        }
+                      });
+                    },
                   ),
                   Expanded(
                     child: Padding(
@@ -129,6 +146,17 @@ class _TierListSchemeDetailScreenState
                         heroes: heroes,
                         heroesById: heroesById,
                         heroesValue: heroesValue,
+                        boardBoundaryKey: _boardBoundaryKey,
+                        labelControllers: _labelControllers,
+                        showLaneBoard: _showLaneBoard,
+                        boardLanePosition: _boardLanePosition,
+                        onBoardLaneChanged: (value) {
+                          setState(() {
+                            _boardLanePosition = value;
+                          });
+                        },
+                        onLabelChanged: _updateRowLabel,
+                        onColorChanged: _updateRowColor,
                         onHeroAdded: _addHeroToRow,
                       ),
                     ),
@@ -367,6 +395,111 @@ class _TierListSchemeDetailScreenState
       );
     }
   }
+
+  Future<void> _exportBoardImage(TierListSchemeSummary scheme) async {
+    try {
+      final bytes = utf8.encode(_tierListSvg(scheme));
+      if (bytes.isEmpty) {
+        throw StateError('Tier board export is empty');
+      }
+
+      final directory = _exportDirectory();
+      final safeName = scheme.name
+          .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '-')
+          .replaceAll(RegExp(r'-+'), '-')
+          .replaceAll(RegExp(r'^-|-$'), '');
+      final file = File(
+        '${directory.path}/${safeName.isEmpty ? 'tier-list' : safeName}-${scheme.id}.svg',
+      );
+      file.writeAsBytesSync(bytes, flush: true);
+      if (!mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Tier list image saved: ${file.path}')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to download tier list image')),
+      );
+    }
+  }
+}
+
+Directory _exportDirectory() {
+  if (Platform.isAndroid) {
+    final downloads = Directory('/storage/emulated/0/Download');
+    if (downloads.existsSync()) {
+      return downloads;
+    }
+  }
+  final directory = Directory(
+    '${Directory.systemTemp.path}/hokhelper-tier-list',
+  );
+  if (!directory.existsSync()) {
+    directory.createSync(recursive: true);
+  }
+  return directory;
+}
+
+String _tierListSvg(TierListSchemeSummary scheme) {
+  const width = 900;
+  const rowHeight = 92;
+  final height = 110 + rowHeight * scheme.rows.length;
+  final buffer = StringBuffer()
+    ..writeln(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0 0 $width $height">',
+    )
+    ..writeln('<rect width="100%" height="100%" fill="#020617"/>')
+    ..writeln(
+      '<text x="24" y="56" fill="#F8FAFC" font-size="34" font-weight="900" font-family="Arial, sans-serif">${_xmlEscape(scheme.name)}</text>',
+    );
+
+  var y = 86;
+  for (final row in scheme.rows) {
+    final color = _colorToHex(
+      _tierColorToken(row.color, fallbackLabel: row.label),
+    );
+    final count = row.heroCount == 1 ? '1 hero' : '${row.heroCount} heroes';
+    buffer
+      ..writeln(
+        '<rect x="24" y="$y" width="852" height="78" rx="14" fill="#071027" stroke="#1E293B"/>',
+      )
+      ..writeln(
+        '<rect x="24" y="$y" width="120" height="78" rx="14" fill="$color"/>',
+      )
+      ..writeln(
+        '<text x="62" y="${y + 50}" fill="#FFFFFF" font-size="30" font-style="italic" font-weight="900" font-family="Arial, sans-serif">${_xmlEscape(row.label)}</text>',
+      )
+      ..writeln(
+        '<text x="170" y="${y + 48}" fill="#94A3B8" font-size="22" font-weight="800" font-family="Arial, sans-serif">${_xmlEscape(count)}</text>',
+      );
+    y += rowHeight;
+  }
+
+  buffer.writeln('</svg>');
+  return buffer.toString();
+}
+
+String _xmlEscape(String value) {
+  return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&apos;');
+}
+
+String _colorToHex(Color color) {
+  final value = color.toARGB32() & 0xFFFFFF;
+  return '#${value.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }
 
 TierListSchemeSummary _schemeWithDefaultRows(TierListSchemeSummary scheme) {
@@ -426,15 +559,23 @@ Map<int, HeroSummary> _heroesById(List<HeroSummary> heroes) {
 class _TierListEditorToolbar extends StatelessWidget {
   const _TierListEditorToolbar({
     required this.schemeName,
+    required this.nameController,
     required this.isSaving,
+    required this.isLaneBoardMode,
     required this.onBack,
     required this.onSave,
+    required this.onExport,
+    required this.onToggleLaneBoard,
   });
 
   final String schemeName;
+  final TextEditingController nameController;
   final bool isSaving;
+  final bool isLaneBoardMode;
   final VoidCallback onBack;
   final VoidCallback onSave;
+  final VoidCallback onExport;
+  final VoidCallback onToggleLaneBoard;
 
   @override
   Widget build(BuildContext context) {
@@ -464,21 +605,45 @@ class _TierListEditorToolbar extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(
-                  schemeName,
+                child: TextField(
+                  key: const ValueKey('tier-list-name-field'),
+                  controller: nameController,
+                  minLines: 1,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  textInputAction: TextInputAction.done,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: AppTheme.text,
                     fontWeight: FontWeight.w900,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               _ToolbarButton(
+                buttonKey: const ValueKey('tier-lane-board-toggle'),
+                tooltip: 'Lane tier view',
+                icon: Icons.account_tree_outlined,
+                isSelected: isLaneBoardMode,
+                onPressed: onToggleLaneBoard,
+              ),
+              const SizedBox(width: 6),
+              _ToolbarButton(
+                buttonKey: const ValueKey('tier-list-download-image'),
                 tooltip: 'Export',
                 icon: Icons.file_download_outlined,
-                onPressed: () {},
+                onPressed: onExport,
               ),
               const SizedBox(width: 6),
               FilledButton(
@@ -506,22 +671,29 @@ class _TierListEditorToolbar extends StatelessWidget {
 
 class _ToolbarButton extends StatelessWidget {
   const _ToolbarButton({
+    this.buttonKey,
     required this.tooltip,
     required this.icon,
     required this.onPressed,
+    this.isSelected = false,
   });
 
+  final Key? buttonKey;
   final String tooltip;
   final IconData icon;
   final VoidCallback onPressed;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
     return IconButton.filledTonal(
+      key: buttonKey,
       tooltip: tooltip,
       onPressed: onPressed,
       style: IconButton.styleFrom(
-        backgroundColor: Colors.white.withValues(alpha: 0.05),
+        backgroundColor: isSelected
+            ? AppTheme.gold
+            : Colors.white.withValues(alpha: 0.05),
         foregroundColor: AppTheme.text,
         minimumSize: const Size(32, 32),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -606,6 +778,13 @@ class _TierListEditorWorkspace extends StatelessWidget {
     required this.heroes,
     required this.heroesById,
     required this.heroesValue,
+    required this.boardBoundaryKey,
+    required this.labelControllers,
+    required this.showLaneBoard,
+    required this.boardLanePosition,
+    required this.onBoardLaneChanged,
+    required this.onLabelChanged,
+    required this.onColorChanged,
     required this.onHeroAdded,
   });
 
@@ -613,6 +792,13 @@ class _TierListEditorWorkspace extends StatelessWidget {
   final List<HeroSummary> heroes;
   final Map<int, HeroSummary> heroesById;
   final AsyncValue<List<HeroSummary>> heroesValue;
+  final GlobalKey boardBoundaryKey;
+  final Map<String, TextEditingController> labelControllers;
+  final bool showLaneBoard;
+  final int? boardLanePosition;
+  final ValueChanged<int?> onBoardLaneChanged;
+  final void Function(String rowId, String label) onLabelChanged;
+  final void Function(String rowId, String color) onColorChanged;
   final void Function(String rowId, int heroId) onHeroAdded;
 
   @override
@@ -628,6 +814,13 @@ class _TierListEditorWorkspace extends StatelessWidget {
               child: _TierBoardPanel(
                 scheme: scheme,
                 heroesById: heroesById,
+                boundaryKey: boardBoundaryKey,
+                labelControllers: labelControllers,
+                showLaneBoard: showLaneBoard,
+                lanePosition: boardLanePosition,
+                onLaneChanged: onBoardLaneChanged,
+                onLabelChanged: onLabelChanged,
+                onColorChanged: onColorChanged,
                 onHeroAdded: onHeroAdded,
               ),
             ),
@@ -647,41 +840,79 @@ class _TierBoardPanel extends StatelessWidget {
   const _TierBoardPanel({
     required this.scheme,
     required this.heroesById,
+    required this.boundaryKey,
+    required this.labelControllers,
+    required this.showLaneBoard,
+    required this.lanePosition,
+    required this.onLaneChanged,
+    required this.onLabelChanged,
+    required this.onColorChanged,
     required this.onHeroAdded,
   });
 
   final TierListSchemeSummary scheme;
   final Map<int, HeroSummary> heroesById;
+  final GlobalKey boundaryKey;
+  final Map<String, TextEditingController> labelControllers;
+  final bool showLaneBoard;
+  final int? lanePosition;
+  final ValueChanged<int?> onLaneChanged;
+  final void Function(String rowId, String label) onLabelChanged;
+  final void Function(String rowId, String color) onColorChanged;
   final void Function(String rowId, int heroId) onHeroAdded;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.24),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(7),
-        child: Column(
-          children: [
-            for (final row in scheme.rows) ...[
-              Expanded(
-                child: _TierRowDetail(
-                  row: row,
-                  heroesById: heroesById,
-                  isEditMode: true,
-                  exposeDropKey: true,
-                  onHeroAdded: (heroId) => onHeroAdded(row.id, heroId),
+    return RepaintBoundary(
+      key: boundaryKey,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.24),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(7),
+          child: Column(
+            children: [
+              if (showLaneBoard) ...[
+                _LaneIconFilterBar(
+                  keyPrefix: 'tier-board-lane-filter',
+                  lanePosition: lanePosition,
+                  onChanged: onLaneChanged,
                 ),
-              ),
-              if (row != scheme.rows.last) const SizedBox(height: 6),
+                const SizedBox(height: 6),
+              ],
+              for (final row in scheme.rows) ...[
+                Expanded(
+                  child: _TierRowDetail(
+                    row: _rowFilteredByLane(row),
+                    heroesById: heroesById,
+                    isEditMode: true,
+                    exposeDropKey: true,
+                    labelController: labelControllers[row.id],
+                    onLabelChanged: (label) => onLabelChanged(row.id, label),
+                    onColorChanged: (color) => onColorChanged(row.id, color),
+                    onHeroAdded: (heroId) => onHeroAdded(row.id, heroId),
+                  ),
+                ),
+                if (row != scheme.rows.last) const SizedBox(height: 6),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  TierListSchemeRowSummary _rowFilteredByLane(TierListSchemeRowSummary row) {
+    if (!showLaneBoard || lanePosition == null) {
+      return row;
+    }
+    final heroIds = row.heroIds
+        .where((heroId) => heroesById[heroId]?.position == lanePosition)
+        .toList(growable: false);
+    return row.copyWith(heroIds: heroIds, heroCount: heroIds.length);
   }
 }
 
@@ -803,10 +1034,12 @@ class _HeroPoolPanelState extends State<_HeroPoolPanel> {
 
 class _LaneIconFilterBar extends StatelessWidget {
   const _LaneIconFilterBar({
+    this.keyPrefix = 'lane-filter',
     required this.lanePosition,
     required this.onChanged,
   });
 
+  final String keyPrefix;
   final int? lanePosition;
   final ValueChanged<int?> onChanged;
 
@@ -831,8 +1064,8 @@ class _LaneIconFilterBar extends StatelessWidget {
             child: InkWell(
               key: ValueKey(
                 option.value == null
-                    ? 'lane-filter-all'
-                    : 'lane-filter-${option.value}',
+                    ? '$keyPrefix-all'
+                    : '$keyPrefix-${option.value}',
               ),
               onTap: () => onChanged(option.value),
               borderRadius: BorderRadius.circular(8),
@@ -888,9 +1121,10 @@ class _HeroPoolDraggable extends StatelessWidget {
   Widget build(BuildContext context) {
     final heroId = int.tryParse(hero.heroId) ?? int.tryParse(hero.id) ?? 0;
     final token = _TierHeroToken(heroId: heroId, hero: hero, size: 28);
-    return Draggable<int>(
+    return LongPressDraggable<int>(
       key: ValueKey('hero-pool-draggable-$heroId'),
       data: heroId,
+      delay: const Duration(milliseconds: 240),
       feedback: Material(
         color: Colors.transparent,
         child: Transform.scale(scale: 1.08, child: token),
@@ -1402,6 +1636,9 @@ class _TierRowDetail extends StatelessWidget {
     required this.heroesById,
     required this.isEditMode,
     required this.exposeDropKey,
+    this.labelController,
+    this.onLabelChanged,
+    this.onColorChanged,
     required this.onHeroAdded,
   });
 
@@ -1409,6 +1646,9 @@ class _TierRowDetail extends StatelessWidget {
   final Map<int, HeroSummary> heroesById;
   final bool isEditMode;
   final bool exposeDropKey;
+  final TextEditingController? labelController;
+  final ValueChanged<String>? onLabelChanged;
+  final ValueChanged<String>? onColorChanged;
   final ValueChanged<int> onHeroAdded;
 
   @override
@@ -1436,20 +1676,59 @@ class _TierRowDetail extends StatelessWidget {
                   left: Radius.circular(7),
                 ),
               ),
-              child: Text(
-                row.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style:
-                    (isEditMode
-                            ? Theme.of(context).textTheme.titleLarge
-                            : Theme.of(context).textTheme.headlineSmall)
-                        ?.copyWith(
-                          color: Colors.white,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w900,
+              child: isEditMode
+                  ? Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned.fill(
+                          child: Center(
+                            child: SizedBox(
+                              width: 50,
+                              height: 30,
+                              child: TextField(
+                                key: ValueKey('tier-row-label-${row.id}'),
+                                controller: labelController,
+                                onChanged: onLabelChanged,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontStyle: FontStyle.italic,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-              ),
+                        if (onColorChanged != null)
+                          Positioned(
+                            right: 1,
+                            bottom: 1,
+                            child: _TierRowColorMenu(
+                              rowId: row.id,
+                              selectedColor: row.color,
+                              onColorChanged: onColorChanged!,
+                            ),
+                          ),
+                      ],
+                    )
+                  : Text(
+                      row.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
             ),
             Expanded(
               child: Padding(
@@ -1485,6 +1764,7 @@ class _TierRowDetail extends StatelessWidget {
                           children: [
                             for (final heroId in row.heroIds) ...[
                               _TierHeroToken(
+                                key: ValueKey('tier-board-token-$heroId'),
                                 heroId: heroId,
                                 hero: heroesById[heroId],
                                 size: isEditMode ? 30 : 44,
@@ -1531,8 +1811,83 @@ class _TierRowDetail extends StatelessWidget {
   }
 }
 
+class _TierRowColorMenu extends StatelessWidget {
+  const _TierRowColorMenu({
+    required this.rowId,
+    required this.selectedColor,
+    required this.onColorChanged,
+  });
+
+  final String rowId;
+  final String selectedColor;
+  final ValueChanged<String> onColorChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      key: ValueKey('tier-row-color-menu-$rowId'),
+      tooltip: 'Tier color',
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 22, height: 22),
+      iconSize: 15,
+      color: Colors.white,
+      onPressed: () => _showColorDialog(context),
+      icon: const Icon(Icons.palette_outlined),
+    );
+  }
+
+  Future<void> _showColorDialog(BuildContext context) async {
+    final color = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: AppTheme.panel,
+          insetPadding: const EdgeInsets.all(18),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final color in _tierListEditorColors)
+                  InkWell(
+                    key: ValueKey('tier-row-color-$rowId-$color'),
+                    onTap: () => Navigator.of(context).pop(color),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: _tierColorToken(color),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: color == selectedColor
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.18),
+                          width: color == selectedColor ? 3 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (color != null) {
+      onColorChanged(color);
+    }
+  }
+}
+
 class _TierHeroToken extends StatelessWidget {
-  const _TierHeroToken({required this.heroId, required this.size, this.hero});
+  const _TierHeroToken({
+    super.key,
+    required this.heroId,
+    required this.size,
+    this.hero,
+  });
 
   final int heroId;
   final double size;
