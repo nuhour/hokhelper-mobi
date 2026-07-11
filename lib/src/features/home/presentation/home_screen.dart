@@ -242,6 +242,7 @@ class _HomeLandingTab extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 28),
       ],
     );
   }
@@ -1453,13 +1454,7 @@ class _HomeDataCell extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _HomeDataIcon(
-              row: row,
-              field: 'best_skill',
-              kind: 'summoner_skill',
-            ),
-            const SizedBox(width: 5),
-            _HomeHeroAvatar(heroId: row['id'], name: heroName),
+            _HomeHeroAvatarCluster(row: row, heroName: heroName),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -1469,8 +1464,6 @@ class _HomeDataCell extends StatelessWidget {
                 style: cellStyle,
               ),
             ),
-            const SizedBox(width: 6),
-            _HomeDataIcon(row: row, field: 'best_equip', kind: 'equip'),
           ],
         ),
       );
@@ -1511,11 +1504,13 @@ class _HomeDataIcon extends StatelessWidget {
     required this.row,
     required this.field,
     required this.kind,
+    this.size = 25,
   });
 
   final Map<String, dynamic> row;
   final String field;
   final String kind;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -1536,10 +1531,55 @@ class _HomeDataIcon extends StatelessWidget {
       message: name,
       child: AppImage(
         url: url,
-        width: 25,
-        height: 25,
+        width: size,
+        height: size,
         borderRadius: 6,
         semanticLabel: name,
+      ),
+    );
+  }
+}
+
+class _HomeHeroAvatarCluster extends StatelessWidget {
+  const _HomeHeroAvatarCluster({required this.row, required this.heroName});
+
+  final Map<String, dynamic> row;
+  final String heroName;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 48,
+      height: 42,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 7,
+            top: 0,
+            child: _HomeHeroAvatar(heroId: row['id'], name: heroName),
+          ),
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: _HomeDataIcon(
+              row: row,
+              field: 'best_skill',
+              kind: 'summoner_skill',
+              size: 20,
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: _HomeDataIcon(
+              row: row,
+              field: 'best_equip',
+              kind: 'equip',
+              size: 20,
+            ),
+          ),
+        ],
       ),
     );
   }
