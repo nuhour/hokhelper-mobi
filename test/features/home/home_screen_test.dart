@@ -303,7 +303,7 @@ void main() {
               ],
               'rows': [
                 {
-                  'hero': {'name': 'Angela'},
+                  'hero': {'id': 2625, 'name': 'Angela'},
                   'wr': 56.2,
                   'pick_rate': 12.4,
                 },
@@ -338,7 +338,8 @@ void main() {
     expect(find.text('Hero Rankings'), findsOneWidget);
     expect(find.byType(DataTable), findsAtLeastNWidgets(2));
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
-    expect(find.text('Angela'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const ValueKey('home-hero-avatar-2625')), findsOneWidget);
+    expect(find.text('Angela'), findsNothing);
 
     await _scrollHomeUntilVisible(tester, find.text('Tier List Preview'));
     expect(find.text('Tier List Preview'), findsOneWidget);

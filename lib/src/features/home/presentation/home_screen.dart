@@ -1355,7 +1355,7 @@ class _HomeDataTable extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 horizontalMargin: 4,
-                columnSpacing: 20,
+                columnSpacing: 12,
                 dataRowMinHeight: 42,
                 dataRowMaxHeight: 48,
                 headingRowHeight: 34,
@@ -1383,12 +1383,12 @@ class _HomeDataTable extends StatelessWidget {
                                 minWidth:
                                     column.id == 'player_name' ||
                                         column.type == 'hero'
-                                    ? (column.type == 'hero' ? 190 : 132)
+                                    ? (column.type == 'hero' ? 52 : 132)
                                     : 48,
                                 maxWidth:
                                     column.id == 'player_name' ||
                                         column.type == 'hero'
-                                    ? (column.type == 'hero' ? 190 : 170)
+                                    ? (column.type == 'hero' ? 52 : 170)
                                     : 92,
                               ),
                               child: _HomeDataCell(row: row, column: column),
@@ -1428,8 +1428,8 @@ class _HomeDataCell extends StatelessWidget {
     );
     final isHero = column.id == 'hero' || column.type == 'hero';
     final isPlayer = column.id == 'player_name' || column.type == 'player';
-    final minWidth = isHero ? 190.0 : (isPlayer ? 132.0 : 48.0);
-    final maxWidth = isHero ? 190.0 : (isPlayer ? 170.0 : 92.0);
+    final minWidth = isHero ? 52.0 : (isPlayer ? 132.0 : 48.0);
+    final maxWidth = isHero ? 52.0 : (isPlayer ? 170.0 : 92.0);
     if (!isHero && !isPlayer) {
       return ConstrainedBox(
         constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
@@ -1453,18 +1453,7 @@ class _HomeDataCell extends StatelessWidget {
         constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            _HomeHeroAvatarCluster(row: row, heroName: heroName),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                heroName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: cellStyle,
-              ),
-            ),
-          ],
+          children: [_HomeHeroAvatarCluster(row: row, heroName: heroName)],
         ),
       );
     }
@@ -1557,7 +1546,10 @@ class _HomeHeroAvatarCluster extends StatelessWidget {
           Positioned(
             left: 7,
             top: 0,
-            child: _HomeHeroAvatar(heroId: row['id'], name: heroName),
+            child: _HomeHeroAvatar(
+              heroId: _readMap(row['hero'])['id'] ?? row['id'],
+              name: heroName,
+            ),
           ),
           Positioned(
             left: 0,
