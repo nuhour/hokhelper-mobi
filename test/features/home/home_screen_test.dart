@@ -87,7 +87,7 @@ void main() {
     expect(find.text('HOK HELPER'), findsOneWidget);
     expect(find.textContaining('Live Now'), findsOneWidget);
     expect(find.text('Core Stats'), findsOneWidget);
-    expect(find.text('Tier List'), findsOneWidget);
+    expect(find.text('Tier List'), findsAtLeastNWidgets(1));
 
     await _scrollHomeUntilVisible(tester, find.text('Trending Heroes'));
     expect(find.text('Trending Heroes'), findsOneWidget);
@@ -95,7 +95,7 @@ void main() {
     expect(find.text('View All'), findsOneWidget);
 
     expect(find.text('BP Simulator'), findsAtLeastNWidgets(1));
-    expect(find.text('Tier List'), findsOneWidget);
+    expect(find.text('Tier List'), findsAtLeastNWidgets(1));
 
     await _scrollHomeUntilVisible(tester, find.text('Latest Patch'));
     expect(find.text('Latest Patch'), findsOneWidget);

@@ -219,21 +219,60 @@ class _HomeLandingTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundUrl = _readString(
+      _readMap(result['season'])['mobile_background_pic'] ??
+          _readMap(result['season'])['background_pic'],
+    );
+    final seasonName = _readString(_readMap(result['season'])['name']);
     return ListView(
-      padding: EdgeInsets.zero,
       physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
       children: [
-        _HomeHeroBanner(
-          backgroundUrl: _readString(
-            _readMap(result['season'])['mobile_background_pic'] ??
-                _readMap(result['season'])['background_pic'],
-          ),
-          seasonName: _readString(_readMap(result['season'])['name']),
+        Stack(
+          children: [
+            Positioned.fill(
+              child: backgroundUrl.isNotEmpty
+                  ? AppImage(
+                      url: backgroundUrl,
+                      fit: BoxFit.cover,
+                      borderRadius: 0,
+                      semanticLabel: 'Honor of Kings season background',
+                    )
+                  : const ColoredBox(color: AppTheme.bg),
+            ),
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x66020617),
+                      Color(0xCC020617),
+                      Color(0xF7020617),
+                    ],
+                    stops: [0, 0.36, 1],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+              child: Column(
+                children: [
+                  _HomeHeroBanner(seasonName: seasonName),
+                  const SizedBox(height: 18),
+                  _HomePortalPreviews(result: result),
+                  const SizedBox(height: 18),
+                  _HomeBentoGrid(
+                    trendingHero: trendingHero,
+                    latestPatch: latestPatch,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 18),
-        _HomePortalPreviews(result: result),
-        const SizedBox(height: 18),
-        _HomeBentoGrid(trendingHero: trendingHero, latestPatch: latestPatch),
       ],
     );
   }
@@ -535,12 +574,8 @@ class _RoundIconButton extends StatelessWidget {
 }
 
 class _HomeHeroBanner extends StatefulWidget {
-  const _HomeHeroBanner({
-    required this.backgroundUrl,
-    required this.seasonName,
-  });
+  const _HomeHeroBanner({required this.seasonName});
 
-  final String backgroundUrl;
   final String seasonName;
 
   @override
@@ -555,33 +590,11 @@ class _HomeHeroBannerState extends State<_HomeHeroBanner> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).width < 360 ? 380 : 340,
+        height: MediaQuery.sizeOf(context).width < 360 ? 380 : 220,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (widget.backgroundUrl.isNotEmpty)
-              AppImage(
-                url: widget.backgroundUrl,
-                fit: BoxFit.cover,
-                borderRadius: 0,
-                semanticLabel: 'Honor of Kings season background',
-              )
-            else
-              const ColoredBox(color: AppTheme.panel),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0x22000000),
-                    Color(0xBB020617),
-                    Color(0xF2020617),
-                  ],
-                  stops: [0, 0.42, 1],
-                ),
-              ),
-            ),
+            const ColoredBox(color: Color(0x33020617)),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
               child: Column(
@@ -788,10 +801,11 @@ class _HomeHeroContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           title,
+          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w900,
@@ -802,13 +816,19 @@ class _HomeHeroContent extends StatelessWidget {
           description,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Colors.white.withValues(alpha: 0.78),
             height: 1.35,
           ),
         ),
         const SizedBox(height: 16),
-        Wrap(spacing: 9, runSpacing: 9, children: buttons),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 9,
+          runSpacing: 9,
+          children: buttons,
+        ),
       ],
     );
   }
