@@ -6,6 +6,7 @@ import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../content/presentation/skin_gallery_screen.dart';
 import '../../esports/presentation/esports_screen.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
@@ -222,7 +223,13 @@ class _HomeLandingTab extends StatelessWidget {
       padding: EdgeInsets.zero,
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
-        const _HomeHeroBanner(),
+        _HomeHeroBanner(
+          backgroundUrl: _readString(
+            _readMap(result['season'])['mobile_background_pic'] ??
+                _readMap(result['season'])['background_pic'],
+          ),
+          seasonName: _readString(_readMap(result['season'])['name']),
+        ),
         const SizedBox(height: 18),
         _HomePortalPreviews(result: result),
         const SizedBox(height: 18),
@@ -527,38 +534,88 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-class _HomeHeroBanner extends StatelessWidget {
-  const _HomeHeroBanner();
+class _HomeHeroBanner extends StatefulWidget {
+  const _HomeHeroBanner({
+    required this.backgroundUrl,
+    required this.seasonName,
+  });
+
+  final String backgroundUrl;
+  final String seasonName;
+
+  @override
+  State<_HomeHeroBanner> createState() => _HomeHeroBannerState();
+}
+
+class _HomeHeroBannerState extends State<_HomeHeroBanner> {
+  bool _showWorld = false;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.22)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).width < 360 ? 380 : 340,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Text(
-              'Dominate the Rift',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w900,
+            if (widget.backgroundUrl.isNotEmpty)
+              AppImage(
+                url: widget.backgroundUrl,
+                fit: BoxFit.cover,
+                borderRadius: 0,
+                semanticLabel: 'Honor of Kings season background',
+              )
+            else
+              const ColoredBox(color: AppTheme.panel),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x22000000),
+                    Color(0xBB020617),
+                    Color(0xF2020617),
+                  ],
+                  stops: [0, 0.42, 1],
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Master every matchup with heroes, skins, esports, tools, and live strategy updates.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _HomeLiveBadge(season: widget.seasonName),
+                      _HomeHeroSlideTabs(
+                        showWorld: _showWorld,
+                        onChanged: (value) => setState(() {
+                          _showWorld = value;
+                        }),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: _showWorld
+                        ? const _HomeWorldHeroContent(
+                            key: ValueKey('home-world-hero-content'),
+                          )
+                        : const _HomeMainHeroContent(
+                            key: ValueKey('home-main-hero-content'),
+                          ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 18),
-            const _HeroSearchBar(),
           ],
         ),
       ),
@@ -566,37 +623,220 @@ class _HomeHeroBanner extends StatelessWidget {
   }
 }
 
-class _HeroSearchBar extends StatelessWidget {
-  const _HeroSearchBar();
+class _HomeLiveBadge extends StatelessWidget {
+  const _HomeLiveBadge({required this.season});
+
+  final String season;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.bolt_rounded, color: AppTheme.gold, size: 16),
+            const SizedBox(width: 5),
+            Text(
+              '${season.isEmpty ? 'S15' : season}  Live Now',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeroSlideTabs extends StatelessWidget {
+  const _HomeHeroSlideTabs({required this.showWorld, required this.onChanged});
+
+  final bool showWorld;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _HomeHeroTab(
+              label: 'HOK',
+              selected: !showWorld,
+              onTap: () => onChanged(false),
+            ),
+            _HomeHeroTab(
+              label: 'HOK World',
+              selected: showWorld,
+              onTap: () => onChanged(true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeroTab extends StatelessWidget {
+  const _HomeHeroTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: selected
+          ? Colors.white.withValues(alpha: 0.18)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go('/search'),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: AppTheme.panelAlt,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              const Icon(Icons.search_rounded, color: AppTheme.gold, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Search heroes, items, guides...',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-                ),
-              ),
-            ],
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: selected ? Colors.white : Colors.white70,
+              fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HomeMainHeroContent extends StatelessWidget {
+  const _HomeMainHeroContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeHeroContent(
+      title: 'HOK HELPER',
+      description:
+          'Live rankings, hero data, and practical decisions for every match.',
+      buttons: [
+        _HomeHeroButton(
+          label: 'Core Stats',
+          icon: Icons.bar_chart_rounded,
+          onTap: () => context.go('/tools/stats?entry=home_core'),
+        ),
+        _HomeHeroButton(
+          label: 'Tier List',
+          icon: Icons.leaderboard_rounded,
+          onTap: () => context.go('/tier-list'),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeWorldHeroContent extends StatelessWidget {
+  const _HomeWorldHeroContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeHeroContent(
+      title: 'HOK WORLD',
+      description:
+          'Explore the world, characters, and stories behind Honor of Kings.',
+      buttons: [
+        _HomeHeroButton(
+          label: 'Enter HOK World',
+          icon: Icons.public_rounded,
+          onTap: () => context.go('/hok-world'),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeHeroContent extends StatelessWidget {
+  const _HomeHeroContent({
+    required this.title,
+    required this.description,
+    required this.buttons,
+  });
+
+  final String title;
+  final String description;
+  final List<_HomeHeroButton> buttons;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          description,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.white.withValues(alpha: 0.78),
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(spacing: 9, runSpacing: 9, children: buttons),
+      ],
+    );
+  }
+}
+
+class _HomeHeroButton extends StatelessWidget {
+  const _HomeHeroButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: FilledButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.gold,
+        minimumSize: const Size(0, 42),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

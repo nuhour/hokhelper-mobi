@@ -84,8 +84,10 @@ void main() {
     expect(find.text('Skins'), findsOneWidget);
     expect(find.text('Heroes'), findsWidgets);
     expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Dominate the Rift'), findsOneWidget);
-    expect(find.text('Search heroes, items, guides...'), findsOneWidget);
+    expect(find.text('HOK HELPER'), findsOneWidget);
+    expect(find.textContaining('Live Now'), findsOneWidget);
+    expect(find.text('Core Stats'), findsOneWidget);
+    expect(find.text('Tier List'), findsOneWidget);
 
     await _scrollHomeUntilVisible(tester, find.text('Trending Heroes'));
     expect(find.text('Trending Heroes'), findsOneWidget);
@@ -197,7 +199,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('home-top-tab-strip')), findsOneWidget);
-    expect(find.text('Dominate the Rift'), findsOneWidget);
+    expect(find.text('HOK HELPER'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('home-top-tab-indicator-3')),
       findsOneWidget,
@@ -389,7 +391,7 @@ void main() {
     expect(find.text('Event Assistance'), findsOneWidget);
 
     await _scrollHomeUntilVisible(tester, find.text('HOK World'));
-    expect(find.text('HOK World'), findsOneWidget);
+    expect(find.text('HOK World'), findsAtLeastNWidgets(1));
     expect(find.text('Enter HOK World Topic'), findsOneWidget);
   });
 
