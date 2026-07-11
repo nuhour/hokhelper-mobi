@@ -197,9 +197,10 @@ class _HomeLandingTab extends StatelessWidget {
           _readMap(result['season'])['background_pic'],
     );
     final seasonName = _readString(_readMap(result['season'])['name']);
+    final bottomNavigationGap = MediaQuery.viewPaddingOf(context).bottom + 104;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+      padding: EdgeInsets.only(bottom: bottomNavigationGap),
       children: [
         Stack(
           children: [
@@ -1117,13 +1118,7 @@ class _HomePortalPreviews extends StatelessWidget {
         icon: Icons.local_fire_department_outlined,
         title: 'Tier List Preview',
         route: '/tier-list',
-        rows: [
-          for (final row in tierRows.take(4))
-            _HomePreviewRow(
-              title: _readString(row['tier'], fallback: 'Tier'),
-              detail: _readTierHeroNames(row),
-            ),
-        ],
+        groups: tierRows.take(4).toList(growable: false),
       ),
       _HomePlayerRankingTable(
         peakRows: peakPlayers,
@@ -1146,16 +1141,8 @@ class _HomePortalPreviews extends StatelessWidget {
         icon: Icons.newspaper_outlined,
         title: 'Latest Updates',
         route: '/content/patch-notes',
-        rows: [
-          for (final row in patchNotes.take(3))
-            _HomePreviewRow(
-              title: _readString(row['title'], fallback: 'Patch note'),
-              detail: _readString(row['content_preview']),
-              route:
-                  _communityPostRoute(row['post_id']) ??
-                  _patchNoteRoute(row['id']),
-            ),
-        ],
+        notes: patchNotes.take(3).toList(growable: false),
+        fallbackHeroes: _readList(result['hero_stats']).take(3).toList(),
       ),
     ];
 
@@ -1395,12 +1382,12 @@ class _HomeDataTable extends StatelessWidget {
                                 minWidth:
                                     column.id == 'player_name' ||
                                         column.type == 'hero'
-                                    ? 88
+                                    ? (column.type == 'hero' ? 190 : 132)
                                     : 48,
                                 maxWidth:
                                     column.id == 'player_name' ||
                                         column.type == 'hero'
-                                    ? 150
+                                    ? (column.type == 'hero' ? 190 : 170)
                                     : 92,
                               ),
                               child: _HomeDataCell(row: row, column: column),
@@ -1440,8 +1427,8 @@ class _HomeDataCell extends StatelessWidget {
     );
     final isHero = column.id == 'hero' || column.type == 'hero';
     final isPlayer = column.id == 'player_name' || column.type == 'player';
-    final minWidth = isHero || isPlayer ? 132.0 : 48.0;
-    final maxWidth = isHero || isPlayer ? 170.0 : 92.0;
+    final minWidth = isHero ? 190.0 : (isPlayer ? 132.0 : 48.0);
+    final maxWidth = isHero ? 190.0 : (isPlayer ? 170.0 : 92.0);
     if (!isHero && !isPlayer) {
       return ConstrainedBox(
         constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
@@ -1459,6 +1446,35 @@ class _HomeDataCell extends StatelessWidget {
         : _readString(
             row['avatar_url'] ?? _readMap(row['player'])['avatar_url'],
           );
+    final heroName = _homeTableValue(row, column);
+    if (isHero) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _HomeDataIcon(
+              row: row,
+              field: 'best_skill',
+              kind: 'summoner_skill',
+            ),
+            const SizedBox(width: 5),
+            _HomeHeroAvatar(heroId: row['id'], name: heroName),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                heroName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: cellStyle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            _HomeDataIcon(row: row, field: 'best_equip', kind: 'equip'),
+          ],
+        ),
+      );
+    }
     return ConstrainedBox(
       constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
       child: Row(
@@ -1490,6 +1506,45 @@ class _HomeDataCell extends StatelessWidget {
   }
 }
 
+class _HomeDataIcon extends StatelessWidget {
+  const _HomeDataIcon({
+    required this.row,
+    required this.field,
+    required this.kind,
+  });
+
+  final Map<String, dynamic> row;
+  final String field;
+  final String kind;
+
+  @override
+  Widget build(BuildContext context) {
+    Object? raw = row[field];
+    if (raw is List) {
+      raw = raw.isEmpty ? null : raw.first;
+    }
+    final item = _readMap(raw);
+    final id = _readString(item['id'] ?? item['skill_id'] ?? item['equip_id']);
+    final name = _readString(
+      item['name'],
+      fallback: kind == 'equip' ? 'Equipment' : 'Summoner skill',
+    );
+    final url = id.isEmpty
+        ? ''
+        : 'https://hokhelper.com/static/game/$kind/$id.png';
+    return Tooltip(
+      message: name,
+      child: AppImage(
+        url: url,
+        width: 25,
+        height: 25,
+        borderRadius: 6,
+        semanticLabel: name,
+      ),
+    );
+  }
+}
+
 String _homeHeroAvatarUrl(Map<String, dynamic> row) {
   final hero = _readMap(row['hero']);
   final explicit = _readString(
@@ -1507,6 +1562,29 @@ String _homeHeroAvatarUrl(Map<String, dynamic> row) {
     return '';
   }
   return 'https://hokhelper.com/static/game/hero/$heroId.png';
+}
+
+class _HomeHeroAvatar extends StatelessWidget {
+  const _HomeHeroAvatar({required this.heroId, required this.name});
+
+  final Object? heroId;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = _readString(heroId);
+    return Tooltip(
+      message: name,
+      child: AppImage(
+        key: ValueKey('home-hero-avatar-$id'),
+        url: id.isEmpty ? '' : 'https://hokhelper.com/static/game/hero/$id.png',
+        width: 34,
+        height: 34,
+        borderRadius: 999,
+        semanticLabel: name,
+      ),
+    );
+  }
 }
 
 List<_HomeTableColumn> _homeTableColumns(
@@ -1575,13 +1653,13 @@ class _HomeTierPreviewSection extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.route,
-    required this.rows,
+    required this.groups,
   });
 
   final IconData icon;
   final String title;
   final String route;
-  final List<_HomePreviewRow> rows;
+  final List<Map<String, dynamic>> groups;
 
   @override
   Widget build(BuildContext context) {
@@ -1591,41 +1669,48 @@ class _HomeTierPreviewSection extends StatelessWidget {
       route: route,
       child: Column(
         children: [
-          if (rows.isEmpty)
+          if (groups.isEmpty)
             const _HomeEmptyPanelMessage()
           else
-            for (final row in rows)
+            for (final group in groups)
               Padding(
                 padding: const EdgeInsets.only(bottom: 7),
                 child: Row(
                   children: [
-                    Container(
-                      width: 5,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: _homeTierColor(row.title),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 9),
                     SizedBox(
-                      width: 38,
+                      width: 28,
                       child: Text(
-                        row.title,
-                        style: const TextStyle(
-                          color: AppTheme.text,
+                        _readString(group['tier'], fallback: 'Tier'),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.muted,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 5,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: _homeTierColor(
+                          _readString(group['tier'], fallback: 'Tier'),
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
                     Expanded(
-                      child: Text(
-                        row.detail,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      child: Wrap(
+                        spacing: 7,
+                        runSpacing: 7,
+                        children: [
+                          for (final hero in _readList(group['heroes']))
+                            _HomeHeroAvatar(
+                              heroId: hero['hero_id'] ?? hero['id'],
+                              name: _readString(hero['name'], fallback: 'Hero'),
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -1679,13 +1764,15 @@ class _HomePatchNotesSection extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.route,
-    required this.rows,
+    required this.notes,
+    required this.fallbackHeroes,
   });
 
   final IconData icon;
   final String title;
   final String route;
-  final List<_HomePreviewRow> rows;
+  final List<Map<String, dynamic>> notes;
+  final List<Map<String, dynamic>> fallbackHeroes;
 
   @override
   Widget build(BuildContext context) {
@@ -1695,20 +1782,136 @@ class _HomePatchNotesSection extends StatelessWidget {
       route: route,
       child: Column(
         children: [
-          if (rows.isEmpty)
+          if (notes.isEmpty)
             const _HomeEmptyPanelMessage()
           else
-            for (final row in rows)
-              _HomeInfoListRow(
-                title: row.title,
-                detail: row.detail,
-                route: row.route,
-                suffix: 'Notes',
-              ),
+            for (final note in notes)
+              _HomePatchNoteRow(note: note, fallbackHeroes: fallbackHeroes),
         ],
       ),
     );
   }
+}
+
+class _HomePatchNoteRow extends StatelessWidget {
+  const _HomePatchNoteRow({required this.note, required this.fallbackHeroes});
+
+  final Map<String, dynamic> note;
+  final List<Map<String, dynamic>> fallbackHeroes;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawChanges =
+        note['hero_changes'] ?? note['changes'] ?? note['heroes'];
+    final changes = _readList(rawChanges).isNotEmpty
+        ? _readList(rawChanges)
+        : [
+            for (final hero in fallbackHeroes)
+              {
+                'hero_id': hero['hero_id'] ?? hero['id'],
+                'name': hero['name'],
+                'direction': _homeChangeDirection(hero['win_rate']),
+              },
+          ];
+    final route =
+        _communityPostRoute(note['post_id']) ?? _patchNoteRoute(note['id']);
+    final child = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _readString(note['title'], fallback: 'Patch note'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                if (changes.isNotEmpty)
+                  Wrap(
+                    spacing: 7,
+                    runSpacing: 6,
+                    children: [
+                      for (final change in changes.take(6))
+                        _HomePatchChangeIcon(change: change),
+                    ],
+                  )
+                else
+                  Text(
+                    _readString(note['content_preview']),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Icon(Icons.article_outlined, color: AppTheme.gold, size: 18),
+        ],
+      ),
+    );
+    if (route == null) return child;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => context.go(route),
+      child: child,
+    );
+  }
+}
+
+class _HomePatchChangeIcon extends StatelessWidget {
+  const _HomePatchChangeIcon({required this.change});
+
+  final Map<String, dynamic> change;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _readString(
+      change['name'] ?? change['hero_name'],
+      fallback: 'Hero',
+    );
+    final heroId = change['hero_id'] ?? change['id'];
+    final isUp =
+        _homeChangeDirection(change['direction'] ?? change['trend']) == 'up';
+    return Tooltip(
+      message: name,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _HomeHeroAvatar(heroId: heroId, name: name),
+          const SizedBox(width: 2),
+          Icon(
+            isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            color: isUp ? AppTheme.success : AppTheme.error,
+            size: 16,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _homeChangeDirection(Object? value) {
+  if (value is num) {
+    return value < 0 ? 'down' : 'up';
+  }
+  final text = value?.toString().toLowerCase() ?? '';
+  return text.contains('down') ||
+          text.contains('nerf') ||
+          text.contains('decrease') ||
+          text.contains('buff_down')
+      ? 'down'
+      : 'up';
 }
 
 class _HomeInfoListRow extends StatelessWidget {
@@ -2305,6 +2508,7 @@ String _readRateDetail(Map<String, dynamic> row) {
   return '${percent.toStringAsFixed(1)}% WR';
 }
 
+// ignore: unused_element
 String _readTierHeroNames(Map<String, dynamic> row) {
   final names = [
     for (final hero in _readList(row['heroes']).take(4))

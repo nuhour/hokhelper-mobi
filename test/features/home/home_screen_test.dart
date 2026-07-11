@@ -313,7 +313,7 @@ void main() {
               {
                 'tier': 'T0',
                 'heroes': [
-                  {'name': 'Dolia'},
+                  {'id': 2624, 'name': 'Dolia'},
                 ],
               },
             ],
@@ -342,7 +342,7 @@ void main() {
 
     await _scrollHomeUntilVisible(tester, find.text('Tier List Preview'));
     expect(find.text('Tier List Preview'), findsOneWidget);
-    expect(find.text('Dolia'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-hero-avatar-2624')), findsOneWidget);
 
     await _scrollHomeUntilVisible(tester, find.text('Leaderboard'));
     expect(find.text('Leaderboard'), findsOneWidget);
