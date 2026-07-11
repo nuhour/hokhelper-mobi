@@ -41,13 +41,6 @@ class HomeScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _HomePortalFramework(result: stats.result),
-                const SizedBox(height: 18),
-                const _HomePrimaryActions(),
-                const SizedBox(height: 18),
-                const _HomeToolGrid(),
-                const SizedBox(height: 18),
-                const _HokWorldEntryCard(),
-                const SizedBox(height: 24),
                 _BackendSummary(stats: stats),
               ],
             ),
@@ -98,16 +91,6 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
 
   @override
   Widget build(BuildContext context) {
-    final heroRows = _readList(
-      _readMap(widget.result['hero_ranking_table'])['rows'],
-    );
-    final patchNotes = _readList(widget.result['patch_notes']);
-    final trendingHero = heroRows.isNotEmpty
-        ? heroRows.first
-        : const <String, dynamic>{};
-    final latestPatch = patchNotes.isNotEmpty
-        ? patchNotes.first
-        : const <String, dynamic>{};
     final pageHeight = (MediaQuery.sizeOf(context).height - 96).clamp(
       620.0,
       980.0,
@@ -135,11 +118,7 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
               const EsportsScreen(syncRouteOnTabTap: false),
               const SkinGalleryScreen(),
               const HeroGalleryScreen(),
-              _HomeLandingTab(
-                trendingHero: trendingHero,
-                latestPatch: latestPatch,
-                result: widget.result,
-              ),
+              _HomeLandingTab(result: widget.result),
             ],
           ),
         ),
@@ -207,14 +186,8 @@ class _HomePortalTopBar extends StatelessWidget {
 }
 
 class _HomeLandingTab extends StatelessWidget {
-  const _HomeLandingTab({
-    required this.trendingHero,
-    required this.latestPatch,
-    required this.result,
-  });
+  const _HomeLandingTab({required this.result});
 
-  final Map<String, dynamic> trendingHero;
-  final Map<String, dynamic> latestPatch;
   final Map<String, dynamic> result;
 
   @override
@@ -263,11 +236,6 @@ class _HomeLandingTab extends StatelessWidget {
                   _HomeHeroBanner(seasonName: seasonName),
                   const SizedBox(height: 18),
                   _HomePortalPreviews(result: result),
-                  const SizedBox(height: 18),
-                  _HomeBentoGrid(
-                    trendingHero: trendingHero,
-                    latestPatch: latestPatch,
-                  ),
                 ],
               ),
             ),
@@ -862,6 +830,9 @@ class _HomeHeroButton extends StatelessWidget {
   }
 }
 
+// Kept as a reference for the previous portal composition; it is intentionally
+// not mounted on the data-first home screen.
+// ignore: unused_element
 class _HomeBentoGrid extends StatelessWidget {
   const _HomeBentoGrid({required this.trendingHero, required this.latestPatch});
 
@@ -1209,13 +1180,13 @@ class _HomeHeroRankingTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final columns = _homeTableColumns(rawColumns, rows);
-    final dataRows = rows.take(8).toList(growable: false);
+    final dataRows = rows;
 
     return _HomeDataSection(
       icon: Icons.bar_chart_outlined,
       title: 'Hero Rankings',
       route: '/tools/stats?entry=home_core',
-      child: _HomeDataTable(columns: columns, rows: dataRows, maxRows: 8),
+      child: _HomeDataTable(columns: columns, rows: dataRows, maxRows: 116),
     );
   }
 }
@@ -1386,55 +1357,61 @@ class _HomeDataTable extends StatelessWidget {
         ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
       );
     }
-    return Scrollbar(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          horizontalMargin: 4,
-          columnSpacing: 20,
-          dataRowMinHeight: 42,
-          dataRowMaxHeight: 48,
-          headingRowHeight: 34,
-          headingTextStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppTheme.muted,
-            fontWeight: FontWeight.w900,
-          ),
-          dataTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.text,
-            fontWeight: FontWeight.w700,
-          ),
-          columns: [
-            for (final column in columns) DataColumn(label: Text(column.label)),
-          ],
-          rows: [
-            for (final row in rows.take(maxRows))
-              DataRow(
-                cells: [
+    return SizedBox(
+      key: const ValueKey('home-hero-ranking-scroll-area'),
+      height: 420,
+      child: Scrollbar(
+        child: SingleChildScrollView(
+          child: Scrollbar(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                horizontalMargin: 4,
+                columnSpacing: 20,
+                dataRowMinHeight: 42,
+                dataRowMaxHeight: 48,
+                headingRowHeight: 34,
+                headingTextStyle: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(
+                      color: AppTheme.muted,
+                      fontWeight: FontWeight.w900,
+                    ),
+                dataTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w700,
+                ),
+                columns: [
                   for (final column in columns)
-                    DataCell(
-                      ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth:
-                              column.id == 'player_name' ||
-                                  column.type == 'hero'
-                              ? 88
-                              : 48,
-                          maxWidth:
-                              column.id == 'player_name' ||
-                                  column.type == 'hero'
-                              ? 150
-                              : 92,
-                        ),
-                        child: Text(
-                          _homeTableValue(row, column),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                    DataColumn(label: Text(column.label)),
+                ],
+                rows: [
+                  for (final row in rows.take(maxRows))
+                    DataRow(
+                      cells: [
+                        for (final column in columns)
+                          DataCell(
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minWidth:
+                                    column.id == 'player_name' ||
+                                        column.type == 'hero'
+                                    ? 88
+                                    : 48,
+                                maxWidth:
+                                    column.id == 'player_name' ||
+                                        column.type == 'hero'
+                                    ? 150
+                                    : 92,
+                              ),
+                              child: _HomeDataCell(row: row, column: column),
+                            ),
+                          ),
+                      ],
                     ),
                 ],
               ),
-          ],
+            ),
+          ),
         ),
       ),
     );
@@ -1447,6 +1424,89 @@ class _HomeTableColumn {
   final String id;
   final String label;
   final String? type;
+}
+
+class _HomeDataCell extends StatelessWidget {
+  const _HomeDataCell({required this.row, required this.column});
+
+  final Map<String, dynamic> row;
+  final _HomeTableColumn column;
+
+  @override
+  Widget build(BuildContext context) {
+    final cellStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+      color: AppTheme.text,
+      fontWeight: FontWeight.w700,
+    );
+    final isHero = column.id == 'hero' || column.type == 'hero';
+    final isPlayer = column.id == 'player_name' || column.type == 'player';
+    final minWidth = isHero || isPlayer ? 132.0 : 48.0;
+    final maxWidth = isHero || isPlayer ? 170.0 : 92.0;
+    if (!isHero && !isPlayer) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
+        child: Text(
+          _homeTableValue(row, column),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: cellStyle,
+        ),
+      );
+    }
+
+    final avatarUrl = isHero
+        ? _homeHeroAvatarUrl(row)
+        : _readString(
+            row['avatar_url'] ?? _readMap(row['player'])['avatar_url'],
+          );
+    return ConstrainedBox(
+      constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: AppImage(
+              url: avatarUrl,
+              width: 28,
+              height: 28,
+              borderRadius: 999,
+              excludeFromSemantics: true,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              _homeTableValue(row, column),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: cellStyle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _homeHeroAvatarUrl(Map<String, dynamic> row) {
+  final hero = _readMap(row['hero']);
+  final explicit = _readString(
+    hero['avatar_url'] ??
+        hero['avatar_url_medium'] ??
+        hero['avatarUrl'] ??
+        row['avatar_url'] ??
+        row['hero_avatar_url'],
+  );
+  if (explicit.isNotEmpty) {
+    return explicit;
+  }
+  final heroId = _readString(hero['id'] ?? row['id']);
+  if (heroId.isEmpty) {
+    return '';
+  }
+  return 'https://hokhelper.com/static/game/hero/$heroId.png';
 }
 
 List<_HomeTableColumn> _homeTableColumns(
@@ -1759,6 +1819,7 @@ class _HomePreviewRow {
   final String? route;
 }
 
+// ignore: unused_element
 class _HomePrimaryActions extends StatelessWidget {
   const _HomePrimaryActions();
 
@@ -1848,6 +1909,7 @@ class _PrimaryActionCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _HomeToolGrid extends StatelessWidget {
   const _HomeToolGrid();
 
@@ -1978,6 +2040,7 @@ class _HomeToolCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _HokWorldEntryCard extends StatelessWidget {
   const _HokWorldEntryCard();
 

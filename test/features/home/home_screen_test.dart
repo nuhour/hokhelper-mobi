@@ -89,18 +89,9 @@ void main() {
     expect(find.text('Core Stats'), findsOneWidget);
     expect(find.text('Tier List'), findsAtLeastNWidgets(1));
 
-    await _scrollHomeUntilVisible(tester, find.text('Trending Heroes'));
-    expect(find.text('Trending Heroes'), findsOneWidget);
-    expect(find.text('Angela'), findsAtLeastNWidgets(1));
-    expect(find.text('View All'), findsOneWidget);
-
-    expect(find.text('BP Simulator'), findsAtLeastNWidgets(1));
-    expect(find.text('Tier List'), findsAtLeastNWidgets(1));
-
-    await _scrollHomeUntilVisible(tester, find.text('Latest Patch'));
-    expect(find.text('Latest Patch'), findsOneWidget);
-    expect(find.text('Patch 1.2'), findsAtLeastNWidgets(1));
-    expect(find.text('Read Notes'), findsOneWidget);
+    expect(find.text('Trending Heroes'), findsNothing);
+    expect(find.text('BP Simulator'), findsNothing);
+    expect(find.text('Quick Tools'), findsNothing);
   });
 
   testWidgets('home top tabs are centered and switch pages in place', (
@@ -380,19 +371,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('View Core Stats'), findsOneWidget);
-    expect(find.text('Enter Tier List'), findsOneWidget);
-    expect(find.text('BP Simulator'), findsAtLeastNWidgets(1));
-    expect(find.text('Tier Editor'), findsOneWidget);
-    expect(find.text('AI Prompts'), findsOneWidget);
-    expect(find.text('Team Builder'), findsOneWidget);
-    expect(find.text('Build Sim'), findsOneWidget);
-    expect(find.text('Rank Fortune'), findsOneWidget);
-    expect(find.text('Event Assistance'), findsOneWidget);
-
-    await _scrollHomeUntilVisible(tester, find.text('HOK World'));
+    expect(find.text('Core Stats'), findsOneWidget);
+    expect(find.text('Tier List'), findsAtLeastNWidgets(1));
+    expect(find.text('BP Simulator'), findsNothing);
+    expect(find.text('Quick Tools'), findsNothing);
     expect(find.text('HOK World'), findsAtLeastNWidgets(1));
-    expect(find.text('Enter HOK World Topic'), findsOneWidget);
+    expect(find.text('Enter HOK World Topic'), findsNothing);
   });
 
   testWidgets('compact viewport handles many backend stats without overflow', (
