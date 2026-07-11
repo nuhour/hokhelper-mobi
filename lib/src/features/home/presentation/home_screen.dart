@@ -589,8 +589,11 @@ class _HomeHeroBannerState extends State<_HomeHeroBanner> {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
                     child: _showWorld
-                        ? const _HomeWorldHeroContent(
+                        ? _HomeWorldHeroContent(
                             key: ValueKey('home-world-hero-content'),
+                            onBack: () => setState(() {
+                              _showWorld = false;
+                            }),
                           )
                         : const _HomeMainHeroContent(
                             key: ValueKey('home-main-hero-content'),
@@ -738,11 +741,22 @@ class _HomeMainHeroContent extends StatelessWidget {
 }
 
 class _HomeWorldHeroContent extends StatelessWidget {
-  const _HomeWorldHeroContent({super.key});
+  const _HomeWorldHeroContent({required this.onBack, super.key});
+
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     return _HomeHeroContent(
+      leading: IconButton(
+        tooltip: 'Back to HOK',
+        onPressed: onBack,
+        icon: const Icon(Icons.arrow_back_rounded),
+        color: Colors.white,
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.black.withValues(alpha: 0.28),
+        ),
+      ),
       title: 'HOK WORLD',
       description:
           'Explore the world, characters, and stories behind Honor of Kings.',
@@ -759,6 +773,7 @@ class _HomeWorldHeroContent extends StatelessWidget {
 
 class _HomeHeroContent extends StatelessWidget {
   const _HomeHeroContent({
+    this.leading,
     required this.title,
     required this.description,
     required this.buttons,
@@ -767,12 +782,15 @@ class _HomeHeroContent extends StatelessWidget {
   final String title;
   final String description;
   final List<_HomeHeroButton> buttons;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        if (leading != null)
+          Align(alignment: Alignment.centerLeft, child: leading!),
         Text(
           title,
           textAlign: TextAlign.center,
@@ -1324,7 +1342,7 @@ class _HomeDataSection extends StatelessWidget {
   }
 }
 
-class _HomeDataTable extends StatelessWidget {
+class _HomeDataTable extends StatefulWidget {
   const _HomeDataTable({
     required this.columns,
     required this.rows,
@@ -1336,8 +1354,27 @@ class _HomeDataTable extends StatelessWidget {
   final int maxRows;
 
   @override
+  State<_HomeDataTable> createState() => _HomeDataTableState();
+}
+
+class _HomeDataTableState extends State<_HomeDataTable> {
+  static const _firstColumnWidth = 52.0;
+  static const _headerHeight = 34.0;
+  static const _rowHeight = 48.0;
+
+  final _verticalController = ScrollController();
+  final _horizontalController = ScrollController();
+
+  @override
+  void dispose() {
+    _verticalController.dispose();
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) {
+    if (widget.rows.isEmpty) {
       return Text(
         'No data',
         style: Theme.of(
@@ -1345,65 +1382,171 @@ class _HomeDataTable extends StatelessWidget {
         ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
       );
     }
-    return SizedBox(
-      key: const ValueKey('home-hero-ranking-scroll-area'),
-      height: 420,
-      child: Scrollbar(
-        child: SingleChildScrollView(
-          child: Scrollbar(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                horizontalMargin: 4,
-                columnSpacing: 12,
-                dataRowMinHeight: 42,
-                dataRowMaxHeight: 48,
-                headingRowHeight: 34,
-                headingTextStyle: Theme.of(context).textTheme.labelSmall
-                    ?.copyWith(
+    final heroColumn = widget.columns.first;
+    final metricColumns = widget.columns.skip(1).toList(growable: false);
+    final metricWidth = metricColumns.fold<double>(
+      0,
+      (total, column) => total + _homeTableColumnWidth(column),
+    );
+    final fixedHeader = Container(
+      key: const ValueKey('home-hero-ranking-fixed-header'),
+      width: _firstColumnWidth,
+      height: _headerHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      alignment: Alignment.center,
+      color: AppTheme.panel,
+      child: Text(
+        heroColumn.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppTheme.muted,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+    final metricHeader = SingleChildScrollView(
+      controller: _horizontalController,
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: metricWidth),
+        child: Row(
+          children: [
+            for (final column in metricColumns)
+              SizedBox(
+                width: _homeTableColumnWidth(column),
+                height: _headerHeight,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    column.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: AppTheme.muted,
                       fontWeight: FontWeight.w900,
                     ),
-                dataTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w700,
+                  ),
                 ),
-                columns: [
-                  for (final column in columns)
-                    DataColumn(label: Text(column.label)),
-                ],
-                rows: [
-                  for (final row in rows.take(maxRows))
-                    DataRow(
-                      cells: [
-                        for (final column in columns)
-                          DataCell(
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minWidth:
-                                    column.id == 'player_name' ||
-                                        column.type == 'hero'
-                                    ? (column.type == 'hero' ? 52 : 132)
-                                    : 48,
-                                maxWidth:
-                                    column.id == 'player_name' ||
-                                        column.type == 'hero'
-                                    ? (column.type == 'hero' ? 52 : 170)
-                                    : 92,
-                              ),
-                              child: _HomeDataCell(row: row, column: column),
-                            ),
-                          ),
-                      ],
+              ),
+          ],
+        ),
+      ),
+    );
+    final metricRows = Column(
+      children: [
+        for (final row in widget.rows.take(widget.maxRows))
+          SizedBox(
+            height: _rowHeight,
+            child: Row(
+              children: [
+                for (final column in metricColumns)
+                  SizedBox(
+                    width: _homeTableColumnWidth(column),
+                    height: _rowHeight,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _HomeDataCell(row: row, column: column),
                     ),
-                ],
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+    final heroRows = Column(
+      children: [
+        for (final row in widget.rows.take(widget.maxRows))
+          SizedBox(
+            width: _firstColumnWidth,
+            height: _rowHeight,
+            child: ColoredBox(
+              color: AppTheme.panel,
+              child: Center(
+                child: _HomeHeroAvatarCluster(
+                  row: row,
+                  heroName: _homeTableValue(row, heroColumn),
+                ),
               ),
             ),
           ),
+      ],
+    );
+    return SizedBox(
+      key: const ValueKey('home-hero-ranking-scroll-area'),
+      height: 420,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: AppTheme.outline.withValues(alpha: 0.7)),
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: _headerHeight,
+              left: _firstColumnWidth,
+              right: 0,
+              bottom: 0,
+              child: SingleChildScrollView(
+                controller: _verticalController,
+                child: SingleChildScrollView(
+                  controller: _horizontalController,
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: metricWidth),
+                    child: metricRows,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: _headerHeight,
+              child: ColoredBox(
+                color: AppTheme.panel,
+                child: Row(
+                  children: [
+                    fixedHeader,
+                    Expanded(child: metricHeader),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: _headerHeight,
+              left: 0,
+              width: _firstColumnWidth,
+              bottom: 0,
+              child: ClipRect(
+                child: AnimatedBuilder(
+                  animation: _verticalController,
+                  builder: (context, child) {
+                    final offset = _verticalController.hasClients
+                        ? _verticalController.offset
+                        : 0.0;
+                    return Transform.translate(
+                      offset: Offset(0, -offset),
+                      child: child,
+                    );
+                  },
+                  child: heroRows,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+double _homeTableColumnWidth(_HomeTableColumn column) {
+  if (column.id == 'player_name' || column.type == 'player') return 132;
+  if (column.id == 'hero' || column.type == 'hero') return 52;
+  return 72;
 }
 
 class _HomeTableColumn {

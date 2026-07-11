@@ -336,7 +336,10 @@ void main() {
 
     await _scrollHomeUntilVisible(tester, find.text('Hero Rankings'));
     expect(find.text('Hero Rankings'), findsOneWidget);
-    expect(find.byType(DataTable), findsAtLeastNWidgets(2));
+    expect(
+      find.byKey(const ValueKey('home-hero-ranking-fixed-header')),
+      findsAtLeastNWidgets(2),
+    );
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
     expect(find.byKey(const ValueKey('home-hero-avatar-2625')), findsOneWidget);
     expect(find.text('Angela'), findsNothing);
