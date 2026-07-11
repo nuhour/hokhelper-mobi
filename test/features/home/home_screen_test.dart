@@ -303,10 +303,16 @@ void main() {
           message: 'Home portal ready',
           result: {
             'hero_ranking_table': {
+              'columns': [
+                {'id': 'hero', 'label': 'Hero', 'type': 'hero'},
+                {'id': 'wr', 'label': 'Win Rate', 'type': 'percent'},
+                {'id': 'pick_rate', 'label': 'Pick Rate', 'type': 'percent'},
+              ],
               'rows': [
                 {
                   'hero': {'name': 'Angela'},
-                  'win_rate': 0.56,
+                  'wr': 56.2,
+                  'pick_rate': 12.4,
                 },
               ],
             },
@@ -337,6 +343,8 @@ void main() {
 
     await _scrollHomeUntilVisible(tester, find.text('Hero Rankings'));
     expect(find.text('Hero Rankings'), findsOneWidget);
+    expect(find.byType(DataTable), findsAtLeastNWidgets(2));
+    expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
     expect(find.text('Angela'), findsAtLeastNWidgets(1));
 
     await _scrollHomeUntilVisible(tester, find.text('Tier List Preview'));

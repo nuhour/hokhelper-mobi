@@ -872,6 +872,7 @@ class _HomePortalPreviews extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final heroRows = _readList(_readMap(result['hero_ranking_table'])['rows']);
+    final heroColumns = _readMap(result['hero_ranking_table'])['columns'];
     final tierRows = _readList(result['tier_list']);
     final peakPlayers = _readList(_readMap(result['player_ranking'])['peak']);
     final communityPosts = _readList(result['community_hot']);
@@ -879,20 +880,9 @@ class _HomePortalPreviews extends StatelessWidget {
 
     final sections = <Widget>[
       if (heroRows.isNotEmpty)
-        _HomePreviewSection(
-          icon: Icons.bar_chart_outlined,
-          title: 'Hero Rankings',
-          route: '/tools/stats?entry=home_core',
-          rows: [
-            for (final row in heroRows.take(3))
-              _HomePreviewRow(
-                title: _readHeroName(row, fallback: 'Hero'),
-                detail: _readRateDetail(row),
-              ),
-          ],
-        ),
+        _HomeHeroRankingTable(rows: heroRows, rawColumns: heroColumns),
       if (tierRows.isNotEmpty)
-        _HomePreviewSection(
+        _HomeTierPreviewSection(
           icon: Icons.local_fire_department_outlined,
           title: 'Tier List Preview',
           route: '/tier-list',
@@ -905,20 +895,12 @@ class _HomePortalPreviews extends StatelessWidget {
           ],
         ),
       if (peakPlayers.isNotEmpty)
-        _HomePreviewSection(
-          icon: Icons.emoji_events_outlined,
-          title: 'Leaderboard',
-          route: '/leaderboard',
-          rows: [
-            for (final row in peakPlayers.take(3))
-              _HomePreviewRow(
-                title: _readString(row['player_name'], fallback: 'Player'),
-                detail: _readScoreDetail(row),
-              ),
-          ],
+        _HomePlayerRankingTable(
+          peakRows: peakPlayers,
+          rankRows: _readList(_readMap(result['player_ranking'])['rank']),
         ),
       if (communityPosts.isNotEmpty)
-        _HomePreviewSection(
+        _HomeCommunitySection(
           icon: Icons.forum_outlined,
           title: 'Community Hot',
           route: '/content/community',
@@ -932,7 +914,7 @@ class _HomePortalPreviews extends StatelessWidget {
           ],
         ),
       if (patchNotes.isNotEmpty)
-        _HomePreviewSection(
+        _HomePatchNotesSection(
           icon: Icons.newspaper_outlined,
           title: 'Latest Updates',
           route: '/content/patch-notes',
@@ -965,8 +947,321 @@ class _HomePortalPreviews extends StatelessWidget {
   }
 }
 
-class _HomePreviewSection extends StatelessWidget {
-  const _HomePreviewSection({
+class _HomeHeroRankingTable extends StatelessWidget {
+  const _HomeHeroRankingTable({required this.rows, required this.rawColumns});
+
+  final List<Map<String, dynamic>> rows;
+  final Object? rawColumns;
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = _homeTableColumns(rawColumns, rows);
+    final dataRows = rows.take(8).toList(growable: false);
+
+    return _HomeDataSection(
+      icon: Icons.bar_chart_outlined,
+      title: 'Hero Rankings',
+      route: '/tools/stats?entry=home_core',
+      child: _HomeDataTable(columns: columns, rows: dataRows, maxRows: 8),
+    );
+  }
+}
+
+class _HomePlayerRankingTable extends StatefulWidget {
+  const _HomePlayerRankingTable({
+    required this.peakRows,
+    required this.rankRows,
+  });
+
+  final List<Map<String, dynamic>> peakRows;
+  final List<Map<String, dynamic>> rankRows;
+
+  @override
+  State<_HomePlayerRankingTable> createState() =>
+      _HomePlayerRankingTableState();
+}
+
+class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
+  String _selected = 'peak';
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _selected == 'peak' ? widget.peakRows : widget.rankRows;
+    return _HomeDataSection(
+      icon: Icons.emoji_events_outlined,
+      title: 'Leaderboard',
+      route: '/leaderboard',
+      trailing: SegmentedButton<String>(
+        key: const ValueKey('home-player-ranking-mode'),
+        segments: const [
+          ButtonSegment(value: 'peak', label: Text('Peak')),
+          ButtonSegment(value: 'rank', label: Text('Rank')),
+        ],
+        selected: {_selected},
+        onSelectionChanged: (selection) {
+          setState(() {
+            _selected = selection.first;
+          });
+        },
+        showSelectedIcon: false,
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 8),
+          ),
+          textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 11)),
+        ),
+      ),
+      child: _HomePlayerTable(rows: rows, mode: _selected),
+    );
+  }
+}
+
+class _HomePlayerTable extends StatelessWidget {
+  const _HomePlayerTable({required this.rows, required this.mode});
+
+  final List<Map<String, dynamic>> rows;
+  final String mode;
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = [
+      const _HomeTableColumn(id: 'rank', label: '#', type: 'number'),
+      const _HomeTableColumn(id: 'player_name', label: 'Player', type: 'text'),
+      _HomeTableColumn(
+        id: mode == 'peak' ? 'peak_score' : 'rank_stars',
+        label: mode == 'peak' ? 'Peak' : 'Stars',
+        type: 'number',
+      ),
+      const _HomeTableColumn(
+        id: 'win_rate',
+        label: 'Win Rate',
+        type: 'percent',
+      ),
+      const _HomeTableColumn(id: 'avg_kda', label: 'KDA', type: 'number'),
+    ];
+    return _HomeDataTable(columns: columns, rows: rows.take(8).toList());
+  }
+}
+
+class _HomeDataSection extends StatelessWidget {
+  const _HomeDataSection({
+    required this.icon,
+    required this.title,
+    required this.route,
+    required this.child,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String route;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: AppTheme.panel,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: AppTheme.gold, size: 21),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  if (trailing != null) ...[
+                    trailing!,
+                    const SizedBox(width: 6),
+                  ],
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => context.go(route),
+                    child: const Padding(
+                      padding: EdgeInsets.all(5),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppTheme.gold,
+                        size: 19,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeDataTable extends StatelessWidget {
+  const _HomeDataTable({
+    required this.columns,
+    required this.rows,
+    this.maxRows = 8,
+  });
+
+  final List<_HomeTableColumn> columns;
+  final List<Map<String, dynamic>> rows;
+  final int maxRows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return Text(
+        'No data',
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+      );
+    }
+    return Scrollbar(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          horizontalMargin: 4,
+          columnSpacing: 20,
+          dataRowMinHeight: 42,
+          dataRowMaxHeight: 48,
+          headingRowHeight: 34,
+          headingTextStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppTheme.muted,
+            fontWeight: FontWeight.w900,
+          ),
+          dataTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w700,
+          ),
+          columns: [
+            for (final column in columns) DataColumn(label: Text(column.label)),
+          ],
+          rows: [
+            for (final row in rows.take(maxRows))
+              DataRow(
+                cells: [
+                  for (final column in columns)
+                    DataCell(
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth:
+                              column.id == 'player_name' ||
+                                  column.type == 'hero'
+                              ? 88
+                              : 48,
+                          maxWidth:
+                              column.id == 'player_name' ||
+                                  column.type == 'hero'
+                              ? 150
+                              : 92,
+                        ),
+                        child: Text(
+                          _homeTableValue(row, column),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeTableColumn {
+  const _HomeTableColumn({required this.id, required this.label, this.type});
+
+  final String id;
+  final String label;
+  final String? type;
+}
+
+List<_HomeTableColumn> _homeTableColumns(
+  Object? rawColumns,
+  List<Map<String, dynamic>> rows,
+) {
+  final columns = <_HomeTableColumn>[];
+  if (rawColumns is List) {
+    for (final value in rawColumns) {
+      if (value is! Map) continue;
+      final id = _readString(value['id']);
+      if (id.isEmpty) continue;
+      columns.add(
+        _HomeTableColumn(
+          id: id,
+          label: _readString(value['label'], fallback: id),
+          type: _readString(value['type']),
+        ),
+      );
+    }
+  }
+  if (columns.isNotEmpty) {
+    return columns;
+  }
+  return [
+    const _HomeTableColumn(id: 'hero', label: 'Hero', type: 'hero'),
+    if (rows.any((row) => row.containsKey('win_rate')))
+      const _HomeTableColumn(
+        id: 'win_rate',
+        label: 'Win Rate',
+        type: 'percent',
+      ),
+  ];
+}
+
+String _homeTableValue(Map<String, dynamic> row, _HomeTableColumn column) {
+  Object? value = row[column.id];
+  if (column.id == 'hero' || column.type == 'hero') {
+    final hero = _readMap(value);
+    value = hero['name'] ?? hero['hero_name'] ?? row['name'];
+  } else if (column.id == 'player_name' || column.type == 'player') {
+    final player = _readMap(row['player']);
+    value = value ?? player['name'] ?? player['player_name'];
+  }
+  if (value == null || value.toString().trim().isEmpty) {
+    return '-';
+  }
+  if (column.type == 'percent' || column.id.endsWith('_rate')) {
+    final number = double.tryParse(value.toString());
+    if (number != null) {
+      final percent = number <= 1 ? number * 100 : number;
+      return '${percent.toStringAsFixed(1)}%';
+    }
+  }
+  if (value is double) {
+    return value.toStringAsFixed(1);
+  }
+  if (value is List) {
+    return value.join(', ');
+  }
+  return value.toString();
+}
+
+class _HomeTierPreviewSection extends StatelessWidget {
+  const _HomeTierPreviewSection({
     required this.icon,
     required this.title,
     required this.route,
@@ -980,58 +1275,197 @@ class _HomePreviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go(route),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+    return _HomeDataSection(
+      icon: icon,
+      title: title,
+      route: route,
+      child: Column(
+        children: [
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: Row(
+                children: [
+                  Container(
+                    width: 5,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: _homeTierColor(row.title),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  SizedBox(
+                    width: 38,
+                    child: Text(
+                      row.title,
+                      style: const TextStyle(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      row.detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeCommunitySection extends StatelessWidget {
+  const _HomeCommunitySection({
+    required this.icon,
+    required this.title,
+    required this.route,
+    required this.rows,
+  });
+
+  final IconData icon;
+  final String title;
+  final String route;
+  final List<_HomePreviewRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeDataSection(
+      icon: icon,
+      title: title,
+      route: route,
+      child: Column(
+        children: [
+          for (final row in rows)
+            _HomeInfoListRow(
+              title: row.title,
+              detail: row.detail,
+              route: row.route,
+              suffix: 'Hot',
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomePatchNotesSection extends StatelessWidget {
+  const _HomePatchNotesSection({
+    required this.icon,
+    required this.title,
+    required this.route,
+    required this.rows,
+  });
+
+  final IconData icon;
+  final String title;
+  final String route;
+  final List<_HomePreviewRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return _HomeDataSection(
+      icon: icon,
+      title: title,
+      route: route,
+      child: Column(
+        children: [
+          for (final row in rows)
+            _HomeInfoListRow(
+              title: row.title,
+              detail: row.detail,
+              route: row.route,
+              suffix: 'Notes',
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeInfoListRow extends StatelessWidget {
+  const _HomeInfoListRow({
+    required this.title,
+    required this.detail,
+    required this.suffix,
+    this.route,
+  });
+
+  final String title;
+  final String detail;
+  final String suffix;
+  final String? route;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        children: [
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(icon, color: AppTheme.gold, size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: AppTheme.text,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: AppTheme.gold,
-                      size: 18,
-                    ),
-                  ],
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                for (var index = 0; index < rows.length; index++) ...[
-                  _HomePreviewTile(row: rows[index]),
-                  if (index != rows.length - 1) const SizedBox(height: 10),
+                if (detail.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  ),
                 ],
               ],
             ),
           ),
-        ),
+          const SizedBox(width: 10),
+          Text(
+            suffix,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppTheme.gold,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
+    if (route == null) return child;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => context.go(route!),
+      child: child,
+    );
   }
+}
+
+Color _homeTierColor(String tier) {
+  return switch (tier.toUpperCase()) {
+    'T0' || 'S' => const Color(0xFFE53935),
+    'T1' || 'A' => const Color(0xFFFF7A1A),
+    'T2' || 'B' => const Color(0xFFF2BE0A),
+    'T3' || 'C' => const Color(0xFF23C76A),
+    _ => const Color(0xFF72809A),
+  };
 }
 
 class _HomePreviewRow {
@@ -1044,68 +1478,6 @@ class _HomePreviewRow {
   final String title;
   final String detail;
   final String? route;
-}
-
-class _HomePreviewTile extends StatelessWidget {
-  const _HomePreviewTile({required this.row});
-
-  final _HomePreviewRow row;
-
-  @override
-  Widget build(BuildContext context) {
-    final route = row.route;
-    final tile = DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                row.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            if (row.detail.isNotEmpty) ...[
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  row.detail,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-
-    if (route == null) {
-      return tile;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => context.go(route),
-        child: tile,
-      ),
-    );
-  }
 }
 
 class _HomePrimaryActions extends StatelessWidget {
@@ -1605,13 +1977,4 @@ String _readTierHeroNames(Map<String, dynamic> row) {
       _readString(hero['name'] ?? hero['hero_name']),
   ].where((name) => name.isNotEmpty).join(', ');
   return names;
-}
-
-String _readScoreDetail(Map<String, dynamic> row) {
-  final peakScore = _readString(row['peak_score']);
-  if (peakScore.isNotEmpty) {
-    return peakScore;
-  }
-  final rankStars = _readString(row['rank_stars']);
-  return rankStars.isEmpty ? '' : '$rankStars stars';
 }
