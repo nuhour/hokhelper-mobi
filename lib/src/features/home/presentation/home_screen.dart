@@ -47,9 +47,6 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 18),
                 const _HokWorldEntryCard(),
                 const SizedBox(height: 24),
-                _HomePortalPreviews(result: stats.result),
-                if (_hasHomePortalPreviews(stats.result))
-                  const SizedBox(height: 18),
                 _BackendSummary(stats: stats),
               ],
             ),
@@ -140,6 +137,7 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
               _HomeLandingTab(
                 trendingHero: trendingHero,
                 latestPatch: latestPatch,
+                result: widget.result,
               ),
             ],
           ),
@@ -211,10 +209,12 @@ class _HomeLandingTab extends StatelessWidget {
   const _HomeLandingTab({
     required this.trendingHero,
     required this.latestPatch,
+    required this.result,
   });
 
   final Map<String, dynamic> trendingHero;
   final Map<String, dynamic> latestPatch;
+  final Map<String, dynamic> result;
 
   @override
   Widget build(BuildContext context) {
@@ -223,6 +223,8 @@ class _HomeLandingTab extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         const _HomeHeroBanner(),
+        const SizedBox(height: 18),
+        _HomePortalPreviews(result: result),
         const SizedBox(height: 18),
         _HomeBentoGrid(trendingHero: trendingHero, latestPatch: latestPatch),
       ],
@@ -879,61 +881,52 @@ class _HomePortalPreviews extends StatelessWidget {
     final patchNotes = _readList(result['patch_notes']);
 
     final sections = <Widget>[
-      if (heroRows.isNotEmpty)
-        _HomeHeroRankingTable(rows: heroRows, rawColumns: heroColumns),
-      if (tierRows.isNotEmpty)
-        _HomeTierPreviewSection(
-          icon: Icons.local_fire_department_outlined,
-          title: 'Tier List Preview',
-          route: '/tier-list',
-          rows: [
-            for (final row in tierRows.take(4))
-              _HomePreviewRow(
-                title: _readString(row['tier'], fallback: 'Tier'),
-                detail: _readTierHeroNames(row),
-              ),
-          ],
-        ),
-      if (peakPlayers.isNotEmpty)
-        _HomePlayerRankingTable(
-          peakRows: peakPlayers,
-          rankRows: _readList(_readMap(result['player_ranking'])['rank']),
-        ),
-      if (communityPosts.isNotEmpty)
-        _HomeCommunitySection(
-          icon: Icons.forum_outlined,
-          title: 'Community Hot',
-          route: '/content/community',
-          rows: [
-            for (final row in communityPosts.take(3))
-              _HomePreviewRow(
-                title: _readString(row['title'], fallback: 'Community post'),
-                detail: _readString(row['content_preview']),
-                route: _communityPostRoute(row['id']),
-              ),
-          ],
-        ),
-      if (patchNotes.isNotEmpty)
-        _HomePatchNotesSection(
-          icon: Icons.newspaper_outlined,
-          title: 'Latest Updates',
-          route: '/content/patch-notes',
-          rows: [
-            for (final row in patchNotes.take(3))
-              _HomePreviewRow(
-                title: _readString(row['title'], fallback: 'Patch note'),
-                detail: _readString(row['content_preview']),
-                route:
-                    _communityPostRoute(row['post_id']) ??
-                    _patchNoteRoute(row['id']),
-              ),
-          ],
-        ),
+      _HomeHeroRankingTable(rows: heroRows, rawColumns: heroColumns),
+      _HomeTierPreviewSection(
+        icon: Icons.local_fire_department_outlined,
+        title: 'Tier List Preview',
+        route: '/tier-list',
+        rows: [
+          for (final row in tierRows.take(4))
+            _HomePreviewRow(
+              title: _readString(row['tier'], fallback: 'Tier'),
+              detail: _readTierHeroNames(row),
+            ),
+        ],
+      ),
+      _HomePlayerRankingTable(
+        peakRows: peakPlayers,
+        rankRows: _readList(_readMap(result['player_ranking'])['rank']),
+      ),
+      _HomeCommunitySection(
+        icon: Icons.forum_outlined,
+        title: 'Community Hot',
+        route: '/content/community',
+        rows: [
+          for (final row in communityPosts.take(3))
+            _HomePreviewRow(
+              title: _readString(row['title'], fallback: 'Community post'),
+              detail: _readString(row['content_preview']),
+              route: _communityPostRoute(row['id']),
+            ),
+        ],
+      ),
+      _HomePatchNotesSection(
+        icon: Icons.newspaper_outlined,
+        title: 'Latest Updates',
+        route: '/content/patch-notes',
+        rows: [
+          for (final row in patchNotes.take(3))
+            _HomePreviewRow(
+              title: _readString(row['title'], fallback: 'Patch note'),
+              detail: _readString(row['content_preview']),
+              route:
+                  _communityPostRoute(row['post_id']) ??
+                  _patchNoteRoute(row['id']),
+            ),
+        ],
+      ),
     ];
-
-    if (sections.isEmpty) {
-      return const SizedBox.shrink();
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -991,28 +984,34 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
       icon: Icons.emoji_events_outlined,
       title: 'Leaderboard',
       route: '/leaderboard',
-      trailing: SegmentedButton<String>(
-        key: const ValueKey('home-player-ranking-mode'),
-        segments: const [
-          ButtonSegment(value: 'peak', label: Text('Peak')),
-          ButtonSegment(value: 'rank', label: Text('Rank')),
-        ],
-        selected: {_selected},
-        onSelectionChanged: (selection) {
-          setState(() {
-            _selected = selection.first;
-          });
-        },
-        showSelectedIcon: false,
-        style: ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          SegmentedButton<String>(
+            key: const ValueKey('home-player-ranking-mode'),
+            segments: const [
+              ButtonSegment(value: 'peak', label: Text('Peak')),
+              ButtonSegment(value: 'rank', label: Text('Rank')),
+            ],
+            selected: {_selected},
+            onSelectionChanged: (selection) {
+              setState(() {
+                _selected = selection.first;
+              });
+            },
+            showSelectedIcon: false,
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 8),
+              ),
+              textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 11)),
+            ),
           ),
-          textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 11)),
-        ),
+          const SizedBox(height: 4),
+          _HomePlayerTable(rows: rows, mode: _selected),
+        ],
       ),
-      child: _HomePlayerTable(rows: rows, mode: _selected),
     );
   }
 }
@@ -1050,14 +1049,12 @@ class _HomeDataSection extends StatelessWidget {
     required this.title,
     required this.route,
     required this.child,
-    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String route;
   final Widget child;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1087,21 +1084,14 @@ class _HomeDataSection extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (trailing != null) ...[
-                    trailing!,
-                    const SizedBox(width: 6),
-                  ],
-                  InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () => context.go(route),
-                    child: const Padding(
-                      padding: EdgeInsets.all(5),
-                      child: Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppTheme.gold,
-                        size: 19,
-                      ),
+                  TextButton(
+                    onPressed: () => context.go(route),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                    child: const Text('View More'),
                   ),
                 ],
               ),
@@ -1281,43 +1271,46 @@ class _HomeTierPreviewSection extends StatelessWidget {
       route: route,
       child: Column(
         children: [
-          for (final row in rows)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 7),
-              child: Row(
-                children: [
-                  Container(
-                    width: 5,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: _homeTierColor(row.title),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  SizedBox(
-                    width: 38,
-                    child: Text(
-                      row.title,
-                      style: const TextStyle(
-                        color: AppTheme.text,
-                        fontWeight: FontWeight.w900,
+          if (rows.isEmpty)
+            const _HomeEmptyPanelMessage()
+          else
+            for (final row in rows)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 7),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: _homeTierColor(row.title),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      row.detail,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    const SizedBox(width: 9),
+                    SizedBox(
+                      width: 38,
+                      child: Text(
+                        row.title,
+                        style: const TextStyle(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: Text(
+                        row.detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
         ],
       ),
     );
@@ -1345,13 +1338,16 @@ class _HomeCommunitySection extends StatelessWidget {
       route: route,
       child: Column(
         children: [
-          for (final row in rows)
-            _HomeInfoListRow(
-              title: row.title,
-              detail: row.detail,
-              route: row.route,
-              suffix: 'Hot',
-            ),
+          if (rows.isEmpty)
+            const _HomeEmptyPanelMessage()
+          else
+            for (final row in rows)
+              _HomeInfoListRow(
+                title: row.title,
+                detail: row.detail,
+                route: row.route,
+                suffix: 'Hot',
+              ),
         ],
       ),
     );
@@ -1379,13 +1375,16 @@ class _HomePatchNotesSection extends StatelessWidget {
       route: route,
       child: Column(
         children: [
-          for (final row in rows)
-            _HomeInfoListRow(
-              title: row.title,
-              detail: row.detail,
-              route: row.route,
-              suffix: 'Notes',
-            ),
+          if (rows.isEmpty)
+            const _HomeEmptyPanelMessage()
+          else
+            for (final row in rows)
+              _HomeInfoListRow(
+                title: row.title,
+                detail: row.detail,
+                route: row.route,
+                suffix: 'Notes',
+              ),
         ],
       ),
     );
@@ -1454,6 +1453,26 @@ class _HomeInfoListRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: () => context.go(route!),
       child: child,
+    );
+  }
+}
+
+class _HomeEmptyPanelMessage extends StatelessWidget {
+  const _HomeEmptyPanelMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Text(
+          'No data yet',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+        ),
+      ),
     );
   }
 }
@@ -1888,14 +1907,6 @@ class _StatChip extends StatelessWidget {
       ),
     );
   }
-}
-
-bool _hasHomePortalPreviews(Map<String, dynamic> result) {
-  return _readList(_readMap(result['hero_ranking_table'])['rows']).isNotEmpty ||
-      _readList(result['tier_list']).isNotEmpty ||
-      _readList(_readMap(result['player_ranking'])['peak']).isNotEmpty ||
-      _readList(result['community_hot']).isNotEmpty ||
-      _readList(result['patch_notes']).isNotEmpty;
 }
 
 Map<String, dynamic> _readMap(Object? value) {
