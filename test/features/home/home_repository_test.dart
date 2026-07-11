@@ -25,7 +25,27 @@ class _FakeApiClient extends ApiClient {
   }
 }
 
+class _FailingApiClient extends ApiClient {
+  _FailingApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+
+  @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
+    throw StateError('stats task unavailable');
+  }
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('HomeRepository', () {
     test('loads home stats from the backend stats endpoint', () async {
       final apiClient = _FakeApiClient({
@@ -42,5 +62,20 @@ void main() {
       expect(stats.message, 'Home stats ready');
       expect(stats.result, {'heroes': 128, 'builds': 34});
     });
+
+    test(
+      'falls back to bundled home stats when the backend is unavailable',
+      () async {
+        final repository = HomeRepository(apiClient: _FailingApiClient());
+
+        final stats = await repository.loadHomeStats();
+
+        expect(stats.success, isTrue);
+        expect(stats.result['season'], isA<Map>());
+        expect(stats.result['hero_ranking_table'], isA<Map>());
+        expect(stats.result['player_ranking'], isA<Map>());
+        expect(stats.result['tier_list'], isA<List>());
+      },
+    );
   });
 }
