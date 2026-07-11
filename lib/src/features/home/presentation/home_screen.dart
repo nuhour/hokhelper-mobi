@@ -1565,10 +1565,15 @@ String _homeHeroAvatarUrl(Map<String, dynamic> row) {
 }
 
 class _HomeHeroAvatar extends StatelessWidget {
-  const _HomeHeroAvatar({required this.heroId, required this.name});
+  const _HomeHeroAvatar({
+    required this.heroId,
+    required this.name,
+    this.size = 34,
+  });
 
   final Object? heroId;
   final String name;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -1578,8 +1583,8 @@ class _HomeHeroAvatar extends StatelessWidget {
       child: AppImage(
         key: ValueKey('home-hero-avatar-$id'),
         url: id.isEmpty ? '' : 'https://hokhelper.com/static/game/hero/$id.png',
-        width: 34,
-        height: 34,
+        width: size,
+        height: size,
         borderRadius: 999,
         semanticLabel: name,
       ),
@@ -1709,6 +1714,7 @@ class _HomeTierPreviewSection extends StatelessWidget {
                             _HomeHeroAvatar(
                               heroId: hero['hero_id'] ?? hero['id'],
                               name: _readString(hero['name'], fallback: 'Hero'),
+                              size: 24,
                             ),
                         ],
                       ),
@@ -1888,7 +1894,7 @@ class _HomePatchChangeIcon extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _HomeHeroAvatar(heroId: heroId, name: name),
+          _HomeHeroAvatar(heroId: heroId, name: name, size: 24),
           const SizedBox(width: 2),
           Icon(
             isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
