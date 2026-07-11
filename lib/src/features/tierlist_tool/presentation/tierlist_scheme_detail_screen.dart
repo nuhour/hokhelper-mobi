@@ -1125,6 +1125,8 @@ class _HeroPoolDraggable extends StatelessWidget {
       key: ValueKey('hero-pool-draggable-$heroId'),
       data: heroId,
       delay: const Duration(milliseconds: 240),
+      // 编辑器横向排列，锁定拖拽方向可以避免和英雄池的纵向滚动争抢手势。
+      axis: Axis.horizontal,
       feedback: Material(
         color: Colors.transparent,
         child: Transform.scale(scale: 1.08, child: token),
@@ -1677,46 +1679,51 @@ class _TierRowDetail extends StatelessWidget {
                 ),
               ),
               child: isEditMode
-                  ? Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Positioned.fill(
-                          child: Center(
-                            child: SizedBox(
-                              width: 50,
-                              height: 30,
-                              child: TextField(
-                                key: ValueKey('tier-row-label-${row.id}'),
-                                controller: labelController,
-                                onChanged: onLabelChanged,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(
-                                      color: Colors.white,
-                                      fontStyle: FontStyle.italic,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 1,
+                        horizontal: 2,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            width: 56,
+                            height: 24,
+                            child: TextField(
+                              key: ValueKey('tier-row-label-${row.id}'),
+                              controller: labelController,
+                              onChanged: onLabelChanged,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontStyle: FontStyle.italic,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
                               ),
                             ),
                           ),
-                        ),
-                        if (onColorChanged != null)
-                          Positioned(
-                            right: 1,
-                            bottom: 1,
-                            child: _TierRowColorMenu(
-                              rowId: row.id,
-                              selectedColor: row.color,
-                              onColorChanged: onColorChanged!,
+                          if (onColorChanged != null)
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: FittedBox(
+                                fit: BoxFit.contain,
+                                child: _TierRowColorMenu(
+                                  rowId: row.id,
+                                  selectedColor: row.color,
+                                  onColorChanged: onColorChanged!,
+                                ),
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     )
                   : Text(
                       row.label,
@@ -1828,8 +1835,8 @@ class _TierRowColorMenu extends StatelessWidget {
       key: ValueKey('tier-row-color-menu-$rowId'),
       tooltip: 'Tier color',
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 22, height: 22),
-      iconSize: 15,
+      constraints: const BoxConstraints.tightFor(width: 18, height: 18),
+      iconSize: 13,
       color: Colors.white,
       onPressed: () => _showColorDialog(context),
       icon: const Icon(Icons.palette_outlined),

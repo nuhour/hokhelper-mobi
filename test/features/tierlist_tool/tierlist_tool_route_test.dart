@@ -537,6 +537,14 @@ void main() {
       find.byKey(const ValueKey('hero-pool-draggable-999')),
       findsOneWidget,
     );
+
+    final labelRect = tester.getRect(
+      find.byKey(const ValueKey('tier-row-label-r1')),
+    );
+    final colorMenuRect = tester.getRect(
+      find.byKey(const ValueKey('tier-row-color-menu-r1')),
+    );
+    expect(labelRect.bottom <= colorMenuRect.top, isTrue);
   });
 
   testWidgets('tier list fullscreen editor saves scheme and tier edits', (
