@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -658,8 +660,62 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   ];
 
   final _selectedHeroIds = <int>[];
+  final _bannedHeroIds = <int>[];
   int? _selectedLane;
   bool _isSaving = false;
+  bool _showBanned = true;
+  bool _showPicked = true;
+  String _phase = 'BAN PHASE';
+  int _secondsRemaining = 41;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannedHeroIds.addAll(widget.scheme.blueBanHeroIds);
+    _selectedHeroIds.addAll(widget.scheme.bluePickHeroIds);
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _secondsRemaining = _secondsRemaining <= 0 ? 41 : _secondsRemaining - 1;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startBp() {
+    setState(() {
+      _phase = 'BAN PHASE';
+      _secondsRemaining = 41;
+      _selectedHeroIds.clear();
+      _bannedHeroIds.clear();
+    });
+  }
+
+  void _nextPhase() {
+    setState(() {
+      _phase = _phase == 'BAN PHASE' ? 'PICK PHASE' : 'BAN PHASE';
+      _secondsRemaining = 41;
+    });
+  }
+
+  void _selectHero(int heroId) {
+    if (_bannedHeroIds.contains(heroId) || _selectedHeroIds.contains(heroId)) {
+      return;
+    }
+    setState(() {
+      if (_phase == 'BAN PHASE') {
+        if (_bannedHeroIds.length < 5) _bannedHeroIds.add(heroId);
+      } else if (_selectedHeroIds.length < 5) {
+        _selectedHeroIds.add(heroId);
+      }
+    });
+  }
 
   Future<void> _saveDraft() async {
     if (_isSaving) return;
@@ -673,7 +729,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                 ? widget.scheme.gameNumber
                 : widget.initialGameIndex! + 1,
             currentStepIndex: _selectedHeroIds.length,
-            blueBanCount: widget.scheme.blueBanCount,
+            blueBanCount: _bannedHeroIds.length,
             redBanCount: widget.scheme.redBanCount,
             bluePickCount: _selectedHeroIds.length,
             redPickCount: widget.scheme.redPickCount,
@@ -710,7 +766,12 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
             _BpEditorTopBar(
               scheme: widget.scheme,
               isSaving: _isSaving,
-              selectedCount: _selectedHeroIds.length,
+              phase: _phase,
+              secondsRemaining: _secondsRemaining,
+              blueBanHeroIds: widget.scheme.blueBanHeroIds.isNotEmpty
+                  ? widget.scheme.blueBanHeroIds
+                  : _bannedHeroIds,
+              redBanHeroIds: widget.scheme.redBanHeroIds,
               onBack: () => Navigator.of(context).maybePop(),
               onSave: _saveDraft,
             ),
@@ -718,60 +779,76 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
               lanes: _lanes,
               selectedLane: _selectedLane,
               onSelected: (lane) => setState(() => _selectedLane = lane),
+              showBanned: _showBanned,
+              showPicked: _showPicked,
+              onToggleBanned: () => setState(() => _showBanned = !_showBanned),
+              onTogglePicked: () => setState(() => _showPicked = !_showPicked),
             ),
             Expanded(
               child: Row(
                 children: [
                   _BpTeamRail(
-                    label: widget.scheme.teamAName,
                     color: const Color(0xFF246BFF),
                     heroIds: _selectedHeroIds.take(5).toList(),
                   ),
                   Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = (constraints.maxWidth / 86)
-                            .floor()
-                            .clamp(6, 12);
-                        return GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 18),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                crossAxisSpacing: 7,
-                                mainAxisSpacing: 7,
-                                childAspectRatio: 1.02,
-                              ),
-                          itemCount: visibleHeroes.length,
-                          itemBuilder: (context, index) {
-                            final hero = visibleHeroes[index];
-                            final heroId = int.tryParse(hero.id) ?? 0;
-                            final isSelected = _selectedHeroIds.contains(
-                              heroId,
-                            );
-                            return _BpHeroPoolTile(
-                              hero: hero,
-                              selected: isSelected,
-                              onTap: heroId <= 0
-                                  ? null
-                                  : () => setState(() {
-                                      if (isSelected) {
-                                        _selectedHeroIds.remove(heroId);
-                                      } else if (_selectedHeroIds.length < 5) {
-                                        _selectedHeroIds.add(heroId);
-                                      }
-                                    }),
+                    child: Stack(
+                      children: [
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final crossAxisCount = (constraints.maxWidth / 70)
+                                .floor()
+                                .clamp(7, 14);
+                            return GridView.builder(
+                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 60),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    crossAxisSpacing: 5,
+                                    mainAxisSpacing: 5,
+                                    childAspectRatio: 1.02,
+                                  ),
+                              itemCount: visibleHeroes.length,
+                              itemBuilder: (context, index) {
+                                final hero = visibleHeroes[index];
+                                final heroId = int.tryParse(hero.id) ?? 0;
+                                final isBanned = _bannedHeroIds.contains(
+                                  heroId,
+                                );
+                                final isPicked = _selectedHeroIds.contains(
+                                  heroId,
+                                );
+                                return _BpHeroPoolTile(
+                                  hero: hero,
+                                  banned: isBanned,
+                                  picked: isPicked,
+                                  showBanned: _showBanned,
+                                  showPicked: _showPicked,
+                                  onTap: heroId <= 0 || isBanned || isPicked
+                                      ? null
+                                      : () => _selectHero(heroId),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 6,
+                          child: _BpFlowControls(
+                            phase: _phase,
+                            onStart: _startBp,
+                            onNext: _nextPhase,
+                            onReset: _startBp,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   _BpTeamRail(
-                    label: widget.scheme.teamBName,
                     color: const Color(0xFFE83B43),
                     heroIds: widget.scheme.redPickHeroIds,
-                    rightAligned: true,
                   ),
                 ],
               ),
@@ -787,21 +864,27 @@ class _BpEditorTopBar extends StatelessWidget {
   const _BpEditorTopBar({
     required this.scheme,
     required this.isSaving,
-    required this.selectedCount,
+    required this.phase,
+    required this.secondsRemaining,
+    required this.blueBanHeroIds,
+    required this.redBanHeroIds,
     required this.onBack,
     required this.onSave,
   });
 
   final BpSchemeSummary scheme;
   final bool isSaving;
-  final int selectedCount;
+  final String phase;
+  final int secondsRemaining;
+  final List<int> blueBanHeroIds;
+  final List<int> redBanHeroIds;
   final VoidCallback onBack;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 62,
+      height: 94,
       child: Row(
         children: [
           IconButton.filledTonal(
@@ -809,38 +892,60 @@ class _BpEditorTopBar extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.logout_rounded),
           ),
-          const SizedBox(width: 12),
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                _BpBanSlots(
+                  color: const Color(0xFF246BFF),
+                  heroIds: blueBanHeroIds,
+                ),
+                const SizedBox(width: 22),
                 _BpScorePill(
                   label: scheme.teamAName,
-                  score: selectedCount,
+                  score: scheme.bluePickHeroIds.length,
                   color: const Color(0xFF246BFF),
                 ),
                 Container(
-                  width: 64,
-                  height: 58,
+                  width: 62,
+                  height: 62,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: const BoxDecoration(
                     color: Color(0xFF171923),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const Text(
-                    '41',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$secondsRemaining',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        phase == 'BAN PHASE' ? 'BAN' : 'PICK',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 _BpScorePill(
                   label: scheme.teamBName,
                   score: scheme.redPickHeroIds.length,
                   color: const Color(0xFFE83B43),
+                ),
+                const SizedBox(width: 22),
+                _BpBanSlots(
+                  color: const Color(0xFFE83B43),
+                  heroIds: redBanHeroIds,
                 ),
               ],
             ),
@@ -852,6 +957,31 @@ class _BpEditorTopBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BpBanSlots extends StatelessWidget {
+  const _BpBanSlots({required this.color, required this.heroIds});
+
+  final Color color;
+  final List<int> heroIds;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < 5; index++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: _BpSlot(
+              heroId: index < heroIds.length ? heroIds[index] : null,
+              color: color,
+              size: 34,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -909,11 +1039,19 @@ class _BpLaneBar extends StatelessWidget {
     required this.lanes,
     required this.selectedLane,
     required this.onSelected,
+    required this.showBanned,
+    required this.showPicked,
+    required this.onToggleBanned,
+    required this.onTogglePicked,
   });
 
   final List<(String, IconData, int?)> lanes;
   final int? selectedLane;
   final ValueChanged<int?> onSelected;
+  final bool showBanned;
+  final bool showPicked;
+  final VoidCallback onToggleBanned;
+  final VoidCallback onTogglePicked;
 
   @override
   Widget build(BuildContext context) {
@@ -925,14 +1063,46 @@ class _BpLaneBar extends StatelessWidget {
           for (final lane in lanes)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: ChoiceChip(
-                label: Text(lane.$1),
-                avatar: Icon(lane.$2, size: 14),
-                selected: selectedLane == lane.$3,
-                onSelected: (_) => onSelected(lane.$3),
-                visualDensity: VisualDensity.compact,
+              child: IconButton(
+                tooltip: lane.$1,
+                onPressed: () => onSelected(lane.$3),
+                icon: Icon(
+                  lane.$2,
+                  size: selectedLane == lane.$3 ? 21 : 18,
+                  color: selectedLane == lane.$3
+                      ? Colors.white
+                      : AppTheme.muted,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: selectedLane == lane.$3
+                      ? AppTheme.gold.withValues(alpha: 0.75)
+                      : Colors.transparent,
+                  minimumSize: const Size(34, 34),
+                  padding: EdgeInsets.zero,
+                ),
               ),
             ),
+          const SizedBox(width: 18),
+          IconButton(
+            tooltip: 'Show banned heroes',
+            onPressed: onToggleBanned,
+            icon: Icon(
+              showBanned ? Icons.block_rounded : Icons.block_outlined,
+              color: showBanned ? AppTheme.error : AppTheme.muted,
+              size: 20,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Show picked heroes',
+            onPressed: onTogglePicked,
+            icon: Icon(
+              showPicked
+                  ? Icons.check_circle_rounded
+                  : Icons.check_circle_outline,
+              color: showPicked ? AppTheme.success : AppTheme.muted,
+              size: 20,
+            ),
+          ),
         ],
       ),
     );
@@ -940,17 +1110,10 @@ class _BpLaneBar extends StatelessWidget {
 }
 
 class _BpTeamRail extends StatelessWidget {
-  const _BpTeamRail({
-    required this.label,
-    required this.color,
-    required this.heroIds,
-    this.rightAligned = false,
-  });
+  const _BpTeamRail({required this.color, required this.heroIds});
 
-  final String label;
   final Color color;
   final List<int> heroIds;
-  final bool rightAligned;
 
   @override
   Widget build(BuildContext context) {
@@ -958,23 +1121,14 @@ class _BpTeamRail extends StatelessWidget {
       width: 86,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: rightAligned
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
         children: [
-          Text(
-            label.isEmpty ? 'TEAM' : label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 10),
           for (var index = 0; index < 5; index++)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: _BpSlot(
                 heroId: index < heroIds.length ? heroIds[index] : null,
                 color: color,
+                size: 44,
               ),
             ),
         ],
@@ -983,17 +1137,58 @@ class _BpTeamRail extends StatelessWidget {
   }
 }
 
+class _BpFlowControls extends StatelessWidget {
+  const _BpFlowControls({
+    required this.phase,
+    required this.onStart,
+    required this.onNext,
+    required this.onReset,
+  });
+
+  final String phase;
+  final VoidCallback onStart;
+  final VoidCallback onNext;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        FilledButton.icon(
+          onPressed: onStart,
+          icon: const Icon(Icons.play_arrow_rounded, size: 17),
+          label: const Text('开始 BP'),
+        ),
+        const SizedBox(width: 8),
+        OutlinedButton.icon(
+          onPressed: onNext,
+          icon: const Icon(Icons.skip_next_rounded, size: 17),
+          label: Text(phase == 'BAN PHASE' ? '下一步选人' : '下一步禁用'),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filledTonal(
+          tooltip: 'Reset BP flow',
+          onPressed: onReset,
+          icon: const Icon(Icons.restart_alt_rounded, size: 18),
+        ),
+      ],
+    );
+  }
+}
+
 class _BpSlot extends StatelessWidget {
-  const _BpSlot({required this.heroId, required this.color});
+  const _BpSlot({required this.heroId, required this.color, this.size = 48});
 
   final int? heroId;
   final Color color;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: color.withValues(alpha: 0.7), width: 2),
@@ -1015,12 +1210,18 @@ class _BpSlot extends StatelessWidget {
 class _BpHeroPoolTile extends StatelessWidget {
   const _BpHeroPoolTile({
     required this.hero,
-    required this.selected,
+    required this.banned,
+    required this.picked,
+    required this.showBanned,
+    required this.showPicked,
     this.onTap,
   });
 
   final HeroSummary hero;
-  final bool selected;
+  final bool banned;
+  final bool picked;
+  final bool showBanned;
+  final bool showPicked;
   final VoidCallback? onTap;
 
   @override
@@ -1030,19 +1231,43 @@ class _BpHeroPoolTile extends StatelessWidget {
         ? hero.avatar
         : 'https://hokhelper.com/static/game/hero/$heroId.png';
     return Material(
-      color: selected ? const Color(0xFF1A4CBE) : const Color(0xFF0A1020),
+      color: banned || picked
+          ? const Color(0xFF070A12)
+          : const Color(0xFF0A1020),
       borderRadius: BorderRadius.circular(7),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(7),
-        child: Center(
-          child: AppImage(
-            url: url,
-            width: 64,
-            height: 64,
-            borderRadius: 999,
-            semanticLabel: hero.name,
-          ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Opacity(
+              opacity: banned || picked ? 0.28 : 1,
+              child: AppImage(
+                url: url,
+                width: 48,
+                height: 48,
+                borderRadius: 999,
+                semanticLabel: hero.name,
+              ),
+            ),
+            if ((banned && showBanned) || (picked && showPicked))
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: banned ? AppTheme.error : AppTheme.success,
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  banned ? Icons.block_rounded : Icons.check_rounded,
+                  color: banned ? AppTheme.error : AppTheme.success,
+                  size: 20,
+                ),
+              ),
+          ],
         ),
       ),
     );
