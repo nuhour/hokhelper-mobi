@@ -1048,6 +1048,7 @@ GoRouter createAppRouter() {
                               initialGameIndex: int.tryParse(
                                 state.uri.queryParameters['gameIndex'] ?? '',
                               ),
+                              enableLandscapeEditor: true,
                             ),
                           );
                         },

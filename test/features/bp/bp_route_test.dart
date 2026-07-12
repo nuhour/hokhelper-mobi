@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
@@ -12,6 +14,7 @@ void main() {
   ) async {
     final router = createAppRouter();
     router.go('/tools/bp-simulator');
+    tester.view.physicalSize = const Size(1170, 2532);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -80,6 +83,7 @@ void main() {
   ) async {
     final router = createAppRouter();
     router.go('/tools/bp-simulator/12?gameIndex=1');
+    tester.view.physicalSize = const Size(1170, 2532);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -122,6 +126,7 @@ void main() {
   ) async {
     final router = createAppRouter();
     router.go('/bp-simulator?scheme_id=12&game_index=1');
+    tester.view.physicalSize = const Size(1170, 2532);
 
     await tester.pumpWidget(
       ProviderScope(

@@ -19,6 +19,8 @@ class StandalonePageShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
 
     return PopScope(
       canPop: false,
@@ -28,17 +30,19 @@ class StandalonePageShell extends StatelessWidget {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            key: const ValueKey('standalone-back-button'),
-            tooltip: l10n.back,
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () => _goBack(context),
-          ),
-          title: title == null ? null : Text(title!),
-          backgroundColor: AppTheme.bg,
-          surfaceTintColor: Colors.transparent,
-        ),
+        appBar: isLandscape
+            ? null
+            : AppBar(
+                leading: IconButton(
+                  key: const ValueKey('standalone-back-button'),
+                  tooltip: l10n.back,
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                  onPressed: () => _goBack(context),
+                ),
+                title: title == null ? null : Text(title!),
+                backgroundColor: AppTheme.bg,
+                surfaceTintColor: Colors.transparent,
+              ),
         body: child,
       ),
     );

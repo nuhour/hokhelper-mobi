@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_image.dart';
+import '../../heroes/domain/hero_summary.dart';
+import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../domain/bp_scheme_summary.dart';
 import 'bp_dashboard_screen.dart';
 
@@ -18,11 +22,13 @@ class BpSchemeDetailScreen extends ConsumerStatefulWidget {
   const BpSchemeDetailScreen({
     required this.schemeId,
     this.initialGameIndex,
+    this.enableLandscapeEditor = false,
     super.key,
   });
 
   final String schemeId;
   final int? initialGameIndex;
+  final bool enableLandscapeEditor;
 
   @override
   ConsumerState<BpSchemeDetailScreen> createState() =>
@@ -34,45 +40,74 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
   var _isUpdating = false;
 
   @override
+  void initState() {
+    super.initState();
+    if (!widget.enableLandscapeEditor) return;
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    if (widget.enableLandscapeEditor) {
+      SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final value = ref.watch(bpSchemeDetailProvider(widget.schemeId));
 
     return Material(
       color: AppTheme.bg,
-      child: RefreshIndicator(
-        onRefresh: () async {
-          _localScheme = null;
-          ref.invalidate(bpSchemeDetailProvider(widget.schemeId));
-          await ref.read(bpSchemeDetailProvider(widget.schemeId).future);
+      child: AppAsyncView<BpSchemeSummary>(
+        value: value,
+        retry: () => ref.invalidate(bpSchemeDetailProvider(widget.schemeId)),
+        data: (scheme) {
+          final activeScheme = _localScheme ?? scheme;
+          if (widget.enableLandscapeEditor &&
+              MediaQuery.orientationOf(context) == Orientation.landscape) {
+            return _BpLandscapeEditor(
+              scheme: activeScheme,
+              initialGameIndex: widget.initialGameIndex,
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async {
+              _localScheme = null;
+              ref.invalidate(bpSchemeDetailProvider(widget.schemeId));
+              await ref.read(bpSchemeDetailProvider(widget.schemeId).future);
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              children: [
+                const AppSectionHeader(title: 'BP Scheme'),
+                const SizedBox(height: 8),
+                Text(
+                  'Review this pick/ban scheme from a shared portal link.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                ),
+                const SizedBox(height: 18),
+                _BpSchemeDetailCard(
+                  scheme: activeScheme,
+                  initialGameIndex: widget.initialGameIndex,
+                  isUpdating: _isUpdating,
+                  onEdit: () => _openEditSheet(activeScheme),
+                  onDraftProgress: () => _openDraftProgressSheet(activeScheme),
+                ),
+              ],
+            ),
+          );
         },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          children: [
-            const AppSectionHeader(title: 'BP Scheme'),
-            const SizedBox(height: 8),
-            Text(
-              'Review this pick/ban scheme from a shared portal link.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 18),
-            AppAsyncView<BpSchemeSummary>(
-              value: value,
-              retry: () =>
-                  ref.invalidate(bpSchemeDetailProvider(widget.schemeId)),
-              data: (scheme) => _BpSchemeDetailCard(
-                scheme: _localScheme ?? scheme,
-                initialGameIndex: widget.initialGameIndex,
-                isUpdating: _isUpdating,
-                onEdit: () => _openEditSheet(_localScheme ?? scheme),
-                onDraftProgress: () =>
-                    _openDraftProgressSheet(_localScheme ?? scheme),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -597,6 +632,418 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
         redBanCount: _redBanCount,
         bluePickCount: _bluePickCount,
         redPickCount: _redPickCount,
+      ),
+    );
+  }
+}
+
+class _BpLandscapeEditor extends ConsumerStatefulWidget {
+  const _BpLandscapeEditor({required this.scheme, this.initialGameIndex});
+
+  final BpSchemeSummary scheme;
+  final int? initialGameIndex;
+
+  @override
+  ConsumerState<_BpLandscapeEditor> createState() => _BpLandscapeEditorState();
+}
+
+class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
+  static const _lanes = <(String, IconData, int?)>[
+    ('ALL', Icons.grid_view_rounded, null),
+    ('CLASH', Icons.shield_outlined, 1),
+    ('MID', Icons.auto_awesome_outlined, 2),
+    ('FARM', Icons.bolt_outlined, 3),
+    ('JUNGLE', Icons.forest_outlined, 4),
+    ('SUPPORT', Icons.handshake_outlined, 5),
+  ];
+
+  final _selectedHeroIds = <int>[];
+  int? _selectedLane;
+  bool _isSaving = false;
+
+  Future<void> _saveDraft() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    try {
+      await ref
+          .read(bpRepositoryProvider)
+          .updateDraftState(
+            widget.scheme.id,
+            gameNumber: widget.initialGameIndex == null
+                ? widget.scheme.gameNumber
+                : widget.initialGameIndex! + 1,
+            currentStepIndex: _selectedHeroIds.length,
+            blueBanCount: widget.scheme.blueBanCount,
+            redBanCount: widget.scheme.redBanCount,
+            bluePickCount: _selectedHeroIds.length,
+            redPickCount: widget.scheme.redPickCount,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('BP draft saved')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to save BP draft')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final heroes =
+        ref.watch(heroGalleryProvider).valueOrNull ?? const <HeroSummary>[];
+    final visibleHeroes = heroes
+        .where((hero) {
+          return _selectedLane == null || hero.position == _selectedLane;
+        })
+        .toList(growable: false);
+
+    return ColoredBox(
+      color: const Color(0xFF03050D),
+      child: SafeArea(
+        child: Column(
+          children: [
+            _BpEditorTopBar(
+              scheme: widget.scheme,
+              isSaving: _isSaving,
+              selectedCount: _selectedHeroIds.length,
+              onBack: () => Navigator.of(context).maybePop(),
+              onSave: _saveDraft,
+            ),
+            _BpLaneBar(
+              lanes: _lanes,
+              selectedLane: _selectedLane,
+              onSelected: (lane) => setState(() => _selectedLane = lane),
+            ),
+            Expanded(
+              child: Row(
+                children: [
+                  _BpTeamRail(
+                    label: widget.scheme.teamAName,
+                    color: const Color(0xFF246BFF),
+                    heroIds: _selectedHeroIds.take(5).toList(),
+                  ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final crossAxisCount = (constraints.maxWidth / 86)
+                            .floor()
+                            .clamp(6, 12);
+                        return GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 18),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 7,
+                                mainAxisSpacing: 7,
+                                childAspectRatio: 1.02,
+                              ),
+                          itemCount: visibleHeroes.length,
+                          itemBuilder: (context, index) {
+                            final hero = visibleHeroes[index];
+                            final heroId = int.tryParse(hero.id) ?? 0;
+                            final isSelected = _selectedHeroIds.contains(
+                              heroId,
+                            );
+                            return _BpHeroPoolTile(
+                              hero: hero,
+                              selected: isSelected,
+                              onTap: heroId <= 0
+                                  ? null
+                                  : () => setState(() {
+                                      if (isSelected) {
+                                        _selectedHeroIds.remove(heroId);
+                                      } else if (_selectedHeroIds.length < 5) {
+                                        _selectedHeroIds.add(heroId);
+                                      }
+                                    }),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  _BpTeamRail(
+                    label: widget.scheme.teamBName,
+                    color: const Color(0xFFE83B43),
+                    heroIds: widget.scheme.redPickHeroIds,
+                    rightAligned: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BpEditorTopBar extends StatelessWidget {
+  const _BpEditorTopBar({
+    required this.scheme,
+    required this.isSaving,
+    required this.selectedCount,
+    required this.onBack,
+    required this.onSave,
+  });
+
+  final BpSchemeSummary scheme;
+  final bool isSaving;
+  final int selectedCount;
+  final VoidCallback onBack;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 62,
+      child: Row(
+        children: [
+          IconButton.filledTonal(
+            tooltip: 'Exit BP editor',
+            onPressed: onBack,
+            icon: const Icon(Icons.logout_rounded),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _BpScorePill(
+                  label: scheme.teamAName,
+                  score: selectedCount,
+                  color: const Color(0xFF246BFF),
+                ),
+                Container(
+                  width: 64,
+                  height: 58,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF171923),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '41',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                _BpScorePill(
+                  label: scheme.teamBName,
+                  score: scheme.redPickHeroIds.length,
+                  color: const Color(0xFFE83B43),
+                ),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            tooltip: 'Save BP draft',
+            onPressed: isSaving ? null : onSave,
+            icon: const Icon(Icons.save_outlined),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BpScorePill extends StatelessWidget {
+  const _BpScorePill({
+    required this.label,
+    required this.score,
+    required this.color,
+  });
+
+  final String label;
+  final int score;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 170,
+      height: 38,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '$score',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label.isEmpty ? 'TEAM' : label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BpLaneBar extends StatelessWidget {
+  const _BpLaneBar({
+    required this.lanes,
+    required this.selectedLane,
+    required this.onSelected,
+  });
+
+  final List<(String, IconData, int?)> lanes;
+  final int? selectedLane;
+  final ValueChanged<int?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 42,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (final lane in lanes)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: ChoiceChip(
+                label: Text(lane.$1),
+                avatar: Icon(lane.$2, size: 14),
+                selected: selectedLane == lane.$3,
+                onSelected: (_) => onSelected(lane.$3),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BpTeamRail extends StatelessWidget {
+  const _BpTeamRail({
+    required this.label,
+    required this.color,
+    required this.heroIds,
+    this.rightAligned = false,
+  });
+
+  final String label;
+  final Color color;
+  final List<int> heroIds;
+  final bool rightAligned;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 86,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: rightAligned
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.isEmpty ? 'TEAM' : label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          for (var index = 0; index < 5; index++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: _BpSlot(
+                heroId: index < heroIds.length ? heroIds[index] : null,
+                color: color,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BpSlot extends StatelessWidget {
+  const _BpSlot({required this.heroId, required this.color});
+
+  final int? heroId;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: color.withValues(alpha: 0.7), width: 2),
+        color: color.withValues(alpha: 0.08),
+      ),
+      child: heroId == null
+          ? Center(
+              child: Text('•', style: TextStyle(color: color, fontSize: 22)),
+            )
+          : AppImage(
+              url: 'https://hokhelper.com/static/game/hero/$heroId.png',
+              borderRadius: 999,
+              semanticLabel: 'Selected hero',
+            ),
+    );
+  }
+}
+
+class _BpHeroPoolTile extends StatelessWidget {
+  const _BpHeroPoolTile({
+    required this.hero,
+    required this.selected,
+    this.onTap,
+  });
+
+  final HeroSummary hero;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final heroId = hero.id.isEmpty ? hero.heroId : hero.id;
+    final url = hero.avatar.isNotEmpty
+        ? hero.avatar
+        : 'https://hokhelper.com/static/game/hero/$heroId.png';
+    return Material(
+      color: selected ? const Color(0xFF1A4CBE) : const Color(0xFF0A1020),
+      borderRadius: BorderRadius.circular(7),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(7),
+        child: Center(
+          child: AppImage(
+            url: url,
+            width: 64,
+            height: 64,
+            borderRadius: 999,
+            semanticLabel: hero.name,
+          ),
+        ),
       ),
     );
   }

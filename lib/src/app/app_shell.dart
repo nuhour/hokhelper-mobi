@@ -12,42 +12,46 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     final l10n = AppLocalizations.of(context);
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
 
     return Scaffold(
       body: SafeArea(child: navigationShell),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex(location),
-        onDestinationSelected: (index) {
-          context.go(_destinationRoute(index));
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: l10n.navHome,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.query_stats_outlined),
-            selectedIcon: const Icon(Icons.query_stats),
-            label: l10n.navStats,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.forum_outlined),
-            selectedIcon: const Icon(Icons.forum),
-            label: l10n.navCommunity,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.auto_awesome_outlined),
-            selectedIcon: const Icon(Icons.auto_awesome),
-            label: l10n.navTools,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: l10n.navMe,
-          ),
-        ],
-      ),
+      bottomNavigationBar: isLandscape
+          ? null
+          : NavigationBar(
+              selectedIndex: _selectedIndex(location),
+              onDestinationSelected: (index) {
+                context.go(_destinationRoute(index));
+              },
+              destinations: [
+                NavigationDestination(
+                  icon: const Icon(Icons.home_outlined),
+                  selectedIcon: const Icon(Icons.home),
+                  label: l10n.navHome,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.query_stats_outlined),
+                  selectedIcon: const Icon(Icons.query_stats),
+                  label: l10n.navStats,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.forum_outlined),
+                  selectedIcon: const Icon(Icons.forum),
+                  label: l10n.navCommunity,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  selectedIcon: const Icon(Icons.auto_awesome),
+                  label: l10n.navTools,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.person_outline),
+                  selectedIcon: const Icon(Icons.person),
+                  label: l10n.navMe,
+                ),
+              ],
+            ),
     );
   }
 
