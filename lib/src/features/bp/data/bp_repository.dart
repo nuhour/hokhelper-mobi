@@ -137,6 +137,27 @@ class BpRepository {
     return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
   }
 
+  Future<BpSchemeSummary> advanceSeries(
+    String schemeId, {
+    required int nextGameNumber,
+    required List<BpHistoryGame> history,
+  }) async {
+    final json = await apiClient.postJson(
+      '/bp/scheme/$schemeId/update',
+      body: {
+        'schemeId': schemeId,
+        'data': {
+          'gameNumber': nextGameNumber,
+          'history': history.map((game) => game.toJson()).toList(),
+          'currentState': null,
+        },
+      },
+    );
+    final result = json['result'];
+    final scheme = result is Map ? result['scheme'] : json['scheme'];
+    return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
+  }
+
   Future<void> deleteScheme(String schemeId) async {
     await apiClient.postJson(
       '/bp/scheme/$schemeId/delete',

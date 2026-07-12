@@ -27,14 +27,30 @@ class BpDraftState {
         : value is Map
         ? Map<String, dynamic>.from(value)
         : const <String, dynamic>{};
+    final blueBans = _readSlots(json['blueBans']);
+    final redBans = _readSlots(json['redBans']);
+    final bluePicks = _readSlots(json['bluePicks']);
+    final redPicks = _readSlots(json['redPicks']);
+    final currentStepIndex = _readInt(json['currentStepIndex']);
+    final isSaved = json['isSaved'] == true;
+    final hasDraftState = [
+      ...blueBans,
+      ...redBans,
+      ...bluePicks,
+      ...redPicks,
+    ].any((heroId) => heroId != null);
     return BpDraftState(
-      blueBans: _readSlots(json['blueBans']),
-      redBans: _readSlots(json['redBans']),
-      bluePicks: _readSlots(json['bluePicks']),
-      redPicks: _readSlots(json['redPicks']),
-      currentStepIndex: _readInt(json['currentStepIndex']),
-      isStarted: json['isStarted'] == true,
-      isSaved: json['isSaved'] == true,
+      blueBans: blueBans,
+      redBans: redBans,
+      bluePicks: bluePicks,
+      redPicks: redPicks,
+      currentStepIndex: currentStepIndex,
+      // Django 仅保存棋盘与步骤；恢复未完成对局时按 HOKX 的规则继续 BP。
+      isStarted: json.containsKey('isStarted')
+          ? json['isStarted'] == true
+          : json.isNotEmpty &&
+                (!isSaved || currentStepIndex > 0 || hasDraftState),
+      isSaved: isSaved,
       timeLeft: _readInt(json['timeLeft'], fallback: 45).clamp(1, 45),
       gameWinner: _readWinner(json['gameWinner'] ?? json['winner']),
     );
@@ -63,16 +79,22 @@ class BpHistoryGame {
     required this.gameNumber,
     required this.blueTeamId,
     required this.redTeamId,
+    this.blueBans = const [null, null, null, null, null],
+    this.redBans = const [null, null, null, null, null],
     required this.bluePicks,
     required this.redPicks,
+    this.mode = 'standard',
     this.winner,
   });
 
   final int gameNumber;
   final String blueTeamId;
   final String redTeamId;
+  final List<int?> blueBans;
+  final List<int?> redBans;
   final List<int?> bluePicks;
   final List<int?> redPicks;
+  final String mode;
   final String? winner;
 
   factory BpHistoryGame.fromJson(Object? value) {
@@ -85,11 +107,26 @@ class BpHistoryGame {
       gameNumber: _readInt(json['gameNumber'] ?? json['game_number']),
       blueTeamId: _readString(json['blueTeamId'] ?? json['blue_team_id']),
       redTeamId: _readString(json['redTeamId'] ?? json['red_team_id']),
+      blueBans: _readSlots(json['blueBans'] ?? json['blue_bans']),
+      redBans: _readSlots(json['redBans'] ?? json['red_bans']),
       bluePicks: _readSlots(json['bluePicks'] ?? json['blue_picks']),
       redPicks: _readSlots(json['redPicks'] ?? json['red_picks']),
+      mode: _readString(json['mode'], fallback: 'standard'),
       winner: _readWinner(json['winner'] ?? json['gameWinner']),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'gameNumber': gameNumber,
+    'blueTeamId': blueTeamId,
+    'redTeamId': redTeamId,
+    'blueBans': _savedSlots(blueBans),
+    'redBans': _savedSlots(redBans),
+    'bluePicks': _savedSlots(bluePicks),
+    'redPicks': _savedSlots(redPicks),
+    'mode': mode,
+    'winner': winner,
+  };
 }
 
 class BpSchemeSummary {
@@ -283,6 +320,9 @@ List<int> _readHeroIds(Object? value) {
       .where((id) => id > 0)
       .toList(growable: false);
 }
+
+List<int> _savedSlots(List<int?> slots) =>
+    slots.whereType<int>().toList(growable: false);
 
 int _readInt(Object? value, {int fallback = 0}) {
   if (value is int) {

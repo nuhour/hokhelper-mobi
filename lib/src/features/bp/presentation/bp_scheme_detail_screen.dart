@@ -10,6 +10,9 @@ import '../../../core/widgets/app_section_header.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../heroes/domain/hero_summary.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
+import '../../settings/presentation/settings_controller.dart';
+import '../../teambuild/domain/team_recommendation.dart';
+import '../../teambuild/presentation/team_builder_screen.dart';
 import '../domain/bp_scheme_summary.dart';
 import 'bp_dashboard_screen.dart';
 
@@ -721,12 +724,22 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   late bool _isTimerRunning;
   late bool _isSaved;
   late bool _isHistoryMode;
+  late bool _isPeakMode;
+  late int _gameNumber;
+  late List<BpHistoryGame> _history;
+  late bool _blueTeamIsA;
+  late List<int> _peakUserPicks;
+  late List<int> _peakEnemyPicks;
+  _BpSide _nextGameLoserSide = _BpSide.blue;
+  bool _peakRevealed = false;
+  bool _isPeakGenerating = false;
   int? _selectedHeroId;
   String? _gameWinner;
   final _undoStack = <_BpSnapshot>[];
   final _redoStack = <_BpSnapshot>[];
   int? _selectedLane;
   bool _isSaving = false;
+  bool _isAdvancing = false;
   bool _showBanned = true;
   bool _showPicked = true;
   Timer? _timer;
@@ -734,13 +747,22 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   @override
   void initState() {
     super.initState();
+    _gameNumber = widget.scheme.gameNumber;
+    _history = List<BpHistoryGame>.from(widget.scheme.history);
+    _blueTeamIsA = _gameNumber.isOdd;
     final historyIndex = widget.initialGameIndex;
     _isHistoryMode =
         historyIndex != null &&
         historyIndex >= 0 &&
         historyIndex < widget.scheme.history.length;
+    _isPeakMode =
+        !_isHistoryMode && widget.scheme.boMode == 7 && _gameNumber == 7;
     if (_isHistoryMode) {
       final game = widget.scheme.history[historyIndex!];
+      _gameNumber = game.gameNumber;
+      _blueTeamIsA = game.blueTeamId.isEmpty
+          ? _gameNumber.isOdd
+          : game.blueTeamId == widget.scheme.teamAId;
       _blueBans = List<int?>.filled(5, null);
       _redBans = List<int?>.filled(5, null);
       _bluePicks = List<int?>.from(game.bluePicks);
@@ -750,6 +772,17 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       _isStarted = true;
       _isTimerRunning = false;
       _isSaved = true;
+      _isPeakMode = game.mode == 'peak';
+      _peakUserPicks = game.bluePicks
+          .whereType<int>()
+          .where((id) => id > 0)
+          .toList();
+      _peakEnemyPicks = game.redPicks
+          .whereType<int>()
+          .where((id) => id > 0)
+          .toList();
+      _peakRevealed = _isPeakMode;
+      if (_isPeakMode) _currentStepIndex = -1;
     } else {
       final state = widget.scheme.draftState;
       _blueBans = List<int?>.from(state.blueBans);
@@ -765,6 +798,20 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       _isTimerRunning = state.isStarted && !state.isSaved;
       _isSaved = state.isSaved;
       _gameWinner = state.gameWinner;
+      _peakUserPicks = state.bluePicks
+          .whereType<int>()
+          .where((id) => id > 0)
+          .toList();
+      _peakEnemyPicks = state.redPicks
+          .whereType<int>()
+          .where((id) => id > 0)
+          .toList();
+      _peakRevealed = _isPeakMode && _peakEnemyPicks.isNotEmpty;
+      if (_isPeakMode) {
+        _currentStepIndex = -1;
+        _isStarted = false;
+        _isTimerRunning = false;
+      }
     }
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || !_canAct || !_isTimerRunning) return;
@@ -783,9 +830,10 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 
   _BpStep? get _currentStep =>
-      _isFinished ? null : _standardSteps[_currentStepIndex];
+      _isPeakMode || _isFinished ? null : _standardSteps[_currentStepIndex];
 
-  bool get _isFinished => _currentStepIndex >= _standardSteps.length;
+  bool get _isFinished =>
+      _isPeakMode ? _peakRevealed : _currentStepIndex >= _standardSteps.length;
 
   bool get _canAct =>
       _isStarted && !_isHistoryMode && !_isSaved && !_isFinished;
@@ -825,6 +873,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 
   void _startBp() {
+    if (_isPeakMode) return;
     setState(() {
       _isStarted = true;
       _isTimerRunning = true;
@@ -834,6 +883,16 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 
   void _resetBp() {
+    if (_isPeakMode) {
+      setState(() {
+        _peakUserPicks = [];
+        _peakEnemyPicks = [];
+        _peakRevealed = false;
+        _gameWinner = null;
+        _isSaved = false;
+      });
+      return;
+    }
     setState(() {
       _blueBans = List<int?>.filled(5, null);
       _redBans = List<int?>.filled(5, null);
@@ -863,6 +922,17 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   void _resumeTimer() => _startBp();
 
   void _setSelectedHero(int heroId) {
+    if (_isPeakMode) {
+      if (_isSaved || _peakRevealed || heroId <= 0) return;
+      setState(() {
+        if (_peakUserPicks.contains(heroId)) {
+          _peakUserPicks.remove(heroId);
+        } else if (_peakUserPicks.length < 5) {
+          _peakUserPicks.add(heroId);
+        }
+      });
+      return;
+    }
     if (!_canSelectHero(heroId)) return;
     setState(() => _selectedHeroId = heroId);
   }
@@ -916,11 +986,24 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     _restore(next);
   }
 
-  bool _isBlueTeamA() => widget.scheme.gameNumber.isOdd;
+  bool _isBlueTeamA() => _blueTeamIsA;
+
+  String get _blueTeamName =>
+      _isBlueTeamA() ? widget.scheme.teamAName : widget.scheme.teamBName;
+
+  String get _redTeamName =>
+      _isBlueTeamA() ? widget.scheme.teamBName : widget.scheme.teamAName;
+
+  int get _winThreshold => (widget.scheme.boMode + 1) ~/ 2;
+
+  bool get _isSeriesCompletedAfterThis =>
+      _teamScore(true) >= _winThreshold ||
+      _teamScore(false) >= _winThreshold ||
+      _gameNumber >= widget.scheme.boMode;
 
   int _teamScore(bool teamA) {
     var score = 0;
-    for (final game in widget.scheme.history) {
+    for (final game in _history) {
       if (game.winner == null) continue;
       final blueIsA = game.blueTeamId.isEmpty
           ? game.gameNumber.isOdd
@@ -942,7 +1025,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
 
   Set<int> _teamUsedHeroes(bool teamA) {
     final used = <int>{};
-    for (final game in widget.scheme.history) {
+    for (final game in _history) {
       final blueIsA = game.blueTeamId.isEmpty
           ? game.gameNumber.isOdd
           : game.blueTeamId == widget.scheme.teamAId;
@@ -959,6 +1042,12 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 
   bool _canSelectHero(int heroId) {
+    if (_isPeakMode) {
+      return !_isSaved &&
+          !_peakRevealed &&
+          heroId > 0 &&
+          !_peakEnemyPicks.contains(heroId);
+    }
     final step = _currentStep;
     if (!_canAct || heroId <= 0 || step == null) return false;
     final inCurrentDraft = <int>{
@@ -976,6 +1065,11 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 
   _BpHeroStatus _heroStatus(int heroId) {
+    if (_isPeakMode) {
+      if (_peakUserPicks.contains(heroId)) return _BpHeroStatus.picked;
+      if (_peakEnemyPicks.contains(heroId)) return _BpHeroStatus.usedByOpponent;
+      return _BpHeroStatus.available;
+    }
     if (_blueBans.contains(heroId) || _redBans.contains(heroId)) {
       return _BpHeroStatus.banned;
     }
@@ -992,6 +1086,84 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     return _BpHeroStatus.available;
   }
 
+  Future<void> _revealPeakEnemy() async {
+    if (!_isPeakMode || _peakUserPicks.length != 5 || _isPeakGenerating) {
+      return;
+    }
+    final heroes =
+        ref.read(heroGalleryProvider).valueOrNull ?? const <HeroSummary>[];
+    setState(() => _isPeakGenerating = true);
+    try {
+      final settings = await ref.read(appSettingsControllerProvider.future);
+      final result = await ref
+          .read(teamBuilderRepositoryProvider)
+          .loadRecommendations(
+            regionId: settings.region.regionId,
+            enemyPicks: _peakUserPicks,
+            mySide: 'red',
+            slotType: 'pick',
+            recommendType: TeamRecommendType.counter,
+            limit: 120,
+          );
+      final byId = {for (final hero in heroes) int.tryParse(hero.id): hero};
+      final picked = <int>[];
+      final usedPositions = <int>{};
+      final excluded = {..._peakUserPicks};
+      for (final recommendation in result.recommendations) {
+        final id = recommendation.heroId;
+        final hero = byId[id];
+        final position = recommendation.mainJob > 0
+            ? recommendation.mainJob
+            : hero?.position;
+        if (id <= 0 || excluded.contains(id) || picked.contains(id)) continue;
+        if (position != null &&
+            position > 0 &&
+            usedPositions.contains(position)) {
+          continue;
+        }
+        picked.add(id);
+        if (position != null && position > 0) usedPositions.add(position);
+        if (picked.length == 5) break;
+      }
+      for (final hero in heroes) {
+        final id = int.tryParse(hero.id) ?? 0;
+        if (picked.length == 5) break;
+        if (id <= 0 || excluded.contains(id) || picked.contains(id)) continue;
+        if (hero.position != null && usedPositions.contains(hero.position)) {
+          continue;
+        }
+        picked.add(id);
+        if (hero.position != null) usedPositions.add(hero.position!);
+      }
+      for (final hero in heroes) {
+        final id = int.tryParse(hero.id) ?? 0;
+        if (picked.length == 5) break;
+        if (id > 0 && !excluded.contains(id) && !picked.contains(id)) {
+          picked.add(id);
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _peakEnemyPicks = picked;
+        _peakRevealed = true;
+      });
+    } catch (_) {
+      final fallback = heroes
+          .map((hero) => int.tryParse(hero.id) ?? 0)
+          .where((id) => id > 0 && !_peakUserPicks.contains(id))
+          .take(5)
+          .toList(growable: false);
+      if (mounted) {
+        setState(() {
+          _peakEnemyPicks = fallback;
+          _peakRevealed = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isPeakGenerating = false);
+    }
+  }
+
   Future<void> _saveDraft() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
@@ -1000,14 +1172,18 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
           .read(bpRepositoryProvider)
           .saveDraftState(
             widget.scheme.id,
-            gameNumber: widget.scheme.gameNumber,
+            gameNumber: _gameNumber,
             draftState: BpDraftState(
               blueBans: _blueBans,
               redBans: _redBans,
-              bluePicks: _bluePicks,
-              redPicks: _redPicks,
-              currentStepIndex: _currentStepIndex,
-              isStarted: _isStarted,
+              bluePicks: _isPeakMode
+                  ? _slotsFromIds(_peakUserPicks)
+                  : _bluePicks,
+              redPicks: _isPeakMode
+                  ? _slotsFromIds(_peakEnemyPicks)
+                  : _redPicks,
+              currentStepIndex: _isPeakMode ? -1 : _currentStepIndex,
+              isStarted: _isPeakMode ? false : _isStarted,
               isSaved: _isFinished || _isSaved,
               timeLeft: _timeLeft,
               gameWinner: _gameWinner,
@@ -1028,6 +1204,84 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     }
   }
 
+  BpHistoryGame get _completedHistoryGame => BpHistoryGame(
+    gameNumber: _gameNumber,
+    blueTeamId: _isBlueTeamA() ? widget.scheme.teamAId : widget.scheme.teamBId,
+    redTeamId: _isBlueTeamA() ? widget.scheme.teamBId : widget.scheme.teamAId,
+    blueBans: _blueBans,
+    redBans: _redBans,
+    bluePicks: _isPeakMode ? _slotsFromIds(_peakUserPicks) : _bluePicks,
+    redPicks: _isPeakMode ? _slotsFromIds(_peakEnemyPicks) : _redPicks,
+    mode: _isPeakMode ? 'peak' : 'standard',
+    winner: _gameWinner,
+  );
+
+  Future<void> _advanceSeries() async {
+    if (_isAdvancing || _isHistoryMode || !_isSaved || _gameWinner == null) {
+      return;
+    }
+    final nextHistory = [..._history, _completedHistoryGame];
+    final isComplete = _isSeriesCompletedAfterThis;
+    final loserIsTeamA = _gameWinner == 'blue'
+        ? !_isBlueTeamA()
+        : _isBlueTeamA();
+    setState(() => _isAdvancing = true);
+    try {
+      await ref
+          .read(bpRepositoryProvider)
+          .advanceSeries(
+            widget.scheme.id,
+            nextGameNumber: isComplete ? _gameNumber : _gameNumber + 1,
+            history: nextHistory,
+          );
+      if (!mounted) return;
+      ref.invalidate(bpSchemeDetailProvider(widget.scheme.id));
+      ref.invalidate(bpSchemesProvider);
+      if (isComplete) {
+        Navigator.of(context).maybePop();
+        return;
+      }
+      setState(() {
+        _history = nextHistory;
+        _gameNumber++;
+        _blueTeamIsA = widget.scheme.sideSelectionRule == 'alternating'
+            ? !_blueTeamIsA
+            : _nextGameLoserSide == _BpSide.blue
+            ? loserIsTeamA
+            : !loserIsTeamA;
+        _isPeakMode = widget.scheme.boMode == 7 && _gameNumber == 7;
+        _blueBans = List<int?>.filled(5, null);
+        _redBans = List<int?>.filled(5, null);
+        _bluePicks = List<int?>.filled(5, null);
+        _redPicks = List<int?>.filled(5, null);
+        _peakUserPicks = [];
+        _peakEnemyPicks = [];
+        _peakRevealed = false;
+        _currentStepIndex = _isPeakMode ? -1 : 0;
+        _timeLeft = _timerDuration;
+        _isStarted = false;
+        _isTimerRunning = false;
+        _isSaved = false;
+        _selectedHeroId = null;
+        _gameWinner = null;
+        _undoStack.clear();
+        _redoStack.clear();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to start the next BP game')),
+      );
+    } finally {
+      if (mounted) setState(() => _isAdvancing = false);
+    }
+  }
+
+  List<int?> _slotsFromIds(List<int> ids) => [
+    ...ids.take(5),
+    ...List<int?>.filled((5 - ids.length).clamp(0, 5).toInt(), null),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final heroes =
@@ -1045,11 +1299,17 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
           children: [
             _BpEditorTopBar(
               scheme: widget.scheme,
+              blueTeamName: _blueTeamName,
+              redTeamName: _redTeamName,
               isSaving: _isSaving,
               blueBans: _blueBans,
               redBans: _redBans,
-              bluePicks: _bluePicks,
-              redPicks: _redPicks,
+              bluePicks: _isPeakMode
+                  ? _slotsFromIds(_peakUserPicks)
+                  : _bluePicks,
+              redPicks: _isPeakMode
+                  ? _slotsFromIds(_peakEnemyPicks)
+                  : _redPicks,
               blueScore: _scoreForSide(_BpSide.blue),
               redScore: _scoreForSide(_BpSide.red),
               currentStep: _currentStep,
@@ -1076,7 +1336,9 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                 children: [
                   _BpTeamRail(
                     color: const Color(0xFF246BFF),
-                    heroIds: _bluePicks,
+                    heroIds: _isPeakMode
+                        ? _slotsFromIds(_peakUserPicks)
+                        : _bluePicks,
                     active:
                         _currentStep?.side == _BpSide.blue &&
                         _currentStep?.type == _BpSlotType.pick,
@@ -1115,6 +1377,10 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                                   hero: hero,
                                   status: status,
                                   selected: _selectedHeroId == heroId,
+                                  allowPickedTap:
+                                      _isPeakMode &&
+                                      !_peakRevealed &&
+                                      !_isSaved,
                                   onTap: () => _setSelectedHero(heroId),
                                 );
                               },
@@ -1127,9 +1393,20 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                           bottom: 6,
                           child: _BpFlowControls(
                             currentStep: _currentStep,
+                            isHistoryMode: _isHistoryMode,
                             isStarted: _isStarted,
                             isFinished: _isFinished,
                             isSaved: _isSaved,
+                            isPeakMode: _isPeakMode,
+                            peakPickCount: _peakUserPicks.length,
+                            isPeakGenerating: _isPeakGenerating,
+                            isAdvancing: _isAdvancing,
+                            isSeriesCompleted: _isSeriesCompletedAfterThis,
+                            sideSelectionRule: widget.scheme.sideSelectionRule,
+                            loserTeamName: _gameWinner == 'blue'
+                                ? _redTeamName
+                                : _blueTeamName,
+                            nextGameLoserSide: _nextGameLoserSide,
                             selectedHeroId: _selectedHeroId,
                             canUndo: _undoStack.isNotEmpty,
                             canRedo: _redoStack.isNotEmpty,
@@ -1142,6 +1419,10 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                             gameWinner: _gameWinner,
                             onWinnerChanged: (winner) =>
                                 setState(() => _gameWinner = winner),
+                            onPeakShow: _revealPeakEnemy,
+                            onNextGame: _advanceSeries,
+                            onNextGameLoserSide: (side) =>
+                                setState(() => _nextGameLoserSide = side),
                           ),
                         ),
                       ],
@@ -1149,7 +1430,9 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                   ),
                   _BpTeamRail(
                     color: const Color(0xFFE83B43),
-                    heroIds: _redPicks,
+                    heroIds: _isPeakMode
+                        ? _slotsFromIds(_peakEnemyPicks)
+                        : _redPicks,
                     active:
                         _currentStep?.side == _BpSide.red &&
                         _currentStep?.type == _BpSlotType.pick,
@@ -1177,6 +1460,8 @@ enum _BpHeroStatus {
 class _BpEditorTopBar extends StatelessWidget {
   const _BpEditorTopBar({
     required this.scheme,
+    required this.blueTeamName,
+    required this.redTeamName,
     required this.isSaving,
     required this.blueBans,
     required this.redBans,
@@ -1196,6 +1481,8 @@ class _BpEditorTopBar extends StatelessWidget {
   });
 
   final BpSchemeSummary scheme;
+  final String blueTeamName;
+  final String redTeamName;
   final bool isSaving;
   final List<int?> blueBans;
   final List<int?> redBans;
@@ -1239,7 +1526,7 @@ class _BpEditorTopBar extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 _BpScorePill(
-                  label: scheme.teamAName,
+                  label: blueTeamName,
                   score: blueScore,
                   color: const Color(0xFF246BFF),
                 ),
@@ -1289,7 +1576,7 @@ class _BpEditorTopBar extends StatelessWidget {
                   ),
                 ),
                 _BpScorePill(
-                  label: scheme.teamBName,
+                  label: redTeamName,
                   score: redScore,
                   color: const Color(0xFFE83B43),
                 ),
@@ -1527,9 +1814,18 @@ class _BpTeamRail extends StatelessWidget {
 class _BpFlowControls extends StatelessWidget {
   const _BpFlowControls({
     required this.currentStep,
+    required this.isHistoryMode,
     required this.isStarted,
     required this.isFinished,
     required this.isSaved,
+    required this.isPeakMode,
+    required this.peakPickCount,
+    required this.isPeakGenerating,
+    required this.isAdvancing,
+    required this.isSeriesCompleted,
+    required this.sideSelectionRule,
+    required this.loserTeamName,
+    required this.nextGameLoserSide,
     required this.selectedHeroId,
     required this.canUndo,
     required this.canRedo,
@@ -1541,12 +1837,24 @@ class _BpFlowControls extends StatelessWidget {
     required this.onSave,
     required this.gameWinner,
     required this.onWinnerChanged,
+    required this.onPeakShow,
+    required this.onNextGame,
+    required this.onNextGameLoserSide,
   });
 
   final _BpStep? currentStep;
+  final bool isHistoryMode;
   final bool isStarted;
   final bool isFinished;
   final bool isSaved;
+  final bool isPeakMode;
+  final int peakPickCount;
+  final bool isPeakGenerating;
+  final bool isAdvancing;
+  final bool isSeriesCompleted;
+  final String sideSelectionRule;
+  final String loserTeamName;
+  final _BpSide nextGameLoserSide;
   final int? selectedHeroId;
   final bool canUndo;
   final bool canRedo;
@@ -1558,9 +1866,13 @@ class _BpFlowControls extends StatelessWidget {
   final VoidCallback onSave;
   final String? gameWinner;
   final ValueChanged<String> onWinnerChanged;
+  final VoidCallback onPeakShow;
+  final VoidCallback onNextGame;
+  final ValueChanged<_BpSide> onNextGameLoserSide;
 
   @override
   Widget build(BuildContext context) {
+    if (isHistoryMode) return const SizedBox.shrink();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1570,7 +1882,21 @@ class _BpFlowControls extends StatelessWidget {
           icon: const Icon(Icons.undo_rounded, size: 18),
         ),
         const SizedBox(width: 8),
-        if (!isStarted)
+        if (isPeakMode && !isFinished)
+          FilledButton.icon(
+            onPressed: peakPickCount == 5 && !isPeakGenerating
+                ? onPeakShow
+                : null,
+            icon: const Icon(Icons.visibility_rounded, size: 17),
+            label: Text(
+              isPeakGenerating
+                  ? '生成对手阵容'
+                  : peakPickCount == 5
+                  ? '展示对手'
+                  : '还需选择 ${5 - peakPickCount} 人',
+            ),
+          )
+        else if (!isStarted && !isFinished)
           FilledButton.icon(
             onPressed: onStart,
             icon: const Icon(Icons.play_arrow_rounded, size: 17),
@@ -1626,8 +1952,57 @@ class _BpFlowControls extends StatelessWidget {
               ),
             ],
           )
+        else if (isSeriesCompleted)
+          FilledButton.icon(
+            onPressed: isAdvancing ? null : onNextGame,
+            icon: const Icon(Icons.emoji_events_outlined, size: 17),
+            label: const Text('结束系列赛'),
+          )
         else
-          const FilledButton(onPressed: null, child: Text('已保存')),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (sideSelectionRule == 'loser_selects') ...[
+                Text(
+                  '${loserTeamName.isEmpty ? '败方' : loserTeamName} 选边',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                IconButton.filledTonal(
+                  tooltip: 'Loser chooses blue side',
+                  onPressed: () => onNextGameLoserSide(_BpSide.blue),
+                  icon: Icon(
+                    Icons.circle,
+                    size: 15,
+                    color: nextGameLoserSide == _BpSide.blue
+                        ? const Color(0xFF246BFF)
+                        : Colors.white54,
+                  ),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Loser chooses red side',
+                  onPressed: () => onNextGameLoserSide(_BpSide.red),
+                  icon: Icon(
+                    Icons.circle,
+                    size: 15,
+                    color: nextGameLoserSide == _BpSide.red
+                        ? const Color(0xFFE83B43)
+                        : Colors.white54,
+                  ),
+                ),
+                const SizedBox(width: 5),
+              ],
+              FilledButton.icon(
+                onPressed: isAdvancing ? null : onNextGame,
+                icon: const Icon(Icons.skip_next_rounded, size: 17),
+                label: Text(isAdvancing ? '保存中' : '下一局'),
+              ),
+            ],
+          ),
         const SizedBox(width: 8),
         IconButton.filledTonal(
           tooltip: 'Redo',
@@ -1713,16 +2088,22 @@ class _BpHeroPoolTile extends StatelessWidget {
     required this.hero,
     required this.status,
     required this.selected,
+    this.allowPickedTap = false,
     this.onTap,
   });
 
   final HeroSummary hero;
   final _BpHeroStatus status;
   final bool selected;
+  final bool allowPickedTap;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final isInteractive =
+        onTap != null &&
+        (status == _BpHeroStatus.available ||
+            (allowPickedTap && status == _BpHeroStatus.picked));
     final heroId = hero.id.isEmpty ? hero.heroId : hero.id;
     final url = hero.avatar.isNotEmpty
         ? hero.avatar
@@ -1733,7 +2114,7 @@ class _BpHeroPoolTile extends StatelessWidget {
           : const Color(0xFF070A12),
       borderRadius: BorderRadius.circular(7),
       child: InkWell(
-        onTap: status == _BpHeroStatus.available ? onTap : null,
+        onTap: isInteractive ? onTap : null,
         borderRadius: BorderRadius.circular(7),
         child: Stack(
           alignment: Alignment.center,

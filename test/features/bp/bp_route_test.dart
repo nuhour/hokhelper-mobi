@@ -223,4 +223,85 @@ void main() {
       expect(find.text('锁定'), findsNothing);
     },
   );
+
+  testWidgets('BO7 game seven uses the HOKX Peak lineup flow', (tester) async {
+    final router = createAppRouter();
+    router.go('/tools/bp-simulator/peak');
+    tester.view.physicalSize = const Size(2532, 1170);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpSchemeDetailProvider('peak').overrideWith((ref) async {
+            return const BpSchemeSummary(
+              id: 'peak',
+              name: 'BO7 Peak Draft',
+              createdAt: '2026-07-03T10:00:00Z',
+              boMode: 7,
+              teamAName: 'Wolves',
+              teamBName: 'AG',
+              sideSelectionRule: 'loser_selects',
+              gameNumber: 7,
+              historyCount: 6,
+              currentStepIndex: 0,
+              blueBanCount: 0,
+              redBanCount: 0,
+              bluePickCount: 0,
+              redPickCount: 0,
+            );
+          }),
+          heroGalleryProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '1',
+                name: 'Peak hero 1',
+                avatar: '',
+                title: '',
+                position: 1,
+              ),
+              HeroSummary(
+                id: '2',
+                name: 'Peak hero 2',
+                avatar: '',
+                title: '',
+                position: 2,
+              ),
+              HeroSummary(
+                id: '3',
+                name: 'Peak hero 3',
+                avatar: '',
+                title: '',
+                position: 3,
+              ),
+              HeroSummary(
+                id: '4',
+                name: 'Peak hero 4',
+                avatar: '',
+                title: '',
+                position: 4,
+              ),
+              HeroSummary(
+                id: '5',
+                name: 'Peak hero 5',
+                avatar: '',
+                title: '',
+                position: 5,
+              ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('还需选择 5 人'), findsOneWidget);
+    for (var index = 1; index <= 5; index++) {
+      await tester.tap(find.bySemanticsLabel('Peak hero $index'));
+      await tester.pump();
+    }
+
+    expect(find.text('展示对手'), findsOneWidget);
+  });
 }

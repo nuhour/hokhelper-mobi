@@ -207,6 +207,7 @@ void main() {
     expect(schemes.single.redBanHeroIds, [133]);
     expect(schemes.single.bluePickHeroIds, [111]);
     expect(schemes.single.redPickHeroIds, [222]);
+    expect(schemes.single.draftState.isStarted, isTrue);
   });
 
   test('loads a BP scheme detail with hokx detail endpoint', () async {
@@ -355,6 +356,53 @@ void main() {
             'timeLeft': 31,
             'gameWinner': null,
           },
+        },
+      });
+    },
+  );
+
+  test(
+    'advances a series with HOKX-compatible completed game history',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = BpRepository(apiClient: apiClient);
+
+      await repository.advanceSeries(
+        '12',
+        nextGameNumber: 2,
+        history: const [
+          BpHistoryGame(
+            gameNumber: 1,
+            blueTeamId: 'team_a',
+            redTeamId: 'team_b',
+            blueBans: [2624, -1, null, null, null],
+            redBans: [2621, null, null, null, null],
+            bluePicks: [2610, 2609, 2608, 2607, 2606],
+            redPicks: [2605, 2604, 2603, 2602, 2601],
+            winner: 'blue',
+          ),
+        ],
+      );
+
+      expect(apiClient.requestedPath, '/bp/scheme/12/update');
+      expect(apiClient.requestedBody, {
+        'schemeId': '12',
+        'data': {
+          'gameNumber': 2,
+          'history': [
+            {
+              'gameNumber': 1,
+              'blueTeamId': 'team_a',
+              'redTeamId': 'team_b',
+              'blueBans': [2624, -1],
+              'redBans': [2621],
+              'bluePicks': [2610, 2609, 2608, 2607, 2606],
+              'redPicks': [2605, 2604, 2603, 2602, 2601],
+              'mode': 'standard',
+              'winner': 'blue',
+            },
+          ],
+          'currentState': null,
         },
       });
     },
