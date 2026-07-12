@@ -241,7 +241,7 @@ void main() {
 
     expect(find.text('Skin Detail'), findsOneWidget);
     expect(find.text('Hunter Series'), findsWidgets);
-    expect(find.text('4.5'), findsOneWidget);
+    expect(find.text('4.5'), findsWidgets);
     expect(find.text('12 ratings'), findsOneWidget);
   });
 
@@ -583,6 +583,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.longPress(find.byKey(const ValueKey('skin-card-1001')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Rate Crimson Hunter 5 stars'));
     await tester.pumpAndSettle();
 

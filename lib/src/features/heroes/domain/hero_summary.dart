@@ -6,6 +6,9 @@ class HeroSummary {
     required this.avatar,
     required this.title,
     this.position,
+    this.tier = '',
+    this.rating = 0,
+    this.ratingCount = 0,
   });
 
   final String id;
@@ -14,6 +17,9 @@ class HeroSummary {
   final String avatar;
   final String title;
   final int? position;
+  final String tier;
+  final double rating;
+  final int ratingCount;
 
   factory HeroSummary.fromJson(Map<String, dynamic> json) {
     return HeroSummary(
@@ -30,6 +36,9 @@ class HeroSummary {
       ]),
       title: _readString(json, const ['title', 'heroTitle']),
       position: _readInt(json, const ['position', 'mainJob', 'main_job']),
+      tier: _readString(json, const ['tier', 'hot']),
+      rating: _readDouble(json, const ['rating', 'avg_rating']),
+      ratingCount: _readInt(json, const ['rating_count', 'ratingCount']) ?? 0,
     );
   }
 
@@ -87,5 +96,20 @@ class HeroSummary {
     }
 
     return null;
+  }
+
+  static double _readDouble(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is num) {
+        return value.toDouble();
+      }
+      final parsedValue = double.tryParse(value?.toString().trim() ?? '');
+      if (parsedValue != null) {
+        return parsedValue;
+      }
+    }
+
+    return 0;
   }
 }

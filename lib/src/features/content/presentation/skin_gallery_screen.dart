@@ -633,8 +633,10 @@ class _SkinCard extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
+          key: ValueKey('skin-card-${skin.id}'),
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
+          onLongPress: isRating ? null : () => _showRatingSheet(context),
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
@@ -663,7 +665,7 @@ class _SkinCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  skin.heroName.isEmpty ? skin.subtitle : skin.heroName,
+                  skin.subtitle.isEmpty ? 'Unknown series' : skin.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
@@ -671,20 +673,22 @@ class _SkinCard extends StatelessWidget {
                   ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
                 ),
                 const Spacer(),
-                Text(
-                  '${skin.rating.toStringAsFixed(1)} · ${skin.ratingCount} ratings',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.gold),
-                ),
-                const SizedBox(height: 4),
-                _SkinCardRatingControl(
-                  skinTitle: skin.title,
-                  rating: skin.rating,
-                  isRating: isRating,
-                  onRate: onRate,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      color: AppTheme.gold,
+                      size: 17,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      skin.rating > 0 ? skin.rating.toStringAsFixed(1) : '--',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppTheme.gold,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -693,10 +697,29 @@ class _SkinCard extends StatelessWidget {
       ),
     );
   }
+
+  void _showRatingSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => _SkinCardRatingSheet(
+        skinTitle: skin.title,
+        rating: skin.rating,
+        isRating: isRating,
+        onRate: (rating) {
+          Navigator.of(sheetContext).pop();
+          onRate(rating);
+        },
+      ),
+    );
+  }
 }
 
-class _SkinCardRatingControl extends StatelessWidget {
-  const _SkinCardRatingControl({
+class _SkinCardRatingSheet extends StatelessWidget {
+  const _SkinCardRatingSheet({
     required this.skinTitle,
     required this.rating,
     required this.isRating,
@@ -711,22 +734,47 @@ class _SkinCardRatingControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roundedRating = rating.round();
-    return Row(
-      children: [
-        for (var index = 1; index <= 5; index++)
-          IconButton(
-            tooltip: 'Rate $skinTitle $index stars',
-            visualDensity: VisualDensity.compact,
-            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-            padding: EdgeInsets.zero,
-            onPressed: isRating ? null : () => onRate(index.toDouble()),
-            icon: Icon(
-              index <= roundedRating ? Icons.star : Icons.star_border,
-              color: AppTheme.gold,
-              size: 18,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 26),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              skinTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-      ],
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var index = 1; index <= 5; index++)
+                  IconButton(
+                    tooltip: 'Rate $skinTitle $index stars',
+                    constraints: const BoxConstraints.tightFor(
+                      width: 48,
+                      height: 48,
+                    ),
+                    onPressed: isRating ? null : () => onRate(index.toDouble()),
+                    icon: Icon(
+                      index <= roundedRating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: AppTheme.gold,
+                      size: 30,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

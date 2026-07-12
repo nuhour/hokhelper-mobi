@@ -89,6 +89,9 @@ void main() {
         'heroName': 'Dolia',
         'icon': 'https://example.test/dolia.png',
         'heroTitle': 'Mermaid Song',
+        'tier': 'T1',
+        'rating': '4.5',
+        'rating_count': 19,
       });
       final bySnakeCase = HeroSummary.fromJson({
         'hero_id': '222',
@@ -101,6 +104,9 @@ void main() {
       expect(byCamelCase.name, 'Dolia');
       expect(byCamelCase.avatar, 'https://example.test/dolia.png');
       expect(byCamelCase.title, 'Mermaid Song');
+      expect(byCamelCase.tier, 'T1');
+      expect(byCamelCase.rating, 4.5);
+      expect(byCamelCase.ratingCount, 19);
       expect(bySnakeCase.id, '222');
       expect(bySnakeCase.name, 'Augran');
       expect(bySnakeCase.avatar, 'https://example.test/augran.png');
@@ -337,7 +343,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
-    expect(find.text('Shark Rider'), findsOneWidget);
+    expect(find.text('Lam'), findsWidgets);
     expect(find.text('Angela'), findsNothing);
     expect(repository.requestedSearch, 'Lam');
   });

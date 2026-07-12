@@ -357,6 +357,8 @@ class _HeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final detailRouteId = hero.detailRouteId;
+    final tier = hero.tier.isEmpty ? '--' : hero.tier.toUpperCase();
+    final ratingLabel = hero.rating > 0 ? hero.rating.toStringAsFixed(1) : '--';
 
     return Material(
       color: AppTheme.panel,
@@ -385,7 +387,7 @@ class _HeroCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 7),
               Text(
                 hero.name.isEmpty ? 'Hero #${hero.id}' : hero.name,
                 maxLines: 1,
@@ -396,13 +398,27 @@ class _HeroCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                hero.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              const SizedBox(height: 5),
+              Row(
+                children: [
+                  _HeroLaneBadge(position: hero.position),
+                  const SizedBox(width: 5),
+                  _HeroTierBadge(tier: tier),
+                  const Spacer(),
+                  const Icon(
+                    Icons.star_rounded,
+                    color: AppTheme.gold,
+                    size: 15,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    ratingLabel,
+                    style: textTheme.labelMedium?.copyWith(
+                      color: AppTheme.gold,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -421,6 +437,83 @@ class _HeroCard extends StatelessWidget {
     final nextUri = currentUri.replace(path: '/heroes/$detailRouteId');
     router.go(nextUri.toString());
   }
+}
+
+class _HeroLaneBadge extends StatelessWidget {
+  const _HeroLaneBadge({required this.position});
+
+  final int? position;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetName = switch (position) {
+      0 => 'clash',
+      1 => 'mid',
+      2 => 'adc',
+      3 => 'jungle',
+      4 => 'support',
+      _ => null,
+    };
+    return Tooltip(
+      message: _laneLabel(position),
+      child: SizedBox.square(
+        dimension: 18,
+        child: assetName == null
+            ? const Icon(
+                Icons.grid_view_rounded,
+                size: 16,
+                color: AppTheme.muted,
+              )
+            : Image.asset('assets/lane-icons/$assetName.png'),
+      ),
+    );
+  }
+}
+
+class _HeroTierBadge extends StatelessWidget {
+  const _HeroTierBadge({required this.tier});
+
+  final String tier;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (tier) {
+      'T0' => const Color(0xFFEF4444),
+      'T1' => const Color(0xFFF97316),
+      'T2' => const Color(0xFFEAB308),
+      'T3' => const Color(0xFF22C55E),
+      _ => AppTheme.muted,
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+        child: Text(
+          tier,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _laneLabel(int? position) {
+  return switch (position) {
+    0 => 'Clash lane',
+    1 => 'Mid lane',
+    2 => 'Farm lane',
+    3 => 'Jungle',
+    4 => 'Support',
+    _ => 'All lanes',
+  };
 }
 
 enum _HeroSort {
