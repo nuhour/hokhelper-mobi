@@ -7,6 +7,8 @@ import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_scheme_detail_screen.dart';
+import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
+import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 
 void main() {
   testWidgets('BP dashboard card opens the focused mobile scheme detail', (
@@ -162,4 +164,63 @@ void main() {
     expect(find.text('KPL Finals Draft'), findsOneWidget);
     expect(find.text('Focused game: Game 2'), findsOneWidget);
   });
+
+  testWidgets(
+    'landscape BP editor locks the selected hero into the first ban',
+    (tester) async {
+      final router = createAppRouter();
+      router.go('/tools/bp-simulator/12');
+      tester.view.physicalSize = const Size(2532, 1170);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bpSchemeDetailProvider('12').overrideWith((ref) async {
+              return const BpSchemeSummary(
+                id: '12',
+                name: 'KPL Finals Draft',
+                createdAt: '2026-07-03T10:00:00Z',
+                boMode: 7,
+                teamAName: 'Wolves',
+                teamBName: 'AG',
+                sideSelectionRule: 'loser_selects',
+                gameNumber: 1,
+                historyCount: 0,
+                currentStepIndex: 0,
+                blueBanCount: 0,
+                redBanCount: 0,
+                bluePickCount: 0,
+                redPickCount: 0,
+              );
+            }),
+            heroGalleryProvider.overrideWith((ref) async {
+              return const [
+                HeroSummary(
+                  id: '2624',
+                  name: 'Haya',
+                  avatar: '',
+                  title: '',
+                  position: 1,
+                ),
+              ];
+            }),
+          ],
+          child: HokHelperApp(router: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('开始 BP'), findsOneWidget);
+      await tester.tap(find.text('开始 BP'));
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel('Haya'));
+      await tester.pump();
+      await tester.tap(find.text('锁定'));
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Selected hero'), findsOneWidget);
+      expect(find.text('锁定'), findsNothing);
+    },
+  );
 }

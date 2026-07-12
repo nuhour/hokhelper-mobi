@@ -1,3 +1,97 @@
+class BpDraftState {
+  const BpDraftState({
+    this.blueBans = const [null, null, null, null, null],
+    this.redBans = const [null, null, null, null, null],
+    this.bluePicks = const [null, null, null, null, null],
+    this.redPicks = const [null, null, null, null, null],
+    this.currentStepIndex = 0,
+    this.isStarted = false,
+    this.isSaved = false,
+    this.timeLeft = 45,
+    this.gameWinner,
+  });
+
+  final List<int?> blueBans;
+  final List<int?> redBans;
+  final List<int?> bluePicks;
+  final List<int?> redPicks;
+  final int currentStepIndex;
+  final bool isStarted;
+  final bool isSaved;
+  final int timeLeft;
+  final String? gameWinner;
+
+  factory BpDraftState.fromJson(Object? value) {
+    final json = value is Map<String, dynamic>
+        ? value
+        : value is Map
+        ? Map<String, dynamic>.from(value)
+        : const <String, dynamic>{};
+    return BpDraftState(
+      blueBans: _readSlots(json['blueBans']),
+      redBans: _readSlots(json['redBans']),
+      bluePicks: _readSlots(json['bluePicks']),
+      redPicks: _readSlots(json['redPicks']),
+      currentStepIndex: _readInt(json['currentStepIndex']),
+      isStarted: json['isStarted'] == true,
+      isSaved: json['isSaved'] == true,
+      timeLeft: _readInt(json['timeLeft'], fallback: 45).clamp(1, 45),
+      gameWinner: _readWinner(json['gameWinner'] ?? json['winner']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'blueBans': blueBans,
+    'redBans': redBans,
+    'bluePicks': bluePicks,
+    'redPicks': redPicks,
+    'currentStepIndex': currentStepIndex,
+    'isStarted': isStarted,
+    'isSaved': isSaved,
+    'timeLeft': timeLeft,
+    'gameWinner': gameWinner,
+  };
+
+  int get blueBanCount => _countHeroes(blueBans);
+  int get redBanCount => _countHeroes(redBans);
+  int get bluePickCount => _countHeroes(bluePicks);
+  int get redPickCount => _countHeroes(redPicks);
+}
+
+class BpHistoryGame {
+  const BpHistoryGame({
+    required this.gameNumber,
+    required this.blueTeamId,
+    required this.redTeamId,
+    required this.bluePicks,
+    required this.redPicks,
+    this.winner,
+  });
+
+  final int gameNumber;
+  final String blueTeamId;
+  final String redTeamId;
+  final List<int?> bluePicks;
+  final List<int?> redPicks;
+  final String? winner;
+
+  factory BpHistoryGame.fromJson(Object? value) {
+    final json = value is Map<String, dynamic>
+        ? value
+        : value is Map
+        ? Map<String, dynamic>.from(value)
+        : const <String, dynamic>{};
+    return BpHistoryGame(
+      gameNumber: _readInt(json['gameNumber'] ?? json['game_number']),
+      blueTeamId: _readString(json['blueTeamId'] ?? json['blue_team_id']),
+      redTeamId: _readString(json['redTeamId'] ?? json['red_team_id']),
+      bluePicks: _readSlots(json['bluePicks'] ?? json['blue_picks']),
+      redPicks: _readSlots(json['redPicks'] ?? json['red_picks']),
+      winner: _readWinner(json['winner'] ?? json['gameWinner']),
+    );
+  }
+}
+
 class BpSchemeSummary {
   const BpSchemeSummary({
     required this.id,
@@ -18,6 +112,10 @@ class BpSchemeSummary {
     this.redBanHeroIds = const [],
     this.bluePickHeroIds = const [],
     this.redPickHeroIds = const [],
+    this.teamAId = 'team_a',
+    this.teamBId = 'team_b',
+    this.draftState = const BpDraftState(),
+    this.history = const [],
   });
 
   final String id;
@@ -38,6 +136,10 @@ class BpSchemeSummary {
   final List<int> redBanHeroIds;
   final List<int> bluePickHeroIds;
   final List<int> redPickHeroIds;
+  final String teamAId;
+  final String teamBId;
+  final BpDraftState draftState;
+  final List<BpHistoryGame> history;
 
   bool get hasCurrentBoardHeroes {
     return blueBanHeroIds.isNotEmpty ||
@@ -82,7 +184,10 @@ class BpSchemeSummary {
         : const <String, dynamic>{};
     final history = json['history'];
     final currentState = json['currentState'];
-    final state = currentState is Map ? currentState : const {};
+    final state = BpDraftState.fromJson(currentState);
+    final parsedHistory = history is List
+        ? history.map(BpHistoryGame.fromJson).toList(growable: false)
+        : const <BpHistoryGame>[];
 
     return BpSchemeSummary(
       id: _readString(json['id'] ?? json['scheme_id']),
@@ -95,22 +200,67 @@ class BpSchemeSummary {
         json['sideSelectionRule'] ?? json['side_selection_rule'],
         fallback: 'loser_selects',
       ),
+      teamAId: _readString(
+        json['teamAId'] ?? json['team_a_id'],
+        fallback: 'team_a',
+      ),
+      teamBId: _readString(
+        json['teamBId'] ?? json['team_b_id'],
+        fallback: 'team_b',
+      ),
       gameNumber: _readInt(
         json['gameNumber'] ?? json['game_number'],
         fallback: 1,
       ),
-      historyCount: history is List ? history.length : 0,
-      currentStepIndex: _readInt(state['currentStepIndex']),
-      blueBanCount: _readListLength(state['blueBans']),
-      redBanCount: _readListLength(state['redBans']),
-      bluePickCount: _readListLength(state['bluePicks']),
-      redPickCount: _readListLength(state['redPicks']),
-      blueBanHeroIds: _readHeroIds(state['blueBans']),
-      redBanHeroIds: _readHeroIds(state['redBans']),
-      bluePickHeroIds: _readHeroIds(state['bluePicks']),
-      redPickHeroIds: _readHeroIds(state['redPicks']),
+      historyCount: parsedHistory.length,
+      currentStepIndex: state.currentStepIndex,
+      blueBanCount: state.blueBanCount,
+      redBanCount: state.redBanCount,
+      bluePickCount: state.bluePickCount,
+      redPickCount: state.redPickCount,
+      blueBanHeroIds: _readHeroIds(state.blueBans),
+      redBanHeroIds: _readHeroIds(state.redBans),
+      bluePickHeroIds: _readHeroIds(state.bluePicks),
+      redPickHeroIds: _readHeroIds(state.redPicks),
+      draftState: state,
+      history: parsedHistory,
     );
   }
+}
+
+List<int?> _readSlots(Object? value) {
+  final values = value is List ? value : const [];
+  final slots = values
+      .take(5)
+      .map((item) {
+        if (item == null) return null;
+        if (item is Map) {
+          final id = _readInt(
+            item['hero_id'] ??
+                item['heroId'] ??
+                item['id'] ??
+                item['hero'] ??
+                item['value'],
+          );
+          return id == 0 ? null : id;
+        }
+        if (item is String && item.startsWith('mobile-')) return -2;
+        final id = _readInt(item);
+        return id == 0 ? null : id;
+      })
+      .toList(growable: true);
+  while (slots.length < 5) {
+    slots.add(null);
+  }
+  return List.unmodifiable(slots);
+}
+
+int _countHeroes(List<int?> slots) =>
+    slots.where((id) => id != null && id != -1).length;
+
+String? _readWinner(Object? value) {
+  final winner = value?.toString().trim().toLowerCase();
+  return winner == 'blue' || winner == 'red' ? winner : null;
 }
 
 List<int> _readHeroIds(Object? value) {
@@ -132,13 +282,6 @@ List<int> _readHeroIds(Object? value) {
       })
       .where((id) => id > 0)
       .toList(growable: false);
-}
-
-int _readListLength(Object? value) {
-  if (value is List) {
-    return value.length;
-  }
-  return 0;
 }
 
 int _readInt(Object? value, {int fallback = 0}) {

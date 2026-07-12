@@ -120,6 +120,23 @@ class BpRepository {
     return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
   }
 
+  Future<BpSchemeSummary> saveDraftState(
+    String schemeId, {
+    required int gameNumber,
+    required BpDraftState draftState,
+  }) async {
+    final json = await apiClient.postJson(
+      '/bp/scheme/$schemeId/update',
+      body: {
+        'schemeId': schemeId,
+        'data': {'gameNumber': gameNumber, 'currentState': draftState.toJson()},
+      },
+    );
+    final result = json['result'];
+    final scheme = result is Map ? result['scheme'] : json['scheme'];
+    return BpSchemeSummary.fromJson(scheme is Map ? scheme : result);
+  }
+
   Future<void> deleteScheme(String schemeId) async {
     await apiClient.postJson(
       '/bp/scheme/$schemeId/delete',

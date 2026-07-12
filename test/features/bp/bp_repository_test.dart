@@ -3,6 +3,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/features/bp/data/bp_repository.dart';
+import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -314,6 +315,48 @@ void main() {
       });
       expect(scheme.progressText, 'Game 4 · Step 6');
       expect(scheme.phaseSummaryText, '3 bans · 3 picks');
+    },
+  );
+
+  test(
+    'saves real BP slots and timer state for the landscape editor',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = BpRepository(apiClient: apiClient);
+
+      await repository.saveDraftState(
+        '12',
+        gameNumber: 4,
+        draftState: const BpDraftState(
+          blueBans: [2624, null, -1, null, null],
+          redBans: [2621, null, null, null, null],
+          bluePicks: [2610, null, null, null, null],
+          redPicks: [2600, null, null, null, null],
+          currentStepIndex: 6,
+          isStarted: true,
+          isSaved: false,
+          timeLeft: 31,
+        ),
+      );
+
+      expect(apiClient.requestedPath, '/bp/scheme/12/update');
+      expect(apiClient.requestedBody, {
+        'schemeId': '12',
+        'data': {
+          'gameNumber': 4,
+          'currentState': {
+            'blueBans': [2624, null, -1, null, null],
+            'redBans': [2621, null, null, null, null],
+            'bluePicks': [2610, null, null, null, null],
+            'redPicks': [2600, null, null, null, null],
+            'currentStepIndex': 6,
+            'isStarted': true,
+            'isSaved': false,
+            'timeLeft': 31,
+            'gameWinner': null,
+          },
+        },
+      });
     },
   );
 

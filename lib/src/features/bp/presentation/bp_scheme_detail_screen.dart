@@ -639,6 +639,35 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
   }
 }
 
+class _BpStep {
+  const _BpStep(this.side, this.type);
+
+  final _BpSide side;
+  final _BpSlotType type;
+}
+
+enum _BpSide { blue, red }
+
+enum _BpSlotType { ban, pick }
+
+class _BpSnapshot {
+  const _BpSnapshot({
+    required this.blueBans,
+    required this.redBans,
+    required this.bluePicks,
+    required this.redPicks,
+    required this.stepIndex,
+    required this.timeLeft,
+  });
+
+  final List<int?> blueBans;
+  final List<int?> redBans;
+  final List<int?> bluePicks;
+  final List<int?> redPicks;
+  final int stepIndex;
+  final int timeLeft;
+}
+
 class _BpLandscapeEditor extends ConsumerStatefulWidget {
   const _BpLandscapeEditor({required this.scheme, this.initialGameIndex});
 
@@ -650,6 +679,7 @@ class _BpLandscapeEditor extends ConsumerStatefulWidget {
 }
 
 class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
+  static const _timerDuration = 45;
   static const _lanes = <(String, IconData, int?)>[
     ('ALL', Icons.grid_view_rounded, null),
     ('CLASH', Icons.shield_outlined, 1),
@@ -658,27 +688,91 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     ('JUNGLE', Icons.forest_outlined, 4),
     ('SUPPORT', Icons.handshake_outlined, 5),
   ];
+  static const _standardSteps = <_BpStep>[
+    _BpStep(_BpSide.blue, _BpSlotType.ban),
+    _BpStep(_BpSide.red, _BpSlotType.ban),
+    _BpStep(_BpSide.blue, _BpSlotType.ban),
+    _BpStep(_BpSide.red, _BpSlotType.ban),
+    _BpStep(_BpSide.blue, _BpSlotType.pick),
+    _BpStep(_BpSide.red, _BpSlotType.pick),
+    _BpStep(_BpSide.red, _BpSlotType.pick),
+    _BpStep(_BpSide.blue, _BpSlotType.pick),
+    _BpStep(_BpSide.blue, _BpSlotType.pick),
+    _BpStep(_BpSide.red, _BpSlotType.pick),
+    _BpStep(_BpSide.red, _BpSlotType.ban),
+    _BpStep(_BpSide.blue, _BpSlotType.ban),
+    _BpStep(_BpSide.blue, _BpSlotType.ban),
+    _BpStep(_BpSide.red, _BpSlotType.ban),
+    _BpStep(_BpSide.red, _BpSlotType.ban),
+    _BpStep(_BpSide.blue, _BpSlotType.ban),
+    _BpStep(_BpSide.red, _BpSlotType.pick),
+    _BpStep(_BpSide.blue, _BpSlotType.pick),
+    _BpStep(_BpSide.blue, _BpSlotType.pick),
+    _BpStep(_BpSide.red, _BpSlotType.pick),
+  ];
 
-  final _selectedHeroIds = <int>[];
-  final _bannedHeroIds = <int>[];
+  late List<int?> _blueBans;
+  late List<int?> _redBans;
+  late List<int?> _bluePicks;
+  late List<int?> _redPicks;
+  late int _currentStepIndex;
+  late int _timeLeft;
+  late bool _isStarted;
+  late bool _isTimerRunning;
+  late bool _isSaved;
+  late bool _isHistoryMode;
+  int? _selectedHeroId;
+  String? _gameWinner;
+  final _undoStack = <_BpSnapshot>[];
+  final _redoStack = <_BpSnapshot>[];
   int? _selectedLane;
   bool _isSaving = false;
   bool _showBanned = true;
   bool _showPicked = true;
-  String _phase = 'BAN PHASE';
-  int _secondsRemaining = 41;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _bannedHeroIds.addAll(widget.scheme.blueBanHeroIds);
-    _selectedHeroIds.addAll(widget.scheme.bluePickHeroIds);
+    final historyIndex = widget.initialGameIndex;
+    _isHistoryMode =
+        historyIndex != null &&
+        historyIndex >= 0 &&
+        historyIndex < widget.scheme.history.length;
+    if (_isHistoryMode) {
+      final game = widget.scheme.history[historyIndex!];
+      _blueBans = List<int?>.filled(5, null);
+      _redBans = List<int?>.filled(5, null);
+      _bluePicks = List<int?>.from(game.bluePicks);
+      _redPicks = List<int?>.from(game.redPicks);
+      _currentStepIndex = _standardSteps.length;
+      _timeLeft = _timerDuration;
+      _isStarted = true;
+      _isTimerRunning = false;
+      _isSaved = true;
+    } else {
+      final state = widget.scheme.draftState;
+      _blueBans = List<int?>.from(state.blueBans);
+      _redBans = List<int?>.from(state.redBans);
+      _bluePicks = List<int?>.from(state.bluePicks);
+      _redPicks = List<int?>.from(state.redPicks);
+      _currentStepIndex = state.currentStepIndex.clamp(
+        0,
+        _standardSteps.length,
+      );
+      _timeLeft = state.timeLeft.clamp(1, _timerDuration);
+      _isStarted = state.isStarted;
+      _isTimerRunning = state.isStarted && !state.isSaved;
+      _isSaved = state.isSaved;
+      _gameWinner = state.gameWinner;
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _secondsRemaining = _secondsRemaining <= 0 ? 41 : _secondsRemaining - 1;
-      });
+      if (!mounted || !_canAct || !_isTimerRunning) return;
+      if (_timeLeft <= 1) {
+        _handleTimeout();
+      } else {
+        setState(() => _timeLeft--);
+      }
     });
   }
 
@@ -688,33 +782,214 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     super.dispose();
   }
 
+  _BpStep? get _currentStep =>
+      _isFinished ? null : _standardSteps[_currentStepIndex];
+
+  bool get _isFinished => _currentStepIndex >= _standardSteps.length;
+
+  bool get _canAct =>
+      _isStarted && !_isHistoryMode && !_isSaved && !_isFinished;
+
+  List<int?> _slotsFor(_BpStep step) {
+    return switch ((step.side, step.type)) {
+      (_BpSide.blue, _BpSlotType.ban) => _blueBans,
+      (_BpSide.red, _BpSlotType.ban) => _redBans,
+      (_BpSide.blue, _BpSlotType.pick) => _bluePicks,
+      (_BpSide.red, _BpSlotType.pick) => _redPicks,
+    };
+  }
+
+  int get _activeSlotIndex => _currentStep == null
+      ? -1
+      : _slotsFor(_currentStep!).indexWhere((heroId) => heroId == null);
+
+  _BpSnapshot get _snapshot => _BpSnapshot(
+    blueBans: List<int?>.from(_blueBans),
+    redBans: List<int?>.from(_redBans),
+    bluePicks: List<int?>.from(_bluePicks),
+    redPicks: List<int?>.from(_redPicks),
+    stepIndex: _currentStepIndex,
+    timeLeft: _timeLeft,
+  );
+
+  void _restore(_BpSnapshot snapshot) {
+    setState(() {
+      _blueBans = List<int?>.from(snapshot.blueBans);
+      _redBans = List<int?>.from(snapshot.redBans);
+      _bluePicks = List<int?>.from(snapshot.bluePicks);
+      _redPicks = List<int?>.from(snapshot.redPicks);
+      _currentStepIndex = snapshot.stepIndex;
+      _timeLeft = snapshot.timeLeft;
+      _selectedHeroId = null;
+    });
+  }
+
   void _startBp() {
     setState(() {
-      _phase = 'BAN PHASE';
-      _secondsRemaining = 41;
-      _selectedHeroIds.clear();
-      _bannedHeroIds.clear();
+      _isStarted = true;
+      _isTimerRunning = true;
+      _isSaved = false;
+      _timeLeft = _timerDuration;
     });
   }
 
-  void _nextPhase() {
+  void _resetBp() {
     setState(() {
-      _phase = _phase == 'BAN PHASE' ? 'PICK PHASE' : 'BAN PHASE';
-      _secondsRemaining = 41;
+      _blueBans = List<int?>.filled(5, null);
+      _redBans = List<int?>.filled(5, null);
+      _bluePicks = List<int?>.filled(5, null);
+      _redPicks = List<int?>.filled(5, null);
+      _currentStepIndex = 0;
+      _timeLeft = _timerDuration;
+      _selectedHeroId = null;
+      _isStarted = false;
+      _isTimerRunning = false;
+      _isSaved = false;
+      _gameWinner = null;
+      _undoStack.clear();
+      _redoStack.clear();
     });
   }
 
-  void _selectHero(int heroId) {
-    if (_bannedHeroIds.contains(heroId) || _selectedHeroIds.contains(heroId)) {
+  void _toggleTimer() {
+    if (_isHistoryMode || _isSaved || _isFinished) return;
+    if (!_isStarted) {
+      _startBp();
       return;
     }
+    setState(() => _isTimerRunning = !_isTimerRunning);
+  }
+
+  void _resumeTimer() => _startBp();
+
+  void _setSelectedHero(int heroId) {
+    if (!_canSelectHero(heroId)) return;
+    setState(() => _selectedHeroId = heroId);
+  }
+
+  void _commitSelection([int? heroOverride]) {
+    final step = _currentStep;
+    if (step == null || !_canAct) return;
+    var heroId = heroOverride ?? _selectedHeroId;
+    if (heroId == null && step.type == _BpSlotType.pick) return;
+    final activeIndex = _activeSlotIndex;
+    if (activeIndex < 0) return;
+    _undoStack.add(_snapshot);
+    _redoStack.clear();
     setState(() {
-      if (_phase == 'BAN PHASE') {
-        if (_bannedHeroIds.length < 5) _bannedHeroIds.add(heroId);
-      } else if (_selectedHeroIds.length < 5) {
-        _selectedHeroIds.add(heroId);
-      }
+      heroId ??= -1;
+      _slotsFor(step)[activeIndex] = heroId;
+      _currentStepIndex++;
+      _timeLeft = _timerDuration;
+      _selectedHeroId = null;
     });
+  }
+
+  void _handleTimeout() {
+    final step = _currentStep;
+    if (step == null) return;
+    var heroId = _selectedHeroId;
+    if (heroId == null && step.type == _BpSlotType.pick) {
+      final heroes =
+          ref.read(heroGalleryProvider).valueOrNull ?? const <HeroSummary>[];
+      final fallback = heroes.firstWhere(
+        (hero) => _canSelectHero(int.tryParse(hero.id) ?? 0),
+        orElse: () =>
+            const HeroSummary(id: '', name: '', avatar: '', title: ''),
+      );
+      heroId = int.tryParse(fallback.id);
+    }
+    _commitSelection(heroId);
+  }
+
+  void _undo() {
+    if (_undoStack.isEmpty || _isHistoryMode || _isSaved) return;
+    final previous = _undoStack.removeLast();
+    _redoStack.add(_snapshot);
+    _restore(previous);
+  }
+
+  void _redo() {
+    if (_redoStack.isEmpty || _isHistoryMode || _isSaved) return;
+    final next = _redoStack.removeLast();
+    _undoStack.add(_snapshot);
+    _restore(next);
+  }
+
+  bool _isBlueTeamA() => widget.scheme.gameNumber.isOdd;
+
+  int _teamScore(bool teamA) {
+    var score = 0;
+    for (final game in widget.scheme.history) {
+      if (game.winner == null) continue;
+      final blueIsA = game.blueTeamId.isEmpty
+          ? game.gameNumber.isOdd
+          : game.blueTeamId == widget.scheme.teamAId;
+      final winnerIsA = game.winner == 'blue' ? blueIsA : !blueIsA;
+      if (winnerIsA == teamA) score++;
+    }
+    if (_gameWinner != null) {
+      final winnerIsA = _gameWinner == 'blue'
+          ? _isBlueTeamA()
+          : !_isBlueTeamA();
+      if (winnerIsA == teamA) score++;
+    }
+    return score;
+  }
+
+  int _scoreForSide(_BpSide side) =>
+      _teamScore(side == _BpSide.blue ? _isBlueTeamA() : !_isBlueTeamA());
+
+  Set<int> _teamUsedHeroes(bool teamA) {
+    final used = <int>{};
+    for (final game in widget.scheme.history) {
+      final blueIsA = game.blueTeamId.isEmpty
+          ? game.gameNumber.isOdd
+          : game.blueTeamId == widget.scheme.teamAId;
+      final picks = blueIsA == teamA ? game.bluePicks : game.redPicks;
+      used.addAll(picks.whereType<int>().where((id) => id > 0));
+    }
+    return used;
+  }
+
+  bool _activeSideIsTeamA() {
+    final step = _currentStep;
+    if (step == null) return _isBlueTeamA();
+    return step.side == _BpSide.blue ? _isBlueTeamA() : !_isBlueTeamA();
+  }
+
+  bool _canSelectHero(int heroId) {
+    final step = _currentStep;
+    if (!_canAct || heroId <= 0 || step == null) return false;
+    final inCurrentDraft = <int>{
+      ..._blueBans.whereType<int>(),
+      ..._redBans.whereType<int>(),
+      ..._bluePicks.whereType<int>(),
+      ..._redPicks.whereType<int>(),
+    };
+    if (inCurrentDraft.contains(heroId)) return false;
+    final activeTeamIsA = _activeSideIsTeamA();
+    if (step.type == _BpSlotType.pick) {
+      return !_teamUsedHeroes(activeTeamIsA).contains(heroId);
+    }
+    return !_teamUsedHeroes(!activeTeamIsA).contains(heroId);
+  }
+
+  _BpHeroStatus _heroStatus(int heroId) {
+    if (_blueBans.contains(heroId) || _redBans.contains(heroId)) {
+      return _BpHeroStatus.banned;
+    }
+    if (_bluePicks.contains(heroId) || _redPicks.contains(heroId)) {
+      return _BpHeroStatus.picked;
+    }
+    final activeTeamIsA = _activeSideIsTeamA();
+    if (_teamUsedHeroes(activeTeamIsA).contains(heroId)) {
+      return _BpHeroStatus.usedByActiveTeam;
+    }
+    if (_teamUsedHeroes(!activeTeamIsA).contains(heroId)) {
+      return _BpHeroStatus.usedByOpponent;
+    }
+    return _BpHeroStatus.available;
   }
 
   Future<void> _saveDraft() async {
@@ -723,18 +998,23 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     try {
       await ref
           .read(bpRepositoryProvider)
-          .updateDraftState(
+          .saveDraftState(
             widget.scheme.id,
-            gameNumber: widget.initialGameIndex == null
-                ? widget.scheme.gameNumber
-                : widget.initialGameIndex! + 1,
-            currentStepIndex: _selectedHeroIds.length,
-            blueBanCount: _bannedHeroIds.length,
-            redBanCount: widget.scheme.redBanCount,
-            bluePickCount: _selectedHeroIds.length,
-            redPickCount: widget.scheme.redPickCount,
+            gameNumber: widget.scheme.gameNumber,
+            draftState: BpDraftState(
+              blueBans: _blueBans,
+              redBans: _redBans,
+              bluePicks: _bluePicks,
+              redPicks: _redPicks,
+              currentStepIndex: _currentStepIndex,
+              isStarted: _isStarted,
+              isSaved: _isFinished || _isSaved,
+              timeLeft: _timeLeft,
+              gameWinner: _gameWinner,
+            ),
           );
       if (!mounted) return;
+      if (_isFinished) setState(() => _isSaved = true);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('BP draft saved')));
@@ -766,14 +1046,21 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
             _BpEditorTopBar(
               scheme: widget.scheme,
               isSaving: _isSaving,
-              phase: _phase,
-              secondsRemaining: _secondsRemaining,
-              blueBanHeroIds: widget.scheme.blueBanHeroIds.isNotEmpty
-                  ? widget.scheme.blueBanHeroIds
-                  : _bannedHeroIds,
-              redBanHeroIds: widget.scheme.redBanHeroIds,
+              blueBans: _blueBans,
+              redBans: _redBans,
+              bluePicks: _bluePicks,
+              redPicks: _redPicks,
+              blueScore: _scoreForSide(_BpSide.blue),
+              redScore: _scoreForSide(_BpSide.red),
+              currentStep: _currentStep,
+              activeSlotIndex: _activeSlotIndex,
+              selectedHeroId: _selectedHeroId,
+              timeLeft: _timeLeft,
+              isStarted: _isStarted,
+              isFinished: _isFinished,
               onBack: () => Navigator.of(context).maybePop(),
               onSave: _saveDraft,
+              onTimerTap: _isStarted ? _toggleTimer : _resumeTimer,
             ),
             _BpLaneBar(
               lanes: _lanes,
@@ -789,7 +1076,12 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                 children: [
                   _BpTeamRail(
                     color: const Color(0xFF246BFF),
-                    heroIds: _selectedHeroIds.take(5).toList(),
+                    heroIds: _bluePicks,
+                    active:
+                        _currentStep?.side == _BpSide.blue &&
+                        _currentStep?.type == _BpSlotType.pick,
+                    activeSlotIndex: _activeSlotIndex,
+                    selectedHeroId: _selectedHeroId,
                   ),
                   Expanded(
                     child: Stack(
@@ -812,21 +1104,18 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                               itemBuilder: (context, index) {
                                 final hero = visibleHeroes[index];
                                 final heroId = int.tryParse(hero.id) ?? 0;
-                                final isBanned = _bannedHeroIds.contains(
-                                  heroId,
-                                );
-                                final isPicked = _selectedHeroIds.contains(
-                                  heroId,
-                                );
+                                final status = _heroStatus(heroId);
+                                if ((status == _BpHeroStatus.banned &&
+                                        !_showBanned) ||
+                                    (status == _BpHeroStatus.picked &&
+                                        !_showPicked)) {
+                                  return const SizedBox.shrink();
+                                }
                                 return _BpHeroPoolTile(
                                   hero: hero,
-                                  banned: isBanned,
-                                  picked: isPicked,
-                                  showBanned: _showBanned,
-                                  showPicked: _showPicked,
-                                  onTap: heroId <= 0 || isBanned || isPicked
-                                      ? null
-                                      : () => _selectHero(heroId),
+                                  status: status,
+                                  selected: _selectedHeroId == heroId,
+                                  onTap: () => _setSelectedHero(heroId),
                                 );
                               },
                             );
@@ -837,10 +1126,22 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                           right: 0,
                           bottom: 6,
                           child: _BpFlowControls(
-                            phase: _phase,
+                            currentStep: _currentStep,
+                            isStarted: _isStarted,
+                            isFinished: _isFinished,
+                            isSaved: _isSaved,
+                            selectedHeroId: _selectedHeroId,
+                            canUndo: _undoStack.isNotEmpty,
+                            canRedo: _redoStack.isNotEmpty,
                             onStart: _startBp,
-                            onNext: _nextPhase,
-                            onReset: _startBp,
+                            onLockIn: _commitSelection,
+                            onUndo: _undo,
+                            onRedo: _redo,
+                            onReset: _resetBp,
+                            onSave: _saveDraft,
+                            gameWinner: _gameWinner,
+                            onWinnerChanged: (winner) =>
+                                setState(() => _gameWinner = winner),
                           ),
                         ),
                       ],
@@ -848,7 +1149,12 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                   ),
                   _BpTeamRail(
                     color: const Color(0xFFE83B43),
-                    heroIds: widget.scheme.redPickHeroIds,
+                    heroIds: _redPicks,
+                    active:
+                        _currentStep?.side == _BpSide.red &&
+                        _currentStep?.type == _BpSlotType.pick,
+                    activeSlotIndex: _activeSlotIndex,
+                    selectedHeroId: _selectedHeroId,
                   ),
                 ],
               ),
@@ -860,31 +1166,57 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 }
 
+enum _BpHeroStatus {
+  available,
+  banned,
+  picked,
+  usedByActiveTeam,
+  usedByOpponent,
+}
+
 class _BpEditorTopBar extends StatelessWidget {
   const _BpEditorTopBar({
     required this.scheme,
     required this.isSaving,
-    required this.phase,
-    required this.secondsRemaining,
-    required this.blueBanHeroIds,
-    required this.redBanHeroIds,
+    required this.blueBans,
+    required this.redBans,
+    required this.bluePicks,
+    required this.redPicks,
+    required this.blueScore,
+    required this.redScore,
+    required this.currentStep,
+    required this.activeSlotIndex,
+    required this.selectedHeroId,
+    required this.timeLeft,
+    required this.isStarted,
+    required this.isFinished,
     required this.onBack,
     required this.onSave,
+    required this.onTimerTap,
   });
 
   final BpSchemeSummary scheme;
   final bool isSaving;
-  final String phase;
-  final int secondsRemaining;
-  final List<int> blueBanHeroIds;
-  final List<int> redBanHeroIds;
+  final List<int?> blueBans;
+  final List<int?> redBans;
+  final List<int?> bluePicks;
+  final List<int?> redPicks;
+  final int blueScore;
+  final int redScore;
+  final _BpStep? currentStep;
+  final int activeSlotIndex;
+  final int? selectedHeroId;
+  final int timeLeft;
+  final bool isStarted;
+  final bool isFinished;
   final VoidCallback onBack;
   final VoidCallback onSave;
+  final VoidCallback onTimerTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 94,
+      height: 82,
       child: Row(
         children: [
           IconButton.filledTonal(
@@ -898,54 +1230,78 @@ class _BpEditorTopBar extends StatelessWidget {
               children: [
                 _BpBanSlots(
                   color: const Color(0xFF246BFF),
-                  heroIds: blueBanHeroIds,
+                  heroIds: blueBans,
+                  active:
+                      currentStep?.side == _BpSide.blue &&
+                      currentStep?.type == _BpSlotType.ban,
+                  activeSlotIndex: activeSlotIndex,
+                  selectedHeroId: selectedHeroId,
                 ),
-                const SizedBox(width: 22),
+                const SizedBox(width: 6),
                 _BpScorePill(
                   label: scheme.teamAName,
-                  score: scheme.bluePickHeroIds.length,
+                  score: blueScore,
                   color: const Color(0xFF246BFF),
                 ),
-                Container(
-                  width: 62,
-                  height: 62,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF171923),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '$secondsRemaining',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                        ),
+                InkWell(
+                  onTap: onTimerTap,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF171923),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: timeLeft <= 10 ? AppTheme.error : Colors.white24,
+                        width: 2,
                       ),
-                      Text(
-                        phase == 'BAN PHASE' ? 'BAN' : 'PICK',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 8,
-                          fontWeight: FontWeight.w900,
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          isFinished ? 'DONE' : '$timeLeft',
+                          style: TextStyle(
+                            color: timeLeft <= 10
+                                ? AppTheme.error
+                                : Colors.white,
+                            fontSize: isFinished ? 12 : 18,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          currentStep == null
+                              ? 'READY'
+                              : currentStep!.type == _BpSlotType.ban
+                              ? 'BAN'
+                              : 'PICK',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 _BpScorePill(
                   label: scheme.teamBName,
-                  score: scheme.redPickHeroIds.length,
+                  score: redScore,
                   color: const Color(0xFFE83B43),
                 ),
-                const SizedBox(width: 22),
+                const SizedBox(width: 6),
                 _BpBanSlots(
                   color: const Color(0xFFE83B43),
-                  heroIds: redBanHeroIds,
+                  heroIds: redBans,
+                  active:
+                      currentStep?.side == _BpSide.red &&
+                      currentStep?.type == _BpSlotType.ban,
+                  activeSlotIndex: activeSlotIndex,
+                  selectedHeroId: selectedHeroId,
                 ),
               ],
             ),
@@ -962,10 +1318,19 @@ class _BpEditorTopBar extends StatelessWidget {
 }
 
 class _BpBanSlots extends StatelessWidget {
-  const _BpBanSlots({required this.color, required this.heroIds});
+  const _BpBanSlots({
+    required this.color,
+    required this.heroIds,
+    required this.active,
+    required this.activeSlotIndex,
+    required this.selectedHeroId,
+  });
 
   final Color color;
-  final List<int> heroIds;
+  final List<int?> heroIds;
+  final bool active;
+  final int activeSlotIndex;
+  final int? selectedHeroId;
 
   @override
   Widget build(BuildContext context) {
@@ -978,7 +1343,12 @@ class _BpBanSlots extends StatelessWidget {
             child: _BpSlot(
               heroId: index < heroIds.length ? heroIds[index] : null,
               color: color,
-              size: 34,
+              size: 28,
+              active: active && index == activeSlotIndex,
+              previewHeroId: active && index == activeSlotIndex
+                  ? selectedHeroId
+                  : null,
+              banned: true,
             ),
           ),
       ],
@@ -1000,7 +1370,7 @@ class _BpScorePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 170,
+      width: 110,
       height: 38,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.72),
@@ -1017,14 +1387,14 @@ class _BpScorePill extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 6),
           Text(
             label.isEmpty ? 'TEAM' : label.toUpperCase(),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1110,28 +1480,45 @@ class _BpLaneBar extends StatelessWidget {
 }
 
 class _BpTeamRail extends StatelessWidget {
-  const _BpTeamRail({required this.color, required this.heroIds});
+  const _BpTeamRail({
+    required this.color,
+    required this.heroIds,
+    required this.active,
+    required this.activeSlotIndex,
+    required this.selectedHeroId,
+  });
 
   final Color color;
-  final List<int> heroIds;
+  final List<int?> heroIds;
+  final bool active;
+  final int activeSlotIndex;
+  final int? selectedHeroId;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 86,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (var index = 0; index < 5; index++)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: _BpSlot(
-                heroId: index < heroIds.length ? heroIds[index] : null,
-                color: color,
-                size: 44,
-              ),
-            ),
-        ],
+      width: 68,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final slotSize = ((constraints.maxHeight - 40) / 5)
+              .clamp(28.0, 44.0)
+              .toDouble();
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (var index = 0; index < 5; index++)
+                _BpSlot(
+                  heroId: index < heroIds.length ? heroIds[index] : null,
+                  color: color,
+                  size: slotSize,
+                  active: active && index == activeSlotIndex,
+                  previewHeroId: active && index == activeSlotIndex
+                      ? selectedHeroId
+                      : null,
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1139,32 +1526,113 @@ class _BpTeamRail extends StatelessWidget {
 
 class _BpFlowControls extends StatelessWidget {
   const _BpFlowControls({
-    required this.phase,
+    required this.currentStep,
+    required this.isStarted,
+    required this.isFinished,
+    required this.isSaved,
+    required this.selectedHeroId,
+    required this.canUndo,
+    required this.canRedo,
     required this.onStart,
-    required this.onNext,
+    required this.onLockIn,
+    required this.onUndo,
+    required this.onRedo,
     required this.onReset,
+    required this.onSave,
+    required this.gameWinner,
+    required this.onWinnerChanged,
   });
 
-  final String phase;
+  final _BpStep? currentStep;
+  final bool isStarted;
+  final bool isFinished;
+  final bool isSaved;
+  final int? selectedHeroId;
+  final bool canUndo;
+  final bool canRedo;
   final VoidCallback onStart;
-  final VoidCallback onNext;
+  final VoidCallback onLockIn;
+  final VoidCallback onUndo;
+  final VoidCallback onRedo;
   final VoidCallback onReset;
+  final VoidCallback onSave;
+  final String? gameWinner;
+  final ValueChanged<String> onWinnerChanged;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        FilledButton.icon(
-          onPressed: onStart,
-          icon: const Icon(Icons.play_arrow_rounded, size: 17),
-          label: const Text('开始 BP'),
+        IconButton.filledTonal(
+          tooltip: 'Undo',
+          onPressed: canUndo && !isSaved ? onUndo : null,
+          icon: const Icon(Icons.undo_rounded, size: 18),
         ),
         const SizedBox(width: 8),
-        OutlinedButton.icon(
-          onPressed: onNext,
-          icon: const Icon(Icons.skip_next_rounded, size: 17),
-          label: Text(phase == 'BAN PHASE' ? '下一步选人' : '下一步禁用'),
+        if (!isStarted)
+          FilledButton.icon(
+            onPressed: onStart,
+            icon: const Icon(Icons.play_arrow_rounded, size: 17),
+            label: const Text('开始 BP'),
+          )
+        else if (!isFinished)
+          FilledButton.icon(
+            onPressed:
+                currentStep?.type == _BpSlotType.ban || selectedHeroId != null
+                ? onLockIn
+                : null,
+            icon: const Icon(Icons.lock_rounded, size: 17),
+            label: Text(
+              currentStep?.type == _BpSlotType.ban && selectedHeroId == null
+                  ? '跳过禁用'
+                  : '锁定',
+            ),
+          )
+        else if (!isSaved)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton(
+                onPressed: () => onWinnerChanged('blue'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF246BFF),
+                  side: BorderSide(
+                    color: gameWinner == 'blue'
+                        ? const Color(0xFF246BFF)
+                        : Colors.white24,
+                  ),
+                ),
+                child: const Text('蓝方胜'),
+              ),
+              const SizedBox(width: 6),
+              OutlinedButton(
+                onPressed: () => onWinnerChanged('red'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.error,
+                  side: BorderSide(
+                    color: gameWinner == 'red'
+                        ? AppTheme.error
+                        : Colors.white24,
+                  ),
+                ),
+                child: const Text('红方胜'),
+              ),
+              const SizedBox(width: 6),
+              FilledButton.icon(
+                onPressed: gameWinner == null ? null : onSave,
+                icon: const Icon(Icons.save_rounded, size: 17),
+                label: const Text('完成 BP'),
+              ),
+            ],
+          )
+        else
+          const FilledButton(onPressed: null, child: Text('已保存')),
+        const SizedBox(width: 8),
+        IconButton.filledTonal(
+          tooltip: 'Redo',
+          onPressed: canRedo && !isSaved ? onRedo : null,
+          icon: const Icon(Icons.redo_rounded, size: 18),
         ),
         const SizedBox(width: 8),
         IconButton.filledTonal(
@@ -1178,11 +1646,21 @@ class _BpFlowControls extends StatelessWidget {
 }
 
 class _BpSlot extends StatelessWidget {
-  const _BpSlot({required this.heroId, required this.color, this.size = 48});
+  const _BpSlot({
+    required this.heroId,
+    required this.color,
+    this.size = 48,
+    this.active = false,
+    this.previewHeroId,
+    this.banned = false,
+  });
 
   final int? heroId;
   final Color color;
   final double size;
+  final bool active;
+  final int? previewHeroId;
+  final bool banned;
 
   @override
   Widget build(BuildContext context) {
@@ -1191,17 +1669,40 @@ class _BpSlot extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.7), width: 2),
+        border: Border.all(
+          color: active ? color : color.withValues(alpha: 0.7),
+          width: active ? 3 : 2,
+        ),
         color: color.withValues(alpha: 0.08),
       ),
-      child: heroId == null
+      child: (heroId ?? previewHeroId) == null
           ? Center(
               child: Text('•', style: TextStyle(color: color, fontSize: 22)),
             )
-          : AppImage(
-              url: 'https://hokhelper.com/static/game/hero/$heroId.png',
-              borderRadius: 999,
-              semanticLabel: 'Selected hero',
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                Opacity(
+                  opacity: heroId == null ? 0.6 : 1,
+                  child: AppImage(
+                    url:
+                        'https://hokhelper.com/static/game/hero/${heroId ?? previewHeroId}.png',
+                    borderRadius: 999,
+                    semanticLabel: 'Selected hero',
+                  ),
+                ),
+                if (banned && heroId != null && heroId! > 0)
+                  const Center(
+                    child: Icon(Icons.block_rounded, color: AppTheme.error),
+                  ),
+                if (heroId == -1)
+                  const Center(
+                    child: Icon(
+                      Icons.remove_circle_outline,
+                      color: Colors.white38,
+                    ),
+                  ),
+              ],
             ),
     );
   }
@@ -1210,18 +1711,14 @@ class _BpSlot extends StatelessWidget {
 class _BpHeroPoolTile extends StatelessWidget {
   const _BpHeroPoolTile({
     required this.hero,
-    required this.banned,
-    required this.picked,
-    required this.showBanned,
-    required this.showPicked,
+    required this.status,
+    required this.selected,
     this.onTap,
   });
 
   final HeroSummary hero;
-  final bool banned;
-  final bool picked;
-  final bool showBanned;
-  final bool showPicked;
+  final _BpHeroStatus status;
+  final bool selected;
   final VoidCallback? onTap;
 
   @override
@@ -1231,18 +1728,18 @@ class _BpHeroPoolTile extends StatelessWidget {
         ? hero.avatar
         : 'https://hokhelper.com/static/game/hero/$heroId.png';
     return Material(
-      color: banned || picked
-          ? const Color(0xFF070A12)
-          : const Color(0xFF0A1020),
+      color: status == _BpHeroStatus.available && !selected
+          ? const Color(0xFF0A1020)
+          : const Color(0xFF070A12),
       borderRadius: BorderRadius.circular(7),
       child: InkWell(
-        onTap: onTap,
+        onTap: status == _BpHeroStatus.available ? onTap : null,
         borderRadius: BorderRadius.circular(7),
         child: Stack(
           alignment: Alignment.center,
           children: [
             Opacity(
-              opacity: banned || picked ? 0.28 : 1,
+              opacity: status == _BpHeroStatus.available ? 1 : 0.28,
               child: AppImage(
                 url: url,
                 width: 48,
@@ -1251,19 +1748,23 @@ class _BpHeroPoolTile extends StatelessWidget {
                 semanticLabel: hero.name,
               ),
             ),
-            if ((banned && showBanned) || (picked && showPicked))
+            if (selected)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppTheme.gold, width: 2),
+                  shape: BoxShape.circle,
+                ),
+              )
+            else if (status != _BpHeroStatus.available)
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: banned ? AppTheme.error : AppTheme.success,
-                    width: 2,
-                  ),
+                  border: Border.all(color: _statusColor(status), width: 2),
                 ),
                 child: Icon(
-                  banned ? Icons.block_rounded : Icons.check_rounded,
-                  color: banned ? AppTheme.error : AppTheme.success,
+                  _statusIcon(status),
+                  color: _statusColor(status),
                   size: 20,
                 ),
               ),
@@ -1273,6 +1774,20 @@ class _BpHeroPoolTile extends StatelessWidget {
     );
   }
 }
+
+Color _statusColor(_BpHeroStatus status) => switch (status) {
+  _BpHeroStatus.banned || _BpHeroStatus.usedByOpponent => AppTheme.error,
+  _BpHeroStatus.picked || _BpHeroStatus.usedByActiveTeam => AppTheme.gold,
+  _BpHeroStatus.available => AppTheme.muted,
+};
+
+IconData _statusIcon(_BpHeroStatus status) => switch (status) {
+  _BpHeroStatus.banned => Icons.block_rounded,
+  _BpHeroStatus.picked => Icons.check_rounded,
+  _BpHeroStatus.usedByActiveTeam => Icons.person_off_rounded,
+  _BpHeroStatus.usedByOpponent => Icons.shield_outlined,
+  _BpHeroStatus.available => Icons.circle_outlined,
+};
 
 class _CurrentBpBoard extends StatelessWidget {
   const _CurrentBpBoard({required this.scheme});
