@@ -683,13 +683,13 @@ class _BpLandscapeEditor extends ConsumerStatefulWidget {
 
 class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   static const _timerDuration = 45;
-  static const _lanes = <(String, IconData, int?)>[
-    ('ALL', Icons.grid_view_rounded, null),
-    ('CLASH', Icons.shield_outlined, 1),
-    ('MID', Icons.auto_awesome_outlined, 2),
-    ('FARM', Icons.bolt_outlined, 3),
-    ('JUNGLE', Icons.forest_outlined, 4),
-    ('SUPPORT', Icons.handshake_outlined, 5),
+  static const _lanes = <_BpLaneOption>[
+    _BpLaneOption(label: 'ALL', assetName: null, value: null),
+    _BpLaneOption(label: 'CLASH', assetName: 'clash', value: 0),
+    _BpLaneOption(label: 'MID', assetName: 'mid', value: 1),
+    _BpLaneOption(label: 'FARM', assetName: 'adc', value: 2),
+    _BpLaneOption(label: 'JUNGLE', assetName: 'jungle', value: 3),
+    _BpLaneOption(label: 'SUPPORT', assetName: 'support', value: 4),
   ];
   static const _standardSteps = <_BpStep>[
     _BpStep(_BpSide.blue, _BpSlotType.ban),
@@ -763,8 +763,8 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       _blueTeamIsA = game.blueTeamId.isEmpty
           ? _gameNumber.isOdd
           : game.blueTeamId == widget.scheme.teamAId;
-      _blueBans = List<int?>.filled(5, null);
-      _redBans = List<int?>.filled(5, null);
+      _blueBans = List<int?>.from(game.blueBans);
+      _redBans = List<int?>.from(game.redBans);
       _bluePicks = List<int?>.from(game.bluePicks);
       _redPicks = List<int?>.from(game.redPicks);
       _currentStepIndex = _standardSteps.length;
@@ -1011,7 +1011,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       final winnerIsA = game.winner == 'blue' ? blueIsA : !blueIsA;
       if (winnerIsA == teamA) score++;
     }
-    if (_gameWinner != null) {
+    if (_gameWinner != null && !_isSaved) {
       final winnerIsA = _gameWinner == 'blue'
           ? _isBlueTeamA()
           : !_isBlueTeamA();
@@ -1204,6 +1204,40 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     }
   }
 
+  Future<void> _completeCurrentGame() async {
+    if (_isSaving || _gameWinner == null || !_isFinished || _isHistoryMode) {
+      return;
+    }
+    final nextHistory = [..._history, _completedHistoryGame];
+    setState(() => _isSaving = true);
+    try {
+      await ref
+          .read(bpRepositoryProvider)
+          .advanceSeries(
+            widget.scheme.id,
+            nextGameNumber: _gameNumber,
+            history: nextHistory,
+          );
+      if (!mounted) return;
+      ref.invalidate(bpSchemeDetailProvider(widget.scheme.id));
+      ref.invalidate(bpSchemesProvider);
+      setState(() {
+        _history = nextHistory;
+        _isSaved = true;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('BP game saved')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to save BP')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   BpHistoryGame get _completedHistoryGame => BpHistoryGame(
     gameNumber: _gameNumber,
     blueTeamId: _isBlueTeamA() ? widget.scheme.teamAId : widget.scheme.teamBId,
@@ -1220,7 +1254,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     if (_isAdvancing || _isHistoryMode || !_isSaved || _gameWinner == null) {
       return;
     }
-    final nextHistory = [..._history, _completedHistoryGame];
+    final nextHistory = _history;
     final isComplete = _isSeriesCompletedAfterThis;
     final loserIsTeamA = _gameWinner == 'blue'
         ? !_isBlueTeamA()
@@ -1416,6 +1450,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                             onRedo: _redo,
                             onReset: _resetBp,
                             onSave: _saveDraft,
+                            onCompleteGame: _completeCurrentGame,
                             gameWinner: _gameWinner,
                             onWinnerChanged: (winner) =>
                                 setState(() => _gameWinner = winner),
@@ -1702,7 +1737,7 @@ class _BpLaneBar extends StatelessWidget {
     required this.onTogglePicked,
   });
 
-  final List<(String, IconData, int?)> lanes;
+  final List<_BpLaneOption> lanes;
   final int? selectedLane;
   final ValueChanged<int?> onSelected;
   final bool showBanned;
@@ -1714,56 +1749,99 @@ class _BpLaneBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 42,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          for (final lane in lanes)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: IconButton(
-                tooltip: lane.$1,
-                onPressed: () => onSelected(lane.$3),
-                icon: Icon(
-                  lane.$2,
-                  size: selectedLane == lane.$3 ? 21 : 18,
-                  color: selectedLane == lane.$3
-                      ? Colors.white
-                      : AppTheme.muted,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (final lane in lanes)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Tooltip(
+                    message: lane.label,
+                    child: InkWell(
+                      onTap: () => onSelected(lane.value),
+                      borderRadius: BorderRadius.circular(8),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 120),
+                        width: 32,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: selectedLane == lane.value
+                              ? AppTheme.gold
+                              : Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: selectedLane == lane.value
+                                ? AppTheme.gold
+                                : Colors.white.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: lane.assetName == null
+                            ? Icon(
+                                Icons.grid_view_rounded,
+                                size: 16,
+                                color: selectedLane == lane.value
+                                    ? Colors.black
+                                    : AppTheme.muted,
+                              )
+                            : Image.asset(
+                                'assets/lane-icons/${lane.assetName}.png',
+                                width: 19,
+                                height: 19,
+                              ),
+                      ),
+                    ),
+                  ),
                 ),
-                style: IconButton.styleFrom(
-                  backgroundColor: selectedLane == lane.$3
-                      ? AppTheme.gold.withValues(alpha: 0.75)
-                      : Colors.transparent,
-                  minimumSize: const Size(34, 34),
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-          const SizedBox(width: 18),
-          IconButton(
-            tooltip: 'Show banned heroes',
-            onPressed: onToggleBanned,
-            icon: Icon(
-              showBanned ? Icons.block_rounded : Icons.block_outlined,
-              color: showBanned ? AppTheme.error : AppTheme.muted,
-              size: 20,
-            ),
+            ],
           ),
-          IconButton(
-            tooltip: 'Show picked heroes',
-            onPressed: onTogglePicked,
-            icon: Icon(
-              showPicked
-                  ? Icons.check_circle_rounded
-                  : Icons.check_circle_outline,
-              color: showPicked ? AppTheme.success : AppTheme.muted,
-              size: 20,
+          Positioned(
+            right: 10,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Show banned heroes',
+                  onPressed: onToggleBanned,
+                  icon: Icon(
+                    showBanned ? Icons.block_rounded : Icons.block_outlined,
+                    color: showBanned ? AppTheme.error : AppTheme.muted,
+                    size: 20,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Show picked heroes',
+                  onPressed: onTogglePicked,
+                  icon: Icon(
+                    showPicked
+                        ? Icons.check_circle_rounded
+                        : Icons.check_circle_outline,
+                    color: showPicked ? AppTheme.success : AppTheme.muted,
+                    size: 20,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _BpLaneOption {
+  const _BpLaneOption({
+    required this.label,
+    required this.assetName,
+    required this.value,
+  });
+
+  final String label;
+  final String? assetName;
+  final int? value;
 }
 
 class _BpTeamRail extends StatelessWidget {
@@ -1835,6 +1913,7 @@ class _BpFlowControls extends StatelessWidget {
     required this.onRedo,
     required this.onReset,
     required this.onSave,
+    required this.onCompleteGame,
     required this.gameWinner,
     required this.onWinnerChanged,
     required this.onPeakShow,
@@ -1864,6 +1943,7 @@ class _BpFlowControls extends StatelessWidget {
   final VoidCallback onRedo;
   final VoidCallback onReset;
   final VoidCallback onSave;
+  final VoidCallback onCompleteGame;
   final String? gameWinner;
   final ValueChanged<String> onWinnerChanged;
   final VoidCallback onPeakShow;
@@ -1922,7 +2002,10 @@ class _BpFlowControls extends StatelessWidget {
               OutlinedButton(
                 onPressed: () => onWinnerChanged('blue'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF246BFF),
+                  foregroundColor: Colors.white,
+                  backgroundColor: gameWinner == 'blue'
+                      ? const Color(0xFF246BFF).withValues(alpha: 0.9)
+                      : const Color(0xFF102150),
                   side: BorderSide(
                     color: gameWinner == 'blue'
                         ? const Color(0xFF246BFF)
@@ -1935,7 +2018,10 @@ class _BpFlowControls extends StatelessWidget {
               OutlinedButton(
                 onPressed: () => onWinnerChanged('red'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.error,
+                  foregroundColor: Colors.white,
+                  backgroundColor: gameWinner == 'red'
+                      ? const Color(0xFFE83B43).withValues(alpha: 0.9)
+                      : const Color(0xFF4B1118),
                   side: BorderSide(
                     color: gameWinner == 'red'
                         ? AppTheme.error
@@ -1946,7 +2032,7 @@ class _BpFlowControls extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               FilledButton.icon(
-                onPressed: gameWinner == null ? null : onSave,
+                onPressed: gameWinner == null ? null : onCompleteGame,
                 icon: const Icon(Icons.save_rounded, size: 17),
                 label: const Text('完成 BP'),
               ),

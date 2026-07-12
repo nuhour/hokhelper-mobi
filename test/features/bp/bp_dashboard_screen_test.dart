@@ -109,6 +109,68 @@ void main() {
     expect(find.text('2 games'), findsOneWidget);
   });
 
+  testWidgets('scheme cards switch completed BP game previews', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpSchemesProvider.overrideWith((ref) async {
+            return const [
+              BpSchemeSummary(
+                id: '12',
+                name: 'KPL Finals Draft',
+                createdAt: '2026-07-03T10:00:00Z',
+                boMode: 7,
+                teamAName: 'Wolves',
+                teamBName: 'AG',
+                sideSelectionRule: 'loser_selects',
+                gameNumber: 3,
+                historyCount: 2,
+                currentStepIndex: 0,
+                blueBanCount: 0,
+                redBanCount: 0,
+                bluePickCount: 0,
+                redPickCount: 0,
+                history: [
+                  BpHistoryGame(
+                    gameNumber: 1,
+                    blueTeamId: 'team_a',
+                    redTeamId: 'team_b',
+                    blueBans: [101, null, null, null, null],
+                    redBans: [201, null, null, null, null],
+                    bluePicks: [102, 103, 104, 105, 106],
+                    redPicks: [202, 203, 204, 205, 206],
+                    winner: 'blue',
+                  ),
+                  BpHistoryGame(
+                    gameNumber: 2,
+                    blueTeamId: 'team_b',
+                    redTeamId: 'team_a',
+                    blueBans: [301, null, null, null, null],
+                    redBans: [401, null, null, null, null],
+                    bluePicks: [302, 303, 304, 305, 306],
+                    redPicks: [402, 403, 404, 405, 406],
+                    winner: 'red',
+                  ),
+                ],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BpDashboardScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('G1'), findsOneWidget);
+    expect(find.text('G2'), findsOneWidget);
+    expect(find.text('Blue Win'), findsOneWidget);
+
+    await tester.tap(find.text('G2'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Red Win'), findsOneWidget);
+  });
+
   testWidgets('creates BP schemes from the mobile dashboard form', (
     tester,
   ) async {
@@ -222,7 +284,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.tap(find.byTooltip('Delete BP scheme'));
     await tester.pumpAndSettle();
 
     expect(find.text('Delete BP scheme?'), findsOneWidget);
