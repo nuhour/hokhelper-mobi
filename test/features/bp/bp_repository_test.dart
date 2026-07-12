@@ -29,23 +29,25 @@ class _FakeApiClient extends ApiClient {
       'success': true,
       'message': 'success',
       'result': {
-        'id': '12',
-        'name': 'KPL Finals Draft',
-        'createdAt': '2026-07-03T10:00:00Z',
-        'boMode': 7,
-        'teamAName': 'Wolves',
-        'teamBName': 'AG',
-        'gameNumber': 3,
-        'history': [
-          {'gameNumber': 1, 'winner': 'blue'},
-          {'gameNumber': 2, 'winner': 'red'},
-        ],
-        'currentState': {
-          'blueBans': ['199'],
-          'redBans': ['133'],
-          'bluePicks': ['111'],
-          'redPicks': ['222'],
-          'currentStepIndex': 4,
+        'scheme': {
+          'id': '12',
+          'name': 'KPL Finals Draft',
+          'createdAt': '2026-07-03T10:00:00Z',
+          'boMode': 7,
+          'teamAName': 'Wolves',
+          'teamBName': 'AG',
+          'gameNumber': 3,
+          'history': [
+            {'gameNumber': 1, 'winner': 'blue'},
+            {'gameNumber': 2, 'winner': 'red'},
+          ],
+          'currentState': {
+            'blueBans': ['199'],
+            'redBans': ['133'],
+            'bluePicks': ['111'],
+            'redPicks': ['222'],
+            'currentStepIndex': 4,
+          },
         },
       },
     };

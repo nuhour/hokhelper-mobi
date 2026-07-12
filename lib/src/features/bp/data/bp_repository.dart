@@ -38,7 +38,11 @@ class BpRepository {
   Future<BpSchemeSummary> loadScheme(String schemeId) async {
     final json = await apiClient.getJson('/bp/scheme/$schemeId');
     final result = json['result'];
-    return BpSchemeSummary.fromJson(result is Map ? result : json);
+    // Detail responses are wrapped as result.scheme, while legacy responses
+    // may expose the scheme directly. Unwrap the canonical HOKX envelope so
+    // the editor retains the scheme ID for later save requests.
+    final scheme = result is Map ? result['scheme'] : json['scheme'];
+    return BpSchemeSummary.fromJson(scheme is Map ? scheme : result ?? json);
   }
 
   Future<BpSchemeSummary> createScheme({
