@@ -378,14 +378,14 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
   Widget build(BuildContext context) {
     final scheme = widget.scheme;
     final history = scheme.history;
-    final selectedHistoryIndex = history.isEmpty
+    final selectedCurrentGame = _selectedGameIndex >= history.length;
+    final selectedHistoryIndex = selectedCurrentGame
         ? null
         : _selectedGameIndex.clamp(0, history.length - 1);
     final selectedGame = selectedHistoryIndex == null
         ? null
         : history[selectedHistoryIndex];
-    final openGameIndex =
-        selectedHistoryIndex ?? (scheme.gameNumber - 1).clamp(0, 99);
+    final openGameIndex = selectedHistoryIndex ?? history.length;
     return Material(
       color: AppTheme.panel,
       borderRadius: BorderRadius.circular(16),
@@ -405,11 +405,6 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.account_tree_outlined,
-                      color: AppTheme.gold,
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         scheme.name,
@@ -422,9 +417,6 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                             ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    _MetricBadge(label: scheme.boModeText, isPrimary: true),
-                    const SizedBox(width: 4),
                     IconButton(
                       tooltip: 'Delete BP scheme',
                       onPressed: widget.onDelete,
@@ -438,50 +430,47 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  scheme.matchupText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _MetricBadge(label: scheme.progressText),
-                    _MetricBadge(label: scheme.historyCountText),
-                    _MetricBadge(label: scheme.phaseSummaryText),
+                    _MetricBadge(label: scheme.boModeText, isPrimary: true),
+                    _MetricBadge(label: _sideSelectionLabel(scheme)),
                   ],
                 ),
-                if (history.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (var index = 0; index < history.length; index++)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ChoiceChip(
-                              label: Text('G${history[index].gameNumber}'),
-                              selected: selectedHistoryIndex == index,
-                              onSelected: (_) {
-                                setState(() => _selectedGameIndex = index);
-                              },
-                              visualDensity: VisualDensity.compact,
-                            ),
+                const SizedBox(height: 18),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var index = 0; index < history.length; index++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _BpGameSelector(
+                            label: 'Game ${history[index].gameNumber}',
+                            selected: selectedHistoryIndex == index,
+                            onPressed: () =>
+                                setState(() => _selectedGameIndex = index),
                           ),
-                      ],
-                    ),
+                        ),
+                      _BpGameSelector(
+                        label: 'Current (Game ${scheme.gameNumber})',
+                        selected: selectedCurrentGame,
+                        current: true,
+                        onPressed: () =>
+                            setState(() => _selectedGameIndex = history.length),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  _BpGamePreview(game: selectedGame!),
-                ],
+                ),
+                const SizedBox(height: 16),
+                _BpGamePreview(
+                  scheme: scheme,
+                  game: selectedGame,
+                  current: selectedCurrentGame,
+                ),
+                const SizedBox(height: 16),
+                _BpScoreFooter(scheme: scheme),
               ],
             ),
           ),
@@ -492,14 +481,32 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
 }
 
 class _BpGamePreview extends StatelessWidget {
-  const _BpGamePreview({required this.game});
+  const _BpGamePreview({
+    required this.scheme,
+    required this.game,
+    required this.current,
+  });
 
-  final BpHistoryGame game;
+  final BpSchemeSummary scheme;
+  final BpHistoryGame? game;
+  final bool current;
 
   @override
   Widget build(BuildContext context) {
-    final blueWon = game.winner == 'blue';
-    final redWon = game.winner == 'red';
+    final activeGame = game;
+    final blueIsTeamA = activeGame == null
+        ? scheme.gameNumber.isOdd
+        : activeGame.blueTeamId.isEmpty
+        ? activeGame.gameNumber.isOdd
+        : activeGame.blueTeamId == scheme.teamAId;
+    final blueName = blueIsTeamA ? scheme.teamAName : scheme.teamBName;
+    final redName = blueIsTeamA ? scheme.teamBName : scheme.teamAName;
+    final blueWon = activeGame?.winner == 'blue';
+    final redWon = activeGame?.winner == 'red';
+    final blueBans = activeGame?.blueBans ?? scheme.draftState.blueBans;
+    final redBans = activeGame?.redBans ?? scheme.draftState.redBans;
+    final bluePicks = activeGame?.bluePicks ?? scheme.draftState.bluePicks;
+    final redPicks = activeGame?.redPicks ?? scheme.draftState.redPicks;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.16),
@@ -510,18 +517,30 @@ class _BpGamePreview extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         child: Column(
           children: [
-            _BpPreviewSide(
-              label: blueWon ? 'Blue Win' : 'Blue',
-              color: const Color(0xFF246BFF),
-              bans: game.blueBans,
-              picks: game.bluePicks,
-            ),
-            const SizedBox(height: 8),
-            _BpPreviewSide(
-              label: redWon ? 'Red Win' : 'Red',
-              color: const Color(0xFFE83B43),
-              bans: game.redBans,
-              picks: game.redPicks,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _BpPreviewSide(
+                    label: blueName,
+                    color: const Color(0xFF246BFF),
+                    bans: blueBans,
+                    picks: bluePicks,
+                    winner: blueWon,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _BpPreviewSide(
+                    label: redName,
+                    color: const Color(0xFFE83B43),
+                    bans: redBans,
+                    picks: redPicks,
+                    winner: redWon,
+                    alignEnd: true,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -536,37 +555,59 @@ class _BpPreviewSide extends StatelessWidget {
     required this.color,
     required this.bans,
     required this.picks,
+    required this.winner,
+    this.alignEnd = false,
   });
 
   final String label;
   final Color color;
   final List<int?> bans;
   final List<int?> picks;
+  final bool winner;
+  final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 58,
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+                style: TextStyle(
+                  color: winner ? color : AppTheme.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
-          ),
+            if (winner) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: AppTheme.gold,
+                size: 14,
+              ),
+            ],
+          ],
         ),
-        Expanded(
-          child: _BpPreviewSlots(heroIds: bans, color: color, ban: true),
+        const SizedBox(height: 10),
+        _BpPreviewSlots(
+          heroIds: bans,
+          color: color,
+          ban: true,
+          alignEnd: alignEnd,
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _BpPreviewSlots(heroIds: picks, color: color),
-        ),
+        const SizedBox(height: 10),
+        _BpPreviewSlots(heroIds: picks, color: color, alignEnd: alignEnd),
       ],
     );
   }
@@ -577,23 +618,27 @@ class _BpPreviewSlots extends StatelessWidget {
     required this.heroIds,
     required this.color,
     this.ban = false,
+    this.alignEnd = false,
   });
 
   final List<int?> heroIds;
   final Color color;
   final bool ban;
+  final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final visibleIds = heroIds.whereType<int>().where((id) => id > 0).toList();
+    if (visibleIds.isEmpty) {
+      return SizedBox(height: ban ? 22 : 28);
+    }
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      alignment: alignEnd ? WrapAlignment.end : WrapAlignment.start,
       children: [
-        for (var index = 0; index < 5; index++)
-          _BpPreviewSlot(
-            heroId: index < heroIds.length ? heroIds[index] : null,
-            color: color,
-            ban: ban,
-          ),
+        for (final heroId in visibleIds)
+          _BpPreviewSlot(heroId: heroId, color: color, ban: ban),
       ],
     );
   }
@@ -614,39 +659,146 @@ class _BpPreviewSlot extends StatelessWidget {
   Widget build(BuildContext context) {
     final id = heroId;
     return Container(
-      width: 24,
-      height: 24,
+      width: ban ? 22 : 28,
+      height: ban ? 22 : 28,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.1),
-        border: Border.all(color: color.withValues(alpha: 0.55)),
+        color: color.withValues(alpha: ban ? 0.04 : 0.1),
+        border: Border.all(color: color.withValues(alpha: ban ? 0.28 : 0.75)),
       ),
-      child: id == null || id <= 0
-          ? Icon(
-              Icons.circle_outlined,
-              color: color.withValues(alpha: 0.45),
-              size: 11,
+      child: ban
+          ? ColorFiltered(
+              colorFilter: const ColorFilter.mode(
+                Colors.grey,
+                BlendMode.saturation,
+              ),
+              child: _heroImage(id),
             )
-          : Stack(
-              fit: StackFit.expand,
-              children: [
-                AppImage(
-                  url: 'https://hokhelper.com/static/game/hero/$id.png',
-                  borderRadius: 999,
-                  semanticLabel: 'BP hero $id',
-                ),
-                if (ban)
-                  const Center(
-                    child: Icon(
-                      Icons.block_rounded,
-                      color: AppTheme.error,
-                      size: 14,
-                    ),
-                  ),
-              ],
-            ),
+          : _heroImage(id),
     );
   }
+
+  Widget _heroImage(int? id) {
+    return AppImage(
+      url: id == null ? null : 'https://hokhelper.com/static/game/hero/$id.png',
+      borderRadius: 999,
+      semanticLabel: 'BP hero $id',
+    );
+  }
+}
+
+class _BpGameSelector extends StatelessWidget {
+  const _BpGameSelector({
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+    this.current = false,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onPressed;
+  final bool current;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = selected
+        ? AppTheme.gold
+        : current
+        ? AppTheme.success.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.18);
+    final textColor = selected
+        ? AppTheme.text
+        : current
+        ? AppTheme.success
+        : AppTheme.muted;
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: textColor,
+        backgroundColor: selected ? AppTheme.gold : Colors.transparent,
+        side: BorderSide(color: borderColor, width: selected ? 1.5 : 1),
+        minimumSize: const Size(0, 38),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        shape: const StadiumBorder(),
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+    );
+  }
+}
+
+class _BpScoreFooter extends StatelessWidget {
+  const _BpScoreFooter({required this.scheme});
+
+  final BpSchemeSummary scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    var teamAScore = 0;
+    var teamBScore = 0;
+    for (final game in scheme.history) {
+      if (game.winner == null) continue;
+      final blueIsA = game.blueTeamId.isEmpty
+          ? game.gameNumber.isOdd
+          : game.blueTeamId == scheme.teamAId;
+      final winnerIsA = game.winner == 'blue' ? blueIsA : !blueIsA;
+      if (winnerIsA) {
+        teamAScore++;
+      } else {
+        teamBScore++;
+      }
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${scheme.teamAName}: $teamAScore',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.gold,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const Text(
+              'VS',
+              style: TextStyle(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                '${scheme.teamBName}: $teamBScore',
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.muted,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _sideSelectionLabel(BpSchemeSummary scheme) {
+  return switch (scheme.sideSelectionRule) {
+    'alternating' => 'Alternating sides',
+    'loser_selects' => 'Loser selects side',
+    _ => 'Side selection',
+  };
 }
 
 class _MetricBadge extends StatelessWidget {

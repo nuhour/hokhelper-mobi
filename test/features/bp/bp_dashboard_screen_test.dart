@@ -103,10 +103,13 @@ void main() {
 
     expect(find.text('BP Simulator'), findsOneWidget);
     expect(find.text('KPL Finals Draft'), findsOneWidget);
-    expect(find.text('Wolves vs AG'), findsOneWidget);
     expect(find.text('BO7'), findsOneWidget);
-    expect(find.text('Game 3 · Step 4'), findsOneWidget);
-    expect(find.text('2 games'), findsOneWidget);
+    expect(find.text('Loser selects side'), findsOneWidget);
+    expect(find.text('Current (Game 3)'), findsOneWidget);
+    expect(find.text('WOLVES'), findsOneWidget);
+    expect(find.text('AG'), findsOneWidget);
+    expect(find.text('Wolves: 0'), findsOneWidget);
+    expect(find.text('AG: 0'), findsOneWidget);
   });
 
   testWidgets('scheme cards switch completed BP game previews', (tester) async {
@@ -161,14 +164,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('G1'), findsOneWidget);
-    expect(find.text('G2'), findsOneWidget);
-    expect(find.text('Blue Win'), findsOneWidget);
+    expect(find.text('Game 1'), findsOneWidget);
+    expect(find.text('Game 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('BP hero 102'), findsOneWidget);
 
-    await tester.tap(find.text('G2'));
+    await tester.tap(find.text('Game 2'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Red Win'), findsOneWidget);
+    expect(find.bySemanticsLabel('BP hero 302'), findsOneWidget);
   });
 
   testWidgets('creates BP schemes from the mobile dashboard form', (
@@ -213,8 +216,10 @@ void main() {
     expect(repository.createdTeamBName, 'Team Beta');
     expect(repository.createdSideSelectionRule, 'loser_selects');
     expect(find.text('Mobile Draft'), findsOneWidget);
-    expect(find.text('Team Alpha vs Team Beta'), findsOneWidget);
     expect(find.text('BO5'), findsOneWidget);
+    expect(find.text('Current (Game 1)'), findsOneWidget);
+    expect(find.text('TEAM ALPHA'), findsOneWidget);
+    expect(find.text('TEAM BETA'), findsOneWidget);
     expect(find.text('BP scheme created'), findsOneWidget);
   });
 
