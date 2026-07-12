@@ -46,7 +46,6 @@ final skinGalleryQueryProvider =
             sort: query.sort.apiValue,
             order: 'desc',
             search: query.search,
-            minRating: query.minRating,
             lanePosition: query.lanePosition,
           );
     });
@@ -62,45 +61,37 @@ class _SkinGalleryQuery {
   const _SkinGalleryQuery({
     this.sort = _SkinSort.latest,
     this.search = '',
-    this.minRating = 0,
     this.lanePosition,
   });
 
   final _SkinSort sort;
   final String search;
-  final double minRating;
   final int? lanePosition;
 
   bool get isDefault =>
-      sort == _SkinSort.latest &&
-      search.trim().isEmpty &&
-      minRating <= 0 &&
-      lanePosition == null;
+      sort == _SkinSort.latest && search.trim().isEmpty && lanePosition == null;
 
   @override
   bool operator ==(Object other) {
     return other is _SkinGalleryQuery &&
         other.sort == sort &&
         other.search == search &&
-        other.minRating == minRating &&
         other.lanePosition == lanePosition;
   }
 
   @override
-  int get hashCode => Object.hash(sort, search, minRating, lanePosition);
+  int get hashCode => Object.hash(sort, search, lanePosition);
 }
 
 class SkinGalleryScreen extends ConsumerStatefulWidget {
   const SkinGalleryScreen({
     this.initialSkinId,
-    this.initialMinRating,
     this.initialLanePosition,
     this.initialSearchQuery,
     super.key,
   });
 
   final int? initialSkinId;
-  final double? initialMinRating;
   final int? initialLanePosition;
   final String? initialSearchQuery;
 
@@ -113,7 +104,6 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   String _query = '';
   _SkinViewMode _viewMode = _SkinViewMode.poster;
   _SkinSort _sort = _SkinSort.latest;
-  double _minRating = 0;
   int? _lanePosition;
   int? _openedInitialSkinId;
   int? _ratingSkinId;
@@ -130,10 +120,6 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       _query = initialQuery;
       _searchController.text = initialQuery;
     }
-    final initialMinRating = widget.initialMinRating;
-    if (initialMinRating != null && initialMinRating > 0) {
-      _minRating = initialMinRating.clamp(0, 5).toDouble();
-    }
     _lanePosition = widget.initialLanePosition;
   }
 
@@ -148,7 +134,6 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     final galleryQuery = _SkinGalleryQuery(
       sort: _sort,
       search: _query,
-      minRating: _minRating,
       lanePosition: _lanePosition,
     );
     final galleryValue = ref.watch(skinGalleryQueryProvider(galleryQuery));
@@ -176,14 +161,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             const AppSectionHeader(title: 'Skin Gallery'),
-            const SizedBox(height: 10),
-            Text(
-              'Browse hero skins, posters, splash art, ratings, and source links.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             TextField(
               controller: _searchController,
               onChanged: (value) => setState(() {
@@ -252,14 +230,6 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                 _resetLoadedPages();
               }),
             ),
-            const SizedBox(height: 12),
-            _RatingFilterBar(
-              minRating: _minRating,
-              onChanged: (value) => setState(() {
-                _minRating = value;
-                _resetLoadedPages();
-              }),
-            ),
             const SizedBox(height: 10),
             _LaneFilterBar(
               lanePosition: _lanePosition,
@@ -268,13 +238,9 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                 _resetLoadedPages();
               }),
             ),
-            if ((widget.initialMinRating ?? 0) > 0 ||
-                widget.initialLanePosition != null) ...[
+            if (widget.initialLanePosition != null) ...[
               const SizedBox(height: 12),
-              _FocusedSkinFilterBanner(
-                minRating: _minRating,
-                lanePosition: _lanePosition,
-              ),
+              _FocusedSkinFilterBanner(lanePosition: _lanePosition),
             ],
             const SizedBox(height: 18),
             AppAsyncView<List<ContentItemSummary>>(
@@ -353,10 +319,6 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     final normalizedQuery = _query.trim().toLowerCase();
     final filtered = items
         .where((skin) {
-          if (skin.rating < _minRating) {
-            return false;
-          }
-
           if (_lanePosition != null && skin.heroPosition != _lanePosition) {
             return false;
           }
@@ -476,7 +438,6 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
             sort: _sort.apiValue,
             order: 'desc',
             search: _query,
-            minRating: _minRating,
             lanePosition: _lanePosition,
           );
 
@@ -509,12 +470,12 @@ class _LaneFilterBar extends StatelessWidget {
   final ValueChanged<int?> onChanged;
 
   static const _options = [
-    _LaneFilterOption(label: 'All lanes'),
-    _LaneFilterOption(label: 'Clash', value: 0),
-    _LaneFilterOption(label: 'Mid', value: 1),
-    _LaneFilterOption(label: 'Farm', value: 2),
-    _LaneFilterOption(label: 'Jungle', value: 3),
-    _LaneFilterOption(label: 'Support', value: 4),
+    _LaneFilterOption(label: 'All lanes', assetName: null),
+    _LaneFilterOption(label: 'Clash', assetName: 'clash', value: 0),
+    _LaneFilterOption(label: 'Mid', assetName: 'mid', value: 1),
+    _LaneFilterOption(label: 'Farm', assetName: 'adc', value: 2),
+    _LaneFilterOption(label: 'Jungle', assetName: 'jungle', value: 3),
+    _LaneFilterOption(label: 'Support', assetName: 'support', value: 4),
   ];
 
   @override
@@ -524,22 +485,41 @@ class _LaneFilterBar extends StatelessWidget {
       runSpacing: 8,
       children: [
         for (final option in _options)
-          ChoiceChip(
-            label: Text(option.label),
-            selected: lanePosition == option.value,
-            onSelected: (_) => onChanged(option.value),
-            avatar: option.value == null
-                ? const Icon(Icons.route_outlined, size: 16)
-                : const Icon(Icons.sports_martial_arts, size: 16),
-            labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: lanePosition == option.value ? AppTheme.bg : AppTheme.text,
-              fontWeight: FontWeight.w800,
-            ),
-            selectedColor: AppTheme.gold,
-            backgroundColor: AppTheme.panel,
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999),
+          Tooltip(
+            message: option.label,
+            child: Semantics(
+              button: true,
+              selected: lanePosition == option.value,
+              label: '${option.label} lane',
+              child: InkWell(
+                key: ValueKey('skin-lane-${option.value ?? 'all'}'),
+                onTap: () => onChanged(option.value),
+                borderRadius: BorderRadius.circular(8),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: lanePosition == option.value
+                        ? AppTheme.gold
+                        : AppTheme.panel,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: lanePosition == option.value
+                          ? AppTheme.gold
+                          : Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: option.assetName == null
+                      ? const Icon(Icons.grid_view_rounded, size: 18)
+                      : Image.asset(
+                          'assets/lane-icons/${option.assetName}.png',
+                          width: 20,
+                          height: 20,
+                        ),
+                ),
+              ),
             ),
           ),
       ],
@@ -548,25 +528,25 @@ class _LaneFilterBar extends StatelessWidget {
 }
 
 class _LaneFilterOption {
-  const _LaneFilterOption({required this.label, this.value});
+  const _LaneFilterOption({
+    required this.label,
+    required this.assetName,
+    this.value,
+  });
 
   final String label;
+  final String? assetName;
   final int? value;
 }
 
 class _FocusedSkinFilterBanner extends StatelessWidget {
-  const _FocusedSkinFilterBanner({
-    required this.minRating,
-    required this.lanePosition,
-  });
+  const _FocusedSkinFilterBanner({required this.lanePosition});
 
-  final double minRating;
   final int? lanePosition;
 
   @override
   Widget build(BuildContext context) {
     final labels = <String>[
-      if (minRating > 0) '${minRating.toStringAsFixed(1)}+ rating',
       if (lanePosition != null) _lanePositionLabel(lanePosition),
     ];
 
@@ -618,55 +598,6 @@ String _lanePositionLabel(int? value) {
     4 => 'Support',
     _ => 'All lanes',
   };
-}
-
-class _RatingFilterBar extends StatelessWidget {
-  const _RatingFilterBar({required this.minRating, required this.onChanged});
-
-  final double minRating;
-  final ValueChanged<double> onChanged;
-
-  static const _options = [
-    _RatingFilterOption(label: 'All ratings', value: 0),
-    _RatingFilterOption(label: '4+', value: 4),
-    _RatingFilterOption(label: '4.5+', value: 4.5),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final option in _options)
-          ChoiceChip(
-            label: Text(option.label),
-            selected: minRating == option.value,
-            onSelected: (_) => onChanged(option.value),
-            avatar: option.value == 0
-                ? const Icon(Icons.filter_alt_off, size: 16)
-                : const Icon(Icons.star, size: 16),
-            labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: minRating == option.value ? AppTheme.bg : AppTheme.text,
-              fontWeight: FontWeight.w800,
-            ),
-            selectedColor: AppTheme.gold,
-            backgroundColor: AppTheme.panel,
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _RatingFilterOption {
-  const _RatingFilterOption({required this.label, required this.value});
-
-  final String label;
-  final double value;
 }
 
 class _SkinCard extends StatelessWidget {

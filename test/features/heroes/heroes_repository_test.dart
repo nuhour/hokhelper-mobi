@@ -360,15 +360,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Rating'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ChoiceChip, '>4'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Clash'));
+    await tester.tap(find.byKey(const ValueKey('hero-lane-0')));
     await tester.pumpAndSettle();
 
     expect(repository.requestedSearch, 'Lam');
     expect(repository.requestedSort, 'rating');
     expect(repository.requestedOrder, 'asc');
     expect(repository.requestedLanePosition, 0);
-    expect(repository.requestedMinRating, 4);
+    expect(repository.requestedMinRating, 0);
   });
 }

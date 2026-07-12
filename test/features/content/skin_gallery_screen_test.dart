@@ -266,33 +266,6 @@ void main() {
     expect(find.text('Moonlight Tune'), findsNothing);
   });
 
-  testWidgets('filters skins by minimum rating', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          contentRepositoryProvider.overrideWithValue(
-            _FakeSkinRepository(skins: _basicSkins),
-          ),
-          skinGalleryRegionProvider.overrideWith((ref) async => 2),
-        ],
-        child: const MaterialApp(home: Scaffold(body: SkinGalleryScreen())),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(ChoiceChip, '4+'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Crimson Hunter'), findsOneWidget);
-    expect(find.text('Moonlight Tune'), findsNothing);
-
-    await tester.tap(find.widgetWithText(ChoiceChip, 'All ratings'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Crimson Hunter'), findsOneWidget);
-    expect(find.text('Moonlight Tune'), findsOneWidget);
-  });
-
   testWidgets('filters skins by hero lane position', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -307,22 +280,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Clash'));
+    await tester.tap(find.byKey(const ValueKey('skin-lane-0')));
     await tester.pumpAndSettle();
 
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsNothing);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'All lanes'));
+    await tester.tap(find.byKey(const ValueKey('skin-lane-all')));
     await tester.pumpAndSettle();
 
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsOneWidget);
   });
 
-  testWidgets('filters skins from initial rating and lane queries', (
-    tester,
-  ) async {
+  testWidgets('filters skins from initial lane query', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -371,12 +342,7 @@ void main() {
           skinGalleryRegionProvider.overrideWith((ref) async => 2),
         ],
         child: const MaterialApp(
-          home: Scaffold(
-            body: SkinGalleryScreen(
-              initialMinRating: 4,
-              initialLanePosition: 0,
-            ),
-          ),
+          home: Scaffold(body: SkinGalleryScreen(initialLanePosition: 0)),
         ),
       ),
     );
@@ -385,7 +351,7 @@ void main() {
     expect(find.text('Focused skin filters'), findsOneWidget);
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsNothing);
-    expect(find.text('Low Rank Skin'), findsNothing);
+    expect(find.text('Low Rank Skin'), findsOneWidget);
   });
 
   testWidgets('requests skins with hokx-compatible sort params', (
@@ -429,13 +395,11 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'Lam');
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ChoiceChip, '4.5+'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Clash'));
+    await tester.tap(find.byKey(const ValueKey('skin-lane-0')));
     await tester.pumpAndSettle();
 
     expect(repository.requestedSkinSearch, 'Lam');
-    expect(repository.requestedMinRating, 4.5);
+    expect(repository.requestedMinRating, 0);
     expect(repository.requestedLanePosition, 0);
   });
 

@@ -272,14 +272,6 @@ String? _esportsTarget(Uri uri, String routeBase) {
   ).toString();
 }
 
-double? _initialMinRating(Uri uri) {
-  final rating = double.tryParse(uri.queryParameters['min_rating'] ?? '');
-  if (rating == null || rating <= 0) {
-    return null;
-  }
-  return rating;
-}
-
 int? _initialLanePosition(Uri uri) {
   return int.tryParse(
     uri.queryParameters['position'] ??
@@ -604,7 +596,6 @@ GoRouter createAppRouter() {
         builder: (context, state) => _standalonePage(
           fallbackRoute: '/content',
           child: SkinGalleryScreen(
-            initialMinRating: _initialMinRating(state.uri),
             initialLanePosition: _initialLanePosition(state.uri),
             initialSearchQuery: state.uri.queryParameters['q'],
           ),
@@ -619,7 +610,6 @@ GoRouter createAppRouter() {
                   initialSkinId: int.tryParse(
                     state.pathParameters['skinId'] ?? '',
                   ),
-                  initialMinRating: _initialMinRating(state.uri),
                   initialLanePosition: _initialLanePosition(state.uri),
                   initialSearchQuery: state.uri.queryParameters['q'],
                 ),
@@ -936,7 +926,6 @@ GoRouter createAppRouter() {
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/content',
                       child: SkinGalleryScreen(
-                        initialMinRating: _initialMinRating(state.uri),
                         initialLanePosition: _initialLanePosition(state.uri),
                         initialSearchQuery: state.uri.queryParameters['q'],
                       ),
