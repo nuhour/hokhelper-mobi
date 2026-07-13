@@ -63,7 +63,24 @@ class _TierListSchemeDetailScreenState
   int? _boardLanePosition;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialEditMode) {
+      SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
+  }
+
+  @override
   void dispose() {
+    if (widget.initialEditMode) {
+      SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
     _nameController.dispose();
     for (final controller in _labelControllers.values) {
       controller.dispose();
@@ -92,23 +109,6 @@ class _TierListSchemeDetailScreenState
         final heroesById = _heroesById(heroes);
 
         if (widget.initialEditMode) {
-          final size = MediaQuery.sizeOf(context);
-          if (size.height > size.width) {
-            return Scaffold(
-              backgroundColor: AppTheme.bg,
-              body: _TierListLandscapePrompt(
-                schemeName: displayScheme.name,
-                onBack: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/tools/tier-list');
-                  }
-                },
-              ),
-            );
-          }
-
           return Scaffold(
             backgroundColor: AppTheme.bg,
             body: SafeArea(
@@ -700,74 +700,6 @@ class _ToolbarButton extends StatelessWidget {
         padding: EdgeInsets.zero,
       ),
       icon: Icon(icon, size: 18),
-    );
-  }
-}
-
-class _TierListLandscapePrompt extends StatelessWidget {
-  const _TierListLandscapePrompt({
-    required this.schemeName,
-    required this.onBack,
-  });
-
-  final String schemeName;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      key: const ValueKey('tier-editor-landscape-prompt'),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                tooltip: 'Back',
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.screen_rotation_alt_rounded,
-              color: AppTheme.gold,
-              size: 64,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Rotate to landscape',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              schemeName,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'The tier editor uses a wide board and hero pool. Turn your phone sideways to start editing.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-            ),
-            const Spacer(),
-          ],
-        ),
-      ),
     );
   }
 }

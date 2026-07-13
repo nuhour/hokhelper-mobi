@@ -88,7 +88,7 @@ Future<void> _pumpEditableTierList(
 }
 
 void main() {
-  testWidgets('tier list edit mode asks portrait users to rotate landscape', (
+  testWidgets('tier list edit mode opens its editor without a rotate prompt', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -125,16 +125,6 @@ void main() {
         child: HokHelperApp(router: router),
       ),
     );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const ValueKey('tier-editor-landscape-prompt')),
-      findsOneWidget,
-    );
-    expect(find.text('Rotate to landscape'), findsOneWidget);
-    expect(find.byKey(const ValueKey('tier-editor-toolbar')), findsNothing);
-
-    tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
 
     expect(
