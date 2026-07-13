@@ -22,9 +22,9 @@ class _FakeApiClient extends ApiClient {
     return switch (path) {
       '/esports/matches/list' => const {
         'success': true,
-        'result': {
+        'data': {
           'total': 1,
-          'data': [
+          'rows': [
             {
               'id': 10,
               'league_name': 'KPL Spring',
@@ -53,9 +53,9 @@ class _FakeApiClient extends ApiClient {
       },
       '/esports/teams/list' => const {
         'success': true,
-        'result': {
+        'data': {
           'total': 1,
-          'data': [
+          'rows': [
             {
               'id': 1,
               'name': 'Wolves',
@@ -72,9 +72,9 @@ class _FakeApiClient extends ApiClient {
       },
       '/esports/players/list' => const {
         'success': true,
-        'result': {
+        'data': {
           'total': 1,
-          'data': [
+          'rows': [
             {
               'id': 8,
               'name': 'Fly',
@@ -89,9 +89,9 @@ class _FakeApiClient extends ApiClient {
       },
       '/esports/stats/list' => const {
         'success': true,
-        'result': {
+        'data': {
           'total': 1,
-          'data': [
+          'rows': [
             {
               'id': 'stat-1',
               'league_name': 'KPL Spring',

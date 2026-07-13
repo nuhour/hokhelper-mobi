@@ -63,10 +63,10 @@ class EsportsRepository {
   }
 
   List<Object?> _readRows(Map<String, dynamic> json) {
-    final result = json['result'];
-    final rows = result is Map
-        ? result['data'] ?? result['rows'] ?? result['results']
-        : json['data'];
+    final envelope = json['result'] ?? json['data'];
+    final rows = envelope is Map
+        ? envelope['data'] ?? envelope['rows'] ?? envelope['results']
+        : envelope;
     if (rows is! List) {
       return const [];
     }

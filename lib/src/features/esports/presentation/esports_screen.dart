@@ -61,7 +61,7 @@ EsportsInitialTab esportsInitialTabFromRoute(String? value) {
   };
 }
 
-class EsportsScreen extends ConsumerWidget {
+class EsportsScreen extends ConsumerStatefulWidget {
   const EsportsScreen({
     super.key,
     this.initialTab = EsportsInitialTab.matches,
@@ -76,72 +76,94 @@ class EsportsScreen extends ConsumerWidget {
   final bool syncRouteOnTabTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
+  ConsumerState<EsportsScreen> createState() => _EsportsScreenState();
+}
+
+class _EsportsScreenState extends ConsumerState<EsportsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
       length: 4,
-      initialIndex: initialTab.tabIndex,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const AppSectionHeader(title: 'Esports'),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Track pro matches, elite teams, and player form.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+      vsync: this,
+      initialIndex: widget.initialTab.tabIndex,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AppSectionHeader(title: 'Esports'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Track pro matches, elite teams, and player form.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                    ),
+                    const SizedBox(height: 16),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppTheme.panel,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      const SizedBox(height: 16),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppTheme.panel,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TabBar(
-                          isScrollable: true,
-                          indicatorSize: TabBarIndicatorSize.tab,
-                          dividerColor: Colors.transparent,
-                          labelColor: AppTheme.gold,
-                          unselectedLabelColor: AppTheme.muted,
-                          onTap: syncRouteOnTabTap
-                              ? (index) => _syncRouteWithTab(context, index)
-                              : null,
-                          tabs: [
-                            Tab(text: 'Matches'),
-                            Tab(text: 'Stats'),
-                            Tab(text: 'Teams'),
-                            Tab(text: 'Players'),
-                          ],
-                        ),
+                      child: TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        labelColor: AppTheme.gold,
+                        unselectedLabelColor: AppTheme.muted,
+                        onTap: widget.syncRouteOnTabTap
+                            ? (index) => _syncRouteWithTab(context, index)
+                            : null,
+                        tabs: [
+                          Tab(text: 'Matches'),
+                          Tab(text: 'Stats'),
+                          Tab(text: 'Teams'),
+                          Tab(text: 'Players'),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ];
-          },
-          body: TabBarView(
-            children: [
-              _MatchesTab(value: ref.watch(esportsMatchesProvider)),
-              _StatsTab(value: ref.watch(esportsStatsProvider)),
-              _TeamsTab(
-                value: ref.watch(esportsTeamsProvider),
-                focusedTeamId: initialTeamId,
-              ),
-              _PlayersTab(
-                value: ref.watch(esportsPlayersProvider),
-                focusedPlayerId: initialPlayerId,
-              ),
-            ],
-          ),
+            ),
+          ];
+        },
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _MatchesTab(value: ref.watch(esportsMatchesProvider)),
+            _StatsTab(value: ref.watch(esportsStatsProvider)),
+            _TeamsTab(
+              value: ref.watch(esportsTeamsProvider),
+              focusedTeamId: widget.initialTeamId,
+            ),
+            _PlayersTab(
+              value: ref.watch(esportsPlayersProvider),
+              focusedPlayerId: widget.initialPlayerId,
+            ),
+          ],
         ),
       ),
     );
