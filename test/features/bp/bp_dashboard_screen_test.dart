@@ -110,6 +110,7 @@ void main() {
     expect(find.text('AG'), findsOneWidget);
     expect(find.text('Wolves: 0'), findsOneWidget);
     expect(find.text('AG: 0'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bp-preview-open')), findsOneWidget);
   });
 
   testWidgets('scheme cards switch completed BP game previews', (tester) async {

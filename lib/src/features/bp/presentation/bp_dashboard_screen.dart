@@ -7,7 +7,6 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
-import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../data/bp_repository.dart';
 import '../domain/bp_scheme_summary.dart';
@@ -388,7 +387,7 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
     final openGameIndex = selectedHistoryIndex ?? history.length;
     return Material(
       color: AppTheme.panel,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.go(
@@ -396,10 +395,11 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFF2E6AE8), width: 1.35),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -413,6 +413,7 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: AppTheme.text,
+                              fontSize: 25,
                               fontWeight: FontWeight.w900,
                             ),
                       ),
@@ -421,7 +422,7 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                       tooltip: 'Delete BP scheme',
                       onPressed: widget.onDelete,
                       icon: const Icon(Icons.delete_outline, size: 17),
-                      color: AppTheme.error,
+                      color: AppTheme.muted,
                       style: IconButton.styleFrom(
                         minimumSize: const Size(32, 32),
                         padding: EdgeInsets.zero,
@@ -434,11 +435,14 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _MetricBadge(label: scheme.boModeText, isPrimary: true),
-                    _MetricBadge(label: _sideSelectionLabel(scheme)),
+                    _MetricBadge(label: scheme.boModeText),
+                    _MetricBadge(
+                      label: _sideSelectionLabel(scheme),
+                      isPrimary: true,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -463,13 +467,14 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 _BpGamePreview(
                   scheme: scheme,
                   game: selectedGame,
                   current: selectedCurrentGame,
+                  obscured: true,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 _BpScoreFooter(scheme: scheme),
               ],
             ),
@@ -485,11 +490,13 @@ class _BpGamePreview extends StatelessWidget {
     required this.scheme,
     required this.game,
     required this.current,
+    this.obscured = false,
   });
 
   final BpSchemeSummary scheme;
   final BpHistoryGame? game;
   final bool current;
+  final bool obscured;
 
   @override
   Widget build(BuildContext context) {
@@ -507,41 +514,71 @@ class _BpGamePreview extends StatelessWidget {
     final redBans = activeGame?.redBans ?? scheme.draftState.redBans;
     final bluePicks = activeGame?.bluePicks ?? scheme.draftState.bluePicks;
     final redPicks = activeGame?.redPicks ?? scheme.draftState.redPicks;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _BpPreviewSide(
-                    label: blueName,
-                    color: const Color(0xFF246BFF),
-                    bans: blueBans,
-                    picks: bluePicks,
-                    winner: blueWon,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _BpPreviewSide(
-                    label: redName,
-                    color: const Color(0xFFE83B43),
-                    bans: redBans,
-                    picks: redPicks,
-                    winner: redWon,
-                    alignEnd: true,
-                  ),
-                ),
-              ],
+    final board = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 13, 12, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _BpPreviewSide(
+              label: blueName,
+              color: const Color(0xFF246BFF),
+              bans: blueBans,
+              picks: bluePicks,
+              winner: blueWon,
             ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _BpPreviewSide(
+              label: redName,
+              color: const Color(0xFFE83B43),
+              bans: redBans,
+              picks: redPicks,
+              winner: redWon,
+              alignEnd: true,
+            ),
+          ),
+        ],
+      ),
+    );
+    return SizedBox(
+      height: 158,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.24),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            board,
+            if (obscured)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.48),
+                ),
+              ),
+            if (obscured)
+              Center(
+                child: IgnorePointer(
+                  child: Container(
+                    key: const ValueKey('bp-preview-open'),
+                    width: 50,
+                    height: 50,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF2E6AE8),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.visibility_outlined,
+                      color: Colors.white,
+                      size: 27,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -599,14 +636,14 @@ class _BpPreviewSide extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         _BpPreviewSlots(
           heroIds: bans,
           color: color,
           ban: true,
           alignEnd: alignEnd,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 7),
         _BpPreviewSlots(heroIds: picks, color: color, alignEnd: alignEnd),
       ],
     );
@@ -630,11 +667,11 @@ class _BpPreviewSlots extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibleIds = heroIds.whereType<int>().where((id) => id > 0).toList();
     if (visibleIds.isEmpty) {
-      return SizedBox(height: ban ? 22 : 28);
+      return SizedBox(height: ban ? 18 : 24);
     }
     return Wrap(
-      spacing: 4,
-      runSpacing: 4,
+      spacing: 2,
+      runSpacing: 2,
       alignment: alignEnd ? WrapAlignment.end : WrapAlignment.start,
       children: [
         for (final heroId in visibleIds)
@@ -658,31 +695,39 @@ class _BpPreviewSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id = heroId;
-    return Container(
-      width: ban ? 22 : 28,
-      height: ban ? 22 : 28,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: ban ? 0.04 : 0.1),
-        border: Border.all(color: color.withValues(alpha: ban ? 0.28 : 0.75)),
+    return Semantics(
+      image: true,
+      label: 'BP hero $id',
+      child: Container(
+        width: ban ? 18 : 24,
+        height: ban ? 18 : 24,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withValues(alpha: ban ? 0.04 : 0.1),
+          border: Border.all(color: color.withValues(alpha: ban ? 0.28 : 0.75)),
+        ),
+        child: ban
+            ? ColorFiltered(
+                colorFilter: const ColorFilter.mode(
+                  Colors.grey,
+                  BlendMode.saturation,
+                ),
+                child: _heroImage(id),
+              )
+            : _heroImage(id),
       ),
-      child: ban
-          ? ColorFiltered(
-              colorFilter: const ColorFilter.mode(
-                Colors.grey,
-                BlendMode.saturation,
-              ),
-              child: _heroImage(id),
-            )
-          : _heroImage(id),
     );
   }
 
   Widget _heroImage(int? id) {
-    return AppImage(
-      url: id == null ? null : 'https://hokhelper.com/static/game/hero/$id.png',
-      borderRadius: 999,
-      semanticLabel: 'BP hero $id',
+    if (id == null) {
+      return const SizedBox.expand();
+    }
+    return Image.network(
+      'https://hokhelper.com/static/game/hero/$id.png',
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const ColoredBox(color: AppTheme.panelAlt),
     );
   }
 }
@@ -703,7 +748,7 @@ class _BpGameSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = selected
-        ? AppTheme.gold
+        ? const Color(0xFF2E6AE8)
         : current
         ? AppTheme.success.withValues(alpha: 0.72)
         : Colors.white.withValues(alpha: 0.18);
@@ -716,9 +761,11 @@ class _BpGameSelector extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: textColor,
-        backgroundColor: selected ? AppTheme.gold : Colors.transparent,
+        backgroundColor: selected
+            ? const Color(0xFF2E6AE8)
+            : Colors.transparent,
         side: BorderSide(color: borderColor, width: selected ? 1.5 : 1),
-        minimumSize: const Size(0, 38),
+        minimumSize: const Size(0, 36),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         shape: const StadiumBorder(),
       ),
@@ -763,7 +810,7 @@ class _BpScoreFooter extends StatelessWidget {
                 '${scheme.teamAName}: $teamAScore',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: AppTheme.gold,
+                  color: Color(0xFF2E6AE8),
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -781,7 +828,7 @@ class _BpScoreFooter extends StatelessWidget {
                 textAlign: TextAlign.end,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: AppTheme.muted,
+                  color: Color(0xFFE0E7F5),
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -809,21 +856,20 @@ class _MetricBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPrimary ? AppTheme.gold : AppTheme.muted;
+    final color = isPrimary ? const Color(0xFF4B8BFF) : AppTheme.muted;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: (isPrimary ? AppTheme.gold : Colors.white).withValues(
-          alpha: isPrimary ? 0.16 : 0.06,
+        color: (isPrimary ? const Color(0xFF246BFF) : Colors.white).withValues(
+          alpha: isPrimary ? 0.17 : 0.035,
         ),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: (isPrimary ? AppTheme.gold : Colors.white).withValues(
-            alpha: isPrimary ? 0.32 : 0.08,
-          ),
+          color: (isPrimary ? const Color(0xFF246BFF) : Colors.white)
+              .withValues(alpha: isPrimary ? 0.52 : 0.13),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         child: Text(
           label,
           maxLines: 1,
