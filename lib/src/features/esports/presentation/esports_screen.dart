@@ -67,7 +67,7 @@ class EsportsScreen extends ConsumerWidget {
     this.initialTab = EsportsInitialTab.matches,
     this.initialTeamId,
     this.initialPlayerId,
-    this.syncRouteOnTabTap = true,
+    this.syncRouteOnTabTap = false,
   });
 
   final EsportsInitialTab initialTab;

@@ -337,6 +337,7 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
         Expanded(
           child: PageView(
             controller: _pageController,
+            allowImplicitScrolling: true,
             onPageChanged: (index) {
               setState(() {
                 _selectedPage = index;

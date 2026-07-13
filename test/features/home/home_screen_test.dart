@@ -319,7 +319,13 @@ void main() {
             ],
             'player_ranking': {
               'peak': [
-                {'player_name': 'Top Player', 'peak_score': 2400},
+                {
+                  'player_id': 'top-player',
+                  'player_name': 'Top Player',
+                  'avatar_url': 'https://example.test/top-player.jpg',
+                  'region': 840,
+                  'peak_score': 2400,
+                },
               ],
             },
             'community_hot': [
@@ -350,7 +356,14 @@ void main() {
 
     await _scrollHomeUntilVisible(tester, find.text('Leaderboard'));
     expect(find.text('Leaderboard'), findsOneWidget);
-    expect(find.text('Top Player'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home-player-avatar-top-player')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('home-player-flag-top-player')),
+      findsOneWidget,
+    );
 
     await _scrollHomeUntilVisible(tester, find.text('Community Hot'));
     expect(find.text('Community Hot'), findsOneWidget);
@@ -383,30 +396,24 @@ void main() {
     expect(find.text('Enter HOK World Topic'), findsNothing);
   });
 
-  testWidgets('compact viewport handles many backend stats without overflow', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 480);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'compact viewport keeps the data-first home surface overflow-free',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 480);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(
-      _buildHomeScreen(
-        HomeStats(
-          success: true,
-          message: 'Ready with a dense payload from the backend.',
-          result: {
-            for (var index = 0; index < 18; index++)
-              'statistic_$index': 'value_$index',
-          },
+      await tester.pumpWidget(
+        _buildHomeScreen(
+          const HomeStats(success: true, message: 'Ready', result: {}),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    await _scrollHomeUntilVisible(tester, find.text('statistic_17'));
-    expect(find.text('statistic_17'), findsOneWidget);
-  });
+      expect(tester.takeException(), isNull);
+      expect(find.text('Backend connected'), findsNothing);
+      expect(find.text('Ready'), findsNothing);
+    },
+  );
 }

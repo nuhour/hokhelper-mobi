@@ -64,17 +64,11 @@ void main() {
     });
 
     test(
-      'falls back to bundled home stats when the backend is unavailable',
+      'surfaces backend failures instead of substituting mock stats',
       () async {
         final repository = HomeRepository(apiClient: _FailingApiClient());
 
-        final stats = await repository.loadHomeStats();
-
-        expect(stats.success, isTrue);
-        expect(stats.result['season'], isA<Map>());
-        expect(stats.result['hero_ranking_table'], isA<Map>());
-        expect(stats.result['player_ranking'], isA<Map>());
-        expect(stats.result['tier_list'], isA<List>());
+        await expectLater(repository.loadHomeStats(), throwsStateError);
       },
     );
   });

@@ -26,7 +26,7 @@ void main() {
       expect(find.text('Arthur'), findsOneWidget);
     });
 
-    testWidgets('renders a centered progress indicator while loading', (
+    testWidgets('renders a static loading surface while loading', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -38,8 +38,11 @@ void main() {
         ),
       );
 
-      expect(find.byType(Center), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('app-async-loading-surface')),
+        findsOneWidget,
+      );
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
     testWidgets('keeps the previous data visible while refreshing', (

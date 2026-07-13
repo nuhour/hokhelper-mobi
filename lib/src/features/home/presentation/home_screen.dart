@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -39,10 +40,7 @@ class HomeScreen extends ConsumerWidget {
             retry: () => ref.invalidate(homeStatsProvider),
             data: (stats) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _HomePortalFramework(result: stats.result),
-                _BackendSummary(stats: stats),
-              ],
+              children: [_HomePortalFramework(result: stats.result)],
             ),
           ),
         ],
@@ -109,13 +107,14 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
           height: pageHeight,
           child: PageView(
             controller: _pageController,
+            allowImplicitScrolling: true,
             onPageChanged: (index) {
               setState(() {
                 _selectedPage = index;
               });
             },
             children: [
-              const EsportsScreen(syncRouteOnTabTap: false),
+              const EsportsScreen(),
               const SkinGalleryScreen(),
               const HeroGalleryScreen(),
               _HomeLandingTab(result: widget.result),
@@ -185,64 +184,126 @@ class _HomePortalTopBar extends StatelessWidget {
   }
 }
 
-class _HomeLandingTab extends StatelessWidget {
+class _HomeLandingTab extends StatefulWidget {
   const _HomeLandingTab({required this.result});
 
   final Map<String, dynamic> result;
 
   @override
+  State<_HomeLandingTab> createState() => _HomeLandingTabState();
+}
+
+class _HomeLandingTabState extends State<_HomeLandingTab> {
+  var _showWorld = false;
+  var _showQuickControls = false;
+
+  bool _onScrollNotification(UserScrollNotification notification) {
+    final offset = notification.metrics.pixels;
+    final nextVisibility = notification.direction == ScrollDirection.forward
+        ? offset > 80
+        : notification.direction == ScrollDirection.reverse || offset <= 80
+        ? false
+        : _showQuickControls;
+    if (_showQuickControls != nextVisibility) {
+      setState(() => _showQuickControls = nextVisibility);
+    }
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final backgroundUrl = _readString(
-      _readMap(result['season'])['mobile_background_pic'] ??
-          _readMap(result['season'])['background_pic'],
+      _readMap(widget.result['season'])['mobile_background_pic'] ??
+          _readMap(widget.result['season'])['background_pic'],
     );
-    final seasonName = _readString(_readMap(result['season'])['name']);
+    final seasonName = _readString(_readMap(widget.result['season'])['name']);
     final bottomNavigationGap = MediaQuery.viewPaddingOf(context).bottom + 104;
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.only(bottom: bottomNavigationGap),
+    return Stack(
       children: [
-        Stack(
-          children: [
-            Positioned.fill(
-              child: backgroundUrl.isNotEmpty
-                  ? AppImage(
-                      url: backgroundUrl,
-                      fit: BoxFit.cover,
-                      borderRadius: 0,
-                      semanticLabel: 'Honor of Kings season background',
-                    )
-                  : const ColoredBox(color: AppTheme.bg),
-            ),
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x66020617),
-                      Color(0xCC020617),
-                      Color(0xF7020617),
-                    ],
-                    stops: [0, 0.36, 1],
+        NotificationListener<UserScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: ListView(
+            key: const ValueKey('home-landing-scroll-view'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.only(bottom: bottomNavigationGap),
+            children: [
+              Stack(
+                children: [
+                  Positioned.fill(
+                    child: backgroundUrl.isNotEmpty
+                        ? AppImage(
+                            url: backgroundUrl,
+                            fit: BoxFit.cover,
+                            borderRadius: 0,
+                            semanticLabel: 'Honor of Kings season background',
+                          )
+                        : const ColoredBox(color: AppTheme.bg),
                   ),
+                  const Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0x66020617),
+                            Color(0xCC020617),
+                            Color(0xF7020617),
+                          ],
+                          stops: [0, 0.36, 1],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+                    child: Column(
+                      children: [
+                        _HomeHeroBanner(
+                          seasonName: seasonName,
+                          showWorld: _showWorld,
+                          onWorldChanged: (value) {
+                            setState(() => _showWorld = value);
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        _HomePortalPreviews(result: widget.result),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 8,
+          left: 12,
+          right: 12,
+          child: IgnorePointer(
+            ignoring: !_showQuickControls,
+            child: AnimatedOpacity(
+              key: const ValueKey('home-sticky-quick-controls'),
+              opacity: _showQuickControls ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: AnimatedSlide(
+                offset: _showQuickControls
+                    ? Offset.zero
+                    : const Offset(0, -0.16),
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: _HomeStickyQuickControls(
+                  showWorld: _showWorld,
+                  onWorldChanged: (value) {
+                    setState(() => _showWorld = value);
+                  },
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
-              child: Column(
-                children: [
-                  _HomeHeroBanner(seasonName: seasonName),
-                  const SizedBox(height: 18),
-                  _HomePortalPreviews(result: result),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 28),
       ],
     );
   }
@@ -543,17 +604,16 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-class _HomeHeroBanner extends StatefulWidget {
-  const _HomeHeroBanner({required this.seasonName});
+class _HomeHeroBanner extends StatelessWidget {
+  const _HomeHeroBanner({
+    required this.seasonName,
+    required this.showWorld,
+    required this.onWorldChanged,
+  });
 
   final String seasonName;
-
-  @override
-  State<_HomeHeroBanner> createState() => _HomeHeroBannerState();
-}
-
-class _HomeHeroBannerState extends State<_HomeHeroBanner> {
-  bool _showWorld = false;
+  final bool showWorld;
+  final ValueChanged<bool> onWorldChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -576,24 +636,20 @@ class _HomeHeroBannerState extends State<_HomeHeroBanner> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _HomeLiveBadge(season: widget.seasonName),
+                      _HomeLiveBadge(season: seasonName),
                       _HomeHeroSlideTabs(
-                        showWorld: _showWorld,
-                        onChanged: (value) => setState(() {
-                          _showWorld = value;
-                        }),
+                        showWorld: showWorld,
+                        onChanged: onWorldChanged,
                       ),
                     ],
                   ),
                   const Spacer(),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
-                    child: _showWorld
+                    child: showWorld
                         ? _HomeWorldHeroContent(
                             key: ValueKey('home-world-hero-content'),
-                            onBack: () => setState(() {
-                              _showWorld = false;
-                            }),
+                            onBack: () => onWorldChanged(false),
                           )
                         : const _HomeMainHeroContent(
                             key: ValueKey('home-main-hero-content'),
@@ -713,6 +769,103 @@ class _HomeHeroTab extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomeStickyQuickControls extends StatelessWidget {
+  const _HomeStickyQuickControls({
+    required this.showWorld,
+    required this.onWorldChanged,
+  });
+
+  final bool showWorld;
+  final ValueChanged<bool> onWorldChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Flexible(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: _HomeHeroSlideTabs(
+                  showWorld: showWorld,
+                  onChanged: onWorldChanged,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (showWorld)
+              _HomeStickyAction(
+                tooltip: 'Enter HOK World',
+                icon: Icons.public_rounded,
+                onTap: () => context.go('/hok-world'),
+              )
+            else ...[
+              _HomeStickyAction(
+                tooltip: 'Core Stats',
+                icon: Icons.bar_chart_rounded,
+                onTap: () => context.go('/tools/stats?entry=home_core'),
+              ),
+              const SizedBox(width: 6),
+              _HomeStickyAction(
+                tooltip: 'Tier List',
+                icon: Icons.leaderboard_rounded,
+                onTap: () => context.go('/tier-list'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeStickyAction extends StatelessWidget {
+  const _HomeStickyAction({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Ink(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppTheme.gold.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppTheme.cyan, size: 20),
+        ),
+      ),
+    ),
+  );
 }
 
 class _HomeMainHeroContent extends StatelessWidget {
@@ -1262,8 +1415,12 @@ class _HomePlayerTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final columns = [
+      const _HomeTableColumn(
+        id: 'player_name',
+        label: 'Player',
+        type: 'player',
+      ),
       const _HomeTableColumn(id: 'rank', label: '#', type: 'number'),
-      const _HomeTableColumn(id: 'player_name', label: 'Player', type: 'text'),
       _HomeTableColumn(
         id: mode == 'peak' ? 'peak_score' : 'rank_stars',
         label: mode == 'peak' ? 'Peak' : 'Stars',
@@ -1454,7 +1611,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
           ),
       ],
     );
-    final heroRows = Column(
+    final identityRows = Column(
       children: [
         for (final row in widget.rows.take(widget.maxRows))
           SizedBox(
@@ -1463,10 +1620,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
             child: ColoredBox(
               color: AppTheme.panel,
               child: Center(
-                child: _HomeHeroAvatarCluster(
-                  row: row,
-                  heroName: _homeTableValue(row, heroColumn),
-                ),
+                child: _HomeFixedTableIdentity(row: row, column: heroColumn),
               ),
             ),
           ),
@@ -1532,7 +1686,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                       child: child,
                     );
                   },
-                  child: heroRows,
+                  child: identityRows,
                 ),
               ),
             ),
@@ -1670,6 +1824,106 @@ class _HomeDataIcon extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomeFixedTableIdentity extends StatelessWidget {
+  const _HomeFixedTableIdentity({required this.row, required this.column});
+
+  final Map<String, dynamic> row;
+  final _HomeTableColumn column;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPlayer = column.id == 'player_name' || column.type == 'player';
+    if (!isPlayer) {
+      return _HomeHeroAvatarCluster(
+        row: row,
+        heroName: _homeTableValue(row, column),
+      );
+    }
+
+    final player = _readMap(row['player']);
+    final playerId = _readString(row['player_id'] ?? player['id']);
+    final playerName = _homeTableValue(row, column);
+    final avatarUrl = _readString(row['avatar_url'] ?? player['avatar_url']);
+    final region = row['region'] ?? player['region'];
+    return SizedBox(
+      width: 50,
+      height: 42,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            top: 1,
+            child: AppImage(
+              key: ValueKey('home-player-avatar-$playerId'),
+              url: avatarUrl,
+              width: 34,
+              height: 34,
+              borderRadius: 999,
+              semanticLabel: playerName,
+            ),
+          ),
+          Positioned(
+            left: 36,
+            top: 12,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppTheme.panel,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(1),
+                child: Text(
+                  _homeRegionFlag(region),
+                  key: ValueKey('home-player-flag-$playerId'),
+                  style: const TextStyle(fontSize: 10, height: 1),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _homeRegionFlag(Object? rawRegion) {
+  const isoByRegion = <int, String>{
+    36: 'AU',
+    76: 'BR',
+    124: 'CA',
+    156: 'CN',
+    246: 'FI',
+    250: 'FR',
+    276: 'DE',
+    344: 'HK',
+    356: 'IN',
+    360: 'ID',
+    392: 'JP',
+    410: 'KR',
+    458: 'MY',
+    484: 'MX',
+    608: 'PH',
+    642: 'RO',
+    643: 'RU',
+    702: 'SG',
+    764: 'TH',
+    784: 'AE',
+    826: 'GB',
+    840: 'US',
+  };
+  final region = int.tryParse(rawRegion?.toString() ?? '');
+  final iso = region == null ? null : isoByRegion[region];
+  if (iso == null) {
+    return '🌐';
+  }
+  return String.fromCharCodes([
+    0x1F1E6 + iso.codeUnitAt(0) - 0x41,
+    0x1F1E6 + iso.codeUnitAt(1) - 0x41,
+  ]);
 }
 
 class _HomeHeroAvatarCluster extends StatelessWidget {
@@ -2491,125 +2745,6 @@ class _HokWorldEntryCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackendSummary extends StatelessWidget {
-  const _BackendSummary({required this.stats});
-
-  final HomeStats stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final statusColor = stats.success ? AppTheme.cyan : AppTheme.error;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cloud_done_outlined, color: statusColor),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    stats.success ? 'Backend connected' : 'Backend responded',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              stats.message,
-              style: textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 20),
-            if (stats.result.isEmpty)
-              Text(
-                'No stats returned yet.',
-                style: textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-              )
-            else
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      for (final entry in stats.result.entries)
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth,
-                          ),
-                          child: _StatChip(
-                            label: entry.key,
-                            value: entry.value.toString(),
-                          ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
         ),
       ),
     );

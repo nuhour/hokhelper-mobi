@@ -193,7 +193,6 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         _selectedPage = index;
       });
     }
-    _syncRouteWithTab(context, index);
     _pageController.animateToPage(
       index,
       duration: const Duration(milliseconds: 260),
@@ -218,11 +217,11 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
           Expanded(
             child: PageView(
               controller: _pageController,
+              allowImplicitScrolling: true,
               onPageChanged: (index) {
                 setState(() {
                   _selectedPage = index;
                 });
-                _syncRouteWithTab(context, index);
               },
               children: [
                 _LeaksTab(
@@ -241,29 +240,6 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         ],
       ),
     );
-  }
-
-  void _syncRouteWithTab(BuildContext context, int index) {
-    final router = GoRouter.maybeOf(context);
-    if (router == null) {
-      return;
-    }
-    final nextUri = switch (index) {
-      0 => Uri(
-        path: '/content/community',
-        queryParameters: const {'tab': 'leaks'},
-      ),
-      2 => Uri(
-        path: '/content/community',
-        queryParameters: const {'tab': 'event'},
-      ),
-      _ => Uri(path: '/content/community'),
-    };
-    final currentUri = router.routeInformationProvider.value.uri;
-    if (nextUri == currentUri) {
-      return;
-    }
-    router.go(nextUri.toString());
   }
 }
 
