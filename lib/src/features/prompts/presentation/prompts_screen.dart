@@ -110,6 +110,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
   final _createdPrompts = <PromptSummary>[];
   final _updatedPrompts = <String, PromptSummary>{};
   final _deletedPromptIds = <String>{};
+  List<PromptSummary>? _lastResolvedPrompts;
   String _search = '';
   PromptListSort _sort = PromptListSort.hot;
 
@@ -134,11 +135,16 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       sort: _sort,
     );
     final promptsValue = ref.watch(promptListQueryProvider(query));
+    final freshPrompts = promptsValue.valueOrNull;
+    if (freshPrompts != null) {
+      _lastResolvedPrompts = freshPrompts;
+    }
 
     return Material(
       color: AppTheme.bg,
       child: AppAsyncView<List<PromptSummary>>(
         value: promptsValue,
+        previousData: _lastResolvedPrompts,
         retry: () => ref.invalidate(promptListQueryProvider(query)),
         data: (prompts) {
           final visiblePrompts = _visiblePrompts(

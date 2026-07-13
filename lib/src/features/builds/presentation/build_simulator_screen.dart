@@ -115,8 +115,6 @@ class BuildSimulatorScreen extends ConsumerStatefulWidget {
 class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
   int _selectedHeroIndex = 0;
   bool _didResolveInitialHero = false;
-  int? _editingSlotIndex;
-  BuildSchemeSummary? _editingScheme;
 
   @override
   void didUpdateWidget(covariant BuildSimulatorScreen oldWidget) {
@@ -178,52 +176,22 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
                 _HeroSelector(
                   heroes: heroes,
                   selectedIndex: _selectedHeroIndex,
-                  onSelected: (index) {
-                    setState(() => _selectedHeroIndex = index);
-                  },
+                  onOpenPicker: () => _openHeroPicker(context, heroes),
                 ),
                 const SizedBox(height: 18),
                 _SlotsPanel(
                   slotsValue: slotsValue,
                   onEdit: (slotIndex, scheme) {
-                    setState(() {
-                      _editingSlotIndex = slotIndex;
-                      _editingScheme = scheme;
-                    });
+                    _openBuildEditor(
+                      context: context,
+                      heroId: heroId!,
+                      heroName: selectedHero?.name ?? '',
+                      heroAvatar: selectedHero?.avatar ?? '',
+                      slotIndex: slotIndex,
+                      scheme: scheme,
+                    );
                   },
                 ),
-                if (_editingSlotIndex != null && heroId != null) ...[
-                  const SizedBox(height: 14),
-                  _BuildEditorPanel(
-                    key: ValueKey(
-                      '${selectedHero?.heroId}-$_editingSlotIndex-${_editingScheme?.id ?? 'new'}',
-                    ),
-                    heroId: heroId,
-                    slotIndex: _editingSlotIndex!,
-                    heroName: selectedHero?.name ?? '',
-                    regionCode: ref
-                        .watch(appSettingsControllerProvider)
-                        .maybeWhen(
-                          data: (settings) => settings.region.languageCode,
-                          orElse: () => 'en',
-                        ),
-                    scheme: _editingScheme,
-                    catalogValue: ref.watch(buildSimEditorCatalogProvider),
-                    onCancel: () {
-                      setState(() {
-                        _editingSlotIndex = null;
-                        _editingScheme = null;
-                      });
-                    },
-                    onSaved: () {
-                      ref.invalidate(buildSimUserSlotsProvider(heroId));
-                      setState(() {
-                        _editingSlotIndex = null;
-                        _editingScheme = null;
-                      });
-                    },
-                  ),
-                ],
               ],
               const SizedBox(height: 22),
               _CommunityBuilds(
@@ -260,18 +228,82 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
     }
     _didResolveInitialHero = true;
   }
+
+  Future<void> _openHeroPicker(
+    BuildContext context,
+    List<HeroSummary> heroes,
+  ) async {
+    final selected = await showModalBottomSheet<HeroSummary>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _BuildHeroPoolSheet(
+        heroes: heroes,
+        selectedIndex: _selectedHeroIndex,
+      ),
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    final selectedIndex = heroes.indexWhere((hero) => hero.id == selected.id);
+    if (selectedIndex >= 0) {
+      setState(() => _selectedHeroIndex = selectedIndex);
+    }
+  }
+
+  Future<void> _openBuildEditor({
+    required BuildContext context,
+    required int heroId,
+    required String heroName,
+    required String heroAvatar,
+    required int slotIndex,
+    required BuildSchemeSummary? scheme,
+  }) async {
+    final regionCode = ref
+        .read(appSettingsControllerProvider)
+        .maybeWhen(
+          data: (settings) => settings.region.languageCode,
+          orElse: () => 'en',
+        );
+    final didSave = await Navigator.of(context).push<bool>(
+      PageRouteBuilder(
+        opaque: true,
+        pageBuilder: (editorContext, animation, secondaryAnimation) =>
+            _BuildEditorPanel(
+              key: ValueKey('$heroId-$slotIndex-${scheme?.id ?? 'new'}'),
+              heroId: heroId,
+              slotIndex: slotIndex,
+              heroName: heroName,
+              heroAvatar: heroAvatar,
+              regionCode: regionCode,
+              scheme: scheme,
+              onCancel: () => Navigator.of(editorContext).pop(false),
+              onSaved: () => Navigator.of(editorContext).pop(true),
+            ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+    if (didSave == true) {
+      ref.invalidate(buildSimUserSlotsProvider(heroId));
+    }
+  }
 }
 
 class _HeroSelector extends StatelessWidget {
   const _HeroSelector({
     required this.heroes,
     required this.selectedIndex,
-    required this.onSelected,
+    required this.onOpenPicker,
   });
 
   final List<HeroSummary> heroes;
   final int selectedIndex;
-  final ValueChanged<int> onSelected;
+  final VoidCallback onOpenPicker;
 
   @override
   Widget build(BuildContext context) {
@@ -288,87 +320,301 @@ class _HeroSelector extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                AppImage(
-                  url: selectedHero.avatar,
-                  width: 54,
-                  height: 54,
-                  borderRadius: 14,
-                  semanticLabel: selectedHero.name,
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: onOpenPicker,
+            borderRadius: BorderRadius.circular(12),
+            child: Ink(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.panel,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.gold.withValues(alpha: 0.38),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        selectedHero.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: AppTheme.text,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                      Text(
-                        selectedHero.title.isEmpty
-                            ? 'Ready for builds'
-                            : selectedHero.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                    ],
+              ),
+              child: Row(
+                children: [
+                  AppImage(
+                    url: selectedHero.avatar,
+                    width: 52,
+                    height: 52,
+                    borderRadius: 999,
+                    semanticLabel: selectedHero.name,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          selectedHero.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: AppTheme.text,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          selectedHero.title.isEmpty
+                              ? 'Select a hero to manage builds'
+                              : selectedHero.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.swap_horiz, color: AppTheme.gold),
+                ],
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 46,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: heroes.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final hero = heroes[index];
-              final selected = index == selectedIndex;
-              return ChoiceChip(
-                selected: selected,
-                label: Text(hero.name),
-                onSelected: (_) => onSelected(index),
-                selectedColor: AppTheme.gold.withValues(alpha: 0.22),
-                backgroundColor: AppTheme.panelAlt,
-                labelStyle: TextStyle(
-                  color: selected ? AppTheme.gold : AppTheme.text,
-                  fontWeight: FontWeight.w700,
-                ),
-                side: BorderSide(
-                  color: selected
-                      ? AppTheme.gold.withValues(alpha: 0.5)
-                      : Colors.white.withValues(alpha: 0.08),
-                ),
-              );
-            },
           ),
         ),
       ],
     );
   }
+}
+
+class _BuildHeroPoolSheet extends StatefulWidget {
+  const _BuildHeroPoolSheet({
+    required this.heroes,
+    required this.selectedIndex,
+  });
+
+  final List<HeroSummary> heroes;
+  final int selectedIndex;
+
+  @override
+  State<_BuildHeroPoolSheet> createState() => _BuildHeroPoolSheetState();
+}
+
+class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
+  final _searchController = TextEditingController();
+  int? _lanePosition;
+  String _search = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final needle = _search.trim().toLowerCase();
+    final heroes = widget.heroes
+        .where(
+          (hero) =>
+              (_lanePosition == null || hero.position == _lanePosition) &&
+              (needle.isEmpty ||
+                  hero.name.toLowerCase().contains(needle) ||
+                  hero.title.toLowerCase().contains(needle)),
+        )
+        .toList(growable: false);
+
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.86,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            children: [
+              Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.muted.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Hero Pool',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Close hero pool',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _search = value),
+                decoration: const InputDecoration(
+                  hintText: 'Search heroes',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _BuildLaneFilterBar(
+                lanePosition: _lanePosition,
+                onChanged: (value) => setState(() => _lanePosition = value),
+              ),
+              const SizedBox(height: 14),
+              Expanded(
+                child: heroes.isEmpty
+                    ? const AppEmptyState(
+                        icon: Icons.person_search_outlined,
+                        title: 'No matching heroes',
+                        message: 'Try a different lane or search term.',
+                      )
+                    : GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.78,
+                            ),
+                        itemCount: heroes.length,
+                        itemBuilder: (context, index) {
+                          final hero = heroes[index];
+                          final selected =
+                              hero.id == widget.heroes[widget.selectedIndex].id;
+                          return Semantics(
+                            button: true,
+                            selected: selected,
+                            label: 'Select ${hero.name}',
+                            child: InkWell(
+                              onTap: () => Navigator.of(context).pop(hero),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Ink(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? AppTheme.gold.withValues(alpha: 0.16)
+                                      : AppTheme.panelAlt,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: selected
+                                        ? AppTheme.gold
+                                        : Colors.white.withValues(alpha: 0.08),
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: AppImage(
+                                        url: hero.avatar,
+                                        borderRadius: 8,
+                                        semanticLabel: hero.name,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      hero.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: AppTheme.text,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BuildLaneFilterBar extends StatelessWidget {
+  const _BuildLaneFilterBar({
+    required this.lanePosition,
+    required this.onChanged,
+  });
+
+  final int? lanePosition;
+  final ValueChanged<int?> onChanged;
+
+  static const _options = [
+    _BuildLaneOption(label: 'All', assetName: null, value: null),
+    _BuildLaneOption(label: 'Clash', assetName: 'clash', value: 0),
+    _BuildLaneOption(label: 'Mid', assetName: 'mid', value: 1),
+    _BuildLaneOption(label: 'Farm', assetName: 'adc', value: 2),
+    _BuildLaneOption(label: 'Jungle', assetName: 'jungle', value: 3),
+    _BuildLaneOption(label: 'Support', assetName: 'support', value: 4),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: _options
+          .map((option) {
+            final selected = lanePosition == option.value;
+            return Tooltip(
+              message: option.label,
+              child: InkWell(
+                onTap: () => onChanged(option.value),
+                borderRadius: BorderRadius.circular(8),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 38,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected ? AppTheme.gold : AppTheme.panelAlt,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: selected
+                          ? AppTheme.gold
+                          : Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: option.assetName == null
+                      ? const Icon(Icons.grid_view_rounded, size: 18)
+                      : Image.asset(
+                          'assets/lane-icons/${option.assetName}.png',
+                          width: 21,
+                          height: 21,
+                        ),
+                ),
+              ),
+            );
+          })
+          .toList(growable: false),
+    );
+  }
+}
+
+class _BuildLaneOption {
+  const _BuildLaneOption({
+    required this.label,
+    required this.assetName,
+    required this.value,
+  });
+
+  final String label;
+  final String? assetName;
+  final int? value;
 }
 
 class _SlotsPanel extends StatelessWidget {
@@ -396,16 +642,18 @@ class _SlotsPanel extends StatelessWidget {
               3,
               (index) => index < slots.length ? slots[index] : null,
             );
-            return Column(
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (var index = 0; index < normalized.length; index++) ...[
-                  _SlotCard(
-                    index: index + 1,
-                    scheme: normalized[index],
-                    onTap: () => onEdit(index + 1, normalized[index]),
+                  Expanded(
+                    child: _SlotCard(
+                      index: index + 1,
+                      scheme: normalized[index],
+                      onTap: () => onEdit(index + 1, normalized[index]),
+                    ),
                   ),
-                  if (index != normalized.length - 1)
-                    const SizedBox(height: 10),
+                  if (index != normalized.length - 1) const SizedBox(width: 8),
                 ],
               ],
             );
@@ -435,56 +683,81 @@ class _SlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = scheme?.title ?? 'Empty slot';
-    final subtitle = scheme == null
-        ? 'Create or clone a scheme here'
-        : '${scheme!.heroName} · ${scheme!.isPublic ? 'Public' : 'Private'}';
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: ListTile(
-          onTap: onTap,
-          leading: CircleAvatar(
-            backgroundColor: AppTheme.gold.withValues(alpha: 0.14),
-            foregroundColor: AppTheme.gold,
-            child: Text('$index'),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Ink(
+          height: 142,
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: scheme == null
+                  ? AppTheme.gold.withValues(alpha: 0.22)
+                  : Colors.white.withValues(alpha: 0.1),
+            ),
           ),
-          title: Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Slot $index',
-                style: const TextStyle(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Slot $index',
+                    style: const TextStyle(
+                      color: AppTheme.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    scheme == null
+                        ? Icons.add_circle_outline
+                        : Icons.edit_outlined,
+                    size: 17,
+                    color: AppTheme.gold,
+                  ),
+                ],
               ),
+              const Spacer(),
+              if (scheme == null)
+                const Center(
+                  child: Icon(Icons.add, color: AppTheme.gold, size: 30),
+                )
+              else
+                Wrap(
+                  spacing: 3,
+                  runSpacing: 3,
+                  children: scheme!.equipmentIcons
+                      .take(6)
+                      .map(
+                        (icon) => AppImage(
+                          url: icon,
+                          width: 22,
+                          height: 22,
+                          borderRadius: 5,
+                          excludeFromSemantics: true,
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              const Spacer(),
               Text(
                 title,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppTheme.text,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
-          ),
-          subtitle: Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppTheme.muted),
-          ),
-          trailing: Icon(
-            scheme == null ? Icons.add_circle_outline : Icons.edit_outlined,
-            color: AppTheme.gold,
           ),
         ),
       ),
@@ -498,9 +771,9 @@ class _BuildEditorPanel extends ConsumerStatefulWidget {
     required this.heroId,
     required this.slotIndex,
     required this.heroName,
+    required this.heroAvatar,
     required this.regionCode,
     required this.scheme,
-    required this.catalogValue,
     required this.onCancel,
     required this.onSaved,
   });
@@ -508,9 +781,9 @@ class _BuildEditorPanel extends ConsumerStatefulWidget {
   final int heroId;
   final int slotIndex;
   final String heroName;
+  final String heroAvatar;
   final String regionCode;
   final BuildSchemeSummary? scheme;
-  final AsyncValue<BuildEditorCatalog> catalogValue;
   final VoidCallback onCancel;
   final VoidCallback onSaved;
 
@@ -524,6 +797,8 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   late List<int> _equipIds;
   late List<int> _runeIds;
   int? _summonerSkillId;
+  _BuildEditorTab _activeTab = _BuildEditorTab.equipment;
+  int _activeRuneColor = 1;
   bool _saving = false;
 
   @override
@@ -549,122 +824,80 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.22)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return LayoutBuilder(
+      builder: (context, constraints) => Material(
+        color: AppTheme.bg,
+        child: SafeArea(
+          child: SizedBox(
+            height: constraints.maxHeight,
+            child: Column(
               children: [
+                _BuildEditorToolbar(
+                  heroName: widget.heroName,
+                  heroAvatar: widget.heroAvatar,
+                  titleController: _titleController,
+                  isPublic: _isPublic,
+                  saving: _saving,
+                  onToggleVisibility: () =>
+                      setState(() => _isPublic = !_isPublic),
+                  onClear: _clearAll,
+                  onClose: widget.onCancel,
+                  onSave: _saving ? null : _save,
+                ),
+                _BuildEditorTabs(
+                  selected: _activeTab,
+                  onSelected: (tab) => setState(() => _activeTab = tab),
+                ),
                 Expanded(
-                  child: Text(
-                    'Edit Build Slot ${widget.slotIndex}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: widget.onCancel,
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Build name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Private'),
-                  selected: !_isPublic,
-                  onSelected: (_) => setState(() => _isPublic = false),
-                ),
-                ChoiceChip(
-                  label: const Text('Public'),
-                  selected: _isPublic,
-                  onSelected: (_) => setState(() => _isPublic = true),
+                  child: ref
+                      .watch(buildSimEditorCatalogProvider)
+                      .when(
+                        data: (catalog) => _buildEditorBody(catalog),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (error, stackTrace) => Center(
+                          child: Text(
+                            error.toString(),
+                            style: const TextStyle(color: AppTheme.error),
+                          ),
+                        ),
+                      ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            widget.catalogValue.when(
-              data: (catalog) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _EditorSectionTitle('Equipment'),
-                  const SizedBox(height: 8),
-                  _EquipSelector(
-                    equips: catalog.equips,
-                    selectedIds: _equipIds,
-                    onToggle: _toggleEquip,
-                  ),
-                  const SizedBox(height: 10),
-                  _SelectedEquipOrder(
-                    equips: catalog.equips,
-                    selectedIds: _equipIds,
-                    onMoveUp: _moveEquipUp,
-                    onMoveDown: _moveEquipDown,
-                    onRemove: _removeEquip,
-                  ),
-                  const SizedBox(height: 14),
-                  _EditorSectionTitle('Arcana'),
-                  const SizedBox(height: 8),
-                  _RuneSelector(
-                    runes: catalog.runes,
-                    selectedIds: _runeIds,
-                    onToggle: _toggleRune,
-                  ),
-                  const SizedBox(height: 14),
-                  _EditorSectionTitle('Summoner Skill'),
-                  const SizedBox(height: 8),
-                  _SummonerSkillSelector(
-                    skills: catalog.summonerSkills,
-                    selectedId: _summonerSkillId,
-                    onSelected: (skillId) {
-                      setState(() => _summonerSkillId = skillId);
-                    },
-                  ),
-                ],
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => Text(
-                error.toString(),
-                style: const TextStyle(color: AppTheme.error),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _saving ? null : _save,
-                icon: _saving
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: const Text('Save Build'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildEditorBody(BuildEditorCatalog catalog) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 160),
+      child: switch (_activeTab) {
+        _BuildEditorTab.equipment => _BuildEquipmentWorkspace(
+          key: const ValueKey('equipment'),
+          equips: catalog.equips,
+          selectedIds: _equipIds,
+          onToggle: _toggleEquip,
+          onRemove: _removeEquip,
+          onReorder: _reorderEquips,
+        ),
+        _BuildEditorTab.arcana => _BuildArcanaWorkspace(
+          key: const ValueKey('arcana'),
+          runes: catalog.runes,
+          selectedIds: _runeIds,
+          activeColor: _activeRuneColor,
+          onColorSelected: (color) => setState(() => _activeRuneColor = color),
+          onToggle: _toggleRune,
+        ),
+        _BuildEditorTab.skill => _BuildSkillWorkspace(
+          key: const ValueKey('skill'),
+          skills: catalog.summonerSkills,
+          selectedId: _summonerSkillId,
+          onSelected: (skillId) => setState(() => _summonerSkillId = skillId),
+        ),
+      },
     );
   }
 
@@ -672,37 +905,39 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
     setState(() {
       if (_equipIds.contains(equipId)) {
         _equipIds = _equipIds.where((id) => id != equipId).toList();
-      } else if (_equipIds.length < 6) {
+      } else if (_equipIds.length < 12) {
         _equipIds = [..._equipIds, equipId];
       }
-    });
-  }
-
-  void _moveEquipUp(int equipId) {
-    final index = _equipIds.indexOf(equipId);
-    if (index <= 0) return;
-    setState(() {
-      final next = [..._equipIds];
-      final value = next.removeAt(index);
-      next.insert(index - 1, value);
-      _equipIds = next;
-    });
-  }
-
-  void _moveEquipDown(int equipId) {
-    final index = _equipIds.indexOf(equipId);
-    if (index < 0 || index >= _equipIds.length - 1) return;
-    setState(() {
-      final next = [..._equipIds];
-      final value = next.removeAt(index);
-      next.insert(index + 1, value);
-      _equipIds = next;
     });
   }
 
   void _removeEquip(int equipId) {
     setState(() {
       _equipIds = _equipIds.where((id) => id != equipId).toList();
+    });
+  }
+
+  void _reorderEquips(int oldIndex, int newIndex) {
+    if (oldIndex == newIndex ||
+        oldIndex < 0 ||
+        newIndex < 0 ||
+        oldIndex >= _equipIds.length ||
+        newIndex >= _equipIds.length) {
+      return;
+    }
+    setState(() {
+      final next = [..._equipIds];
+      final item = next.removeAt(oldIndex);
+      next.insert(newIndex, item);
+      _equipIds = next;
+    });
+  }
+
+  void _clearAll() {
+    setState(() {
+      _equipIds = [];
+      _runeIds = [];
+      _summonerSkillId = null;
     });
   }
 
@@ -741,343 +976,527 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   }
 }
 
-class _EditorSectionTitle extends StatelessWidget {
-  const _EditorSectionTitle(this.text);
+enum _BuildEditorTab { equipment, arcana, skill }
 
-  final String text;
+class _BuildEditorToolbar extends StatelessWidget {
+  const _BuildEditorToolbar({
+    required this.heroName,
+    required this.heroAvatar,
+    required this.titleController,
+    required this.isPublic,
+    required this.saving,
+    required this.onToggleVisibility,
+    required this.onClear,
+    required this.onClose,
+    required this.onSave,
+  });
+
+  final String heroName;
+  final String heroAvatar;
+  final TextEditingController titleController;
+  final bool isPublic;
+  final bool saving;
+  final VoidCallback onToggleVisibility;
+  final VoidCallback onClear;
+  final VoidCallback onClose;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: AppTheme.muted,
-        fontWeight: FontWeight.w800,
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: onClose,
+            tooltip: 'Discard changes',
+            icon: const Icon(Icons.close),
+          ),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.gold.withValues(alpha: 0.16),
+              border: Border.all(color: AppTheme.gold.withValues(alpha: 0.55)),
+            ),
+            child: heroAvatar.isEmpty
+                ? const Icon(Icons.shield_outlined, size: 18)
+                : ClipOval(
+                    child: AppImage(url: heroAvatar, semanticLabel: heroName),
+                  ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: titleController,
+              maxLines: 1,
+              textInputAction: TextInputAction.done,
+              style: const TextStyle(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: heroName.isEmpty ? 'Build name' : '$heroName build',
+                hintStyle: const TextStyle(color: AppTheme.muted),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onToggleVisibility,
+            tooltip: isPublic ? 'Public build' : 'Private build',
+            icon: Icon(
+              isPublic ? Icons.lock_open_outlined : Icons.lock_outline,
+            ),
+            color: isPublic ? AppTheme.success : AppTheme.muted,
+          ),
+          IconButton(
+            onPressed: onClear,
+            tooltip: 'Clear equipment, arcana, and skill',
+            icon: const Icon(Icons.delete_outline),
+            color: AppTheme.error,
+          ),
+          IconButton(
+            onPressed: onSave,
+            tooltip: 'Save build',
+            icon: saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save_outlined),
+            color: AppTheme.gold,
+          ),
+        ],
       ),
     );
   }
 }
 
-class _EquipSelector extends StatelessWidget {
-  const _EquipSelector({
+class _BuildEditorTabs extends StatelessWidget {
+  const _BuildEditorTabs({required this.selected, required this.onSelected});
+
+  final _BuildEditorTab selected;
+  final ValueChanged<_BuildEditorTab> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    const tabs = [
+      (
+        tab: _BuildEditorTab.equipment,
+        icon: Icons.flash_on_outlined,
+        label: 'Equipment',
+      ),
+      (
+        tab: _BuildEditorTab.arcana,
+        icon: Icons.hexagon_outlined,
+        label: 'Arcana',
+      ),
+      (
+        tab: _BuildEditorTab.skill,
+        icon: Icons.auto_fix_high_outlined,
+        label: 'Skill',
+      ),
+    ];
+    return Container(
+      height: 48,
+      color: AppTheme.panel,
+      child: Row(
+        children: tabs
+            .map(
+              (entry) => Expanded(
+                child: InkWell(
+                  onTap: () => onSelected(entry.tab),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 140),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          width: 2,
+                          color: selected == entry.tab
+                              ? AppTheme.gold
+                              : Colors.transparent,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          entry.icon,
+                          size: 17,
+                          color: selected == entry.tab
+                              ? AppTheme.gold
+                              : AppTheme.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          entry.label,
+                          style: TextStyle(
+                            color: selected == entry.tab
+                                ? AppTheme.text
+                                : AppTheme.muted,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _BuildEquipmentWorkspace extends StatelessWidget {
+  const _BuildEquipmentWorkspace({
+    super.key,
     required this.equips,
     required this.selectedIds,
     required this.onToggle,
+    required this.onRemove,
+    required this.onReorder,
   });
 
   final List<BuildEquipSummary> equips;
   final List<int> selectedIds;
   final ValueChanged<int> onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    if (equips.isEmpty) {
-      return const Text(
-        'No equipment available',
-        style: TextStyle(color: AppTheme.muted),
-      );
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final equip in equips.take(24))
-          FilterChip(
-            selected: selectedIds.contains(equip.id),
-            label: Text(equip.name),
-            avatar: equip.iconUrl.isEmpty
-                ? null
-                : AppImage(
-                    url: equip.iconUrl,
-                    width: 24,
-                    height: 24,
-                    borderRadius: 6,
-                    semanticLabel: equip.name,
-                  ),
-            onSelected: (_) => onToggle(equip.id),
-          ),
-      ],
-    );
-  }
-}
-
-class _SelectedEquipOrder extends StatelessWidget {
-  const _SelectedEquipOrder({
-    required this.equips,
-    required this.selectedIds,
-    required this.onMoveUp,
-    required this.onMoveDown,
-    required this.onRemove,
-  });
-
-  final List<BuildEquipSummary> equips;
-  final List<int> selectedIds;
-  final ValueChanged<int> onMoveUp;
-  final ValueChanged<int> onMoveDown;
   final ValueChanged<int> onRemove;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
   @override
   Widget build(BuildContext context) {
-    if (selectedIds.isEmpty) {
-      return const Text(
-        'Select up to six items. Saved order follows this list.',
-        style: TextStyle(color: AppTheme.muted),
-      );
-    }
-
     final equipById = {for (final equip in equips) equip.id: equip};
-
+    final placeholderCount = (6 - selectedIds.length).clamp(0, 6);
     return Column(
       children: [
-        for (var index = 0; index < selectedIds.length; index++) ...[
-          _SelectedEquipRow(
-            index: index,
-            equip:
-                equipById[selectedIds[index]] ??
-                BuildEquipSummary(
-                  id: selectedIds[index],
-                  name: 'Equipment ${selectedIds[index]}',
-                  iconUrl: '',
-                ),
-            isFirst: index == 0,
-            isLast: index == selectedIds.length - 1,
-            onMoveUp: onMoveUp,
-            onMoveDown: onMoveDown,
-            onRemove: onRemove,
+        Container(
+          height: 90,
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            border: Border(
+              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+            ),
           ),
-          if (index != selectedIds.length - 1) const SizedBox(height: 6),
-        ],
+          child: Row(
+            children: [
+              Expanded(
+                child: selectedIds.isEmpty
+                    ? Row(
+                        children: List.generate(
+                          6,
+                          (_) => const Padding(
+                            padding: EdgeInsets.only(right: 7),
+                            child: _BuildEmptyEquipmentSlot(),
+                          ),
+                        ),
+                      )
+                    : ReorderableListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        buildDefaultDragHandles: false,
+                        itemCount: selectedIds.length,
+                        onReorderItem: onReorder,
+                        itemBuilder: (context, index) {
+                          final equipId = selectedIds[index];
+                          final equip = equipById[equipId];
+                          return Padding(
+                            key: ValueKey('selected-equip-$equipId'),
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ReorderableDelayedDragStartListener(
+                              index: index,
+                              child: Tooltip(
+                                message: equip?.name ?? 'Equipment $equipId',
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    AppImage(
+                                      url: equip?.iconUrl,
+                                      width: 54,
+                                      height: 54,
+                                      borderRadius: 999,
+                                      semanticLabel: equip?.name,
+                                    ),
+                                    Positioned(
+                                      right: -5,
+                                      top: -5,
+                                      child: InkWell(
+                                        onTap: () => onRemove(equipId),
+                                        borderRadius: BorderRadius.circular(99),
+                                        child: const CircleAvatar(
+                                          radius: 10,
+                                          backgroundColor: AppTheme.error,
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 13,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              if (placeholderCount > 0 && selectedIds.isNotEmpty)
+                Row(
+                  children: List.generate(
+                    placeholderCount,
+                    (_) => const Padding(
+                      padding: EdgeInsets.only(left: 7),
+                      child: _BuildEmptyEquipmentSlot(),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.flash_on_outlined,
+                size: 17,
+                color: AppTheme.gold,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'Equipment ${selectedIds.length}/12',
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: equips.isEmpty
+              ? const AppEmptyState(
+                  icon: Icons.inventory_2_outlined,
+                  title: 'No equipment available',
+                  message: 'Pull to refresh and try again.',
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 5,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 0.8,
+                  ),
+                  itemCount: equips.length,
+                  itemBuilder: (context, index) {
+                    final equip = equips[index];
+                    final selected = selectedIds.contains(equip.id);
+                    return _BuildCatalogAsset(
+                      label: equip.name,
+                      imageUrl: equip.iconUrl,
+                      selected: selected,
+                      onTap: () => onToggle(equip.id),
+                    );
+                  },
+                ),
+        ),
       ],
     );
   }
 }
 
-class _SelectedEquipRow extends StatelessWidget {
-  const _SelectedEquipRow({
-    required this.index,
-    required this.equip,
-    required this.isFirst,
-    required this.isLast,
-    required this.onMoveUp,
-    required this.onMoveDown,
-    required this.onRemove,
-  });
-
-  final int index;
-  final BuildEquipSummary equip;
-  final bool isFirst;
-  final bool isLast;
-  final ValueChanged<int> onMoveUp;
-  final ValueChanged<int> onMoveDown;
-  final ValueChanged<int> onRemove;
+class _BuildEmptyEquipmentSlot extends StatelessWidget {
+  const _BuildEmptyEquipmentSlot();
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
+      width: 54,
+      height: 54,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: AppTheme.bg,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          children: [
-            Text(
-              '${index + 1}',
-              style: const TextStyle(
-                color: AppTheme.gold,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                equip.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: 'Move ${equip.name} up',
-              onPressed: isFirst ? null : () => onMoveUp(equip.id),
-              icon: const Icon(Icons.keyboard_arrow_up),
-            ),
-            IconButton(
-              tooltip: 'Move ${equip.name} down',
-              onPressed: isLast ? null : () => onMoveDown(equip.id),
-              icon: const Icon(Icons.keyboard_arrow_down),
-            ),
-            IconButton(
-              tooltip: 'Remove ${equip.name}',
-              onPressed: () => onRemove(equip.id),
-              icon: const Icon(Icons.close),
-            ),
-          ],
-        ),
-      ),
+      child: const Icon(Icons.add, size: 18, color: AppTheme.muted),
     );
   }
 }
 
-class _RuneSelector extends StatelessWidget {
-  const _RuneSelector({
+class _BuildArcanaWorkspace extends StatelessWidget {
+  const _BuildArcanaWorkspace({
+    super.key,
     required this.runes,
     required this.selectedIds,
+    required this.activeColor,
+    required this.onColorSelected,
     required this.onToggle,
   });
 
   final List<BuildRuneSummary> runes;
   final List<int> selectedIds;
+  final int activeColor;
+  final ValueChanged<int> onColorSelected;
   final ValueChanged<int> onToggle;
 
   @override
   Widget build(BuildContext context) {
-    if (runes.isEmpty) {
-      return const Text(
-        'No arcana available',
-        style: TextStyle(color: AppTheme.muted),
-      );
-    }
-
+    final colorRunes = runes
+        .where((rune) => rune.color == activeColor)
+        .toList();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final color in const [1, 2, 3]) ...[
-          _ArcanaMatrixCard(
-            color: color,
-            selectedCount: _selectedCountForColor(color),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: Row(
             children: [
-              for (final rune in runes.where((rune) => rune.color == color))
-                FilterChip(
-                  selected: selectedIds.contains(rune.id),
-                  label: Text(rune.name),
-                  avatar: rune.iconUrl.isEmpty
-                      ? null
-                      : AppImage(
-                          url: rune.iconUrl,
-                          width: 24,
-                          height: 24,
-                          borderRadius: 6,
-                          semanticLabel: rune.name,
-                        ),
-                  onSelected: (_) => onToggle(rune.id),
+              for (final color in const [1, 2, 3]) ...[
+                Expanded(
+                  child: _ArcanaColorButton(
+                    color: color,
+                    selected: activeColor == color,
+                    selectedCount: _selectedCount(color),
+                    onTap: () => onColorSelected(color),
+                  ),
                 ),
+                if (color != 3) const SizedBox(width: 8),
+              ],
             ],
           ),
-          if (color != 3) const SizedBox(height: 10),
-        ],
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Choose up to 10 arcana of each color.',
+              style: TextStyle(color: AppTheme.muted, fontSize: 12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: colorRunes.isEmpty
+              ? const AppEmptyState(
+                  icon: Icons.hexagon_outlined,
+                  title: 'No arcana available',
+                  message: 'Pull to refresh and try again.',
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.82,
+                  ),
+                  itemCount: colorRunes.length,
+                  itemBuilder: (context, index) {
+                    final rune = colorRunes[index];
+                    return _BuildCatalogAsset(
+                      label: rune.name,
+                      imageUrl: rune.iconUrl,
+                      selected: selectedIds.contains(rune.id),
+                      accent: _arcanaAccent(rune.color),
+                      onTap: () => onToggle(rune.id),
+                    );
+                  },
+                ),
+        ),
       ],
     );
   }
 
-  int _selectedCountForColor(int color) {
-    final runeIdsForColor = runes
+  int _selectedCount(int color) {
+    final ids = runes
         .where((rune) => rune.color == color)
         .map((rune) => rune.id)
         .toSet();
-    return selectedIds.where(runeIdsForColor.contains).length.clamp(0, 10);
+    return selectedIds.where(ids.contains).length;
   }
 }
 
-class _ArcanaMatrixCard extends StatelessWidget {
-  const _ArcanaMatrixCard({required this.color, required this.selectedCount});
+class _ArcanaColorButton extends StatelessWidget {
+  const _ArcanaColorButton({
+    required this.color,
+    required this.selected,
+    required this.selectedCount,
+    required this.onTap,
+  });
 
   final int color;
+  final bool selected;
   final int selectedCount;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final accent = _accentColor(color);
-    final title = '${_colorName(color)} Arcana Matrix';
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withValues(alpha: 0.28)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+    final accent = _arcanaAccent(color);
+    final label = switch (color) {
+      1 => 'Red',
+      2 => 'Blue',
+      _ => 'Green',
+    };
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Ink(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.16) : AppTheme.panel,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? accent : Colors.white.withValues(alpha: 0.08),
+          ),
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Text(
-                  '$selectedCount/10',
-                  style: TextStyle(color: accent, fontWeight: FontWeight.w900),
-                ),
-              ],
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppTheme.text,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (var index = 0; index < 10; index++)
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: index < selectedCount
-                          ? accent.withValues(alpha: 0.86)
-                          : Colors.white.withValues(alpha: 0.06),
-                      border: Border.all(
-                        color: index < selectedCount
-                            ? accent
-                            : Colors.white.withValues(alpha: 0.12),
-                      ),
-                    ),
-                    child: const SizedBox(width: 18, height: 18),
-                  ),
-              ],
+            Text(
+              '$selectedCount/10',
+              style: TextStyle(
+                color: accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
       ),
     );
   }
-
-  String _colorName(int color) {
-    return switch (color) {
-      1 => 'Red',
-      2 => 'Blue',
-      3 => 'Green',
-      _ => 'Arcana',
-    };
-  }
-
-  Color _accentColor(int color) {
-    return switch (color) {
-      1 => const Color(0xFFFF6B6B),
-      2 => AppTheme.cyan,
-      3 => const Color(0xFF4ADE80),
-      _ => AppTheme.gold,
-    };
-  }
 }
 
-class _SummonerSkillSelector extends StatelessWidget {
-  const _SummonerSkillSelector({
+class _BuildSkillWorkspace extends StatelessWidget {
+  const _BuildSkillWorkspace({
+    super.key,
     required this.skills,
     required this.selectedId,
     required this.onSelected,
@@ -1090,34 +1509,107 @@ class _SummonerSkillSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (skills.isEmpty) {
-      return const Text(
-        'No summoner skills available',
-        style: TextStyle(color: AppTheme.muted),
+      return const AppEmptyState(
+        icon: Icons.auto_fix_high_outlined,
+        title: 'No skills available',
+        message: 'Pull to refresh and try again.',
       );
     }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final skill in skills)
-          ChoiceChip(
-            selected: selectedId == skill.id,
-            label: Text(skill.name),
-            avatar: skill.iconUrl.isEmpty
-                ? null
-                : AppImage(
-                    url: skill.iconUrl,
-                    width: 24,
-                    height: 24,
-                    borderRadius: 6,
-                    semanticLabel: skill.name,
-                  ),
-            onSelected: (_) => onSelected(skill.id),
-          ),
-      ],
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 5,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 18,
+        childAspectRatio: 0.82,
+      ),
+      itemCount: skills.length,
+      itemBuilder: (context, index) {
+        final skill = skills[index];
+        return _BuildCatalogAsset(
+          label: skill.name,
+          imageUrl: skill.iconUrl,
+          selected: selectedId == skill.id,
+          onTap: () => onSelected(skill.id),
+        );
+      },
     );
   }
+}
+
+class _BuildCatalogAsset extends StatelessWidget {
+  const _BuildCatalogAsset({
+    required this.label,
+    required this.imageUrl,
+    required this.selected,
+    required this.onTap,
+    this.accent = AppTheme.gold,
+  });
+
+  final String label;
+  final String imageUrl;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Column(
+          children: [
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 130),
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected
+                      ? accent.withValues(alpha: 0.14)
+                      : AppTheme.panel,
+                  border: Border.all(
+                    width: selected ? 2 : 1,
+                    color: selected
+                        ? accent
+                        : Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: AppImage(
+                  url: imageUrl,
+                  borderRadius: 999,
+                  semanticLabel: label,
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppTheme.text,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Color _arcanaAccent(int color) {
+  return switch (color) {
+    1 => const Color(0xFFFF6B6B),
+    2 => AppTheme.cyan,
+    3 => const Color(0xFF4ADE80),
+    _ => AppTheme.gold,
+  };
 }
 
 class _CommunityBuilds extends ConsumerStatefulWidget {

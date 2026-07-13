@@ -42,6 +42,24 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
+    testWidgets('keeps the previous data visible while refreshing', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          AppAsyncView<String>(
+            value: const AsyncValue.loading(),
+            previousData: 'Existing prompts',
+            data: Text.new,
+          ),
+        ),
+      );
+
+      expect(find.text('Existing prompts'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
     testWidgets('renders an error state with retry action on failures', (
       tester,
     ) async {

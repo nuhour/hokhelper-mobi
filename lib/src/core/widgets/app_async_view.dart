@@ -8,18 +8,34 @@ class AppAsyncView<T> extends StatelessWidget {
     required this.value,
     required this.data,
     this.retry,
+    this.previousData,
     super.key,
   });
 
   final AsyncValue<T> value;
   final Widget Function(T value) data;
   final VoidCallback? retry;
+  final T? previousData;
 
   @override
   Widget build(BuildContext context) {
     return value.when(
       data: data,
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () {
+        final previous = previousData;
+        if (previous == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Stack(
+          children: [
+            data(previous),
+            const Align(
+              alignment: Alignment.topCenter,
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+          ],
+        );
+      },
       error: (error, stackTrace) =>
           AppErrorState(message: error.toString(), retry: retry),
     );
