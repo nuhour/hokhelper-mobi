@@ -80,16 +80,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Build Simulator'), findsOneWidget);
       expect(find.text('Lam'), findsWidgets);
-      expect(find.text('My Slots'), findsOneWidget);
-      expect(find.text('Slot 1'), findsOneWidget);
+      expect(find.text('My Builds'), findsWidgets);
+      expect(find.text('BUILD 1'), findsOneWidget);
       expect(find.text('My Lam build'), findsOneWidget);
-      expect(find.text('Slot 2'), findsOneWidget);
-      expect(find.text('Empty slot'), findsWidgets);
+      expect(find.text('Create Build 2'), findsOneWidget);
       await tester.drag(find.byType(ListView).first, const Offset(0, -720));
       await tester.pumpAndSettle();
-      expect(find.text('Community Builds'), findsOneWidget);
+      expect(find.text('Explore Builds'), findsOneWidget);
       expect(find.text('Burst jungle'), findsOneWidget);
     },
   );
@@ -161,7 +159,6 @@ void main() {
     expect(requestedSlots, contains(166));
     expect(find.text('Angela'), findsWidgets);
     expect(find.text('Angela opener'), findsOneWidget);
-    expect(find.text('Blazing Mage'), findsOneWidget);
   });
 
   testWidgets('pins shared community build from scheme deep link', (
@@ -272,13 +269,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2200));
     await tester.pumpAndSettle();
 
     expect(find.text('Shared build'), findsOneWidget);
     expect(find.text('Shared target build'), findsOneWidget);
-    expect(find.text('Angela · '), findsOneWidget);
-    expect(find.text('sharer'), findsOneWidget);
+    expect(find.textContaining('sharer'), findsOneWidget);
   });
 
   testWidgets('opens favorite builds from initial community filter', (
@@ -353,13 +349,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2200));
     await tester.pumpAndSettle();
 
     expect(find.text('Favorite Builds'), findsOneWidget);
     expect(find.text('Favorite mobile build'), findsOneWidget);
-    expect(find.text('Angela · '), findsOneWidget);
-    expect(find.text('collector'), findsOneWidget);
+    expect(find.textContaining('collector'), findsOneWidget);
     expect(find.text('Public build'), findsNothing);
   });
 
@@ -409,19 +404,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Empty slot').first);
+    await tester.tap(find.text('Create Build 1'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
     expect(find.text('Equipment'), findsOneWidget);
-    expect(find.text('Arcana'), findsOneWidget);
+    expect(find.text('Arcana Matrix'), findsOneWidget);
     expect(find.text('Skill'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Mobile burst');
-    await tester.tap(find.text('Storm Axe'));
-    await tester.tap(find.text('Swift Boots'));
+    await tester.ensureVisible(find.bySemanticsLabel('Storm Axe'));
+    await tester.tap(find.bySemanticsLabel('Storm Axe'));
+    await tester.ensureVisible(find.bySemanticsLabel('Swift Boots'));
+    await tester.tap(find.bySemanticsLabel('Swift Boots'));
     await tester.pump();
     await tester.tap(find.byTooltip('Private build'));
-    await tester.tap(find.text('Arcana'));
+    await tester.tap(find.text('Arcana Matrix'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Red'), findsOneWidget);
     expect(find.text('0/10'), findsNWidgets(3));
@@ -513,15 +510,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Like build'));
+    await tester.tap(find.byTooltip('Favorite build'));
+    await tester.tap(find.byTooltip('Clone to slot 1'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Like 12').last);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorite 5').last);
-    await tester.tap(find.text('Clone S2'));
-    await tester.pumpAndSettle();
-
-    expect(actions, ['like:7', 'favorite:7', 'clone:7:2']);
+    expect(actions, ['like:7', 'favorite:7', 'clone:7:1']);
   });
 
   testWidgets('shows liked favorite state and toggles community reactions', (
@@ -595,14 +591,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2200));
     await tester.pumpAndSettle();
+    expect(find.byTooltip('Unlike build'), findsOneWidget);
+    expect(find.byTooltip('Unfavorite build'), findsOneWidget);
 
-    expect(find.widgetWithText(OutlinedButton, 'Liked 12'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Favorited 5'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Liked 12').last);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorited 5').last);
+    await tester.tap(find.byTooltip('Unlike build'));
+    await tester.tap(find.byTooltip('Unfavorite build'));
     await tester.pumpAndSettle();
 
     expect(actions, ['unlike:7', 'unfavorite:7']);
