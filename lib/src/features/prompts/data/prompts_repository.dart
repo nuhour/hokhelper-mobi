@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../domain/prompt_summary.dart';
 
 enum PromptListAction {
@@ -154,6 +156,23 @@ class PromptsRepository {
     final map = result is Map ? result : json;
     final prompt = map['prompt'];
     return PromptSummary.fromJson(prompt ?? map);
+  }
+
+  Future<String> uploadImage(File imageFile) async {
+    final json = await apiClient.postMultipart(
+      '/prompt/image/upload',
+      file: imageFile,
+    );
+    final result = json['result'];
+    final map = result is Map ? result : const <String, Object?>{};
+    final imageUrl = map['image_url']?.toString().trim() ?? '';
+    if (imageUrl.isEmpty) {
+      throw const ApiError(
+        kind: ApiErrorKind.backend,
+        message: 'Image upload did not return an image URL',
+      );
+    }
+    return imageUrl;
   }
 
   Future<PromptRechargeResult> rechargeGenerationQuota({

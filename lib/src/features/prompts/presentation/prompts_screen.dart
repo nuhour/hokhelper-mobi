@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -1120,12 +1123,16 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  final _tagsController = TextEditingController();
-  final _sourceImageController = TextEditingController();
-  final _effectImageController = TextEditingController();
+  final _customTagController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final Set<String> _tags = <String>{};
   var _language = _PromptLanguage.english;
   var _isPublic = true;
   var _submitting = false;
+  String _sourceImageUrl = '';
+  String _effectImageUrl = '';
+  XFile? _sourceImageFile;
+  XFile? _effectImageFile;
 
   @override
   void initState() {
@@ -1134,12 +1141,10 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
     if (prompt != null) {
       _titleController.text = prompt.title;
       _contentController.text = prompt.content;
-      _tagsController.text = prompt.tags
-          .where((tag) => !tag.startsWith('Lang:'))
-          .join(', ');
+      _tags.addAll(prompt.tags.where((tag) => !tag.startsWith('Lang:')));
       _language = _PromptLanguageOptionX.fromTag(prompt.tags);
-      _sourceImageController.text = prompt.sourceImageUrl;
-      _effectImageController.text = prompt.effectImageUrl;
+      _sourceImageUrl = prompt.sourceImageUrl;
+      _effectImageUrl = prompt.effectImageUrl;
       _isPublic = prompt.isPublic;
     }
   }
@@ -1148,9 +1153,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
-    _tagsController.dispose();
-    _sourceImageController.dispose();
-    _effectImageController.dispose();
+    _customTagController.dispose();
     super.dispose();
   }
 
@@ -1213,15 +1216,6 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                   },
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _tagsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Tags',
-                    hintText: 'skin, build, hero',
-                  ),
-                  textInputAction: TextInputAction.done,
-                ),
-                const SizedBox(height: 12),
                 DropdownButtonFormField<_PromptLanguage>(
                   initialValue: _language,
                   decoration: const InputDecoration(
@@ -1244,25 +1238,63 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                           }
                         },
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _sourceImageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Source image URL',
-                    hintText: 'https://example.com/source.png',
-                  ),
-                  keyboardType: TextInputType.url,
-                  textInputAction: TextInputAction.next,
+                const SizedBox(height: 20),
+                _PromptTagsEditor(
+                  tags: _tags,
+                  customTagController: _customTagController,
+                  enabled: !_submitting,
+                  onChanged: () => setState(() {}),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _effectImageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Effect image URL',
-                    hintText: 'https://example.com/effect.png',
+                const SizedBox(height: 20),
+                Text(
+                  'Images (optional)',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
                   ),
-                  keyboardType: TextInputType.url,
-                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 8),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 520;
+                    final sourcePicker = _PromptImagePicker(
+                      label: 'Source image',
+                      localFile: _sourceImageFile,
+                      imageUrl: _sourceImageUrl,
+                      enabled: !_submitting,
+                      onPick: () => _pickImage(_PromptImageTarget.source),
+                      onRemove: () => setState(() {
+                        _sourceImageFile = null;
+                        _sourceImageUrl = '';
+                      }),
+                    );
+                    final effectPicker = _PromptImagePicker(
+                      label: 'Result image',
+                      localFile: _effectImageFile,
+                      imageUrl: _effectImageUrl,
+                      enabled: !_submitting,
+                      onPick: () => _pickImage(_PromptImageTarget.effect),
+                      onRemove: () => setState(() {
+                        _effectImageFile = null;
+                        _effectImageUrl = '';
+                      }),
+                    );
+                    return isWide
+                        ? Row(
+                            children: [
+                              Expanded(child: sourcePicker),
+                              const SizedBox(width: 12),
+                              Expanded(child: effectPicker),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              sourcePicker,
+                              const SizedBox(height: 12),
+                              effectPicker,
+                            ],
+                          );
+                  },
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile.adaptive(
@@ -1302,19 +1334,26 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
     }
     setState(() => _submitting = true);
     try {
-      final tags = _tagsController.text
-          .split(',')
-          .map((tag) => tag.trim())
-          .where((tag) => tag.isNotEmpty)
-          .toList(growable: false);
+      var sourceImageUrl = _sourceImageUrl;
+      var effectImageUrl = _effectImageUrl;
+      if (_sourceImageFile != null) {
+        sourceImageUrl = await ref
+            .read(promptsRepositoryProvider)
+            .uploadImage(File(_sourceImageFile!.path));
+      }
+      if (_effectImageFile != null) {
+        effectImageUrl = await ref
+            .read(promptsRepositoryProvider)
+            .uploadImage(File(_effectImageFile!.path));
+      }
       final draft = PromptDraft(
         title: _titleController.text,
         content: _contentController.text,
-        tags: tags,
+        tags: _tags.toList(growable: false),
         isPublic: _isPublic,
         language: _language.code,
-        sourceImageUrl: _sourceImageController.text,
-        effectImageUrl: _effectImageController.text,
+        sourceImageUrl: sourceImageUrl,
+        effectImageUrl: effectImageUrl,
       );
       final editingPrompt = widget.prompt;
       final saved = editingPrompt == null
@@ -1348,7 +1387,246 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
       );
     }
   }
+
+  Future<void> _pickImage(_PromptImageTarget target) async {
+    final file = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 88,
+      maxWidth: 2048,
+    );
+    if (!mounted || file == null) {
+      return;
+    }
+    setState(() {
+      if (target == _PromptImageTarget.source) {
+        _sourceImageFile = file;
+      } else {
+        _effectImageFile = file;
+      }
+    });
+  }
 }
+
+class _PromptTagsEditor extends StatelessWidget {
+  const _PromptTagsEditor({
+    required this.tags,
+    required this.customTagController,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  static const _popularTags = [
+    'HOK Hero Portrait',
+    'MOBA Splash Art',
+    'Skin Concept Art',
+    'Esports Poster',
+    'Mythic China',
+    'Battlefield Matte',
+  ];
+
+  final Set<String> tags;
+  final TextEditingController customTagController;
+  final bool enabled;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tags (optional)',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _popularTags
+              .map((tag) {
+                final selected = tags.contains(tag);
+                return FilterChip(
+                  label: Text(tag),
+                  selected: selected,
+                  onSelected: enabled
+                      ? (value) {
+                          if (value) {
+                            tags.add(tag);
+                          } else {
+                            tags.remove(tag);
+                          }
+                          onChanged();
+                        }
+                      : null,
+                );
+              })
+              .toList(growable: false),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: customTagController,
+                enabled: enabled,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _addCustomTag(),
+                decoration: const InputDecoration(
+                  labelText: 'Custom tag',
+                  hintText: 'Add a tag',
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              onPressed: enabled ? _addCustomTag : null,
+              icon: const Icon(Icons.add),
+              tooltip: 'Add tag',
+            ),
+          ],
+        ),
+        if (tags.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: tags
+                .map(
+                  (tag) => InputChip(
+                    label: Text(tag),
+                    onDeleted: enabled
+                        ? () {
+                            tags.remove(tag);
+                            onChanged();
+                          }
+                        : null,
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _addCustomTag() {
+    final tag = customTagController.text.trim();
+    if (tag.isEmpty) {
+      return;
+    }
+    tags.add(tag);
+    customTagController.clear();
+    onChanged();
+  }
+}
+
+class _PromptImagePicker extends StatelessWidget {
+  const _PromptImagePicker({
+    required this.label,
+    required this.localFile,
+    required this.imageUrl,
+    required this.enabled,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  final String label;
+  final XFile? localFile;
+  final String imageUrl;
+  final bool enabled;
+  final VoidCallback onPick;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = localFile != null || imageUrl.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label (optional)',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: AppTheme.muted,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Semantics(
+          button: true,
+          label: 'Upload $label',
+          child: InkWell(
+            onTap: enabled ? onPick : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Ink(
+              height: 132,
+              decoration: BoxDecoration(
+                color: AppTheme.panelAlt,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: hasImage
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.outline,
+                  style: hasImage ? BorderStyle.solid : BorderStyle.none,
+                ),
+              ),
+              child: hasImage
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: localFile != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(5),
+                                  child: Image.file(
+                                    File(localFile!.path),
+                                    fit: BoxFit.contain,
+                                  ),
+                                )
+                              : AppImage(
+                                  url: imageUrl,
+                                  fit: BoxFit.contain,
+                                  borderRadius: 5,
+                                  semanticLabel: label,
+                                ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton.filled(
+                            onPressed: enabled ? onRemove : null,
+                            icon: const Icon(Icons.close, size: 16),
+                            tooltip: 'Remove $label',
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.upload_outlined, color: AppTheme.muted),
+                          SizedBox(height: 6),
+                          Text(
+                            'Upload image',
+                            style: TextStyle(color: AppTheme.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _PromptImageTarget { source, effect }
 
 enum _PromptLanguage {
   english('en', 'English'),

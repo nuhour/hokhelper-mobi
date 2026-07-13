@@ -55,6 +55,26 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> postMultipart(
+    String path, {
+    required File file,
+    Map<String, Object?> fields = const {},
+    String fileField = 'image',
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        ...fields,
+        fileField: await MultipartFile.fromFile(file.path),
+      });
+      final response = await _dio.post<Object?>(path, data: formData);
+      return _readJsonMap(response.data);
+    } on DioException catch (error) {
+      final apiError = _mapDioException(error);
+      await _notifyAuthFailure(apiError);
+      throw apiError;
+    }
+  }
+
   Map<String, dynamic> _readJsonMap(Object? data) {
     final json = switch (data) {
       Map<String, dynamic>() => data,
@@ -190,7 +210,9 @@ class _ApiClientAuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    options.headers[Headers.contentTypeHeader] = Headers.jsonContentType;
+    if (options.data is! FormData) {
+      options.headers[Headers.contentTypeHeader] = Headers.jsonContentType;
+    }
 
     try {
       final accessToken = await _tokenStore.readAccessToken();

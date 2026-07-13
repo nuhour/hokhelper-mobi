@@ -544,19 +544,24 @@ void main() {
       find.widgetWithText(TextFormField, 'Prompt content'),
       'Generate a clean HOK hero portrait.',
     );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Tags'),
-      'portrait, mobile',
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextField, 'Custom tag'),
+      120,
+      scrollable: find.byType(Scrollable).last,
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Source image URL'),
-      'https://example.test/source.png',
+      find.widgetWithText(TextField, 'Custom tag'),
+      'portrait',
     );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Effect image URL'),
-      'https://example.test/effect.png',
+      find.widgetWithText(TextField, 'Custom tag'),
+      'mobile',
     );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
 
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.widgetWithText(FilledButton, 'Save prompt'),
       120,
@@ -571,14 +576,8 @@ void main() {
       'Generate a clean HOK hero portrait.',
     );
     expect(repository.createdDraft?.tags, ['portrait', 'mobile']);
-    expect(
-      repository.createdDraft?.sourceImageUrl,
-      'https://example.test/source.png',
-    );
-    expect(
-      repository.createdDraft?.effectImageUrl,
-      'https://example.test/effect.png',
-    );
+    expect(repository.createdDraft?.sourceImageUrl, isEmpty);
+    expect(repository.createdDraft?.effectImageUrl, isEmpty);
     expect(find.text('Mobile prompt'), findsOneWidget);
     expect(find.text('Prompt created'), findsOneWidget);
   });
@@ -684,20 +683,19 @@ void main() {
       find.widgetWithText(TextFormField, 'Prompt content'),
       'Updated HOK prompt content.',
     );
+    expect(find.text('skin'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextField, 'Custom tag'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Tags'),
+      find.widgetWithText(TextField, 'Custom tag'),
       'updated',
     );
-    expect(find.text('https://example.test/source-old.png'), findsOneWidget);
-    expect(find.text('https://example.test/effect-old.png'), findsOneWidget);
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Source image URL'),
-      'https://example.test/source-updated.png',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Effect image URL'),
-      'https://example.test/effect-updated.png',
-    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.widgetWithText(FilledButton, 'Save prompt'),
       120,
@@ -708,14 +706,17 @@ void main() {
 
     expect(repository.updatedPromptId, '7');
     expect(repository.updatedDraft?.title, 'Updated prompt');
-    expect(repository.updatedDraft?.tags, ['updated']);
+    expect(
+      repository.updatedDraft?.tags,
+      containsAll(['skin', 'cyber', 'updated']),
+    );
     expect(
       repository.updatedDraft?.sourceImageUrl,
-      'https://example.test/source-updated.png',
+      'https://example.test/source-old.png',
     );
     expect(
       repository.updatedDraft?.effectImageUrl,
-      'https://example.test/effect-updated.png',
+      'https://example.test/effect-old.png',
     );
     expect(find.text('Updated prompt'), findsOneWidget);
     expect(find.text('Prompt updated'), findsOneWidget);
