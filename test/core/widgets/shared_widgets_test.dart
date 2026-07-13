@@ -45,6 +45,31 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
+    testWidgets('gallery skeleton remains overflow-free in a short viewport', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 480);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _wrap(
+          AppAsyncView<String>(
+            value: const AsyncValue.loading(),
+            loadingStyle: AppAsyncLoadingStyle.gallery,
+            data: Text.new,
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('app-async-loading-surface')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('keeps the previous data visible while refreshing', (
       tester,
     ) async {

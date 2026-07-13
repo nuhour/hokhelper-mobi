@@ -247,6 +247,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
               value: galleryValue,
               retry: () =>
                   ref.invalidate(skinGalleryQueryProvider(galleryQuery)),
+              loadingStyle: AppAsyncLoadingStyle.gallery,
               data: (items) {
                 final allItems = [...items, ..._extraSkins];
                 final skins = _filterAndSort(allItems);

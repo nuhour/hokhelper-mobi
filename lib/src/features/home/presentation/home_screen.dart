@@ -38,6 +38,7 @@ class HomeScreen extends ConsumerWidget {
           AppAsyncView<HomeStats>(
             value: statsValue,
             retry: () => ref.invalidate(homeStatsProvider),
+            loadingStyle: AppAsyncLoadingStyle.dashboard,
             data: (stats) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [_HomePortalFramework(result: stats.result)],

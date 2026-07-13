@@ -86,6 +86,7 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
   String _query = '';
   _HeroSort _sort = _HeroSort.release;
   int? _lanePosition;
+  List<HeroSummary>? _previousHeroes;
 
   @override
   void initState() {
@@ -111,12 +112,18 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
       lanePosition: _lanePosition,
     );
     final heroesValue = ref.watch(heroGalleryQueryProvider(galleryQuery));
+    final loadedHeroes = heroesValue.valueOrNull;
+    if (loadedHeroes != null) {
+      _previousHeroes = loadedHeroes;
+    }
 
     return Material(
       color: AppTheme.bg,
       child: AppAsyncView<List<HeroSummary>>(
         value: heroesValue,
         retry: () => ref.invalidate(heroGalleryQueryProvider(galleryQuery)),
+        previousData: _previousHeroes,
+        loadingStyle: AppAsyncLoadingStyle.gallery,
         data: (heroes) {
           final visibleHeroes = _filterHeroes(heroes);
           return RefreshIndicator(
@@ -361,6 +368,7 @@ class _HeroCard extends StatelessWidget {
     final ratingLabel = hero.rating > 0 ? hero.rating.toStringAsFixed(1) : '--';
 
     return Material(
+      key: ValueKey('hero-card-${hero.id}'),
       color: AppTheme.panel,
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,

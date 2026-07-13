@@ -126,6 +126,7 @@ class StatsScreen extends ConsumerWidget {
     return AppAsyncView<StatsDashboard>(
       value: value,
       retry: () => ref.invalidate(dashboardProvider),
+      loadingStyle: AppAsyncLoadingStyle.dashboard,
       data: (dashboard) {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(dashboardProvider.future),

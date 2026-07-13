@@ -379,6 +379,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
     return AppAsyncView<List<CommunityPostSummary>>(
       value: postsValue,
       retry: () => ref.invalidate(communityPostsQueryProvider(query)),
+      loadingStyle: AppAsyncLoadingStyle.list,
       data: (posts) {
         final combinedPosts = [...posts, ..._extraPosts];
         final allPosts = _mergeCreatedPosts(combinedPosts)

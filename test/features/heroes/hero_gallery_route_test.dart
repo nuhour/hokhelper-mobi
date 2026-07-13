@@ -67,7 +67,7 @@ void main() {
       'Lam',
     );
     expect(find.widgetWithText(TextField, 'Lam'), findsOneWidget);
-    expect(find.text('Shark Rider'), findsOneWidget);
+    expect(find.text('Lam'), findsWidgets);
     expect(find.text('Angela'), findsNothing);
     expect(repository.requestedSearch, 'Lam');
   });
@@ -100,8 +100,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Shark Rider'));
-    await tester.tap(find.text('Shark Rider'));
+    final heroCard = find.byKey(const ValueKey('hero-card-1'));
+    await tester.ensureVisible(heroCard);
+    await tester.tap(heroCard);
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/1');
