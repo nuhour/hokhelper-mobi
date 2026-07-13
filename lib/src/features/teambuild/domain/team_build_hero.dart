@@ -5,6 +5,7 @@ class TeamBuildHero {
     required this.name,
     required this.mainJob,
     required this.avatarUrl,
+    this.position = '',
   });
 
   final int id;
@@ -12,6 +13,7 @@ class TeamBuildHero {
   final String name;
   final int mainJob;
   final String avatarUrl;
+  final String position;
 
   factory TeamBuildHero.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -31,7 +33,39 @@ class TeamBuildHero {
             map['avatar_url_large'] ??
             map['avatar'],
       ),
+      position: _readString(
+        map['position'] ?? map['postion'] ?? map['lane_position'],
+      ),
     );
+  }
+
+  bool matchesLane(int lane) {
+    final tokens = position
+        .replaceAll(RegExp(r'[|/，、;；]'), ',')
+        .split(',')
+        .map((token) => token.trim().toLowerCase())
+        .where((token) => token.isNotEmpty);
+    const tokenMap = {
+      '0': 0,
+      'clash': 0,
+      'solo': 0,
+      'top': 0,
+      '1': 1,
+      'mid': 1,
+      'middle': 1,
+      '2': 2,
+      'farm': 2,
+      'adc': 2,
+      'bot': 2,
+      '3': 3,
+      'jungle': 3,
+      'jg': 3,
+      '4': 4,
+      'support': 4,
+      'sup': 4,
+      'roam': 4,
+    };
+    return tokens.any((token) => tokenMap[token] == lane);
   }
 }
 

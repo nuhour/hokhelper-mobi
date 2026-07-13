@@ -3,10 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_async_view.dart';
-import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/team_builder_repository.dart';
 import '../domain/team_build_hero.dart';
@@ -29,56 +26,59 @@ class TeamBuilderDraft {
   const TeamBuilderDraft({
     this.allyPicks = const [null, null, null, null, null],
     this.enemyPicks = const [null, null, null, null, null],
-    this.bans = const [null, null, null, null, null],
+    this.allyBans = const [null, null, null, null, null],
+    this.enemyBans = const [null, null, null, null, null],
     this.activeSlotType = TeamBuilderSlotType.pick,
     this.activeSide = TeamBuilderSide.ally,
     this.activeIndex = 0,
-    this.recommendType = TeamRecommendType.balanced,
+    this.recommendType = TeamRecommendType.synergy,
+    this.allyIsBlue = true,
   });
 
   final List<TeamBuildHero?> allyPicks;
   final List<TeamBuildHero?> enemyPicks;
-  final List<TeamBuildHero?> bans;
+  final List<TeamBuildHero?> allyBans;
+  final List<TeamBuildHero?> enemyBans;
   final TeamBuilderSlotType activeSlotType;
   final TeamBuilderSide activeSide;
   final int activeIndex;
   final TeamRecommendType recommendType;
+  final bool allyIsBlue;
 
   TeamBuilderDraft copyWith({
     List<TeamBuildHero?>? allyPicks,
     List<TeamBuildHero?>? enemyPicks,
-    List<TeamBuildHero?>? bans,
+    List<TeamBuildHero?>? allyBans,
+    List<TeamBuildHero?>? enemyBans,
     TeamBuilderSlotType? activeSlotType,
     TeamBuilderSide? activeSide,
     int? activeIndex,
     TeamRecommendType? recommendType,
+    bool? allyIsBlue,
   }) {
     return TeamBuilderDraft(
       allyPicks: allyPicks ?? this.allyPicks,
       enemyPicks: enemyPicks ?? this.enemyPicks,
-      bans: bans ?? this.bans,
+      allyBans: allyBans ?? this.allyBans,
+      enemyBans: enemyBans ?? this.enemyBans,
       activeSlotType: activeSlotType ?? this.activeSlotType,
       activeSide: activeSide ?? this.activeSide,
       activeIndex: activeIndex ?? this.activeIndex,
       recommendType: recommendType ?? this.recommendType,
+      allyIsBlue: allyIsBlue ?? this.allyIsBlue,
     );
   }
 
-  List<int> get allyIds => allyPicks
-      .whereType<TeamBuildHero>()
-      .map((hero) => hero.id)
-      .toList(growable: false);
-
-  List<int> get enemyIds => enemyPicks
-      .whereType<TeamBuildHero>()
-      .map((hero) => hero.id)
-      .toList(growable: false);
-
-  List<int> get banIds => bans
-      .whereType<TeamBuildHero>()
-      .map((hero) => hero.id)
-      .toList(growable: false);
+  List<int> get allyIds => _heroIds(allyPicks);
+  List<int> get enemyIds => _heroIds(enemyPicks);
+  List<int> get banIds => _heroIds([...allyBans, ...enemyBans]);
+  Set<int> get occupiedIds => {...allyIds, ...enemyIds, ...banIds};
 }
+
+List<int> _heroIds(List<TeamBuildHero?> heroes) => heroes
+    .whereType<TeamBuildHero>()
+    .map((hero) => hero.id)
+    .toList(growable: false);
 
 enum TeamBuilderSide { ally, enemy }
 
@@ -98,17 +98,15 @@ final teamRecommendationsProvider = FutureProvider<TeamRecommendationResult>((
 ) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
   final draft = ref.watch(teamBuilderDraftProvider);
+  final isAllyTarget = draft.activeSide == TeamBuilderSide.ally;
   return ref
       .watch(teamBuilderRepositoryProvider)
       .loadRecommendations(
         regionId: settings.region.regionId,
-        myPicks: draft.activeSide == TeamBuilderSide.ally
-            ? draft.allyIds
-            : draft.enemyIds,
-        enemyPicks: draft.activeSide == TeamBuilderSide.ally
-            ? draft.enemyIds
-            : draft.allyIds,
+        myPicks: isAllyTarget ? draft.allyIds : draft.enemyIds,
+        enemyPicks: isAllyTarget ? draft.enemyIds : draft.allyIds,
         bans: draft.banIds,
+        mySide: isAllyTarget == draft.allyIsBlue ? 'blue' : 'red',
         slotType: draft.activeSlotType.apiValue,
         slotIndex: draft.activeIndex,
         recommendType: draft.recommendType,
@@ -139,64 +137,11 @@ class TeamBuilderScreen extends ConsumerStatefulWidget {
 
 class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   bool _didHydrateInitialDraft = false;
-
-  void _selectHero(WidgetRef ref, TeamBuildHero hero) {
-    final draft = ref.read(teamBuilderDraftProvider);
-    final ally = List<TeamBuildHero?>.of(draft.allyPicks);
-    final enemy = List<TeamBuildHero?>.of(draft.enemyPicks);
-    if (draft.activeSlotType == TeamBuilderSlotType.ban) {
-      final bans = List<TeamBuildHero?>.of(draft.bans);
-      bans[draft.activeIndex] = hero;
-      ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
-        bans: bans,
-        activeIndex: (draft.activeIndex + 1).clamp(0, bans.length - 1),
-      );
-      return;
-    }
-
-    final slots = draft.activeSide == TeamBuilderSide.ally ? ally : enemy;
-    slots[draft.activeIndex] = hero;
-    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
-      allyPicks: ally,
-      enemyPicks: enemy,
-      activeSlotType: TeamBuilderSlotType.pick,
-      activeIndex: (draft.activeIndex + 1).clamp(0, 4),
-    );
-  }
-
-  void _setActiveSlot(WidgetRef ref, TeamBuilderSide side, int index) {
-    final draft = ref.read(teamBuilderDraftProvider);
-    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
-      activeSlotType: TeamBuilderSlotType.pick,
-      activeSide: side,
-      activeIndex: index,
-    );
-  }
-
-  void _setActiveBanSlot(WidgetRef ref, int index) {
-    final draft = ref.read(teamBuilderDraftProvider);
-    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
-      activeSlotType: TeamBuilderSlotType.ban,
-      activeIndex: index,
-    );
-  }
-
-  void _clearAll(WidgetRef ref) {
-    ref.read(teamBuilderDraftProvider.notifier).state =
-        const TeamBuilderDraft();
-  }
-
-  void _setRecommendType(WidgetRef ref, TeamRecommendType type) {
-    final draft = ref.read(teamBuilderDraftProvider);
-    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
-      recommendType: type,
-    );
-  }
+  int? _poolLane;
+  int? _recommendJob;
 
   void _hydrateInitialDraft(List<TeamBuildHero> heroes) {
-    if (_didHydrateInitialDraft) {
-      return;
-    }
+    if (_didHydrateInitialDraft) return;
     final hasInitialIntent =
         widget.initialAllyHeroIds.isNotEmpty ||
         widget.initialEnemyHeroIds.isNotEmpty ||
@@ -208,410 +153,625 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
       _didHydrateInitialDraft = true;
       return;
     }
-    if (heroes.isEmpty) {
-      return;
-    }
-
-    final allyPicks = _hydratePicks(heroes, widget.initialAllyHeroIds);
-    final enemyPicks = _hydratePicks(heroes, widget.initialEnemyHeroIds);
-    final bans = _hydratePicks(heroes, widget.initialBanHeroIds);
-    final activeSlotType = widget.initialSlotType ?? TeamBuilderSlotType.pick;
-    final activeSide = widget.initialSide ?? TeamBuilderSide.ally;
-    final activeIndex = (widget.initialSlotIndex ?? 0).clamp(0, 4);
+    if (heroes.isEmpty) return;
     _didHydrateInitialDraft = true;
-
+    final bans = widget.initialBanHeroIds;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       ref.read(teamBuilderDraftProvider.notifier).state = TeamBuilderDraft(
-        allyPicks: allyPicks,
-        enemyPicks: enemyPicks,
-        bans: bans,
-        activeSlotType: activeSlotType,
-        activeSide: activeSide,
-        activeIndex: activeIndex,
+        allyPicks: _hydrateSlots(heroes, widget.initialAllyHeroIds),
+        enemyPicks: _hydrateSlots(heroes, widget.initialEnemyHeroIds),
+        allyBans: _hydrateSlots(heroes, bans.take(5).toList()),
+        enemyBans: _hydrateSlots(heroes, bans.skip(5).take(5).toList()),
+        activeSlotType: widget.initialSlotType ?? TeamBuilderSlotType.pick,
+        activeSide: widget.initialSide ?? TeamBuilderSide.ally,
+        activeIndex: (widget.initialSlotIndex ?? 0).clamp(0, 4),
       );
     });
+  }
+
+  void _activateSlot(
+    TeamBuilderSlotType type,
+    TeamBuilderSide side,
+    int index,
+  ) {
+    final draft = ref.read(teamBuilderDraftProvider);
+    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
+      activeSlotType: type,
+      activeSide: side,
+      activeIndex: index,
+    );
+  }
+
+  void _selectHero(TeamBuildHero hero) {
+    final draft = ref.read(teamBuilderDraftProvider);
+    final existingId = _heroAtActiveSlot(draft)?.id;
+    if (draft.occupiedIds.contains(hero.id) && existingId != hero.id) return;
+    final allyPicks = List<TeamBuildHero?>.from(draft.allyPicks);
+    final enemyPicks = List<TeamBuildHero?>.from(draft.enemyPicks);
+    final allyBans = List<TeamBuildHero?>.from(draft.allyBans);
+    final enemyBans = List<TeamBuildHero?>.from(draft.enemyBans);
+    final target = draft.activeSlotType == TeamBuilderSlotType.pick
+        ? draft.activeSide == TeamBuilderSide.ally
+              ? allyPicks
+              : enemyPicks
+        : draft.activeSide == TeamBuilderSide.ally
+        ? allyBans
+        : enemyBans;
+    target[draft.activeIndex] = hero;
+    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
+      allyPicks: allyPicks,
+      enemyPicks: enemyPicks,
+      allyBans: allyBans,
+      enemyBans: enemyBans,
+      activeIndex: (draft.activeIndex + 1).clamp(0, 4),
+    );
+  }
+
+  TeamBuildHero? _heroAtActiveSlot(TeamBuilderDraft draft) {
+    final slots = draft.activeSlotType == TeamBuilderSlotType.pick
+        ? draft.activeSide == TeamBuilderSide.ally
+              ? draft.allyPicks
+              : draft.enemyPicks
+        : draft.activeSide == TeamBuilderSide.ally
+        ? draft.allyBans
+        : draft.enemyBans;
+    return slots[draft.activeIndex];
+  }
+
+  void _removeHero(TeamBuilderSlotType type, TeamBuilderSide side, int index) {
+    final draft = ref.read(teamBuilderDraftProvider);
+    final allyPicks = List<TeamBuildHero?>.from(draft.allyPicks);
+    final enemyPicks = List<TeamBuildHero?>.from(draft.enemyPicks);
+    final allyBans = List<TeamBuildHero?>.from(draft.allyBans);
+    final enemyBans = List<TeamBuildHero?>.from(draft.enemyBans);
+    final target = type == TeamBuilderSlotType.pick
+        ? side == TeamBuilderSide.ally
+              ? allyPicks
+              : enemyPicks
+        : side == TeamBuilderSide.ally
+        ? allyBans
+        : enemyBans;
+    target[index] = null;
+    ref.read(teamBuilderDraftProvider.notifier).state = draft.copyWith(
+      allyPicks: allyPicks,
+      enemyPicks: enemyPicks,
+      allyBans: allyBans,
+      enemyBans: enemyBans,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final heroesValue = ref.watch(teamBuilderHeroesProvider);
+    final draft = ref.watch(teamBuilderDraftProvider);
+    final recommendations = ref.watch(teamRecommendationsProvider);
     if (heroesValue case AsyncData(value: final heroes)) {
       _hydrateInitialDraft(heroes);
     }
-    final draft = ref.watch(teamBuilderDraftProvider);
-    final recommendations = ref.watch(teamRecommendationsProvider);
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(teamBuilderHeroesProvider);
-        ref.invalidate(teamRecommendationsProvider);
-        await ref.read(teamBuilderHeroesProvider.future);
-        await ref.read(teamRecommendationsProvider.future);
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        children: [
-          Row(
-            children: [
-              const Expanded(child: AppSectionHeader(title: 'Team Builder')),
-              IconButton(
-                tooltip: 'Reset',
-                onPressed: () => _clearAll(ref),
-                icon: const Icon(Icons.refresh_rounded),
+    return Material(
+      color: AppTheme.bg,
+      child: SafeArea(
+        child: Column(
+          children: [
+            _BuilderToolbar(
+              allyIsBlue: draft.allyIsBlue,
+              onSwap: () {
+                ref.read(teamBuilderDraftProvider.notifier).state = draft
+                    .copyWith(allyIsBlue: !draft.allyIsBlue);
+              },
+              onReset: () => ref.read(teamBuilderDraftProvider.notifier).state =
+                  const TeamBuilderDraft(),
+            ),
+            _WinRateBar(
+              rates: recommendations.valueOrNull?.sideWinRates,
+              allyIsBlue: draft.allyIsBlue,
+            ),
+            _BanStrip(
+              allyBans: draft.allyBans,
+              enemyBans: draft.enemyBans,
+              activeType: draft.activeSlotType,
+              activeSide: draft.activeSide,
+              activeIndex: draft.activeIndex,
+              allyIsBlue: draft.allyIsBlue,
+              onTap: (side, index) =>
+                  _activateSlot(TeamBuilderSlotType.ban, side, index),
+              onRemove: (side, index) =>
+                  _removeHero(TeamBuilderSlotType.ban, side, index),
+            ),
+            SizedBox(
+              height: 274,
+              child: _DraftBoard(
+                draft: draft,
+                recommendations: recommendations,
+                recommendJob: _recommendJob,
+                onRecommendationJobChanged: (value) =>
+                    setState(() => _recommendJob = value),
+                onRecommendationTypeChanged: (type) {
+                  ref.read(teamBuilderDraftProvider.notifier).state = draft
+                      .copyWith(recommendType: type);
+                },
+                onSlotTap: (side, index) =>
+                    _activateSlot(TeamBuilderSlotType.pick, side, index),
+                onRemove: (side, index) =>
+                    _removeHero(TeamBuilderSlotType.pick, side, index),
+                onRecommendationTap: (recommendation) {
+                  final heroes =
+                      heroesValue.valueOrNull ?? const <TeamBuildHero>[];
+                  final hero = heroes
+                      .where(
+                        (candidate) => candidate.id == recommendation.heroId,
+                      )
+                      .firstOrNull;
+                  if (hero != null) _selectHero(hero);
+                },
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Draft ally and enemy picks, then review data-backed recommendations.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-          ),
-          const SizedBox(height: 20),
-          _PickPanel(
-            title: 'Ally Picks',
-            slots: draft.allyPicks,
-            activeSlotType: draft.activeSlotType,
-            activeSide: draft.activeSide,
-            activeIndex: draft.activeIndex,
-            side: TeamBuilderSide.ally,
-            onSlotTap: (side, index) => _setActiveSlot(ref, side, index),
-          ),
-          const SizedBox(height: 12),
-          _PickPanel(
-            title: 'Enemy Picks',
-            slots: draft.enemyPicks,
-            activeSlotType: draft.activeSlotType,
-            activeSide: draft.activeSide,
-            activeIndex: draft.activeIndex,
-            side: TeamBuilderSide.enemy,
-            onSlotTap: (side, index) => _setActiveSlot(ref, side, index),
-          ),
-          const SizedBox(height: 12),
-          _BanPanel(
-            bans: draft.bans,
-            activeSlotType: draft.activeSlotType,
-            activeIndex: draft.activeIndex,
-            onSlotTap: (index) => _setActiveBanSlot(ref, index),
-          ),
-          const SizedBox(height: 20),
-          AppAsyncView<List<TeamBuildHero>>(
-            value: heroesValue,
-            retry: () => ref.invalidate(teamBuilderHeroesProvider),
-            data: (heroes) => _HeroPool(
-              heroes: heroes,
-              onHeroTap: (hero) => _selectHero(ref, hero),
+            ),
+            Expanded(
+              child: switch (heroesValue) {
+                AsyncData(value: final heroes) => _HeroPool(
+                  heroes: heroes,
+                  lane: _poolLane,
+                  occupiedIds: draft.occupiedIds,
+                  onLaneChanged: (value) => setState(() => _poolLane = value),
+                  onHeroTap: _selectHero,
+                ),
+                AsyncError() => _PoolMessage(
+                  icon: Icons.error_outline,
+                  message: 'Failed to load hero pool',
+                  onRetry: () => ref.invalidate(teamBuilderHeroesProvider),
+                ),
+                _ => const _PoolMessage(
+                  icon: Icons.hourglass_top_rounded,
+                  message: 'Loading hero pool',
+                ),
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+extension on Iterable<TeamBuildHero> {
+  TeamBuildHero? get firstOrNull => isEmpty ? null : first;
+}
+
+List<TeamBuildHero?> _hydrateSlots(List<TeamBuildHero> heroes, List<int> ids) {
+  final slots = List<TeamBuildHero?>.filled(5, null);
+  for (var index = 0; index < ids.length && index < slots.length; index++) {
+    slots[index] = heroes
+        .where(
+          (hero) =>
+              hero.id == ids[index] || hero.externalHeroId == '${ids[index]}',
+        )
+        .firstOrNull;
+  }
+  return slots;
+}
+
+class _BuilderToolbar extends StatelessWidget {
+  const _BuilderToolbar({
+    required this.allyIsBlue,
+    required this.onSwap,
+    required this.onReset,
+  });
+  final bool allyIsBlue;
+  final VoidCallback onSwap;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 52,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+    ),
+    child: Row(
+      children: [
+        const Icon(
+          Icons.psychology_alt_rounded,
+          color: AppTheme.gold,
+          size: 20,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Smart Team Builder',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppTheme.text,
+              fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 20),
-          _RecommendationTypePanel(
-            selected: draft.recommendType,
-            onChanged: (type) => _setRecommendType(ref, type),
+        ),
+        IconButton(
+          tooltip: 'Swap Red/Blue',
+          onPressed: onSwap,
+          icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+        ),
+        IconButton(
+          tooltip: 'Reset',
+          onPressed: onReset,
+          icon: const Icon(Icons.refresh_rounded, size: 20),
+        ),
+      ],
+    ),
+  );
+}
+
+class _WinRateBar extends StatelessWidget {
+  const _WinRateBar({required this.rates, required this.allyIsBlue});
+  final TeamSideWinRates? rates;
+  final bool allyIsBlue;
+
+  @override
+  Widget build(BuildContext context) {
+    final blue = rates?.blue ?? .5;
+    final red = rates?.red ?? .5;
+    final ally = allyIsBlue ? blue : red;
+    final enemy = allyIsBlue ? red : blue;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: .18),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: .08)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _RateLabel(
+              label: 'My Side',
+              color: allyIsBlue
+                  ? const Color(0xFF4B8BFF)
+                  : const Color(0xFFFF5A65),
+              value: ally,
+            ),
           ),
-          const SizedBox(height: 20),
-          _RecommendationsPanel(value: recommendations),
+          Expanded(
+            child: _RateLabel(
+              label: 'Opponent',
+              textAlign: TextAlign.end,
+              color: allyIsBlue
+                  ? const Color(0xFFFF5A65)
+                  : const Color(0xFF4B8BFF),
+              value: enemy,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-List<TeamBuildHero?> _hydratePicks(List<TeamBuildHero> heroes, List<int> ids) {
-  final picks = List<TeamBuildHero?>.filled(5, null);
-  for (var index = 0; index < ids.length && index < picks.length; index += 1) {
-    picks[index] = _findTeamBuildHero(heroes, ids[index]);
-  }
-  return picks;
+class _RateLabel extends StatelessWidget {
+  const _RateLabel({
+    required this.label,
+    required this.color,
+    required this.value,
+    this.textAlign = TextAlign.start,
+  });
+  final String label;
+  final Color color;
+  final double value;
+  final TextAlign textAlign;
+  @override
+  Widget build(BuildContext context) => Text(
+    '$label: Win Rate ${(value * 100).toStringAsFixed(1)}%',
+    textAlign: textAlign,
+    overflow: TextOverflow.ellipsis,
+    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: color,
+      fontWeight: FontWeight.w900,
+    ),
+  );
 }
 
-TeamBuildHero? _findTeamBuildHero(List<TeamBuildHero> heroes, int id) {
-  for (final hero in heroes) {
-    if (hero.id == id || hero.externalHeroId == '$id') {
-      return hero;
-    }
-  }
-  return null;
-}
-
-class _PickPanel extends StatelessWidget {
-  const _PickPanel({
-    required this.title,
-    required this.slots,
-    required this.activeSlotType,
+class _BanStrip extends StatelessWidget {
+  const _BanStrip({
+    required this.allyBans,
+    required this.enemyBans,
+    required this.activeType,
     required this.activeSide,
     required this.activeIndex,
-    required this.side,
-    required this.onSlotTap,
+    required this.allyIsBlue,
+    required this.onTap,
+    required this.onRemove,
   });
-
-  final String title;
-  final List<TeamBuildHero?> slots;
-  final TeamBuilderSlotType activeSlotType;
+  final List<TeamBuildHero?> allyBans;
+  final List<TeamBuildHero?> enemyBans;
+  final TeamBuilderSlotType activeType;
   final TeamBuilderSide activeSide;
   final int activeIndex;
-  final TeamBuilderSide side;
-  final void Function(TeamBuilderSide side, int index) onSlotTap;
-
+  final bool allyIsBlue;
+  final void Function(TeamBuilderSide, int) onTap;
+  final void Function(TeamBuilderSide, int) onRemove;
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
+  Widget build(BuildContext context) => Container(
+    height: 66,
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: .24),
+      border: Border(
+        bottom: BorderSide(color: Colors.white.withValues(alpha: .08)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: List.generate(slots.length, (index) {
-                final hero = slots[index];
-                final isActive =
-                    activeSlotType == TeamBuilderSlotType.pick &&
-                    side == activeSide &&
-                    index == activeIndex;
-                return SizedBox(
-                  width: 128,
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: () => onSlotTap(side, index),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: isActive ? AppTheme.panelAlt : Colors.black12,
-                          border: Border.all(
-                            color: isActive ? AppTheme.gold : Colors.white10,
-                          ),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          child: Text(
-                            hero == null
-                                ? 'Slot ${index + 1}: Empty'
-                                : 'Slot ${index + 1}: ${hero.name}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: hero == null
-                                      ? AppTheme.muted
-                                      : AppTheme.text,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BanPanel extends StatelessWidget {
-  const _BanPanel({
-    required this.bans,
-    required this.activeSlotType,
-    required this.activeIndex,
-    required this.onSlotTap,
-  });
-
-  final List<TeamBuildHero?> bans;
-  final TeamBuilderSlotType activeSlotType;
-  final int activeIndex;
-  final ValueChanged<int> onSlotTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Bans',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: List.generate(bans.length, (index) {
-                final hero = bans[index];
-                final isActive =
-                    activeSlotType == TeamBuilderSlotType.ban &&
-                    index == activeIndex;
-                return SizedBox(
-                  width: 128,
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(999),
-                      onTap: () => onSlotTap(index),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: isActive ? AppTheme.panelAlt : Colors.black12,
-                          border: Border.all(
-                            color: isActive ? AppTheme.gold : Colors.white10,
-                          ),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          child: Text(
-                            hero == null
-                                ? 'Ban ${index + 1}: Empty'
-                                : 'Ban ${index + 1}: ${hero.name}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: hero == null
-                                      ? AppTheme.muted
-                                      : AppTheme.text,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroPool extends StatelessWidget {
-  const _HeroPool({required this.heroes, required this.onHeroTap});
-
-  final List<TeamBuildHero> heroes;
-  final ValueChanged<TeamBuildHero> onHeroTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (heroes.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.shield_outlined,
-        title: 'No heroes found',
-        message: 'Pull to refresh or switch region in settings.',
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    ),
+    child: Row(
       children: [
-        Text(
-          'Hero Pool',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.text,
-            fontWeight: FontWeight.w900,
+        Expanded(
+          child: _SlotRow(
+            slots: allyBans,
+            type: TeamBuilderSlotType.ban,
+            side: TeamBuilderSide.ally,
+            color: allyIsBlue
+                ? const Color(0xFF3B82F6)
+                : const Color(0xFFEF4444),
+            activeType: activeType,
+            activeSide: activeSide,
+            activeIndex: activeIndex,
+            onTap: onTap,
+            onRemove: onRemove,
           ),
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: heroes
-              .take(30)
-              .map((hero) {
-                return _HeroChip(hero: hero, onTap: () => onHeroTap(hero));
-              })
-              .toList(growable: false),
+        Container(
+          width: 1,
+          height: 34,
+          color: Colors.white.withValues(alpha: .1),
+        ),
+        Expanded(
+          child: _SlotRow(
+            slots: enemyBans,
+            type: TeamBuilderSlotType.ban,
+            side: TeamBuilderSide.enemy,
+            color: allyIsBlue
+                ? const Color(0xFFEF4444)
+                : const Color(0xFF3B82F6),
+            reverse: true,
+            activeType: activeType,
+            activeSide: activeSide,
+            activeIndex: activeIndex,
+            onTap: onTap,
+            onRemove: onRemove,
+          ),
         ),
       ],
-    );
-  }
+    ),
+  );
 }
 
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.hero, required this.onTap});
+class _DraftBoard extends StatelessWidget {
+  const _DraftBoard({
+    required this.draft,
+    required this.recommendations,
+    required this.recommendJob,
+    required this.onRecommendationJobChanged,
+    required this.onRecommendationTypeChanged,
+    required this.onSlotTap,
+    required this.onRemove,
+    required this.onRecommendationTap,
+  });
+  final TeamBuilderDraft draft;
+  final AsyncValue<TeamRecommendationResult> recommendations;
+  final int? recommendJob;
+  final ValueChanged<int?> onRecommendationJobChanged;
+  final ValueChanged<TeamRecommendType> onRecommendationTypeChanged;
+  final void Function(TeamBuilderSide, int) onSlotTap;
+  final void Function(TeamBuilderSide, int) onRemove;
+  final ValueChanged<TeamRecommendation> onRecommendationTap;
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      SizedBox(
+        width: 66,
+        child: _SlotColumn(
+          slots: draft.allyPicks,
+          side: TeamBuilderSide.ally,
+          color: draft.allyIsBlue
+              ? const Color(0xFF3B82F6)
+              : const Color(0xFFEF4444),
+          activeType: draft.activeSlotType,
+          activeSide: draft.activeSide,
+          activeIndex: draft.activeIndex,
+          onTap: onSlotTap,
+          onRemove: onRemove,
+        ),
+      ),
+      Expanded(
+        child: _RecommendationPanel(
+          value: recommendations,
+          type: draft.recommendType,
+          mainJob: recommendJob,
+          onTypeChanged: onRecommendationTypeChanged,
+          onMainJobChanged: onRecommendationJobChanged,
+          onTap: onRecommendationTap,
+        ),
+      ),
+      SizedBox(
+        width: 66,
+        child: _SlotColumn(
+          slots: draft.enemyPicks,
+          side: TeamBuilderSide.enemy,
+          color: draft.allyIsBlue
+              ? const Color(0xFFEF4444)
+              : const Color(0xFF3B82F6),
+          activeType: draft.activeSlotType,
+          activeSide: draft.activeSide,
+          activeIndex: draft.activeIndex,
+          onTap: onSlotTap,
+          onRemove: onRemove,
+        ),
+      ),
+    ],
+  );
+}
 
-  final TeamBuildHero hero;
+class _SlotRow extends StatelessWidget {
+  const _SlotRow({
+    required this.slots,
+    required this.type,
+    required this.side,
+    required this.color,
+    required this.activeType,
+    required this.activeSide,
+    required this.activeIndex,
+    required this.onTap,
+    required this.onRemove,
+    this.reverse = false,
+  });
+  final List<TeamBuildHero?> slots;
+  final TeamBuilderSlotType type;
+  final TeamBuilderSide side;
+  final Color color;
+  final TeamBuilderSlotType activeType;
+  final TeamBuilderSide activeSide;
+  final int activeIndex;
+  final void Function(TeamBuilderSide, int) onTap;
+  final void Function(TeamBuilderSide, int) onRemove;
+  final bool reverse;
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    children: [
+      for (var rawIndex = 0; rawIndex < slots.length; rawIndex++)
+        () {
+          final index = reverse ? slots.length - rawIndex - 1 : rawIndex;
+          return _TeamSlot(
+            key: ValueKey('team-ban-${side.name}-$index'),
+            hero: slots[index],
+            color: color,
+            isBan: type == TeamBuilderSlotType.ban,
+            active:
+                activeType == type &&
+                activeSide == side &&
+                activeIndex == index,
+            onTap: () => onTap(side, index),
+            onLongPress: slots[index] == null
+                ? null
+                : () => onRemove(side, index),
+          );
+        }(),
+    ],
+  );
+}
+
+class _SlotColumn extends StatelessWidget {
+  const _SlotColumn({
+    required this.slots,
+    required this.side,
+    required this.color,
+    required this.activeType,
+    required this.activeSide,
+    required this.activeIndex,
+    required this.onTap,
+    required this.onRemove,
+  });
+  final List<TeamBuildHero?> slots;
+  final TeamBuilderSide side;
+  final Color color;
+  final TeamBuilderSlotType activeType;
+  final TeamBuilderSide activeSide;
+  final int activeIndex;
+  final void Function(TeamBuilderSide, int) onTap;
+  final void Function(TeamBuilderSide, int) onRemove;
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .04),
+      border: Border.symmetric(
+        vertical: BorderSide(color: color.withValues(alpha: .14)),
+      ),
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        for (var index = 0; index < slots.length; index++)
+          _TeamSlot(
+            key: ValueKey('team-pick-${side.name}-$index'),
+            hero: slots[index],
+            color: color,
+            active:
+                activeType == TeamBuilderSlotType.pick &&
+                activeSide == side &&
+                activeIndex == index,
+            onTap: () => onTap(side, index),
+            onLongPress: slots[index] == null
+                ? null
+                : () => onRemove(side, index),
+          ),
+      ],
+    ),
+  );
+}
+
+class _TeamSlot extends StatelessWidget {
+  const _TeamSlot({
+    super.key,
+    required this.hero,
+    required this.color,
+    required this.active,
+    required this.onTap,
+    this.isBan = false,
+    this.onLongPress,
+  });
+  final TeamBuildHero? hero;
+  final Color color;
+  final bool active;
   final VoidCallback onTap;
-
+  final bool isBan;
+  final VoidCallback? onLongPress;
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppTheme.panel,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppImage(
-                  url: hero.avatarUrl,
-                  height: 28,
-                  width: 28,
-                  borderRadius: 999,
-                  semanticLabel: hero.name,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  hero.name,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+    final size = isBan ? 40.0 : 50.0;
+    return Semantics(
+      button: true,
+      label: hero == null ? 'Empty ${isBan ? 'ban' : 'pick'} slot' : hero!.name,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          customBorder: const CircleBorder(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: size,
+            height: size,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black.withValues(alpha: .22),
+              border: Border.all(
+                color: active
+                    ? AppTheme.gold
+                    : color.withValues(alpha: hero == null ? .25 : .85),
+                width: active ? 3 : 1.5,
+              ),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.gold.withValues(alpha: .45),
+                        blurRadius: 9,
+                      ),
+                    ]
+                  : null,
             ),
+            child: hero == null
+                ? Icon(
+                    Icons.add_rounded,
+                    color: Colors.white.withValues(alpha: .26),
+                    size: isBan ? 18 : 23,
+                  )
+                : AppImage(
+                    url: hero!.avatarUrl,
+                    borderRadius: 999,
+                    semanticLabel: hero!.name,
+                  ),
           ),
         ),
       ),
@@ -619,188 +779,210 @@ class _HeroChip extends StatelessWidget {
   }
 }
 
-class _RecommendationTypePanel extends StatelessWidget {
-  const _RecommendationTypePanel({
-    required this.selected,
-    required this.onChanged,
+class _RecommendationPanel extends StatelessWidget {
+  const _RecommendationPanel({
+    required this.value,
+    required this.type,
+    required this.mainJob,
+    required this.onTypeChanged,
+    required this.onMainJobChanged,
+    required this.onTap,
   });
 
-  final TeamRecommendType selected;
-  final ValueChanged<TeamRecommendType> onChanged;
+  final AsyncValue<TeamRecommendationResult> value;
+  final TeamRecommendType type;
+  final int? mainJob;
+  final ValueChanged<TeamRecommendType> onTypeChanged;
+  final ValueChanged<int?> onMainJobChanged;
+  final ValueChanged<TeamRecommendation> onTap;
 
   @override
   Widget build(BuildContext context) {
+    final result = value.valueOrNull;
+    final items = (result?.recommendations ?? const <TeamRecommendation>[])
+        .where((item) => mainJob == null || item.mainJob == mainJob)
+        .toList();
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Recommendation Type',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            SegmentedButton<TeamRecommendType>(
-              segments: const [
-                ButtonSegment(
-                  value: TeamRecommendType.balanced,
-                  icon: Icon(Icons.balance_outlined),
-                  label: Text('Balanced'),
-                ),
-                ButtonSegment(
-                  value: TeamRecommendType.synergy,
-                  icon: Icon(Icons.group_work_outlined),
-                  label: Text('Synergy'),
-                ),
-                ButtonSegment(
-                  value: TeamRecommendType.counter,
-                  icon: Icon(Icons.shield_outlined),
-                  label: Text('Counter'),
-                ),
-              ],
-              selected: {selected},
-              onSelectionChanged: (values) => onChanged(values.single),
-            ),
-          ],
+        border: Border.symmetric(
+          vertical: BorderSide(color: Colors.white.withValues(alpha: .08)),
         ),
       ),
-    );
-  }
-}
-
-class _RecommendationsPanel extends StatelessWidget {
-  const _RecommendationsPanel({required this.value});
-
-  final AsyncValue<TeamRecommendationResult> value;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppAsyncView<TeamRecommendationResult>(
-      value: value,
-      retry: null,
-      data: (result) {
-        if (result.recommendations.isEmpty) {
-          return const AppEmptyState(
-            icon: Icons.psychology_alt_outlined,
-            title: 'No recommendations',
-            message: 'Select heroes to refresh team recommendations.',
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 7, 8, 5),
+            child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Recommendations',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: _RecTab(
+                    label: 'Synergy Picks',
+                    selected: type == TeamRecommendType.synergy,
+                    onTap: () => onTypeChanged(TeamRecommendType.synergy),
                   ),
                 ),
-                if (result.sideWinRates case final rates?)
-                  Text(
-                    'Blue ${_formatPercent(rates.blue)}',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w900,
-                    ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _RecTab(
+                    label: 'Counter Picks',
+                    selected: type == TeamRecommendType.counter,
+                    onTap: () => onTypeChanged(TeamRecommendType.counter),
                   ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            ...result.recommendations.take(10).map(_RecommendationCard.new),
-          ],
-        );
-      },
+          ),
+          Container(
+            height: 33,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: .26),
+              border: Border.symmetric(
+                horizontal: BorderSide(
+                  color: Colors.white.withValues(alpha: .07),
+                ),
+              ),
+            ),
+            child: Text(
+              type == TeamRecommendType.counter
+                  ? 'COUNTER OPPONENT LINEUP'
+                  : 'FIT MY SIDE LINEUP RECOMMENDATIONS',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppTheme.cyan,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          _JobFilter(selected: mainJob, onChanged: onMainJobChanged),
+          Expanded(
+            child: value.isLoading
+                ? const Center(
+                    child: SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : items.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No recommendations',
+                      style: TextStyle(color: AppTheme.muted, fontSize: 12),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => Divider(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: .06),
+                    ),
+                    itemBuilder: (context, index) => _RecommendationTile(
+                      item: items[index],
+                      onTap: () => onTap(items[index]),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _RecommendationCard extends StatelessWidget {
-  const _RecommendationCard(this.recommendation);
+class _RecTab extends StatelessWidget {
+  const _RecTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => FilledButton(
+    onPressed: onTap,
+    style: FilledButton.styleFrom(
+      minimumSize: const Size(0, 34),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      backgroundColor: selected ? AppTheme.gold : Colors.transparent,
+      foregroundColor: selected ? AppTheme.text : AppTheme.muted,
+      side: BorderSide(
+        color: selected ? AppTheme.gold : Colors.white.withValues(alpha: .17),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+    ),
+  );
+}
 
-  final TeamRecommendation recommendation;
-
+class _RecommendationTile extends StatelessWidget {
+  const _RecommendationTile({required this.item, required this.onTap});
+  final TeamRecommendation item;
+  final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppTheme.panel,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          borderRadius: BorderRadius.circular(16),
-        ),
+    final score = item.score <= 1 ? item.score * 100 : item.score;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      recommendation.name,
+              CircleAvatar(
+                radius: 17,
+                backgroundColor: AppTheme.panelAlt,
+                child: Text(
+                  item.name.isEmpty
+                      ? '?'
+                      : item.name.characters.first.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      style: const TextStyle(
                         color: AppTheme.text,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                  ),
-                  Text(
-                    'Score ${recommendation.score.toStringAsFixed(1)}',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w900,
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pick ${(item.pickRate * 100).toStringAsFixed(1)}% · Synergy ${(item.synergy * 100).toStringAsFixed(1)}%',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.muted,
+                        fontSize: 10,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              if (recommendation.reason.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  recommendation.reason,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _MetricChip(
-                    label: 'Pick',
-                    value: _formatPercent(recommendation.pickRate),
-                  ),
-                  _MetricChip(
-                    label: 'Synergy',
-                    value: _formatPercent(recommendation.synergy),
-                  ),
-                  _MetricChip(
-                    label: 'Counter',
-                    value: _formatPercent(recommendation.counter),
-                  ),
-                ],
+              ),
+              Text(
+                '${score.toStringAsFixed(0)}%',
+                style: const TextStyle(
+                  color: AppTheme.success,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),
@@ -810,33 +992,227 @@ class _RecommendationCard extends StatelessWidget {
   }
 }
 
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({required this.label, required this.value});
+class _JobFilter extends StatelessWidget {
+  const _JobFilter({required this.selected, required this.onChanged});
+  final int? selected;
+  final ValueChanged<int?> onChanged;
+  static const _jobs = <int?>[null, 1, 2, 3, 4, 5, 6];
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 42,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      itemCount: _jobs.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 7),
+      itemBuilder: (context, index) {
+        final job = _jobs[index];
+        return _FilterIcon(
+          selected: selected == job,
+          tooltip: job == null ? 'All roles' : _jobLabel(job),
+          icon: job == null
+              ? const Icon(Icons.grid_view_rounded, size: 16)
+              : Image.asset(_jobAsset(job), width: 18, height: 18),
+          onTap: () => onChanged(job),
+        );
+      },
+    ),
+  );
+}
 
-  final String label;
-  final String value;
+class _HeroPool extends StatelessWidget {
+  const _HeroPool({
+    required this.heroes,
+    required this.lane,
+    required this.occupiedIds,
+    required this.onLaneChanged,
+    required this.onHeroTap,
+  });
+  final List<TeamBuildHero> heroes;
+  final int? lane;
+  final Set<int> occupiedIds;
+  final ValueChanged<int?> onLaneChanged;
+  final ValueChanged<TeamBuildHero> onHeroTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Text(
-          '$label $value',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: AppTheme.text,
-            fontWeight: FontWeight.w700,
+    final visible = heroes
+        .where((hero) => lane == null || hero.matchesLane(lane!))
+        .toList();
+    return Column(
+      children: [
+        _LaneFilter(selected: lane, onChanged: onLaneChanged),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 18),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1,
+            ),
+            itemCount: visible.length,
+            itemBuilder: (context, index) {
+              final hero = visible[index];
+              final locked = occupiedIds.contains(hero.id);
+              return Semantics(
+                button: !locked,
+                label: hero.name,
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                  child: InkWell(
+                    key: ValueKey('team-pool-${hero.id}'),
+                    onTap: locked ? null : () => onHeroTap(hero),
+                    borderRadius: BorderRadius.circular(9),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppTheme.panel,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: .05),
+                        ),
+                      ),
+                      child: Opacity(
+                        opacity: locked ? .3 : 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: AppImage(
+                            url: hero.avatarUrl,
+                            borderRadius: 999,
+                            semanticLabel: hero.name,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-      ),
+      ],
     );
   }
 }
 
-String _formatPercent(double value) {
-  return '${(value * 100).toStringAsFixed(1)}%';
+class _LaneFilter extends StatelessWidget {
+  const _LaneFilter({required this.selected, required this.onChanged});
+  final int? selected;
+  final ValueChanged<int?> onChanged;
+  static const _lanes = <int?>[null, 0, 1, 2, 3, 4];
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 48,
+    decoration: BoxDecoration(
+      border: Border.symmetric(
+        horizontal: BorderSide(color: Colors.white.withValues(alpha: .08)),
+      ),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final lane in _lanes)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: _FilterIcon(
+              selected: selected == lane,
+              tooltip: lane == null ? 'All lanes' : _laneLabel(lane),
+              icon: lane == null
+                  ? const Icon(Icons.grid_view_rounded, size: 17)
+                  : Image.asset(_laneAsset(lane), width: 19, height: 19),
+              onTap: () => onChanged(lane),
+            ),
+          ),
+      ],
+    ),
+  );
 }
+
+class _FilterIcon extends StatelessWidget {
+  const _FilterIcon({
+    required this.selected,
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+  final bool selected;
+  final String tooltip;
+  final Widget icon;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        width: 31,
+        height: 31,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? AppTheme.gold : Colors.transparent,
+          border: Border.all(
+            color: selected
+                ? AppTheme.gold
+                : Colors.white.withValues(alpha: .16),
+          ),
+        ),
+        child: icon,
+      ),
+    ),
+  );
+}
+
+class _PoolMessage extends StatelessWidget {
+  const _PoolMessage({required this.icon, required this.message, this.onRetry});
+  final IconData icon;
+  final String message;
+  final VoidCallback? onRetry;
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppTheme.muted),
+        const SizedBox(height: 8),
+        Text(message, style: const TextStyle(color: AppTheme.muted)),
+        if (onRetry != null)
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ],
+    ),
+  );
+}
+
+String _laneAsset(int lane) => switch (lane) {
+  0 => 'assets/lane-icons/clash.png',
+  1 => 'assets/lane-icons/mid.png',
+  2 => 'assets/lane-icons/adc.png',
+  3 => 'assets/lane-icons/jungle.png',
+  _ => 'assets/lane-icons/support.png',
+};
+String _laneLabel(int lane) => switch (lane) {
+  0 => 'Clash lane',
+  1 => 'Mid lane',
+  2 => 'Farm lane',
+  3 => 'Jungle',
+  _ => 'Support',
+};
+String _jobAsset(int job) => switch (job) {
+  1 => 'assets/lane-icons/tank.png',
+  2 => 'assets/lane-icons/clash.png',
+  3 => 'assets/lane-icons/jungle.png',
+  4 => 'assets/lane-icons/mid.png',
+  5 => 'assets/lane-icons/adc.png',
+  _ => 'assets/lane-icons/support.png',
+};
+String _jobLabel(int job) => switch (job) {
+  1 => 'Tank',
+  2 => 'Fighter',
+  3 => 'Assassin',
+  4 => 'Mage',
+  5 => 'Marksman',
+  _ => 'Support',
+};
