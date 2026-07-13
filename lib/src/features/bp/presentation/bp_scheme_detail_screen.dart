@@ -1322,7 +1322,12 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
         ref.watch(heroGalleryProvider).valueOrNull ?? const <HeroSummary>[];
     final visibleHeroes = heroes
         .where((hero) {
-          return _selectedLane == null || hero.position == _selectedLane;
+          if (_selectedLane != null && hero.position != _selectedLane) {
+            return false;
+          }
+          final status = _heroStatus(int.tryParse(hero.id) ?? 0);
+          return (status != _BpHeroStatus.banned || _showBanned) &&
+              (status != _BpHeroStatus.picked || _showPicked);
         })
         .toList(growable: false);
 
@@ -1401,12 +1406,6 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                                 final hero = visibleHeroes[index];
                                 final heroId = int.tryParse(hero.id) ?? 0;
                                 final status = _heroStatus(heroId);
-                                if ((status == _BpHeroStatus.banned &&
-                                        !_showBanned) ||
-                                    (status == _BpHeroStatus.picked &&
-                                        !_showPicked)) {
-                                  return const SizedBox.shrink();
-                                }
                                 return _BpHeroPoolTile(
                                   hero: hero,
                                   status: status,

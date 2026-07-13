@@ -472,7 +472,6 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                   scheme: scheme,
                   game: selectedGame,
                   current: selectedCurrentGame,
-                  obscured: true,
                 ),
                 const SizedBox(height: 14),
                 _BpScoreFooter(scheme: scheme),
@@ -490,13 +489,11 @@ class _BpGamePreview extends StatelessWidget {
     required this.scheme,
     required this.game,
     required this.current,
-    this.obscured = false,
   });
 
   final BpSchemeSummary scheme;
   final BpHistoryGame? game;
   final bool current;
-  final bool obscured;
 
   @override
   Widget build(BuildContext context) {
@@ -543,44 +540,14 @@ class _BpGamePreview extends StatelessWidget {
       ),
     );
     return SizedBox(
-      height: 158,
+      height: 100,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.24),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
         ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            board,
-            if (obscured)
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.48),
-                ),
-              ),
-            if (obscured)
-              Center(
-                child: IgnorePointer(
-                  child: Container(
-                    key: const ValueKey('bp-preview-open'),
-                    width: 50,
-                    height: 50,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2E6AE8),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.visibility_outlined,
-                      color: Colors.white,
-                      size: 27,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        child: board,
       ),
     );
   }
@@ -747,8 +714,9 @@ class _BpGameSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = current ? const Color(0xFF16813F) : const Color(0xFF2E6AE8);
     final borderColor = selected
-        ? const Color(0xFF2E6AE8)
+        ? accent
         : current
         ? AppTheme.success.withValues(alpha: 0.72)
         : Colors.white.withValues(alpha: 0.18);
@@ -761,9 +729,7 @@ class _BpGameSelector extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: textColor,
-        backgroundColor: selected
-            ? const Color(0xFF2E6AE8)
-            : Colors.transparent,
+        backgroundColor: selected ? accent : Colors.transparent,
         side: BorderSide(color: borderColor, width: selected ? 1.5 : 1),
         minimumSize: const Size(0, 36),
         padding: const EdgeInsets.symmetric(horizontal: 12),
