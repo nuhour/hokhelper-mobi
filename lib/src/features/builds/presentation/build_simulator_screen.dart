@@ -846,16 +846,21 @@ class _BuildCollectionTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: selected ? Colors.white : AppTheme.muted, size: 25),
-          const SizedBox(width: 10),
-          Text(
-            label,
-            style: TextStyle(
-              color: selected ? Colors.white : AppTheme.muted,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+          Icon(icon, color: selected ? Colors.white : AppTheme.muted, size: 22),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected ? Colors.white : AppTheme.muted,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -1863,45 +1868,84 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
               size: 30,
             ),
             const SizedBox(width: 10),
-            Text(
-              widget.filter == BuildSimCommunityFilter.favorites
-                  ? 'Favorite Builds'
-                  : 'Explore Builds',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w900,
+            Expanded(
+              child: Text(
+                widget.filter == BuildSimCommunityFilter.favorites
+                    ? 'Favorite Builds'
+                    : 'Explore Builds',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 18),
-        Row(
-          children: [
-            const Icon(Icons.filter_alt_outlined, color: AppTheme.muted),
-            const SizedBox(width: 10),
-            const Text(
-              'Sort',
-              style: TextStyle(
-                color: AppTheme.muted,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final sortButtons = [
+              Expanded(
+                child: _ExploreSortButton(
+                  label: 'Latest',
+                  icon: Icons.schedule_outlined,
+                  selected: _latestFirst,
+                  onTap: () => setState(() => _latestFirst = true),
+                ),
               ),
-            ),
-            const SizedBox(width: 14),
-            _ExploreSortButton(
-              label: 'Latest',
-              icon: Icons.schedule_outlined,
-              selected: _latestFirst,
-              onTap: () => setState(() => _latestFirst = true),
-            ),
-            const SizedBox(width: 10),
-            _ExploreSortButton(
-              label: 'Popular',
-              icon: Icons.trending_up,
-              selected: !_latestFirst,
-              onTap: () => setState(() => _latestFirst = false),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ExploreSortButton(
+                  label: 'Popular',
+                  icon: Icons.trending_up,
+                  selected: !_latestFirst,
+                  onTap: () => setState(() => _latestFirst = false),
+                ),
+              ),
+            ];
+            if (constraints.maxWidth < 390) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.filter_alt_outlined, color: AppTheme.muted),
+                      SizedBox(width: 8),
+                      Text(
+                        'Sort',
+                        style: TextStyle(
+                          color: AppTheme.muted,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(children: sortButtons),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                const Icon(Icons.filter_alt_outlined, color: AppTheme.muted),
+                const SizedBox(width: 10),
+                const Text(
+                  'Sort',
+                  style: TextStyle(
+                    color: AppTheme.muted,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                ...sortButtons,
+              ],
+            );
+          },
         ),
         const SizedBox(height: 22),
         widget.value.when(
@@ -2008,7 +2052,7 @@ class _ExploreSortButton extends StatelessWidget {
     borderRadius: BorderRadius.circular(14),
     child: Ink(
       height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: selected ? AppTheme.gold : AppTheme.bg,
         borderRadius: BorderRadius.circular(14),
@@ -2019,15 +2063,20 @@ class _ExploreSortButton extends StatelessWidget {
         ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: selected ? Colors.white : AppTheme.muted),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: selected ? Colors.white : AppTheme.muted,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected ? Colors.white : AppTheme.muted,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

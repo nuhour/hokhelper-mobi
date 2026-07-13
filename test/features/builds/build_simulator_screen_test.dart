@@ -441,6 +441,65 @@ void main() {
     expect(savedDraft?.summonerSkillId, 12);
   });
 
+  testWidgets('keeps the build editor within portrait and landscape bounds', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          buildSimHeroesProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '199',
+                heroId: '199',
+                name: 'Lam',
+                avatar: '',
+                title: 'Shark Blade',
+              ),
+            ];
+          }),
+          buildSimPublicSchemesProvider.overrideWith((ref) async => const []),
+          buildSimUserSlotsProvider.overrideWith((ref, heroId) async {
+            return const [null, null, null];
+          }),
+          buildSimEditorCatalogProvider.overrideWith((ref) async {
+            return const BuildEditorCatalog(
+              equips: [
+                BuildEquipSummary(id: 101, name: 'Storm Axe', iconUrl: ''),
+              ],
+              runes: [BuildRuneSummary(id: 201, name: 'Fate', color: 1)],
+              summonerSkills: [
+                BuildSummonerSkillSummary(id: 12, name: 'Smite', iconUrl: ''),
+              ],
+            );
+          }),
+          buildSimSaveSchemeProvider.overrideWith((ref) => (_) async {}),
+        ],
+        child: const MaterialApp(home: Scaffold(body: BuildSimulatorScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create Build 1'));
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(852, 393);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+
+    for (final tab in const ['Equipment', 'Arcana Matrix', 'Skill']) {
+      await tester.tap(find.text(tab));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('runs community build like favorite and clone actions', (
     tester,
   ) async {
