@@ -6,7 +6,7 @@ class HomeRepository {
   final ApiClient apiClient;
 
   Future<HomeStats> loadHomeStats() async => HomeStats.fromJson(
-    await apiClient.getJson('/home/stats').timeout(const Duration(seconds: 8)),
+    await apiClient.getJson('/home/stats').timeout(const Duration(seconds: 45)),
   );
 }
 

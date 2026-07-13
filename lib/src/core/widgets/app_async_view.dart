@@ -40,8 +40,16 @@ class AppAsyncView<T> extends StatelessWidget {
         );
       },
       error: (error, stackTrace) =>
-          AppErrorState(message: error.toString(), retry: retry),
+          AppErrorState(message: _errorMessage(error), retry: retry),
     );
+  }
+
+  String _errorMessage(Object error) {
+    final message = error.toString();
+    if (message.contains('TimeoutException') || message.contains('timed out')) {
+      return 'The service is taking longer than usual. Please try again.';
+    }
+    return message;
   }
 }
 
