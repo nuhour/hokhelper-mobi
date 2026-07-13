@@ -1807,64 +1807,58 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
               ),
             ],
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MetricChip(
-                  icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                  value: _likeCount,
-                ),
-                _MetricChip(icon: Icons.bookmark_border, value: _favoriteCount),
-                OutlinedButton.icon(
-                  onPressed: _likeSubmitting
-                      ? null
-                      : () => _likePrompt(context),
-                  icon: Icon(
-                    _isLiked ? Icons.favorite : Icons.favorite_border,
-                    size: 16,
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _PromptCountAction(
+                    icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                    value: _likeCount,
+                    tooltip: _isLiked ? 'Unlike' : 'Like',
+                    color: _isLiked ? AppTheme.error : AppTheme.gold,
+                    isLoading: _likeSubmitting,
+                    onPressed: () => _likePrompt(context),
                   ),
-                  label: const Text('Like'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _favoriteSubmitting
-                      ? null
-                      : () => _favoritePrompt(context),
-                  icon: Icon(
-                    _isFavorited ? Icons.bookmark : Icons.bookmark_border,
-                    size: 16,
+                  const SizedBox(width: 4),
+                  _PromptCountAction(
+                    icon: _isFavorited ? Icons.bookmark : Icons.bookmark_border,
+                    value: _favoriteCount,
+                    tooltip: _isFavorited ? 'Remove favorite' : 'Favorite',
+                    isLoading: _favoriteSubmitting,
+                    onPressed: () => _favoritePrompt(context),
                   ),
-                  label: const Text('Favorite'),
-                ),
-                if (prompt.content.isNotEmpty)
-                  OutlinedButton.icon(
-                    onPressed: () => _copyPrompt(context),
-                    icon: const Icon(Icons.copy_outlined, size: 16),
-                    label: const Text('Copy'),
+                  const SizedBox(width: 8),
+                  if (prompt.content.isNotEmpty)
+                    _PromptIconAction(
+                      icon: Icons.copy_outlined,
+                      tooltip: 'Copy',
+                      onPressed: () => _copyPrompt(context),
+                    ),
+                  _PromptIconAction(
+                    icon: Icons.ios_share_outlined,
+                    tooltip: 'Share',
+                    onPressed: () => _sharePrompt(context),
                   ),
-                OutlinedButton.icon(
-                  onPressed: () => _sharePrompt(context),
-                  icon: const Icon(Icons.ios_share_outlined, size: 16),
-                  label: const Text('Share'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: widget.onGenerate,
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('Generate'),
-                ),
-                if (widget.canManage) ...[
-                  OutlinedButton.icon(
-                    onPressed: widget.onEdit,
-                    icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: const Text('Edit'),
+                  _PromptIconAction(
+                    icon: Icons.auto_awesome,
+                    tooltip: 'Generate',
+                    onPressed: widget.onGenerate,
                   ),
-                  OutlinedButton.icon(
-                    onPressed: widget.onDelete,
-                    icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('Delete'),
-                  ),
+                  if (widget.canManage) ...[
+                    _PromptIconAction(
+                      icon: Icons.edit_outlined,
+                      tooltip: 'Edit',
+                      onPressed: widget.onEdit,
+                    ),
+                    _PromptIconAction(
+                      icon: Icons.delete_outline,
+                      tooltip: 'Delete',
+                      color: AppTheme.error,
+                      onPressed: widget.onDelete,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ),
@@ -2078,36 +2072,74 @@ class _TagChip extends StatelessWidget {
   }
 }
 
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({required this.icon, required this.value});
+class _PromptCountAction extends StatelessWidget {
+  const _PromptCountAction({
+    required this.icon,
+    required this.value,
+    required this.tooltip,
+    required this.onPressed,
+    this.color = AppTheme.gold,
+    this.isLoading = false,
+  });
 
   final IconData icon;
   final int value;
+  final String tooltip;
+  final Color color;
+  final bool isLoading;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: AppTheme.gold),
-            const SizedBox(width: 5),
-            Text(
-              value.toString(),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
+    return Tooltip(
+      message: tooltip,
+      child: TextButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: color,
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        icon: isLoading
+            ? SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: color),
+              )
+            : Icon(icon, size: 20),
+        label: Text(
+          value.toString(),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
+    );
+  }
+}
+
+class _PromptIconAction extends StatelessWidget {
+  const _PromptIconAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.color = AppTheme.gold,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 21),
+      tooltip: tooltip,
+      color: color,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
     );
   }
 }

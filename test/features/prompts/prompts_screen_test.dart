@@ -382,7 +382,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Copy'));
+    await tester.tap(find.byTooltip('Copy'));
     await tester.pumpAndSettle();
 
     expect(clipboardCall?.arguments, {
@@ -427,7 +427,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.tap(find.byTooltip('Share'));
     await tester.pumpAndSettle();
 
     expect(clipboardCall?.arguments, {'text': '/tools/prompts?promptId=7'});
@@ -464,7 +464,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Favorite'));
+    await tester.tap(find.byTooltip('Favorite'));
     await tester.pumpAndSettle();
 
     expect(repository.favoritedPromptId, '7');
@@ -502,7 +502,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Like'));
+    await tester.tap(find.byTooltip('Like'));
     await tester.pumpAndSettle();
 
     expect(repository.likedPromptId, '7');
@@ -671,7 +671,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Edit'));
+    await tester.tap(find.byTooltip('Edit'));
     await tester.pumpAndSettle();
 
     expect(find.text('Edit prompt'), findsOneWidget);
@@ -756,7 +756,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.tap(find.byTooltip('Delete'));
     await tester.pumpAndSettle();
     expect(find.text('Delete prompt?'), findsOneWidget);
 
@@ -798,7 +798,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.tap(find.byTooltip('Generate'));
     await tester.pumpAndSettle();
 
     expect(find.text('Image generation'), findsOneWidget);
@@ -853,7 +853,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.tap(find.byTooltip('Generate'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Image to image'));
     await tester.pumpAndSettle();
@@ -904,7 +904,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.tap(find.byTooltip('Generate'));
     await tester.pumpAndSettle();
 
     expect(find.text('Image generation'), findsNothing);
@@ -944,7 +944,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.tap(find.byTooltip('Generate'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Generate image'));
     await tester.pumpAndSettle();
@@ -998,7 +998,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Generate'));
+    await tester.tap(find.byTooltip('Generate'));
     await tester.pumpAndSettle();
 
     expect(find.text('0 / 5 left'), findsOneWidget);
