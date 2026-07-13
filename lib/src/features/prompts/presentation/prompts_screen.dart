@@ -262,6 +262,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                             _PromptCard(
                               prompt: prompt,
                               canManage: _action == PromptListAction.myPrompts,
+                              onView: () => _openPromptViewer(context, prompt),
                               onEdit: () => _openEditSheet(context, prompt),
                               onDelete: () => _confirmDelete(context, prompt),
                               onGenerate: () =>
@@ -479,6 +480,13 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     });
     ref.invalidate(promptListQueryProvider(_currentQuery));
     ref.invalidate(promptListProvider(_action));
+  }
+
+  Future<void> _openPromptViewer(BuildContext context, PromptSummary prompt) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => _PromptViewerDialog(prompt: prompt),
+    );
   }
 }
 
@@ -1685,6 +1693,7 @@ class _PromptCard extends ConsumerStatefulWidget {
   const _PromptCard({
     required this.prompt,
     this.canManage = false,
+    this.onView,
     this.onEdit,
     this.onDelete,
     this.onGenerate,
@@ -1692,6 +1701,7 @@ class _PromptCard extends ConsumerStatefulWidget {
 
   final PromptSummary prompt;
   final bool canManage;
+  final VoidCallback? onView;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onGenerate;
@@ -1828,6 +1838,11 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                     onPressed: () => _favoritePrompt(context),
                   ),
                   const SizedBox(width: 8),
+                  _PromptIconAction(
+                    icon: Icons.visibility_outlined,
+                    tooltip: 'View prompt',
+                    onPressed: widget.onView,
+                  ),
                   if (prompt.content.isNotEmpty)
                     _PromptIconAction(
                       icon: Icons.copy_outlined,
@@ -1959,6 +1974,203 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
         const SnackBar(content: Text('Failed to favorite prompt')),
       );
     }
+  }
+}
+
+class _PromptViewerDialog extends StatelessWidget {
+  const _PromptViewerDialog({required this.prompt});
+
+  final PromptSummary prompt;
+
+  @override
+  Widget build(BuildContext context) {
+    final sourceImage = prompt.sourceImageUrl;
+    final resultImage = prompt.effectImageUrl.isNotEmpty
+        ? prompt.effectImageUrl
+        : prompt.imageUrl;
+    final hasImages = sourceImage.isNotEmpty || resultImage.isNotEmpty;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(12),
+      backgroundColor: AppTheme.panel,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.78,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 12, 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        prompt.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () => _copyPrompt(context),
+                      icon: const Icon(Icons.copy_outlined, size: 19),
+                      label: const Text('Copy'),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Close',
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (prompt.content.isNotEmpty)
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppTheme.bg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.48),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: SelectableText(
+                              prompt.content,
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: AppTheme.muted,
+                                    height: 1.55,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      if (hasImages) ...[
+                        const SizedBox(height: 18),
+                        _PromptImageComparison(
+                          sourceImageUrl: sourceImage,
+                          resultImageUrl: resultImage,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _copyPrompt(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: prompt.content));
+    if (!context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(const SnackBar(content: Text('Prompt copied')));
+  }
+}
+
+class _PromptImageComparison extends StatelessWidget {
+  const _PromptImageComparison({
+    required this.sourceImageUrl,
+    required this.resultImageUrl,
+  });
+
+  final String sourceImageUrl;
+  final String resultImageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final source = _PromptComparisonImage(
+      label: 'Original',
+      imageUrl: sourceImageUrl,
+    );
+    final result = _PromptComparisonImage(
+      label: 'Result',
+      imageUrl: resultImageUrl,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 320) {
+          return Column(children: [source, const SizedBox(height: 16), result]);
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: source),
+            const SizedBox(width: 16),
+            Expanded(child: result),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PromptComparisonImage extends StatelessWidget {
+  const _PromptComparisonImage({required this.label, required this.imageUrl});
+
+  final String label;
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: AppTheme.muted,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (imageUrl.isEmpty)
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppTheme.bg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  color: AppTheme.muted,
+                ),
+              ),
+            ),
+          )
+        else
+          AppImage(
+            url: imageUrl,
+            aspectRatio: 16 / 9,
+            borderRadius: 10,
+            semanticLabel: '$label image',
+          ),
+      ],
+    );
   }
 }
 

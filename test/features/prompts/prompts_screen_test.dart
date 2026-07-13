@@ -227,6 +227,47 @@ void main() {
     expect(find.text('5'), findsOneWidget);
   });
 
+  testWidgets('opens a prompt viewer with its image comparison', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          promptListProvider(PromptListAction.explore).overrideWith((
+            ref,
+          ) async {
+            return const [
+              PromptSummary(
+                id: '7',
+                title: 'Rainy battlefield',
+                content: 'Transform this battlefield into a rainy scene.',
+                tags: ['rain'],
+                imageUrl: 'https://example.test/result.png',
+                sourceImageUrl: 'https://example.test/source.png',
+                effectImageUrl: 'https://example.test/result.png',
+                authorName: 'artist',
+                likeCount: 12,
+                favoriteCount: 5,
+                isPublic: true,
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('View prompt'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.text('Rainy battlefield'), findsWidgets);
+    expect(find.text('Original'), findsOneWidget);
+    expect(find.text('Result'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Copy'), findsOneWidget);
+  });
+
   testWidgets('searches and sorts prompt explorer like the hokx portal', (
     tester,
   ) async {
