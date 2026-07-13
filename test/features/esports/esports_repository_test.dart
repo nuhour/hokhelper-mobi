@@ -121,7 +121,7 @@ void main() {
 
     expect(apiClient.postBodies['/esports/matches/list'], {
       'page': 1,
-      'pageSize': 10,
+      'pageSize': 60,
       'sort': 'start_time',
       'order': 'desc',
     });
@@ -161,7 +161,7 @@ void main() {
 
     expect(apiClient.postBodies['/esports/teams/list'], {
       'page': 1,
-      'pageSize': 12,
+      'pageSize': 60,
       'sort': 'win_rate',
       'order': 'desc',
     });
@@ -180,7 +180,7 @@ void main() {
 
     expect(apiClient.postBodies['/esports/players/list'], {
       'page': 1,
-      'pageSize': 12,
+      'pageSize': 80,
       'sort': 'grade',
       'order': 'desc',
     });

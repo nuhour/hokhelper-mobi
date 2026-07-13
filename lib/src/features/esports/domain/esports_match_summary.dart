@@ -11,6 +11,9 @@ class EsportsMatchSummary {
     required this.scoreB,
     required this.statusKey,
     required this.startTime,
+    this.endTime = '',
+    this.streamUrl = '',
+    this.vodUrl = '',
     this.bestOf = 0,
     this.teamAId = '',
     this.teamBId = '',
@@ -29,6 +32,9 @@ class EsportsMatchSummary {
   final int? scoreB;
   final String statusKey;
   final String startTime;
+  final String endTime;
+  final String streamUrl;
+  final String vodUrl;
   final int bestOf;
   final String teamAId;
   final String teamBId;
@@ -104,6 +110,9 @@ class EsportsMatchSummary {
       scoreB: _readNullableInt(map['score_b']),
       statusKey: _readString(map['status_key'] ?? map['status']),
       startTime: _readString(map['start_time'] ?? map['scheduled_at']),
+      endTime: _readString(map['end_time'] ?? map['ended_at']),
+      streamUrl: _readString(map['stream_url'] ?? map['live_addr']),
+      vodUrl: _readString(map['vod_url']),
       bestOf: _readInt(map['bo'] ?? map['best_of']),
       winnerTeamId: _readString(map['winner_team_id']),
       winCamp: _readInt(map['win_camp']),

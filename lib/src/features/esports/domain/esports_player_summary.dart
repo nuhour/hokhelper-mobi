@@ -5,6 +5,7 @@ class EsportsPlayerSummary {
     required this.avatarUrl,
     required this.teamName,
     required this.teamLogoUrl,
+    this.leagueName = '',
     required this.role,
     required this.grade,
     required this.kda,
@@ -16,6 +17,7 @@ class EsportsPlayerSummary {
   final String avatarUrl;
   final String teamName;
   final String teamLogoUrl;
+  final String leagueName;
   final String role;
   final double grade;
   final double kda;
@@ -37,10 +39,13 @@ class EsportsPlayerSummary {
       avatarUrl: _readString(map['avatar_url']),
       teamName: _readString(map['team_name']),
       teamLogoUrl: _readString(map['team_logo_url']),
+      leagueName: _readString(map['league_name']),
       role: _readString(map['role'] ?? map['role_key']),
-      grade: _readDouble(stats['grade'] ?? stats['avg_grade']),
-      kda: _readDouble(stats['kda']),
-      winRate: _readRate(stats['win_rate']),
+      grade: _readDouble(
+        stats['grade'] ?? stats['avg_grade'] ?? stats['avgScore'],
+      ),
+      kda: _readDouble(stats['kda'] ?? stats['avgKda']),
+      winRate: _readRate(stats['win_rate'] ?? stats['winRate']),
     );
   }
 }

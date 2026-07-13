@@ -29,6 +29,9 @@ class EsportsTeamSummary {
 
   factory EsportsTeamSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
+    final rankStat = map['rank_stat'] is Map
+        ? map['rank_stat'] as Map
+        : const {};
 
     return EsportsTeamSummary(
       id: _readString(map['id']),
@@ -37,9 +40,9 @@ class EsportsTeamSummary {
       logoUrl: _readString(map['logo_url']),
       leagueName: _readString(map['league_name']),
       club: _readString(map['club']),
-      wins: _readInt(map['wins']),
-      losses: _readInt(map['losses']),
-      winRate: _readRate(map['win_rate']),
+      wins: _readInt(map['wins'] ?? rankStat['victoryBattleCount']),
+      losses: _readInt(map['losses'] ?? rankStat['defeatedBattleCount']),
+      winRate: _readRate(map['win_rate'] ?? rankStat['winRate']),
     );
   }
 }

@@ -1,5 +1,6 @@
 import '../../../core/network/api_client.dart';
 import '../domain/esports_match_summary.dart';
+import '../domain/esports_meta.dart';
 import '../domain/esports_player_summary.dart';
 import '../domain/esports_stat_summary.dart';
 import '../domain/esports_team_summary.dart';
@@ -9,49 +10,67 @@ class EsportsRepository {
 
   final ApiClient apiClient;
 
-  Future<List<EsportsMatchSummary>> loadMatches() async {
+  Future<EsportsMeta> loadMeta() async {
+    final json = await apiClient.getJson('/esports/meta');
+    final data = json['data'] ?? json['result'];
+    return EsportsMeta.fromJson(data);
+  }
+
+  Future<List<EsportsMatchSummary>> loadMatches({String? league}) async {
     final json = await apiClient.postJson(
       '/esports/matches/list',
-      body: const {
+      body: {
         'page': 1,
-        'pageSize': 10,
+        'pageSize': 60,
         'sort': 'start_time',
         'order': 'desc',
+        if (league != null && league != 'all') 'league': league,
       },
     );
     return _readRows(json).map(EsportsMatchSummary.fromJson).toList();
   }
 
-  Future<List<EsportsTeamSummary>> loadTeams() async {
+  Future<List<EsportsTeamSummary>> loadTeams({String? league}) async {
     final json = await apiClient.postJson(
       '/esports/teams/list',
-      body: const {
+      body: {
         'page': 1,
-        'pageSize': 12,
+        'pageSize': 60,
         'sort': 'win_rate',
         'order': 'desc',
+        if (league != null && league != 'all') 'league': league,
       },
     );
     return _readRows(json).map(EsportsTeamSummary.fromJson).toList();
   }
 
-  Future<List<EsportsPlayerSummary>> loadPlayers() async {
+  Future<List<EsportsPlayerSummary>> loadPlayers({String? league}) async {
     final json = await apiClient.postJson(
       '/esports/players/list',
-      body: const {'page': 1, 'pageSize': 12, 'sort': 'grade', 'order': 'desc'},
+      body: {
+        'page': 1,
+        'pageSize': 80,
+        'sort': 'grade',
+        'order': 'desc',
+        if (league != null && league != 'all') 'league': league,
+      },
     );
     return _readRows(json).map(EsportsPlayerSummary.fromJson).toList();
   }
 
-  Future<List<EsportsStatSummary>> loadStats() async {
+  Future<List<EsportsStatSummary>> loadStats({
+    int rankType = 1,
+    String? league,
+  }) async {
     final json = await apiClient.postJson(
       '/esports/stats/list',
-      body: const {
+      body: {
         'page': 1,
         'pageSize': 40,
         'sort': 'winRate',
         'order': 'desc',
-        'rank_type': 1,
+        'rank_type': rankType,
+        if (league != null && league != 'all') 'league': league,
       },
     );
     return _readRows(json).indexed

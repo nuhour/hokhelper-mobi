@@ -10,6 +10,7 @@ import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../data/esports_repository.dart';
 import '../domain/esports_match_summary.dart';
+import '../domain/esports_meta.dart';
 import '../domain/esports_player_summary.dart';
 import '../domain/esports_stat_summary.dart';
 import '../domain/esports_team_summary.dart';
@@ -34,6 +35,18 @@ final esportsPlayersProvider = FutureProvider<List<EsportsPlayerSummary>>((
 
 final esportsStatsProvider = FutureProvider<List<EsportsStatSummary>>((ref) {
   return ref.watch(esportsRepositoryProvider).loadStats();
+});
+
+final esportsStatsByRankProvider =
+    FutureProvider.family<List<EsportsStatSummary>, int>((ref, rankType) {
+      if (rankType == 1) {
+        return ref.watch(esportsStatsProvider.future);
+      }
+      return ref.watch(esportsRepositoryProvider).loadStats(rankType: rankType);
+    });
+
+final esportsMetaProvider = FutureProvider<EsportsMeta>((ref) {
+  return ref.watch(esportsRepositoryProvider).loadMeta();
 });
 
 enum EsportsInitialTab {
@@ -113,14 +126,16 @@ class _EsportsScreenState extends ConsumerState<EsportsScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const AppSectionHeader(title: 'Esports'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
-                      'Track pro matches, elite teams, and player form.',
+                      'Live matches, tournament form, teams, and pro players.',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(
                         context,
-                      ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         color: AppTheme.panel,
@@ -154,7 +169,7 @@ class _EsportsScreenState extends ConsumerState<EsportsScreen>
           controller: _tabController,
           children: [
             _MatchesTab(value: ref.watch(esportsMatchesProvider)),
-            _StatsTab(value: ref.watch(esportsStatsProvider)),
+            const _StatsTab(),
             _TeamsTab(
               value: ref.watch(esportsTeamsProvider),
               focusedTeamId: widget.initialTeamId,
@@ -299,6 +314,7 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsMatchesProvider.future),
           child: ListView.separated(
+            cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -310,16 +326,34 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
   }
 }
 
-class _StatsTab extends ConsumerWidget {
-  const _StatsTab({required this.value});
-
-  final AsyncValue<List<EsportsStatSummary>> value;
+class _StatsTab extends ConsumerStatefulWidget {
+  const _StatsTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StatsTab> createState() => _StatsTabState();
+}
+
+class _StatsTabState extends ConsumerState<_StatsTab> {
+  int _rankType = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = ref.watch(esportsMetaProvider).valueOrNull;
+    final rankTypes = meta?.rankTypes.isNotEmpty == true
+        ? meta!.rankTypes
+        : const [
+            EsportsRankType(value: 1, label: 'Team'),
+            EsportsRankType(value: 2, label: 'Player'),
+            EsportsRankType(value: 3, label: 'Player Hero'),
+            EsportsRankType(value: 4, label: 'Hero'),
+          ];
+    final selectedRank = rankTypes.any((type) => type.value == _rankType)
+        ? _rankType
+        : rankTypes.first.value;
+    final value = ref.watch(esportsStatsByRankProvider(selectedRank));
     return AppAsyncView<List<EsportsStatSummary>>(
       value: value,
-      retry: () => ref.invalidate(esportsStatsProvider),
+      retry: () => ref.invalidate(esportsStatsByRankProvider(selectedRank)),
       data: (stats) {
         if (stats.isEmpty) {
           return const AppEmptyState(
@@ -329,15 +363,25 @@ class _StatsTab extends ConsumerWidget {
           );
         }
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(esportsStatsProvider.future),
+          onRefresh: () =>
+              ref.refresh(esportsStatsByRankProvider(selectedRank).future),
           child: ListView.separated(
+            cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) {
               if (index == 0) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _StatsIntroCard(),
+                    _StatsIntroCard(
+                      rankTypes: rankTypes,
+                      selectedRank: selectedRank,
+                      onRankChanged: (rankType) {
+                        setState(() {
+                          _rankType = rankType;
+                        });
+                      },
+                    ),
                     const SizedBox(height: 12),
                     _StatCard(stat: stats[index]),
                   ],
@@ -354,16 +398,23 @@ class _StatsTab extends ConsumerWidget {
   }
 }
 
-class _TeamsTab extends ConsumerWidget {
+class _TeamsTab extends ConsumerStatefulWidget {
   const _TeamsTab({required this.value, required this.focusedTeamId});
 
   final AsyncValue<List<EsportsTeamSummary>> value;
   final String? focusedTeamId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TeamsTab> createState() => _TeamsTabState();
+}
+
+class _TeamsTabState extends ConsumerState<_TeamsTab> {
+  String _leagueFilter = 'all';
+
+  @override
+  Widget build(BuildContext context) {
     return AppAsyncView<List<EsportsTeamSummary>>(
-      value: value,
+      value: widget.value,
       retry: () => ref.invalidate(esportsTeamsProvider),
       data: (teams) {
         if (teams.isEmpty) {
@@ -373,14 +424,42 @@ class _TeamsTab extends ConsumerWidget {
             message: 'Pull to refresh and try again.',
           );
         }
-        final focusedTeam = _findTeam(teams, focusedTeamId);
+        final leagues =
+            teams
+                .map((team) => team.leagueName)
+                .where((league) => league.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
+        final selectedLeague = leagues.contains(_leagueFilter)
+            ? _leagueFilter
+            : 'all';
+        final visibleTeams = teams
+            .where(
+              (team) =>
+                  selectedLeague == 'all' || team.leagueName == selectedLeague,
+            )
+            .toList();
+        final focusedTeam = _findTeam(visibleTeams, widget.focusedTeamId);
         final cards = [
+          _FilterCard(
+            children: [
+              _FilterDropdown(
+                width: 220,
+                value: selectedLeague,
+                fallbackLabel: 'All Leagues',
+                options: _textFilterOptions(leagues),
+                onChanged: (league) => setState(() => _leagueFilter = league),
+              ),
+            ],
+          ),
           if (focusedTeam != null) _FocusedTeamCard(team: focusedTeam),
-          ...teams.map((team) => _TeamCard(team: team)),
+          ...visibleTeams.map((team) => _TeamCard(team: team)),
         ];
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsTeamsProvider.future),
           child: ListView.separated(
+            cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -403,6 +482,7 @@ class _PlayersTab extends ConsumerStatefulWidget {
 }
 
 class _PlayersTabState extends ConsumerState<_PlayersTab> {
+  String _leagueFilter = 'all';
   String _teamFilter = 'all';
   String _roleFilter = 'all';
 
@@ -420,9 +500,19 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
           );
         }
         final teamOptions = _playerTeamOptions(players);
+        final leagueOptions =
+            players
+                .map((player) => player.leagueName)
+                .where((league) => league.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
         final roleOptions = _playerRoleOptions(players);
         final selectedTeam = teamOptions.contains(_teamFilter)
             ? _teamFilter
+            : 'all';
+        final selectedLeague = leagueOptions.contains(_leagueFilter)
+            ? _leagueFilter
             : 'all';
         final selectedRole = roleOptions.contains(_roleFilter)
             ? _roleFilter
@@ -430,14 +520,28 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
         final filteredPlayers = players.where((player) {
           final matchesTeam =
               selectedTeam == 'all' || player.teamName.trim() == selectedTeam;
+          final matchesLeague =
+              selectedLeague == 'all' ||
+              player.leagueName.trim() == selectedLeague;
           final matchesRole =
               selectedRole == 'all' || player.role.trim() == selectedRole;
-          return matchesTeam && matchesRole;
+          return matchesLeague && matchesTeam && matchesRole;
         }).toList();
         final focusedPlayer = _findPlayer(players, widget.focusedPlayerId);
         final cards = <Widget>[
           _FilterCard(
             children: [
+              _FilterDropdown(
+                width: 180,
+                value: selectedLeague,
+                fallbackLabel: 'All Leagues',
+                options: _textFilterOptions(leagueOptions),
+                onChanged: (value) {
+                  setState(() {
+                    _leagueFilter = value;
+                  });
+                },
+              ),
               _FilterDropdown(
                 width: 160,
                 value: selectedTeam,
@@ -477,6 +581,7 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(esportsPlayersProvider.future),
           child: ListView.separated(
+            cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -513,7 +618,15 @@ class _FilterCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Wrap(spacing: 10, runSpacing: 10, children: children),
+          SizedBox(
+            height: 48,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: children.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) => children[index],
+            ),
+          ),
         ],
       ),
     );
@@ -973,52 +1086,93 @@ class _MatchDetailRow extends StatelessWidget {
 }
 
 class _StatsIntroCard extends StatelessWidget {
-  const _StatsIntroCard();
+  const _StatsIntroCard({
+    required this.rankTypes,
+    required this.selectedRank,
+    required this.onRankChanged,
+  });
+
+  final List<EsportsRankType> rankTypes;
+  final int selectedRank;
+  final ValueChanged<int> onRankChanged;
 
   @override
   Widget build(BuildContext context) {
     return _PanelCard(
       accentColor: AppTheme.gold,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppTheme.gold.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Padding(
-              padding: EdgeInsets.all(10),
-              child: Icon(
-                Icons.leaderboard_outlined,
-                color: AppTheme.gold,
-                size: 24,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Esports Stats',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w900,
+          Row(
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTheme.gold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.all(9),
+                  child: Icon(
+                    Icons.leaderboard_outlined,
+                    color: AppTheme.gold,
+                    size: 22,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Hero rankings and player performance',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Esports Stats',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      'Hero rankings and player performance',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: rankTypes.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final rankType = rankTypes[index];
+                final selected = rankType.value == selectedRank;
+                return ChoiceChip(
+                  label: Text(rankType.label),
+                  selected: selected,
+                  onSelected: (_) => onRankChanged(rankType.value),
+                  selectedColor: AppTheme.gold,
+                  backgroundColor: Colors.black.withValues(alpha: 0.18),
+                  side: BorderSide(
+                    color: selected
+                        ? AppTheme.gold
+                        : Colors.white.withValues(alpha: 0.10),
+                  ),
+                  labelStyle: TextStyle(
+                    color: selected ? AppTheme.bg : AppTheme.muted,
+                    fontWeight: FontWeight.w900,
+                  ),
+                );
+              },
             ),
           ),
         ],
