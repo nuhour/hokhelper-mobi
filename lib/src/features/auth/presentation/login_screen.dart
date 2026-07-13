@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import 'auth_controller.dart';
 
 typedef OAuthUrlOpener = Future<void> Function(String url);
@@ -25,8 +26,12 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  late final _emailController = TextEditingController(
+    text: AppConfig.loginEmail,
+  );
+  late final _passwordController = TextEditingController(
+    text: AppConfig.loginPassword,
+  );
   String? _oauthLoadingProvider;
   String? _oauthError;
 

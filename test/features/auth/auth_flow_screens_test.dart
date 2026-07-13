@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
 import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
@@ -102,6 +103,29 @@ class _NoopTokenStore extends SecureTokenStore {
 }
 
 void main() {
+  testWidgets('login screen uses build-provided credential defaults', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+
+    expect(
+      tester
+          .widget<TextField>(find.widgetWithText(TextField, 'Email'))
+          .controller!
+          .text,
+      AppConfig.loginEmail,
+    );
+    expect(
+      tester
+          .widget<TextField>(find.widgetWithText(TextField, 'Password'))
+          .controller!
+          .text,
+      AppConfig.loginPassword,
+    );
+  });
+
   testWidgets('login screen links to register', (tester) async {
     final router = GoRouter(
       initialLocation: '/login',

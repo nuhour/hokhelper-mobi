@@ -11,6 +11,11 @@ class AppConfig {
     apiPrefix: String.fromEnvironment('HOK_API_PREFIX', defaultValue: '/hokx'),
   );
 
+  // Debug credentials are injected at build time and deliberately have no
+  // source-controlled defaults.
+  static const loginEmail = String.fromEnvironment('HOK_LOGIN_EMAIL');
+  static const loginPassword = String.fromEnvironment('HOK_LOGIN_PASSWORD');
+
   final String apiBaseUrl;
   final String apiPrefix;
 
