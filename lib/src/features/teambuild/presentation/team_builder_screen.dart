@@ -284,6 +284,7 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
               height: 274,
               child: _DraftBoard(
                 draft: draft,
+                heroes: heroesValue.valueOrNull ?? const <TeamBuildHero>[],
                 recommendations: recommendations,
                 recommendJob: _recommendJob,
                 onRecommendationJobChanged: (value) =>
@@ -548,6 +549,7 @@ class _BanStrip extends StatelessWidget {
 class _DraftBoard extends StatelessWidget {
   const _DraftBoard({
     required this.draft,
+    required this.heroes,
     required this.recommendations,
     required this.recommendJob,
     required this.onRecommendationJobChanged,
@@ -557,6 +559,7 @@ class _DraftBoard extends StatelessWidget {
     required this.onRecommendationTap,
   });
   final TeamBuilderDraft draft;
+  final List<TeamBuildHero> heroes;
   final AsyncValue<TeamRecommendationResult> recommendations;
   final int? recommendJob;
   final ValueChanged<int?> onRecommendationJobChanged;
@@ -585,6 +588,13 @@ class _DraftBoard extends StatelessWidget {
       Expanded(
         child: _RecommendationPanel(
           value: recommendations,
+          heroForRecommendation: (recommendation) => heroes
+              .where(
+                (hero) =>
+                    hero.id == recommendation.heroId ||
+                    hero.externalHeroId == recommendation.externalHeroId,
+              )
+              .firstOrNull,
           type: draft.recommendType,
           mainJob: recommendJob,
           onTypeChanged: onRecommendationTypeChanged,
@@ -635,28 +645,39 @@ class _SlotRow extends StatelessWidget {
   final void Function(TeamBuilderSide, int) onRemove;
   final bool reverse;
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    children: [
-      for (var rawIndex = 0; rawIndex < slots.length; rawIndex++)
-        () {
-          final index = reverse ? slots.length - rawIndex - 1 : rawIndex;
-          return _TeamSlot(
-            key: ValueKey('team-ban-${side.name}-$index'),
-            hero: slots[index],
-            color: color,
-            isBan: type == TeamBuilderSlotType.ban,
-            active:
-                activeType == type &&
-                activeSide == side &&
-                activeIndex == index,
-            onTap: () => onTap(side, index),
-            onLongPress: slots[index] == null
-                ? null
-                : () => onRemove(side, index),
-          );
-        }(),
-    ],
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final size = (constraints.maxWidth / slots.length)
+          .clamp(28.0, 36.0)
+          .toDouble();
+      return Row(
+        children: [
+          for (var rawIndex = 0; rawIndex < slots.length; rawIndex++)
+            () {
+              final index = reverse ? slots.length - rawIndex - 1 : rawIndex;
+              return Expanded(
+                child: Center(
+                  child: _TeamSlot(
+                    key: ValueKey('team-ban-${side.name}-$index'),
+                    hero: slots[index],
+                    color: color,
+                    size: size,
+                    isBan: type == TeamBuilderSlotType.ban,
+                    active:
+                        activeType == type &&
+                        activeSide == side &&
+                        activeIndex == index,
+                    onTap: () => onTap(side, index),
+                    onLongPress: slots[index] == null
+                        ? null
+                        : () => onRemove(side, index),
+                  ),
+                ),
+              );
+            }(),
+        ],
+      );
+    },
   );
 }
 
@@ -717,6 +738,7 @@ class _TeamSlot extends StatelessWidget {
     required this.active,
     required this.onTap,
     this.isBan = false,
+    this.size,
     this.onLongPress,
   });
   final TeamBuildHero? hero;
@@ -724,10 +746,11 @@ class _TeamSlot extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
   final bool isBan;
+  final double? size;
   final VoidCallback? onLongPress;
   @override
   Widget build(BuildContext context) {
-    final size = isBan ? 40.0 : 50.0;
+    final slotSize = size ?? (isBan ? 40.0 : 50.0);
     return Semantics(
       button: true,
       label: hero == null ? 'Empty ${isBan ? 'ban' : 'pick'} slot' : hero!.name,
@@ -740,8 +763,8 @@ class _TeamSlot extends StatelessWidget {
           customBorder: const CircleBorder(),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            width: size,
-            height: size,
+            width: slotSize,
+            height: slotSize,
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -782,6 +805,7 @@ class _TeamSlot extends StatelessWidget {
 class _RecommendationPanel extends StatelessWidget {
   const _RecommendationPanel({
     required this.value,
+    required this.heroForRecommendation,
     required this.type,
     required this.mainJob,
     required this.onTypeChanged,
@@ -790,6 +814,7 @@ class _RecommendationPanel extends StatelessWidget {
   });
 
   final AsyncValue<TeamRecommendationResult> value;
+  final TeamBuildHero? Function(TeamRecommendation) heroForRecommendation;
   final TeamRecommendType type;
   final int? mainJob;
   final ValueChanged<TeamRecommendType> onTypeChanged;
@@ -881,6 +906,7 @@ class _RecommendationPanel extends StatelessWidget {
                     ),
                     itemBuilder: (context, index) => _RecommendationTile(
                       item: items[index],
+                      hero: heroForRecommendation(items[index]),
                       onTap: () => onTap(items[index]),
                     ),
                   ),
@@ -923,8 +949,13 @@ class _RecTab extends StatelessWidget {
 }
 
 class _RecommendationTile extends StatelessWidget {
-  const _RecommendationTile({required this.item, required this.onTap});
+  const _RecommendationTile({
+    required this.item,
+    required this.hero,
+    required this.onTap,
+  });
   final TeamRecommendation item;
+  final TeamBuildHero? hero;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
@@ -934,21 +965,30 @@ class _RecommendationTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
+          key: ValueKey('team-recommendation-${item.heroId}'),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 17,
-                backgroundColor: AppTheme.panelAlt,
-                child: Text(
-                  item.name.isEmpty
-                      ? '?'
-                      : item.name.characters.first.toUpperCase(),
-                  style: const TextStyle(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+              SizedBox.square(
+                dimension: 34,
+                child: hero == null
+                    ? CircleAvatar(
+                        backgroundColor: AppTheme.panelAlt,
+                        child: Text(
+                          item.name.isEmpty
+                              ? '?'
+                              : item.name.characters.first.toUpperCase(),
+                          style: const TextStyle(
+                            color: AppTheme.text,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      )
+                    : AppImage(
+                        url: hero!.avatarUrl,
+                        borderRadius: 999,
+                        semanticLabel: hero!.name,
+                      ),
               ),
               const SizedBox(width: 8),
               Expanded(

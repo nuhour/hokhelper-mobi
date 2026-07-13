@@ -36,6 +36,17 @@ class HokHelperApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) {
+        final textScale = MediaQuery.textScalerOf(
+          context,
+        ).scale(1).clamp(0.9, 1.0).toDouble();
+        return MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

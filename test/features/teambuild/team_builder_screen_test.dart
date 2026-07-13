@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_build_hero.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_recommendation.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/presentation/team_builder_screen.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
 
 const _heroes = [
   TeamBuildHero(
@@ -66,6 +67,13 @@ void main() {
     expect(find.text('Synergy Picks'), findsOneWidget);
     expect(find.text('Counter Picks'), findsOneWidget);
     expect(find.text('Dolia'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('team-recommendation-99')),
+        matching: find.byType(AppImage),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('fills the active pick slot and locks the hero in the pool', (
