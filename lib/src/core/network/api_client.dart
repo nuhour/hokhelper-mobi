@@ -35,7 +35,9 @@ class ApiClient {
     Map<String, dynamic>? query,
   }) async {
     try {
-      final response = await _dio.get<Object?>(path, queryParameters: query);
+      final response = await _retryHandshakeFailure(
+        () => _dio.get<Object?>(path, queryParameters: query),
+      );
       return _readJsonMap(response.data);
     } on DioException catch (error) {
       final apiError = _mapDioException(error);
@@ -46,7 +48,9 @@ class ApiClient {
 
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     try {
-      final response = await _dio.post<Object?>(path, data: body);
+      final response = await _retryHandshakeFailure(
+        () => _dio.post<Object?>(path, data: body),
+      );
       return _readJsonMap(response.data);
     } on DioException catch (error) {
       final apiError = _mapDioException(error);
@@ -66,13 +70,42 @@ class ApiClient {
         ...fields,
         fileField: await MultipartFile.fromFile(file.path),
       });
-      final response = await _dio.post<Object?>(path, data: formData);
+      final response = await _retryHandshakeFailure(
+        () => _dio.post<Object?>(path, data: formData),
+      );
       return _readJsonMap(response.data);
     } on DioException catch (error) {
       final apiError = _mapDioException(error);
       await _notifyAuthFailure(apiError);
       throw apiError;
     }
+  }
+
+  Future<Response<T>> _retryHandshakeFailure<T>(
+    Future<Response<T>> Function() request,
+  ) async {
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return await request();
+      } on DioException catch (error) {
+        if (!_isHandshakeTermination(error) || attempt >= 2) {
+          rethrow;
+        }
+        await Future<void>.delayed(Duration(milliseconds: 350 * (attempt + 1)));
+      }
+    }
+  }
+
+  bool _isHandshakeTermination(DioException error) {
+    if (error.response != null) {
+      return false;
+    }
+    if (error.error is HandshakeException) {
+      return true;
+    }
+    final message = '${error.error ?? ''} ${error.message ?? ''}'.toLowerCase();
+    return message.contains('during handshake') ||
+        message.contains('before full header was received');
   }
 
   Map<String, dynamic> _readJsonMap(Object? data) {
