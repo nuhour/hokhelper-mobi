@@ -2163,13 +2163,82 @@ class _PromptComparisonImage extends StatelessWidget {
             ),
           )
         else
-          AppImage(
-            url: imageUrl,
-            aspectRatio: 16 / 9,
-            borderRadius: 10,
-            semanticLabel: '$label image',
+          Tooltip(
+            message: 'View $label fullscreen',
+            child: Semantics(
+              button: true,
+              label: 'View $label fullscreen',
+              child: InkWell(
+                onTap: () => _openFullscreen(context),
+                borderRadius: BorderRadius.circular(10),
+                child: AppImage(
+                  url: imageUrl,
+                  aspectRatio: 16 / 9,
+                  borderRadius: 10,
+                  semanticLabel: '$label image',
+                ),
+              ),
+            ),
           ),
       ],
+    );
+  }
+
+  void _openFullscreen(BuildContext context) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) =>
+            _PromptFullscreenImage(label: label, imageUrl: imageUrl),
+      ),
+    );
+  }
+}
+
+class _PromptFullscreenImage extends StatelessWidget {
+  const _PromptFullscreenImage({required this.label, required this.imageUrl});
+
+  final String label;
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: AppTheme.text,
+        title: Text(label),
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.close),
+          tooltip: 'Close full screen image',
+        ),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Icon(
+              Icons.broken_image_outlined,
+              color: AppTheme.muted,
+              size: 48,
+            ),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) {
+                return child;
+              }
+              return const SizedBox.square(
+                dimension: 44,
+                child: CircularProgressIndicator(color: AppTheme.gold),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }

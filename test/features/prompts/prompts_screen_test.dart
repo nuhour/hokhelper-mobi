@@ -266,6 +266,12 @@ void main() {
     expect(find.text('Original'), findsOneWidget);
     expect(find.text('Result'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Copy'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('View Original fullscreen'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+    expect(find.byTooltip('Close full screen image'), findsOneWidget);
   });
 
   testWidgets('searches and sorts prompt explorer like the hokx portal', (
