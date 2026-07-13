@@ -160,13 +160,16 @@ class ApiClient {
 }
 
 void _configureDevelopmentCertificates(Dio dio, AppConfig config) {
-  if (kReleaseMode || !config.apiBaseUrl.startsWith('https://')) {
-    return;
-  }
-
+  final proxy = config.httpProxy.trim();
   final uri = Uri.tryParse(config.apiBaseUrl);
   final host = uri?.host;
-  if (host == null || !_isDevelopmentHost(host)) {
+  final trustsDevelopmentCertificate =
+      !kReleaseMode &&
+      config.apiBaseUrl.startsWith('https://') &&
+      host != null &&
+      _isDevelopmentHost(host);
+
+  if (proxy.isEmpty && !trustsDevelopmentCertificate) {
     return;
   }
 
@@ -177,9 +180,14 @@ void _configureDevelopmentCertificates(Dio dio, AppConfig config) {
 
   adapter.createHttpClient = () {
     final client = HttpClient();
-    client.badCertificateCallback = (certificate, certificateHost, port) {
-      return certificateHost == host;
-    };
+    if (proxy.isNotEmpty) {
+      client.findProxy = (_) => 'PROXY $proxy';
+    }
+    if (trustsDevelopmentCertificate) {
+      client.badCertificateCallback = (certificate, certificateHost, port) {
+        return certificateHost == host;
+      };
+    }
     return client;
   };
 }

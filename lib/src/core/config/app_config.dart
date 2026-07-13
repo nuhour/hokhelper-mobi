@@ -1,14 +1,19 @@
 class AppConfig {
-  const AppConfig({required this.apiBaseUrl, required this.apiPrefix});
+  const AppConfig({
+    required this.apiBaseUrl,
+    required this.apiPrefix,
+    this.httpProxy = '',
+  });
 
-  // Defaults keep local desktop runs predictable. Android emulator debug builds
-  // should pass an explicit host URL with --dart-define.
+  // Installed builds use the public API by default. A local backend is opt-in
+  // through --dart-define=HOK_API_BASE_URL=https://your-host:8000.
   static const current = AppConfig(
     apiBaseUrl: String.fromEnvironment(
       'HOK_API_BASE_URL',
-      defaultValue: 'https://localhost:8000',
+      defaultValue: 'https://api.hokhelper.com',
     ),
     apiPrefix: String.fromEnvironment('HOK_API_PREFIX', defaultValue: '/hokx'),
+    httpProxy: String.fromEnvironment('HOK_HTTP_PROXY'),
   );
 
   // Debug credentials are injected at build time and deliberately have no
@@ -18,6 +23,7 @@ class AppConfig {
 
   final String apiBaseUrl;
   final String apiPrefix;
+  final String httpProxy;
 
   String get apiRoot {
     final base = apiBaseUrl.replaceFirst(RegExp(r'/+$'), '');
