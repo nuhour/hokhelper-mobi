@@ -53,6 +53,42 @@ class _FakeSearchRepository extends SearchRepository {
 }
 
 void main() {
+  testWidgets('portal search sheet renders results without leaving home', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _FakeSearchRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [searchRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showPortalSearchSheet(context),
+                child: const Text('Open search'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open search'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Global Search'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'arthur');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedKeyword, 'arthur');
+    expect(find.text('Heroes (1)'), findsOneWidget);
+    expect(find.text('Arthur'), findsOneWidget);
+    expect(find.text('Builds (1)'), findsOneWidget);
+  });
+
   testWidgets('hero search results expose hokx quick actions', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final repository = _FakeSearchRepository();

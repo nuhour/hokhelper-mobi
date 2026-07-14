@@ -8,7 +8,7 @@ import 'package:hok_helper_mobile/src/features/home/data/home_repository.dart';
 import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dart';
 
 void main() {
-  testWidgets('home screen opens global search route', (tester) async {
+  testWidgets('home screen opens global search in a sheet', (tester) async {
     final router = createAppRouter();
 
     await tester.pumpWidget(
@@ -27,10 +27,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Global Search'));
+    await tester.tap(find.byIcon(Icons.search_rounded));
     await tester.pumpAndSettle();
 
+    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(find.text('Global Search'), findsOneWidget);
     expect(find.text('Search the portal'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close search'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('home screen opens core stats and tier list portal routes', (

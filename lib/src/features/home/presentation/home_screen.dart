@@ -11,6 +11,7 @@ import '../../../core/widgets/app_image.dart';
 import '../../content/presentation/skin_gallery_screen.dart';
 import '../../esports/presentation/esports_screen.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
+import '../../search/presentation/search_screen.dart';
 import '../data/home_repository.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
@@ -200,7 +201,7 @@ class _HomePortalTopBar extends StatelessWidget {
         const SizedBox(width: 10),
         _RoundIconButton(
           icon: Icons.search_rounded,
-          onTap: () => context.go('/search'),
+          onTap: () => showPortalSearchSheet(context),
         ),
       ],
     );

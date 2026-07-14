@@ -17,16 +17,123 @@ final searchRepositoryProvider = Provider<SearchRepository>((ref) {
   return SearchRepository(apiClient: ref.watch(apiClientProvider));
 });
 
-class SearchScreen extends ConsumerStatefulWidget {
+Future<void> showPortalSearchSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.66),
+    builder: (context) => const _PortalSearchSheet(),
+  );
+}
+
+class SearchScreen extends StatelessWidget {
   const SearchScreen({this.initialQuery, super.key});
 
   final String? initialQuery;
 
   @override
-  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.bg,
+      child: _SearchContent(initialQuery: initialQuery),
+    );
+  }
 }
 
-class _SearchScreenState extends ConsumerState<SearchScreen> {
+class _PortalSearchSheet extends StatelessWidget {
+  const _PortalSearchSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.72,
+      minChildSize: 0.50,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (context, scrollController) {
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AppTheme.panel,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.muted.withValues(alpha: 0.48),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 10, 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search_rounded, color: AppTheme.gold),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Global Search',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: AppTheme.text,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close search',
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded),
+                        color: AppTheme.muted,
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                Expanded(
+                  child: _SearchContent(
+                    scrollController: scrollController,
+                    compact: true,
+                    autofocus: true,
+                    closeBeforeOpening: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SearchContent extends ConsumerStatefulWidget {
+  const _SearchContent({
+    this.initialQuery,
+    this.scrollController,
+    this.compact = false,
+    this.autofocus = false,
+    this.closeBeforeOpening = false,
+  });
+
+  final String? initialQuery;
+  final ScrollController? scrollController;
+  final bool compact;
+  final bool autofocus;
+  final bool closeBeforeOpening;
+
+  @override
+  ConsumerState<_SearchContent> createState() => _SearchContentState();
+}
+
+class _SearchContentState extends ConsumerState<_SearchContent> {
   final _controller = TextEditingController();
   Future<List<SearchResultGroup>>? _searchFuture;
   String _lastQuery = '';
@@ -76,11 +183,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       });
     }
 
-    return Material(
-      color: AppTheme.bg,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        children: [
+    return ListView(
+      controller: widget.scrollController,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: widget.compact
+          ? const EdgeInsets.fromLTRB(18, 12, 18, 28)
+          : const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      children: [
+        if (!widget.compact) ...[
           const AppSectionHeader(title: 'Global Search'),
           const SizedBox(height: 8),
           Text(
@@ -89,77 +199,91 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _submit(),
-            style: const TextStyle(color: AppTheme.text),
-            decoration: InputDecoration(
-              hintText: 'Search HOK Helper',
-              prefixIcon: const Icon(Icons.search, color: AppTheme.muted),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.arrow_forward, color: AppTheme.gold),
-                onPressed: _submit,
-                tooltip: 'Search',
-              ),
+        ] else
+          Text(
+            'Search heroes, builds, guides, and community content.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+          ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _controller,
+          autofocus: widget.autofocus,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _submit(),
+          style: const TextStyle(color: AppTheme.text),
+          decoration: InputDecoration(
+            hintText: 'Search HOK Helper',
+            prefixIcon: const Icon(Icons.search, color: AppTheme.muted),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.arrow_forward, color: AppTheme.gold),
+              onPressed: _submit,
+              tooltip: 'Search',
             ),
           ),
-          const SizedBox(height: 20),
-          if (_searchFuture == null)
-            const AppEmptyState(
-              icon: Icons.manage_search_outlined,
-              title: 'Search the portal',
-              message:
-                  'Enter a hero, build, guide, player, or community keyword.',
-            )
-          else
-            FutureBuilder<List<SearchResultGroup>>(
-              future: _searchFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Padding(
-                    padding: EdgeInsets.only(top: 80),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return AppEmptyState(
-                    icon: Icons.search_off_outlined,
-                    title: 'Search failed',
-                    message: snapshot.error.toString(),
-                  );
-                }
-
-                final groups = snapshot.data ?? const [];
-                if (groups.isEmpty) {
-                  return AppEmptyState(
-                    icon: Icons.search_off_outlined,
-                    title: 'No results found',
-                    message: 'No portal content matched "$_lastQuery".',
-                  );
-                }
-
-                return Column(
-                  children: [
-                    for (final group in groups) ...[
-                      _SearchGroupCard(group: group),
-                      const SizedBox(height: 14),
-                    ],
-                  ],
+        ),
+        const SizedBox(height: 20),
+        if (_searchFuture == null)
+          const AppEmptyState(
+            icon: Icons.manage_search_outlined,
+            title: 'Search the portal',
+            message:
+                'Enter a hero, build, guide, player, or community keyword.',
+          )
+        else
+          FutureBuilder<List<SearchResultGroup>>(
+            future: _searchFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.only(top: 80),
+                  child: Center(child: CircularProgressIndicator()),
                 );
-              },
-            ),
-        ],
-      ),
+              }
+              if (snapshot.hasError) {
+                return AppEmptyState(
+                  icon: Icons.search_off_outlined,
+                  title: 'Search failed',
+                  message: snapshot.error.toString(),
+                );
+              }
+
+              final groups = snapshot.data ?? const [];
+              if (groups.isEmpty) {
+                return AppEmptyState(
+                  icon: Icons.search_off_outlined,
+                  title: 'No results found',
+                  message: 'No portal content matched "$_lastQuery".',
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final group in groups) ...[
+                    _SearchGroupCard(
+                      group: group,
+                      closeBeforeOpening: widget.closeBeforeOpening,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                ],
+              );
+            },
+          ),
+      ],
     );
   }
 }
 
 class _SearchGroupCard extends StatelessWidget {
-  const _SearchGroupCard({required this.group});
+  const _SearchGroupCard({
+    required this.group,
+    this.closeBeforeOpening = false,
+  });
 
   final SearchResultGroup group;
+  final bool closeBeforeOpening;
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +307,10 @@ class _SearchGroupCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             for (final item in group.items) ...[
-              _SearchResultTile(item: item),
+              _SearchResultTile(
+                item: item,
+                closeBeforeOpening: closeBeforeOpening,
+              ),
               if (item != group.items.last) const SizedBox(height: 10),
             ],
           ],
@@ -194,9 +321,24 @@ class _SearchGroupCard extends StatelessWidget {
 }
 
 class _SearchResultTile extends StatelessWidget {
-  const _SearchResultTile({required this.item});
+  const _SearchResultTile({
+    required this.item,
+    this.closeBeforeOpening = false,
+  });
 
   final SearchResultItem item;
+  final bool closeBeforeOpening;
+
+  void _open(BuildContext context, String url) {
+    if (!closeBeforeOpening) {
+      _openSearchResult(context, url);
+      return;
+    }
+
+    final router = GoRouter.of(context);
+    Navigator.of(context, rootNavigator: true).pop();
+    _openSearchResultWithRouter(router, url);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +347,7 @@ class _SearchResultTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: canOpen ? () => _openSearchResult(context, item.url) : null,
+        onTap: canOpen ? () => _open(context, item.url) : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(
@@ -252,8 +394,7 @@ class _SearchResultTile extends StatelessWidget {
                         children: [
                           for (final action in item.actions)
                             OutlinedButton(
-                              onPressed: () =>
-                                  _openSearchResult(context, action.url),
+                              onPressed: () => _open(context, action.url),
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size(0, 32),
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -291,11 +432,15 @@ class _SearchResultTile extends StatelessWidget {
 }
 
 void _openSearchResult(BuildContext context, String url) {
+  _openSearchResultWithRouter(GoRouter.of(context), url);
+}
+
+void _openSearchResultWithRouter(GoRouter router, String url) {
   final target = normalizePortalLinkTarget(url);
   if (target.startsWith('/')) {
-    context.go(target);
+    router.go(target);
     return;
   }
 
-  context.push(externalLinkRoute(target));
+  router.push(externalLinkRoute(target));
 }
