@@ -244,7 +244,7 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                             crossAxisCount: 2,
                             mainAxisSpacing: 12,
                             crossAxisSpacing: 12,
-                            childAspectRatio: 0.64,
+                            childAspectRatio: 0.82,
                           ),
                       itemCount: visibleHeroes.length,
                       itemBuilder: (context, index) {
@@ -362,7 +362,6 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final detailRouteId = hero.detailRouteId;
     final tier = hero.tier.isEmpty ? '--' : hero.tier.toUpperCase();
     final ratingLabel = hero.rating > 0 ? hero.rating.toStringAsFixed(1) : '--';
@@ -374,62 +373,79 @@ class _HeroCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: detailRouteId == null ? null : () => _openDetail(context),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Flexible(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: 88,
-                      maxHeight: 88,
-                    ),
-                    child: AppImage(
-                      url: hero.avatar,
-                      aspectRatio: 1,
-                      borderRadius: 12,
-                      semanticLabel: '${hero.name} hero portrait',
-                    ),
-                  ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AppImage(
+              url: hero.avatar,
+              width: double.infinity,
+              height: double.infinity,
+              borderRadius: 0,
+              semanticLabel: '${hero.name} hero portrait',
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x33000000),
+                    Colors.transparent,
+                    Color(0xD9000000),
+                  ],
+                  stops: [0, 0.36, 1],
                 ),
               ),
-              const SizedBox(height: 7),
-              Text(
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: _HeroCardCorner(
+                child: _HeroLaneBadge(position: hero.position),
+              ),
+            ),
+            Positioned(top: 8, right: 8, child: _HeroTierBadge(tier: tier)),
+            Positioned(
+              left: 10,
+              right: 56,
+              bottom: 9,
+              child: Text(
                 hero.name.isEmpty ? 'Hero #${hero.id}' : hero.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w700,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
                 ),
               ),
-              const SizedBox(height: 5),
-              Row(
+            ),
+            Positioned(
+              right: 9,
+              bottom: 10,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _HeroLaneBadge(position: hero.position),
-                  const SizedBox(width: 5),
-                  _HeroTierBadge(tier: tier),
-                  const Spacer(),
                   const Icon(
                     Icons.star_rounded,
                     color: AppTheme.gold,
-                    size: 15,
+                    size: 16,
                   ),
                   const SizedBox(width: 2),
                   Text(
                     ratingLabel,
-                    style: textTheme.labelMedium?.copyWith(
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: AppTheme.gold,
                       fontWeight: FontWeight.w900,
+                      shadows: const [
+                        Shadow(color: Colors.black, blurRadius: 6),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -444,6 +460,23 @@ class _HeroCard extends StatelessWidget {
     final currentUri = router.routeInformationProvider.value.uri;
     final nextUri = currentUri.replace(path: '/heroes/$detailRouteId');
     router.go(nextUri.toString());
+  }
+}
+
+class _HeroCardCorner extends StatelessWidget {
+  const _HeroCardCorner({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Padding(padding: const EdgeInsets.all(3), child: child),
+    );
   }
 }
 

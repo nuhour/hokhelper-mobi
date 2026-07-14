@@ -636,81 +636,83 @@ class _SkinCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           onLongPress: isRating ? null : () => _showRatingSheet(context),
-          child: LayoutBuilder(
-            builder: (context, constraints) => Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isSplash)
-                    SizedBox(
-                      height: (constraints.maxHeight * 0.56).clamp(
-                        108.0,
-                        150.0,
-                      ),
-                      width: double.infinity,
-                      child: AppImage(
-                        url: imageUrl,
-                        width: double.infinity,
-                        height: double.infinity,
-                        borderRadius: 12,
-                        semanticLabel: skin.title,
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: AppImage(
-                          url: imageUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          borderRadius: 12,
-                          semanticLabel: skin.title,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                  Text(
-                    skin.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    skin.subtitle.isEmpty ? 'Unknown series' : skin.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: AppTheme.gold,
-                        size: 17,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        skin.rating > 0 ? skin.rating.toStringAsFixed(1) : '--',
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: AppTheme.gold,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                    ],
-                  ),
-                ],
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AppImage(
+                url: imageUrl,
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: 0,
+                semanticLabel: skin.title,
               ),
-            ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x11000000),
+                      Colors.transparent,
+                      Color(0xE6000000),
+                    ],
+                    stops: [0, 0.35, 1],
+                  ),
+                ),
+              ),
+              if (skin.subtitle.isNotEmpty)
+                Positioned(
+                  top: 9,
+                  right: 9,
+                  child: _SkinSeriesPill(label: skin.subtitle),
+                ),
+              Positioned(
+                left: 11,
+                right: 11,
+                bottom: 10,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            skin.title,
+                            maxLines: isSplash ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  shadows: const [
+                                    Shadow(color: Colors.black, blurRadius: 6),
+                                  ],
+                                ),
+                          ),
+                          if (skin.heroName.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              skin.heroName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _SkinRatingBadge(rating: skin.rating),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -733,6 +735,60 @@ class _SkinCard extends StatelessWidget {
           onRate(rating);
         },
       ),
+    );
+  }
+}
+
+class _SkinSeriesPill extends StatelessWidget {
+  const _SkinSeriesPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkinRatingBadge extends StatelessWidget {
+  const _SkinRatingBadge({required this.rating});
+
+  final double rating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, color: AppTheme.gold, size: 17),
+        const SizedBox(width: 2),
+        Text(
+          rating > 0 ? rating.toStringAsFixed(1) : '--',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: AppTheme.gold,
+            fontWeight: FontWeight.w900,
+            shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
+          ),
+        ),
+      ],
     );
   }
 }
