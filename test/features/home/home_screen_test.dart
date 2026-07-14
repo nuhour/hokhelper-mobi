@@ -347,12 +347,18 @@ void main() {
       findsAtLeastNWidgets(2),
     );
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
-    expect(find.byKey(const ValueKey('home-hero-avatar-2625')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home-hero-avatar-2625')),
+      findsAtLeastNWidgets(1),
+    );
     expect(find.text('Angela'), findsNothing);
 
     await _scrollHomeUntilVisible(tester, find.text('Tier List Preview'));
     expect(find.text('Tier List Preview'), findsOneWidget);
-    expect(find.byKey(const ValueKey('home-hero-avatar-2624')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home-hero-avatar-2624')),
+      findsAtLeastNWidgets(1),
+    );
 
     await _scrollHomeUntilVisible(tester, find.text('Leaderboard'));
     expect(find.text('Leaderboard'), findsOneWidget);

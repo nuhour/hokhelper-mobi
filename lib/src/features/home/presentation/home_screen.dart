@@ -1181,6 +1181,11 @@ class _HomePortalPreviews extends StatelessWidget {
     final heroRows = _readList(_readMap(result['hero_ranking_table'])['rows']);
     final heroColumns = _readMap(result['hero_ranking_table'])['columns'];
     final tierRows = _readList(result['tier_list']);
+    final patchHeroPool = _homePatchHeroPool(
+      heroStats: _readList(result['hero_stats']),
+      heroRankingRows: heroRows,
+      tierGroups: tierRows,
+    );
     final peakPlayers = _readList(_readMap(result['player_ranking'])['peak']);
     final communityPosts = _readList(result['community_hot']);
     final patchNotes = _readList(result['patch_notes']);
@@ -1214,8 +1219,8 @@ class _HomePortalPreviews extends StatelessWidget {
         icon: Icons.newspaper_outlined,
         title: 'Latest Updates',
         route: '/content/patch-notes',
-        notes: patchNotes.take(3).toList(growable: false),
-        fallbackHeroes: _readList(result['hero_stats']).take(3).toList(),
+        notes: patchNotes.take(6).toList(growable: false),
+        fallbackHeroes: patchHeroPool,
       ),
     ];
 
@@ -1421,12 +1426,57 @@ class _HomeDataTableState extends State<_HomeDataTable> {
   static const _rowHeight = 48.0;
 
   final _verticalController = ScrollController();
-  final _horizontalController = ScrollController();
+  final _metricHeaderController = ScrollController();
+  final _metricRowsController = ScrollController();
+  var _isSynchronizingHorizontalScroll = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _metricHeaderController.addListener(_syncHeaderToRows);
+    _metricRowsController.addListener(_syncRowsToHeader);
+  }
+
+  void _syncHeaderToRows() {
+    _syncHorizontalScroll(
+      source: _metricHeaderController,
+      target: _metricRowsController,
+    );
+  }
+
+  void _syncRowsToHeader() {
+    _syncHorizontalScroll(
+      source: _metricRowsController,
+      target: _metricHeaderController,
+    );
+  }
+
+  void _syncHorizontalScroll({
+    required ScrollController source,
+    required ScrollController target,
+  }) {
+    if (_isSynchronizingHorizontalScroll ||
+        !source.hasClients ||
+        !target.hasClients) {
+      return;
+    }
+    final targetOffset = source.offset.clamp(
+      0.0,
+      target.position.maxScrollExtent,
+    );
+    if ((target.offset - targetOffset).abs() < 0.5) {
+      return;
+    }
+    _isSynchronizingHorizontalScroll = true;
+    target.jumpTo(targetOffset);
+    _isSynchronizingHorizontalScroll = false;
+  }
 
   @override
   void dispose() {
     _verticalController.dispose();
-    _horizontalController.dispose();
+    _metricHeaderController.dispose();
+    _metricRowsController.dispose();
     super.dispose();
   }
 
@@ -1464,7 +1514,8 @@ class _HomeDataTableState extends State<_HomeDataTable> {
       ),
     );
     final metricHeader = SingleChildScrollView(
-      controller: _horizontalController,
+      key: const ValueKey('home-hero-ranking-metric-header'),
+      controller: _metricHeaderController,
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
         constraints: BoxConstraints(minWidth: metricWidth),
@@ -1546,7 +1597,8 @@ class _HomeDataTableState extends State<_HomeDataTable> {
               child: SingleChildScrollView(
                 controller: _verticalController,
                 child: SingleChildScrollView(
-                  controller: _horizontalController,
+                  key: const ValueKey('home-hero-ranking-metric-rows'),
+                  controller: _metricRowsController,
                   scrollDirection: Axis.horizontal,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minWidth: metricWidth),
@@ -2095,6 +2147,53 @@ class _HomeCommunitySection extends StatelessWidget {
   }
 }
 
+List<Map<String, dynamic>> _homePatchHeroPool({
+  required List<Map<String, dynamic>> heroStats,
+  required List<Map<String, dynamic>> heroRankingRows,
+  required List<Map<String, dynamic>> tierGroups,
+}) {
+  final candidates = <Map<String, dynamic>>[
+    ...heroStats,
+    for (final row in heroRankingRows) _readMap(row['hero']),
+    for (final tierGroup in tierGroups) ..._readList(tierGroup['heroes']),
+  ];
+  final seen = <String>{};
+  final heroes = <Map<String, dynamic>>[];
+  for (final candidate in candidates) {
+    final hero = _readMap(candidate['hero']);
+    final source = hero.isEmpty ? candidate : hero;
+    final id = _readString(source['hero_id'] ?? source['id']);
+    final name = _readString(source['name'] ?? source['hero_name']);
+    final key = id.isNotEmpty ? id : name.toLowerCase();
+    if (key.isEmpty || !seen.add(key)) {
+      continue;
+    }
+    heroes.add({
+      'hero_id': id,
+      'name': name.isEmpty ? 'Hero' : name,
+      if (source['direction'] != null) 'direction': source['direction'],
+      if (source['trend'] != null) 'trend': source['trend'],
+    });
+  }
+  return heroes;
+}
+
+List<Map<String, dynamic>> _homePatchFallbackHeroes(
+  List<Map<String, dynamic>> heroes, {
+  required int noteIndex,
+}) {
+  if (heroes.isEmpty) {
+    return const [];
+  }
+  const changesPerNote = 6;
+  final count = heroes.length < changesPerNote ? heroes.length : changesPerNote;
+  final start = (noteIndex * changesPerNote) % heroes.length;
+  return [
+    for (var offset = 0; offset < count; offset++)
+      heroes[(start + offset) % heroes.length],
+  ];
+}
+
 class _HomePatchNotesSection extends StatelessWidget {
   const _HomePatchNotesSection({
     required this.icon,
@@ -2121,8 +2220,14 @@ class _HomePatchNotesSection extends StatelessWidget {
           if (notes.isEmpty)
             const _HomeEmptyPanelMessage()
           else
-            for (final note in notes)
-              _HomePatchNoteRow(note: note, fallbackHeroes: fallbackHeroes),
+            for (var index = 0; index < notes.length; index++)
+              _HomePatchNoteRow(
+                note: notes[index],
+                fallbackHeroes: _homePatchFallbackHeroes(
+                  fallbackHeroes,
+                  noteIndex: index,
+                ),
+              ),
         ],
       ),
     );
