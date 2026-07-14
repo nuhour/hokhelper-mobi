@@ -25,45 +25,42 @@ class _FakeApiClient extends ApiClient {
     getPath = path;
     getQuery = query;
     return const {
-      'success': true,
-      'result': {
-        'post': {
-          'id': '99',
-          'title': 'Best jungle rotation',
-          'content': 'Start blue, punish mid wave, then invade.',
-          'content_preview': 'Start blue, punish mid wave.',
-          'author_name': 'coach',
-          'author_avatar': 'https://example.test/avatar.png',
-          'tags': ['Guide', 'Jungle'],
-          'created_at': '2026-07-03T08:30:00Z',
-          'view_count': 230,
-          'like_count': 18,
-          'comment_count': 2,
-          'is_liked': true,
-        },
-        'comments': [
-          {
-            'id': 'c1',
-            'content': 'Great route.',
-            'author_id': 77,
-            'author_name': 'Lam',
-            'author_avatar': '',
-            'created_at': '2026-07-03T09:00:00Z',
-            'like_count': 3,
-            'parent': null,
-          },
-          {
-            'id': 'c2',
-            'content': 'What if red buff is invaded?',
-            'author_name': 'Angela',
-            'author_avatar': '',
-            'created_at': '2026-07-03T09:10:00Z',
-            'like_count': 1,
-            'parent': 'c1',
-            'parent_author_name': 'Lam',
-          },
-        ],
+      'post': {
+        'id': '99',
+        'title': 'Best jungle rotation',
+        'content': 'Start blue, punish mid wave, then invade.',
+        'content_preview': 'Start blue, punish mid wave.',
+        'author_name': 'coach',
+        'author_avatar': 'https://example.test/avatar.png',
+        'tags': ['Guide', 'Jungle'],
+        'created_at': '2026-07-03T08:30:00Z',
+        'view_count': 230,
+        'like_count': 18,
+        'comment_count': 2,
+        'is_liked': true,
       },
+      'comments': [
+        {
+          'id': 'c1',
+          'content': 'Great route.',
+          'author_id': 77,
+          'author_name': 'Lam',
+          'author_avatar': '',
+          'created_at': '2026-07-03T09:00:00Z',
+          'like_count': 3,
+          'parent': null,
+        },
+        {
+          'id': 'c2',
+          'content': 'What if red buff is invaded?',
+          'author_name': 'Angela',
+          'author_avatar': '',
+          'created_at': '2026-07-03T09:10:00Z',
+          'like_count': 1,
+          'parent': 'c1',
+          'parent_author_name': 'Lam',
+        },
+      ],
     };
   }
 

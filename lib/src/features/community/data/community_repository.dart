@@ -100,7 +100,7 @@ class CommunityRepository {
       query: {'region_id': regionId},
     );
     final result = json['result'];
-    return CommunityPostDetail.fromJson(result);
+    return CommunityPostDetail.fromJson(result is Map ? result : json);
   }
 
   Future<CommunityLikeResult> togglePostLike(String postId) async {

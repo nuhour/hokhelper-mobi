@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_markdown_content.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/community_post_detail.dart';
@@ -22,13 +23,29 @@ final postDetailProvider = FutureProvider.family<CommunityPostDetail, String>((
       .loadPostDetail(postId, regionId: settings.region.regionId);
 });
 
-class CommunityPostDetailScreen extends ConsumerWidget {
+class CommunityPostDetailScreen extends ConsumerStatefulWidget {
   const CommunityPostDetailScreen({required this.postId, super.key});
 
   final String postId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommunityPostDetailScreen> createState() =>
+      _CommunityPostDetailScreenState();
+}
+
+class _CommunityPostDetailScreenState
+    extends ConsumerState<CommunityPostDetailScreen> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final postId = widget.postId;
     final detailValue = ref.watch(postDetailProvider(postId));
 
     return Material(
@@ -38,20 +55,28 @@ class CommunityPostDetailScreen extends ConsumerWidget {
           ref.invalidate(postDetailProvider(postId));
           await ref.read(postDetailProvider(postId).future);
         },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            const AppSectionHeader(title: 'Post Detail'),
-            const SizedBox(height: 16),
-            AppAsyncView<CommunityPostDetail>(
-              value: detailValue,
-              retry: () => ref.invalidate(postDetailProvider(postId)),
-              data: (detail) {
-                return _PostDetailBody(detail: detail);
-              },
-            ),
-          ],
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          interactive: true,
+          thickness: 4,
+          radius: const Radius.circular(99),
+          child: ListView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              const AppSectionHeader(title: 'Post Detail'),
+              const SizedBox(height: 16),
+              AppAsyncView<CommunityPostDetail>(
+                value: detailValue,
+                retry: () => ref.invalidate(postDetailProvider(postId)),
+                data: (detail) {
+                  return _PostDetailBody(detail: detail);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -178,12 +203,10 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  detail.content.isNotEmpty ? detail.content : post.preview,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.text,
-                    height: 1.45,
-                  ),
+                AppMarkdownContent(
+                  content: detail.content.isNotEmpty
+                      ? detail.content
+                      : post.preview,
                 ),
                 const SizedBox(height: 14),
                 Wrap(

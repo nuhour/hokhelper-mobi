@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
-import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_markdown_content.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../heroes/data/heroes_repository.dart';
 import '../domain/patch_note_summary.dart';
@@ -371,7 +371,7 @@ class _PatchTimelineCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 14),
-                _HeroChangeWrap(changes: note.heroChanges),
+                _HeroChangeRail(changes: note.heroChanges),
               ],
             ),
           ),
@@ -450,94 +450,101 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
         minChildSize: 0.5,
         maxChildSize: 0.94,
         builder: (context, scrollController) {
-          return ListView(
+          return Scrollbar(
             controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-            children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.muted.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  _VersionPill(version: note.version),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      note.date,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+            thumbVisibility: true,
+            interactive: true,
+            thickness: 4,
+            radius: const Radius.circular(99),
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.muted.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                note.title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w900,
                 ),
-              ),
-              if (note.content.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _PatchContentText(content: note.content),
-              ],
-              if (_isLoadingDetail) ...[
-                const SizedBox(height: 12),
-                const Row(
+                const SizedBox(height: 18),
+                Row(
                   children: [
-                    SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Loading full patch details...',
-                      style: TextStyle(color: AppTheme.muted),
+                    _VersionPill(version: note.version),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        note.date,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                      ),
                     ),
                   ],
                 ),
-              ],
-              if (_detailFailed) ...[
-                const SizedBox(height: 12),
-                const Text(
-                  'Failed to load full patch details.',
-                  style: TextStyle(color: AppTheme.muted),
-                ),
-              ],
-              const SizedBox(height: 24),
-              Text(
-                'Hero Adjustments',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.text,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (note.heroChanges.isEmpty)
-                const Text(
-                  'No hero-specific adjustments attached.',
-                  style: TextStyle(color: AppTheme.muted),
-                )
-              else
-                ...note.heroChanges.map(
-                  (change) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _HeroChangeRow(change: change),
+                const SizedBox(height: 14),
+                Text(
+                  note.title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-            ],
+                if (note.content.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  AppMarkdownContent(content: note.content),
+                ],
+                if (_isLoadingDetail) ...[
+                  const SizedBox(height: 12),
+                  const Row(
+                    children: [
+                      SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Loading full patch details...',
+                        style: TextStyle(color: AppTheme.muted),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_detailFailed) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Failed to load full patch details.',
+                    style: TextStyle(color: AppTheme.muted),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                Text(
+                  'Hero Adjustments',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (note.heroChanges.isEmpty)
+                  const Text(
+                    'No hero-specific adjustments attached.',
+                    style: TextStyle(color: AppTheme.muted),
+                  )
+                else
+                  ...note.heroChanges.map(
+                    (change) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _HeroChangeRow(change: change),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),
@@ -545,115 +552,8 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
   }
 }
 
-class _PatchContentText extends StatelessWidget {
-  const _PatchContentText({required this.content});
-
-  final String content;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(
-      context,
-    ).textTheme.bodyLarge?.copyWith(color: AppTheme.text, height: 1.45);
-    final paragraphs = content.split(RegExp(r'\n\s*\n'));
-    final hasLinks = paragraphs.any(_containsLink);
-
-    if (!hasLinks) {
-      return Text(content, style: style);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var index = 0; index < paragraphs.length; index += 1) ...[
-          _PatchLinkedParagraph(text: paragraphs[index], style: style),
-          if (index < paragraphs.length - 1) const SizedBox(height: 12),
-        ],
-      ],
-    );
-  }
-}
-
-class _PatchLinkedParagraph extends StatelessWidget {
-  const _PatchLinkedParagraph({required this.text, required this.style});
-
-  final String text;
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(children: _buildInlineWidgets(text, style));
-  }
-}
-
-List<Widget> _buildInlineWidgets(String text, TextStyle? style) {
-  final widgets = <Widget>[];
-  var cursor = 0;
-
-  for (final match in _patchLinkPattern.allMatches(text)) {
-    if (match.start > cursor) {
-      widgets.add(Text(text.substring(cursor, match.start), style: style));
-    }
-
-    final label = match.namedGroup('label') ?? match.namedGroup('url') ?? '';
-    final url = match.namedGroup('href') ?? match.namedGroup('url') ?? '';
-    widgets.add(_PatchInlineLink(label: label, url: url, style: style));
-    cursor = match.end;
-  }
-
-  if (cursor < text.length) {
-    widgets.add(Text(text.substring(cursor), style: style));
-  }
-
-  return widgets;
-}
-
-class _PatchInlineLink extends StatelessWidget {
-  const _PatchInlineLink({
-    required this.label,
-    required this.url,
-    required this.style,
-  });
-
-  final String label;
-  final String url;
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.go(_patchLinkDestination(url)),
-      child: Text(
-        label,
-        style: style?.copyWith(
-          color: AppTheme.gold,
-          decoration: TextDecoration.underline,
-          decorationColor: AppTheme.gold,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
-String _patchLinkDestination(String url) {
-  final normalized = normalizePortalLinkTarget(url);
-  final uri = Uri.tryParse(normalized);
-  if (uri != null && uri.hasScheme) {
-    return externalLinkRoute(normalized);
-  }
-  return normalized;
-}
-
-bool _containsLink(String text) => _patchLinkPattern.hasMatch(text);
-
-final _patchLinkPattern = RegExp(
-  r'\[(?<label>[^\]]+)\]\((?<href>[^)]+)\)|(?<url>https?://[^\s\])]+)',
-);
-
-class _HeroChangeWrap extends StatelessWidget {
-  const _HeroChangeWrap({required this.changes});
+class _HeroChangeRail extends StatelessWidget {
+  const _HeroChangeRail({required this.changes});
 
   final List<PatchHeroChange> changes;
 
@@ -663,21 +563,87 @@ class _HeroChangeWrap extends StatelessWidget {
       return const _ChangeChip(label: 'No hero changes', changeType: 'adjust');
     }
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final change in changes.take(6))
-          _ChangeChip(
-            label: change.heroName,
-            changeType: change.changeType,
-            route: change.heroId > 0
-                ? '/heroes/${change.heroId}?tab=history'
-                : null,
+    return SizedBox(
+      height: 46,
+      child: Scrollbar(
+        thumbVisibility: changes.length > 6,
+        thickness: 3,
+        radius: const Radius.circular(99),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: changes.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 8),
+          itemBuilder: (context, index) =>
+              _HeroChangeAvatar(change: changes[index]),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroChangeAvatar extends StatelessWidget {
+  const _HeroChangeAvatar({required this.change});
+
+  final PatchHeroChange change;
+
+  @override
+  Widget build(BuildContext context) {
+    final route = change.heroId > 0
+        ? '/heroes/${change.heroId}?tab=history'
+        : null;
+    final child = Tooltip(
+      message: '${change.heroName} (${change.changeType})',
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AppImage(
+            url: change.avatarUrl,
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            semanticLabel: change.heroName,
           ),
-        if (changes.length > 6)
-          _ChangeChip(label: '+${changes.length - 6}', changeType: 'adjust'),
-      ],
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: _ChangeDirectionBadge(changeType: change.changeType),
+          ),
+        ],
+      ),
+    );
+    if (route == null) {
+      return child;
+    }
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: () => context.go(route),
+      child: child,
+    );
+  }
+}
+
+class _ChangeDirectionBadge extends StatelessWidget {
+  const _ChangeDirectionBadge({required this.changeType});
+
+  final String changeType;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color) = switch (changeType) {
+      'buff' => (Icons.arrow_upward_rounded, AppTheme.success),
+      'nerf' => (Icons.arrow_downward_rounded, AppTheme.error),
+      _ => (Icons.remove_rounded, AppTheme.muted),
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        shape: BoxShape.circle,
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: Icon(icon, size: 12, color: color),
+      ),
     );
   }
 }

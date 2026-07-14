@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -213,8 +214,8 @@ void main() {
     expect(find.text('Patch Notes'), findsWidgets);
     expect(find.text('Version 1.2.3 Patch Notes'), findsOneWidget);
     expect(find.text('Version 1.2.4 Patch Notes'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
-    expect(find.text('Angela'), findsOneWidget);
+    expect(find.byTooltip('Lam (buff)'), findsOneWidget);
+    expect(find.byTooltip('Angela (nerf)'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Arthur');
     await tester.pumpAndSettle();
@@ -337,7 +338,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Arthur'));
+    await tester.tap(find.byTooltip('Arthur (adjust)'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
@@ -452,7 +453,12 @@ void main() {
 
     await tester.tap(find.text('Version 1.2.5 Patch Notes'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('official notes'));
+    final markdown = tester.widget<MarkdownBody>(find.byType(MarkdownBody));
+    markdown.onTapLink!(
+      'official notes',
+      'https://updates.example/hok/125',
+      '',
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 

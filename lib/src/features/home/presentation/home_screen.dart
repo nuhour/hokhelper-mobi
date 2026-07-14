@@ -1187,11 +1187,6 @@ class _HomePortalPreviews extends StatelessWidget {
     final heroRows = _readList(_readMap(result['hero_ranking_table'])['rows']);
     final heroColumns = _readMap(result['hero_ranking_table'])['columns'];
     final tierRows = _readList(result['tier_list']);
-    final patchHeroPool = _homePatchHeroPool(
-      heroStats: _readList(result['hero_stats']),
-      heroRankingRows: heroRows,
-      tierGroups: tierRows,
-    );
     final peakPlayers = _readList(_readMap(result['player_ranking'])['peak']);
     final communityPosts = _readList(result['community_hot']);
     final patchNotes = _readList(result['patch_notes']);
@@ -1226,7 +1221,6 @@ class _HomePortalPreviews extends StatelessWidget {
         title: 'Latest Updates',
         route: '/content/patch-notes',
         notes: patchNotes.take(6).toList(growable: false),
-        fallbackHeroes: patchHeroPool,
       ),
     ];
 
@@ -1956,11 +1950,13 @@ class _HomeHeroAvatar extends StatelessWidget {
   const _HomeHeroAvatar({
     required this.heroId,
     required this.name,
+    this.imageUrl = '',
     this.size = 34,
   });
 
   final Object? heroId;
   final String name;
+  final String imageUrl;
   final double size;
 
   @override
@@ -1970,7 +1966,11 @@ class _HomeHeroAvatar extends StatelessWidget {
       message: name,
       child: AppImage(
         key: ValueKey('home-hero-avatar-$id'),
-        url: id.isEmpty ? '' : 'https://hokhelper.com/static/game/hero/$id.png',
+        url: imageUrl.isNotEmpty
+            ? imageUrl
+            : id.isEmpty
+            ? ''
+            : 'https://hokhelper.com/static/game/hero/$id.png',
         width: size,
         height: size,
         borderRadius: 999,
@@ -2153,67 +2153,18 @@ class _HomeCommunitySection extends StatelessWidget {
   }
 }
 
-List<Map<String, dynamic>> _homePatchHeroPool({
-  required List<Map<String, dynamic>> heroStats,
-  required List<Map<String, dynamic>> heroRankingRows,
-  required List<Map<String, dynamic>> tierGroups,
-}) {
-  final candidates = <Map<String, dynamic>>[
-    ...heroStats,
-    for (final row in heroRankingRows) _readMap(row['hero']),
-    for (final tierGroup in tierGroups) ..._readList(tierGroup['heroes']),
-  ];
-  final seen = <String>{};
-  final heroes = <Map<String, dynamic>>[];
-  for (final candidate in candidates) {
-    final hero = _readMap(candidate['hero']);
-    final source = hero.isEmpty ? candidate : hero;
-    final id = _readString(source['hero_id'] ?? source['id']);
-    final name = _readString(source['name'] ?? source['hero_name']);
-    final key = id.isNotEmpty ? id : name.toLowerCase();
-    if (key.isEmpty || !seen.add(key)) {
-      continue;
-    }
-    heroes.add({
-      'hero_id': id,
-      'name': name.isEmpty ? 'Hero' : name,
-      if (source['direction'] != null) 'direction': source['direction'],
-      if (source['trend'] != null) 'trend': source['trend'],
-    });
-  }
-  return heroes;
-}
-
-List<Map<String, dynamic>> _homePatchFallbackHeroes(
-  List<Map<String, dynamic>> heroes, {
-  required int noteIndex,
-}) {
-  if (heroes.isEmpty) {
-    return const [];
-  }
-  const changesPerNote = 6;
-  final count = heroes.length < changesPerNote ? heroes.length : changesPerNote;
-  final start = (noteIndex * changesPerNote) % heroes.length;
-  return [
-    for (var offset = 0; offset < count; offset++)
-      heroes[(start + offset) % heroes.length],
-  ];
-}
-
 class _HomePatchNotesSection extends StatelessWidget {
   const _HomePatchNotesSection({
     required this.icon,
     required this.title,
     required this.route,
     required this.notes,
-    required this.fallbackHeroes,
   });
 
   final IconData icon;
   final String title;
   final String route;
   final List<Map<String, dynamic>> notes;
-  final List<Map<String, dynamic>> fallbackHeroes;
 
   @override
   Widget build(BuildContext context) {
@@ -2226,14 +2177,7 @@ class _HomePatchNotesSection extends StatelessWidget {
           if (notes.isEmpty)
             const _HomeEmptyPanelMessage()
           else
-            for (var index = 0; index < notes.length; index++)
-              _HomePatchNoteRow(
-                note: notes[index],
-                fallbackHeroes: _homePatchFallbackHeroes(
-                  fallbackHeroes,
-                  noteIndex: index,
-                ),
-              ),
+            for (final note in notes) _HomePatchNoteRow(note: note),
         ],
       ),
     );
@@ -2241,25 +2185,15 @@ class _HomePatchNotesSection extends StatelessWidget {
 }
 
 class _HomePatchNoteRow extends StatelessWidget {
-  const _HomePatchNoteRow({required this.note, required this.fallbackHeroes});
+  const _HomePatchNoteRow({required this.note});
 
   final Map<String, dynamic> note;
-  final List<Map<String, dynamic>> fallbackHeroes;
 
   @override
   Widget build(BuildContext context) {
     final rawChanges =
         note['hero_changes'] ?? note['changes'] ?? note['heroes'];
-    final changes = _readList(rawChanges).isNotEmpty
-        ? _readList(rawChanges)
-        : [
-            for (final hero in fallbackHeroes)
-              {
-                'hero_id': hero['hero_id'] ?? hero['id'],
-                'name': hero['name'],
-                'direction': _homeChangeDirection(hero['win_rate']),
-              },
-          ];
+    final changes = _readList(rawChanges);
     final route =
         _communityPostRoute(note['post_id']) ?? _patchNoteRoute(note['id']);
     final child = Padding(
@@ -2328,20 +2262,27 @@ class _HomePatchChangeIcon extends StatelessWidget {
       fallback: 'Hero',
     );
     final heroId = change['hero_id'] ?? change['id'];
-    final isUp =
-        _homeChangeDirection(change['direction'] ?? change['trend']) == 'up';
+    final changeType = _readString(
+      change['change_type'] ?? change['changeType'] ?? change['direction'],
+    );
+    final (icon, color) = switch (_homeChangeDirection(changeType)) {
+      'down' => (Icons.arrow_downward_rounded, AppTheme.error),
+      'flat' => (Icons.remove_rounded, AppTheme.muted),
+      _ => (Icons.arrow_upward_rounded, AppTheme.success),
+    };
     return Tooltip(
       message: name,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _HomeHeroAvatar(heroId: heroId, name: name, size: 24),
-          const SizedBox(width: 2),
-          Icon(
-            isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-            color: isUp ? AppTheme.success : AppTheme.error,
-            size: 16,
+          _HomeHeroAvatar(
+            heroId: heroId,
+            name: name,
+            imageUrl: _readString(change['avatar_url'] ?? change['avatarUrl']),
+            size: 24,
           ),
+          const SizedBox(width: 2),
+          Icon(icon, color: color, size: 16),
         ],
       ),
     );
@@ -2353,6 +2294,11 @@ String _homeChangeDirection(Object? value) {
     return value < 0 ? 'down' : 'up';
   }
   final text = value?.toString().toLowerCase() ?? '';
+  if (text.contains('adjust') ||
+      text.contains('flat') ||
+      text.contains('neutral')) {
+    return 'flat';
+  }
   return text.contains('down') ||
           text.contains('nerf') ||
           text.contains('decrease') ||

@@ -16,12 +16,12 @@ class CommunityPostDetail {
   factory CommunityPostDetail.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     final postJson = map['post'];
-    final postMap = postJson is Map ? postJson : const <String, Object?>{};
+    final postMap = postJson is Map ? postJson : map;
     final comments = map['comments'];
 
     return CommunityPostDetail(
       post: CommunityPostSummary.fromJson(postMap),
-      content: _readString(postMap['content']),
+      content: _readString(postMap['content'] ?? map['content']),
       isLiked: _readBool(postMap['is_liked'] ?? postMap['isLiked']),
       comments: comments is List
           ? comments
