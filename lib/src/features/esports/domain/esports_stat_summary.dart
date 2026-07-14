@@ -7,6 +7,12 @@ class EsportsStatSummary {
     required this.imageUrl,
     required this.leagueName,
     required this.metrics,
+    this.teamId = '',
+    this.teamName = '',
+    this.teamLogoUrl = '',
+    this.playerId = '',
+    this.playerName = '',
+    this.playerAvatarUrl = '',
   });
 
   final String id;
@@ -16,6 +22,12 @@ class EsportsStatSummary {
   final String imageUrl;
   final String leagueName;
   final List<EsportsStatMetric> metrics;
+  final String teamId;
+  final String teamName;
+  final String teamLogoUrl;
+  final String playerId;
+  final String playerName;
+  final String playerAvatarUrl;
 
   factory EsportsStatSummary.fromJson(Object? json, {int fallbackRank = 0}) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -51,6 +63,14 @@ class EsportsStatSummary {
       ]),
       leagueName: _readString(map['league_name']),
       metrics: _readMetrics(map, stats, display),
+      teamId: _readString(team['id'] ?? map['team_id']),
+      teamName: teamName,
+      teamLogoUrl: _readString(team['logo_url']),
+      playerId: _readString(player['player_id'] ?? map['player_id']),
+      playerName: playerName,
+      playerAvatarUrl: _readString(
+        player['player_avatar'] ?? player['avatar_url'],
+      ),
     );
   }
 }

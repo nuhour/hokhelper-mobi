@@ -365,32 +365,22 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
         return RefreshIndicator(
           onRefresh: () =>
               ref.refresh(esportsStatsByRankProvider(selectedRank).future),
-          child: ListView.separated(
+          child: ListView(
             cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _StatsIntroCard(
-                      rankTypes: rankTypes,
-                      selectedRank: selectedRank,
-                      onRankChanged: (rankType) {
-                        setState(() {
-                          _rankType = rankType;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _StatCard(stat: stats[index]),
-                  ],
-                );
-              }
-              return _StatCard(stat: stats[index]);
-            },
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemCount: stats.length,
+            children: [
+              _StatsIntroCard(
+                rankTypes: rankTypes,
+                selectedRank: selectedRank,
+                onRankChanged: (rankType) {
+                  setState(() {
+                    _rankType = rankType;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              _EsportsStatsTable(stats: stats),
+            ],
           ),
         );
       },
@@ -1181,118 +1171,270 @@ class _StatsIntroCard extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.stat});
+class _EsportsStatsTable extends StatelessWidget {
+  const _EsportsStatsTable({required this.stats});
 
-  final EsportsStatSummary stat;
+  final List<EsportsStatSummary> stats;
 
   @override
   Widget build(BuildContext context) {
+    final metricLabels = <String>[];
+    for (final stat in stats) {
+      for (final metric in stat.metrics) {
+        if (!metricLabels.contains(metric.label)) {
+          metricLabels.add(metric.label);
+        }
+      }
+    }
+    final columns = metricLabels.take(4).toList(growable: false);
+    final tableWidth = 276.0 + columns.length * 92;
+    final leagueName = stats
+        .map((stat) => stat.leagueName)
+        .firstWhere((name) => name.isNotEmpty, orElse: () => '');
+
     return _PanelCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              const Icon(Icons.table_chart_outlined, color: AppTheme.gold),
+              const SizedBox(width: 8),
               Text(
-                '#${stat.rank}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.gold,
+                'Rankings',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppTheme.text,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 10),
-              AppImage(
-                url: stat.imageUrl,
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                semanticLabel: stat.objectName,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stat.objectName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (stat.subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        stat.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                    ],
-                  ],
+              const Spacer(),
+              Text(
+                '${stats.length} entries',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppTheme.muted,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              if (stat.leagueName.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                _Pill(label: stat.leagueName),
-              ],
             ],
           ),
-          if (stat.metrics.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: stat.metrics
-                  .map((metric) => _StatMetricChip(metric: metric))
-                  .toList(),
+          if (leagueName.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              leagueName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                children: [
+                  _StatsTableHeader(columns: columns),
+                  for (final stat in stats)
+                    _StatsTableRow(stat: stat, columns: columns),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _StatMetricChip extends StatelessWidget {
-  const _StatMetricChip({required this.metric});
+class _StatsTableHeader extends StatelessWidget {
+  const _StatsTableHeader({required this.columns});
 
-  final EsportsStatMetric metric;
+  final List<String> columns;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: AppTheme.muted,
+      fontWeight: FontWeight.w900,
+    );
+    return Container(
+      height: 36,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.black.withValues(alpha: 0.16),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
       ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 38,
+            child: Center(child: Text('#', style: labelStyle)),
+          ),
+          SizedBox(width: 144, child: Text('Player / Hero', style: labelStyle)),
+          SizedBox(width: 94, child: Text('Team', style: labelStyle)),
+          for (final column in columns)
+            SizedBox(width: 92, child: Text(column, style: labelStyle)),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsTableRow extends StatelessWidget {
+  const _StatsTableRow({required this.stat, required this.columns});
+
+  final EsportsStatSummary stat;
+  final List<String> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    final metrics = {
+      for (final metric in stat.metrics) metric.label: metric.value,
+    };
+    return Container(
+      height: 68,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 38,
+            child: Center(
+              child: Text(
+                '${stat.rank}',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.gold,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 144, child: _StatsIdentityCell(stat: stat)),
+          SizedBox(width: 94, child: _StatsTeamCell(stat: stat)),
+          for (final column in columns)
+            SizedBox(
+              width: 92,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  metrics[column] ?? '--',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsIdentityCell extends StatelessWidget {
+  const _StatsIdentityCell({required this.stat});
+
+  final EsportsStatSummary stat;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPlayer = stat.playerId.isNotEmpty;
+    final route = isPlayer ? '/esports/players/${stat.playerId}' : null;
+    final imageUrl = isPlayer ? stat.playerAvatarUrl : stat.imageUrl;
+    final title = isPlayer ? stat.playerName : stat.objectName;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: route == null ? null : () => context.go(route),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.only(right: 8),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              metric.label,
+            AppImage(
+              url: imageUrl,
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              semanticLabel: title,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (stat.subtitle.isNotEmpty)
+                    Text(
+                      stat.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.muted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatsTeamCell extends StatelessWidget {
+  const _StatsTeamCell({required this.stat});
+
+  final EsportsStatSummary stat;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stat.teamId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => context.go('/esports/teams/${stat.teamId}'),
+      child: Row(
+        children: [
+          AppImage(
+            url: stat.teamLogoUrl,
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            semanticLabel: stat.teamName,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              stat.teamName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: AppTheme.muted,
                 fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(width: 6),
-            Text(
-              metric.value,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1314,12 +1456,16 @@ class _FocusedTeamCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              AppImage(
-                url: team.logoUrl,
-                width: 62,
-                height: 62,
-                borderRadius: 16,
-                semanticLabel: team.name,
+              _EsportsAvatarLink(
+                route: '/esports/teams/${team.id}',
+                label: 'Open ${team.displayName}',
+                child: AppImage(
+                  url: team.logoUrl,
+                  width: 62,
+                  height: 62,
+                  borderRadius: 16,
+                  semanticLabel: team.name,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1385,12 +1531,16 @@ class _FocusedPlayerCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              AppImage(
-                url: player.avatarUrl,
-                width: 62,
-                height: 62,
-                borderRadius: 16,
-                semanticLabel: player.name,
+              _EsportsAvatarLink(
+                route: '/esports/players/${player.id}',
+                label: 'Open ${player.name}',
+                child: AppImage(
+                  url: player.avatarUrl,
+                  width: 62,
+                  height: 62,
+                  borderRadius: 16,
+                  semanticLabel: player.name,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1537,12 +1687,16 @@ class _TeamCard extends StatelessWidget {
         child: _PanelCard(
           child: Row(
             children: [
-              AppImage(
-                url: team.logoUrl,
-                width: 58,
-                height: 58,
-                borderRadius: 14,
-                semanticLabel: team.name,
+              _EsportsAvatarLink(
+                route: '/esports/teams/${team.id}',
+                label: 'Open ${team.displayName}',
+                child: AppImage(
+                  url: team.logoUrl,
+                  width: 58,
+                  height: 58,
+                  borderRadius: 14,
+                  semanticLabel: team.name,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1609,12 +1763,16 @@ class _PlayerCard extends StatelessWidget {
         child: _PanelCard(
           child: Row(
             children: [
-              AppImage(
-                url: player.avatarUrl,
-                width: 58,
-                height: 58,
-                borderRadius: 14,
-                semanticLabel: player.name,
+              _EsportsAvatarLink(
+                route: '/esports/players/${player.id}',
+                label: 'Open ${player.name}',
+                child: AppImage(
+                  url: player.avatarUrl,
+                  width: 58,
+                  height: 58,
+                  borderRadius: 14,
+                  semanticLabel: player.name,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1668,6 +1826,31 @@ class _PlayerCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EsportsAvatarLink extends StatelessWidget {
+  const _EsportsAvatarLink({
+    required this.route,
+    required this.label,
+    required this.child,
+  });
+
+  final String route;
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => context.go(route),
+        child: child,
       ),
     );
   }

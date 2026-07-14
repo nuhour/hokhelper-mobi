@@ -241,10 +241,10 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                     sliver: SliverGrid.builder(
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
+                            crossAxisCount: 2,
                             mainAxisSpacing: 12,
                             crossAxisSpacing: 12,
-                            childAspectRatio: 0.68,
+                            childAspectRatio: 0.64,
                           ),
                       itemCount: visibleHeroes.length,
                       itemBuilder: (context, index) {

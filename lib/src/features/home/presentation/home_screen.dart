@@ -62,6 +62,7 @@ class _HomePortalFramework extends StatefulWidget {
 class _HomePortalFrameworkState extends State<_HomePortalFramework> {
   late final PageController _pageController;
   int _selectedPage = 3;
+  var _showPortalTopBar = true;
 
   @override
   void initState() {
@@ -88,6 +89,13 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
     );
   }
 
+  void _setPortalTopBarVisible(bool visible) {
+    if (_showPortalTopBar == visible) {
+      return;
+    }
+    setState(() => _showPortalTopBar = visible);
+  }
+
   @override
   Widget build(BuildContext context) {
     final pageHeight = (MediaQuery.sizeOf(context).height - 96).clamp(
@@ -98,9 +106,17 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _HomePortalTopBar(
-          selectedIndex: _selectedPage,
-          onSelected: _selectPage,
+        IgnorePointer(
+          ignoring: !_showPortalTopBar,
+          child: AnimatedOpacity(
+            opacity: _showPortalTopBar ? 1 : 0,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: _HomePortalTopBar(
+              selectedIndex: _selectedPage,
+              onSelected: _selectPage,
+            ),
+          ),
         ),
         const SizedBox(height: 18),
         SizedBox(
@@ -112,13 +128,19 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
             onPageChanged: (index) {
               setState(() {
                 _selectedPage = index;
+                if (index != 3) {
+                  _showPortalTopBar = true;
+                }
               });
             },
             children: [
               const EsportsScreen(),
               const SkinGalleryScreen(),
               const HeroGalleryScreen(),
-              _HomeLandingTab(result: widget.result),
+              _HomeLandingTab(
+                result: widget.result,
+                onPortalTopBarVisibilityChanged: _setPortalTopBarVisible,
+              ),
             ],
           ),
         ),
@@ -186,9 +208,13 @@ class _HomePortalTopBar extends StatelessWidget {
 }
 
 class _HomeLandingTab extends StatefulWidget {
-  const _HomeLandingTab({required this.result});
+  const _HomeLandingTab({
+    required this.result,
+    required this.onPortalTopBarVisibilityChanged,
+  });
 
   final Map<String, dynamic> result;
+  final ValueChanged<bool> onPortalTopBarVisibilityChanged;
 
   @override
   State<_HomeLandingTab> createState() => _HomeLandingTabState();
@@ -196,17 +222,14 @@ class _HomeLandingTab extends StatefulWidget {
 
 class _HomeLandingTabState extends State<_HomeLandingTab> {
   var _showWorld = false;
-  var _showQuickControls = false;
 
   bool _onScrollNotification(UserScrollNotification notification) {
     final offset = notification.metrics.pixels;
-    final nextVisibility = notification.direction == ScrollDirection.forward
-        ? offset > 80
-        : notification.direction == ScrollDirection.reverse || offset <= 80
-        ? false
-        : _showQuickControls;
-    if (_showQuickControls != nextVisibility) {
-      setState(() => _showQuickControls = nextVisibility);
+    if (notification.direction == ScrollDirection.forward || offset <= 16) {
+      widget.onPortalTopBarVisibilityChanged(true);
+    } else if (notification.direction == ScrollDirection.reverse &&
+        offset > 16) {
+      widget.onPortalTopBarVisibilityChanged(false);
     }
     return false;
   }
@@ -276,33 +299,6 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
               ),
               const SizedBox(height: 28),
             ],
-          ),
-        ),
-        Positioned(
-          top: 8,
-          left: 12,
-          right: 12,
-          child: IgnorePointer(
-            ignoring: !_showQuickControls,
-            child: AnimatedOpacity(
-              key: const ValueKey('home-sticky-quick-controls'),
-              opacity: _showQuickControls ? 1 : 0,
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              child: AnimatedSlide(
-                offset: _showQuickControls
-                    ? Offset.zero
-                    : const Offset(0, -0.16),
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                child: _HomeStickyQuickControls(
-                  showWorld: _showWorld,
-                  onWorldChanged: (value) {
-                    setState(() => _showWorld = value);
-                  },
-                ),
-              ),
-            ),
           ),
         ),
       ],
@@ -770,103 +766,6 @@ class _HomeHeroTab extends StatelessWidget {
       ),
     );
   }
-}
-
-class _HomeStickyQuickControls extends StatelessWidget {
-  const _HomeStickyQuickControls({
-    required this.showWorld,
-    required this.onWorldChanged,
-  });
-
-  final bool showWorld;
-  final ValueChanged<bool> onWorldChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x66000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          children: [
-            Flexible(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _HomeHeroSlideTabs(
-                  showWorld: showWorld,
-                  onChanged: onWorldChanged,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (showWorld)
-              _HomeStickyAction(
-                tooltip: 'Enter HOK World',
-                icon: Icons.public_rounded,
-                onTap: () => context.go('/hok-world'),
-              )
-            else ...[
-              _HomeStickyAction(
-                tooltip: 'Core Stats',
-                icon: Icons.bar_chart_rounded,
-                onTap: () => context.go('/tools/stats?entry=home_core'),
-              ),
-              const SizedBox(width: 6),
-              _HomeStickyAction(
-                tooltip: 'Tier List',
-                icon: Icons.leaderboard_rounded,
-                onTap: () => context.go('/tier-list'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeStickyAction extends StatelessWidget {
-  const _HomeStickyAction({
-    required this.tooltip,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Ink(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppTheme.gold.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: AppTheme.cyan, size: 20),
-        ),
-      ),
-    ),
-  );
 }
 
 class _HomeMainHeroContent extends StatelessWidget {

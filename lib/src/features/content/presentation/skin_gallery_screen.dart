@@ -622,8 +622,6 @@ class _SkinCard extends StatelessWidget {
     final imageUrl = isSplash && skin.landscapeImageUrl.isNotEmpty
         ? skin.landscapeImageUrl
         : skin.imageUrl;
-    final imageHeight = isSplash ? 150.0 : 178.0;
-
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
@@ -638,60 +636,80 @@ class _SkinCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           onLongPress: isRating ? null : () => _showRatingSheet(context),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: imageHeight,
-                  width: double.infinity,
-                  child: AppImage(
-                    url: imageUrl,
-                    width: double.infinity,
-                    height: imageHeight,
-                    borderRadius: 12,
-                    semanticLabel: skin.title,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  skin.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  skin.subtitle.isEmpty ? 'Unknown series' : skin.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                ),
-                const Spacer(),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      color: AppTheme.gold,
-                      size: 17,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      skin.rating > 0 ? skin.rating.toStringAsFixed(1) : '--',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppTheme.gold,
-                        fontWeight: FontWeight.w900,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isSplash)
+                    SizedBox(
+                      height: (constraints.maxHeight * 0.56).clamp(
+                        108.0,
+                        150.0,
+                      ),
+                      width: double.infinity,
+                      child: AppImage(
+                        url: imageUrl,
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 12,
+                        semanticLabel: skin.title,
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: AppImage(
+                          url: imageUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          borderRadius: 12,
+                          semanticLabel: skin.title,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Text(
+                    skin.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    skin.subtitle.isEmpty ? 'Unknown series' : skin.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        color: AppTheme.gold,
+                        size: 17,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        skin.rating > 0 ? skin.rating.toStringAsFixed(1) : '--',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: AppTheme.gold,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
