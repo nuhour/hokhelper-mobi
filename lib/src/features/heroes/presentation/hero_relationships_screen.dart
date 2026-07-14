@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,9 +7,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/hero_relationship.dart';
+import '../domain/hero_summary.dart';
 import 'hero_gallery_screen.dart';
 
 final heroRelationshipsProvider = FutureProvider<List<HeroRelationship>>((
@@ -17,6 +21,15 @@ final heroRelationshipsProvider = FutureProvider<List<HeroRelationship>>((
   return ref
       .watch(heroesRepositoryProvider)
       .loadHeroRelationships(settings.region.regionId);
+});
+
+final relationshipGraphHeroesProvider = FutureProvider<List<HeroSummary>>((
+  ref,
+) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(heroesRepositoryProvider)
+      .loadHeroes(settings.region.regionId, pageSize: 200);
 });
 
 class HeroRelationshipsScreen extends ConsumerStatefulWidget {
@@ -52,13 +65,17 @@ class _HeroRelationshipsScreenState
   @override
   Widget build(BuildContext context) {
     final relationshipsValue = ref.watch(heroRelationshipsProvider);
+    final graphHeroes =
+        ref.watch(relationshipGraphHeroesProvider).valueOrNull ??
+        const <HeroSummary>[];
 
     return Material(
       color: AppTheme.bg,
       child: AppAsyncView<List<HeroRelationship>>(
         value: relationshipsValue,
         retry: () => ref.invalidate(heroRelationshipsProvider),
-        data: (relationships) {
+        data: (rawRelationships) {
+          final relationships = _withHeroNames(rawRelationships, graphHeroes);
           _resolveInitialFocus(relationships);
           final heroNames = _collectHeroNames(relationships);
           final visibleRelationships = _filterRelationships(relationships);
@@ -139,16 +156,32 @@ class _HeroRelationshipsScreenState
                 else
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    sliver: SliverList.separated(
-                      itemCount: visibleRelationships.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        return _RelationshipCard(
-                          relationship: visibleRelationships[index],
-                          focusedHero: _focusedHero,
-                        );
-                      },
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          _RelationshipChainBoard(
+                            relationships: visibleRelationships,
+                            heroes: graphHeroes,
+                            focusedHero: _focusedHero,
+                            onHeroSelected: (heroName) {
+                              setState(() {
+                                _focusedHero = heroName;
+                                _query = '';
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          ...visibleRelationships.map(
+                            (relationship) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _RelationshipCard(
+                                relationship: relationship,
+                                focusedHero: _focusedHero,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
@@ -182,6 +215,36 @@ class _HeroRelationshipsScreenState
           ].join(' ').toLowerCase();
           return haystack.contains(query);
         })
+        .toList(growable: false);
+  }
+
+  List<HeroRelationship> _withHeroNames(
+    List<HeroRelationship> relationships,
+    List<HeroSummary> heroes,
+  ) {
+    if (heroes.isEmpty) {
+      return relationships;
+    }
+
+    final heroesById = <String, HeroSummary>{
+      for (final hero in heroes) ...{
+        hero.id: hero,
+        if (hero.heroId.isNotEmpty) hero.heroId: hero,
+      },
+    };
+    return relationships
+        .map(
+          (relationship) => relationship.withHeroNames(
+            sourceHeroName:
+                heroesById[relationship.sourceHeroId]?.name.isNotEmpty == true
+                ? heroesById[relationship.sourceHeroId]?.name
+                : null,
+            targetHeroName:
+                heroesById[relationship.targetHeroId]?.name.isNotEmpty == true
+                ? heroesById[relationship.targetHeroId]?.name
+                : null,
+          ),
+        )
         .toList(growable: false);
   }
 
@@ -321,6 +384,311 @@ class _HeroFocusRail extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class _RelationshipChainBoard extends StatelessWidget {
+  const _RelationshipChainBoard({
+    required this.relationships,
+    required this.heroes,
+    required this.focusedHero,
+    required this.onHeroSelected,
+  });
+
+  final List<HeroRelationship> relationships;
+  final List<HeroSummary> heroes;
+  final String focusedHero;
+  final ValueChanged<String> onHeroSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final focus = focusedHero.isNotEmpty
+        ? focusedHero
+        : relationships.first.sourceHeroName.isNotEmpty
+        ? relationships.first.sourceHeroName
+        : relationships.first.sourceHeroId;
+    final directLinks = relationships
+        .where((relationship) => relationship.involves(focus))
+        .toList(growable: false);
+    final displayLinks = (directLinks.isNotEmpty ? directLinks : relationships)
+        .take(6)
+        .toList(growable: false);
+    final heroesByName = <String, HeroSummary>{
+      for (final hero in heroes) hero.name.toLowerCase(): hero,
+    };
+    final centerHero = heroesByName[focus.toLowerCase()];
+    final nodes = displayLinks
+        .map((link) => _ChainNode.fromRelationship(link, focus, heroesByName))
+        .where((node) => node.name.isNotEmpty)
+        .toList(growable: false);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_tree_outlined, color: AppTheme.cyan),
+              const SizedBox(width: 8),
+              Text(
+                'Relationship Chain',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Linked heroes: ${nodes.length}',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppTheme.muted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 276,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final size = Size(constraints.maxWidth, 276);
+                final center = Offset(size.width / 2, 138);
+                final radius = math.min(size.width * 0.36, 98.0);
+                final positions = <Offset>[
+                  for (var index = 0; index < nodes.length; index++)
+                    Offset(
+                      center.dx +
+                          math.cos(
+                                -math.pi / 2 +
+                                    index * (math.pi * 2 / nodes.length),
+                              ) *
+                              radius,
+                      center.dy +
+                          math.sin(
+                                -math.pi / 2 +
+                                    index * (math.pi * 2 / nodes.length),
+                              ) *
+                              radius,
+                    ),
+                ];
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _RelationshipChainPainter(
+                          center: center,
+                          nodes: positions,
+                          colors: [for (final node in nodes) node.color],
+                        ),
+                      ),
+                    ),
+                    for (var index = 0; index < nodes.length; index++)
+                      Positioned(
+                        left: positions[index].dx - 35,
+                        top: positions[index].dy - 42,
+                        child: _RelationshipAvatarNode(
+                          node: nodes[index],
+                          compact: true,
+                          onTap: () => onHeroSelected(nodes[index].name),
+                        ),
+                      ),
+                    Positioned(
+                      left: center.dx - 48,
+                      top: center.dy - 54,
+                      child: _RelationshipAvatarNode(
+                        node: _ChainNode(
+                          name: focus,
+                          avatar: centerHero?.avatar ?? '',
+                          color: AppTheme.cyan,
+                        ),
+                        onTap: () => onHeroSelected(focus),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChainNode {
+  const _ChainNode({
+    required this.name,
+    required this.avatar,
+    required this.color,
+  });
+
+  final String name;
+  final String avatar;
+  final Color color;
+
+  factory _ChainNode.fromRelationship(
+    HeroRelationship relationship,
+    String focus,
+    Map<String, HeroSummary> heroesByName,
+  ) {
+    final name = relationship.involves(focus)
+        ? relationship.otherHeroName(focus)
+        : relationship.targetHeroName.isNotEmpty
+        ? relationship.targetHeroName
+        : relationship.targetHeroId;
+    return _ChainNode(
+      name: name,
+      avatar: heroesByName[name.toLowerCase()]?.avatar ?? '',
+      color: _relationshipColor(relationship.title),
+    );
+  }
+}
+
+Color _relationshipColor(String title) {
+  final value = title.toLowerCase();
+  if (value.contains('enemy') || value.contains('rival')) return AppTheme.error;
+  if (value.contains('family') || value.contains('mentor')) {
+    return AppTheme.gold;
+  }
+  if (value.contains('friend') || value.contains('ally')) {
+    return AppTheme.success;
+  }
+  return AppTheme.cyan;
+}
+
+class _RelationshipAvatarNode extends StatelessWidget {
+  const _RelationshipAvatarNode({
+    required this.node,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  final _ChainNode node;
+  final VoidCallback onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarSize = compact ? 48.0 : 72.0;
+    final labelWidth = compact ? 70.0 : 96.0;
+    return Semantics(
+      button: true,
+      label: node.name,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: labelWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: avatarSize,
+                  height: avatarSize,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: node.color, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: node.color.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: node.avatar.isEmpty
+                        ? ColoredBox(
+                            color: AppTheme.bg,
+                            child: Center(
+                              child: Text(
+                                node.name.isEmpty ? '?' : node.name[0],
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: node.color,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                            ),
+                          )
+                        : AppImage(
+                            url: node.avatar,
+                            width: avatarSize,
+                            height: avatarSize,
+                            borderRadius: avatarSize / 2,
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  node.name.isEmpty ? 'Unknown' : node.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RelationshipChainPainter extends CustomPainter {
+  const _RelationshipChainPainter({
+    required this.center,
+    required this.nodes,
+    required this.colors,
+  });
+
+  final Offset center;
+  final List<Offset> nodes;
+  final List<Color> colors;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var index = 0; index < nodes.length; index++) {
+      final color = colors[index];
+      final paint = Paint()
+        ..color = color.withValues(alpha: 0.65)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(center, nodes[index], paint);
+      canvas.drawCircle(nodes[index], 4, Paint()..color = color);
+    }
+    canvas.drawCircle(
+      center,
+      42,
+      Paint()
+        ..color = AppTheme.cyan.withValues(alpha: 0.16)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RelationshipChainPainter oldDelegate) {
+    return oldDelegate.center != center ||
+        oldDelegate.nodes != nodes ||
+        oldDelegate.colors != colors;
   }
 }
 

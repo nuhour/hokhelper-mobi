@@ -151,12 +151,6 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                               child: AppSectionHeader(title: 'Heroes'),
                             ),
                             IconButton.filledTonal(
-                              tooltip: 'Hero Trends',
-                              onPressed: () => context.go('/trends'),
-                              icon: const Icon(Icons.trending_up_outlined),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton.filledTonal(
                               tooltip: 'World Map',
                               onPressed: () => context.go('/world-map'),
                               icon: const Icon(Icons.travel_explore_outlined),
@@ -432,20 +426,6 @@ class _HeroCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (roleLabels.isNotEmpty)
-                          Text(
-                            roleLabels,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w700,
-                                  shadows: const [
-                                    Shadow(color: Colors.black, blurRadius: 6),
-                                  ],
-                                ),
-                          ),
                         Text(
                           hero.name.isEmpty ? 'Hero #${hero.id}' : hero.name,
                           maxLines: 1,
@@ -459,6 +439,22 @@ class _HeroCard extends StatelessWidget {
                                 ],
                               ),
                         ),
+                        if (roleLabels.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            roleLabels,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w700,
+                                  shadows: const [
+                                    Shadow(color: Colors.black, blurRadius: 6),
+                                  ],
+                                ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -467,6 +463,7 @@ class _HeroCard extends StatelessWidget {
                     rating: hero.rating,
                     ratingCount: hero.ratingCount,
                     size: 12,
+                    countLabel: '',
                   ),
                 ],
               ),

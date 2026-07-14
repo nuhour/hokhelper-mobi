@@ -74,8 +74,8 @@ class HeroesRepository {
         .whereType<Map>()
         .map((row) => HeroRelationship.fromJson(Map<String, dynamic>.from(row)))
         .where((relationship) {
-          return relationship.sourceHeroName.isNotEmpty ||
-              relationship.targetHeroName.isNotEmpty ||
+          return relationship.sourceHeroId.isNotEmpty ||
+              relationship.targetHeroId.isNotEmpty ||
               relationship.title.isNotEmpty;
         })
         .toList(growable: false);

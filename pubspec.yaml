@@ -73,6 +73,7 @@ flutter:
   assets:
     - assets/tools/
     - assets/lane-icons/
+    - assets/world/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -9,6 +9,7 @@ class AppRatingStars extends StatelessWidget {
     required this.ratingCount,
     this.size = 14,
     this.showCount = true,
+    this.countLabel = 'ratings',
     super.key,
   });
 
@@ -16,6 +17,7 @@ class AppRatingStars extends StatelessWidget {
   final int ratingCount;
   final double size;
   final bool showCount;
+  final String countLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +46,10 @@ class AppRatingStars extends StatelessWidget {
           ),
           const SizedBox(width: 2),
           Text(
-            '${_compactCount(ratingCount)} ratings',
+            [
+              _compactCount(ratingCount),
+              if (countLabel.trim().isNotEmpty) countLabel.trim(),
+            ].join(' '),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,

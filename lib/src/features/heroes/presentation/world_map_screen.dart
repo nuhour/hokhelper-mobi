@@ -76,17 +76,12 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  sliver: SliverList.separated(
-                    itemCount: regions.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      return _WorldRegionCard(
-                        region: regions[index],
-                        onOpenDetail: (region) =>
-                            _openRegionDetail(context, region),
-                      );
-                    },
+                  sliver: SliverToBoxAdapter(
+                    child: _WorldAtlas(
+                      regions: regions,
+                      onOpenDetail: (region) =>
+                          _openRegionDetail(context, region),
+                    ),
                   ),
                 ),
               ],
@@ -192,86 +187,153 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
   }
 }
 
-class _WorldRegionCard extends StatelessWidget {
-  const _WorldRegionCard({required this.region, required this.onOpenDetail});
+class _WorldAtlas extends StatefulWidget {
+  const _WorldAtlas({required this.regions, required this.onOpenDetail});
 
-  final WorldMapRegion region;
+  final List<WorldMapRegion> regions;
   final ValueChanged<WorldMapRegion> onOpenDetail;
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+  State<_WorldAtlas> createState() => _WorldAtlasState();
+}
 
-    return Material(
-      color: AppTheme.panel,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => onOpenDetail(region),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+class _WorldAtlasState extends State<_WorldAtlas> {
+  static const _mapWidth = 1500.0;
+  static const _mapHeight = 743.0;
+  static const _regionAnchors = <String, Offset>{
+    'riluohai': Offset(100, 445),
+    'yunzhongmodi': Offset(496, 402),
+    'beihuang': Offset(599, 279),
+    'heluo': Offset(803, 499),
+    'jianmu': Offset(886, 319),
+    'daheliuyu': Offset(962, 470),
+    'zhulu': Offset(1025, 374),
+    'sanfenzhidi': Offset(1103, 470),
+    'dongfenghaiyu': Offset(1210, 548),
+  };
+
+  late final TransformationController _controller;
+  var _hasCenteredMap = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TransformationController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _centerMap() {
+    final width = context.size?.width ?? MediaQuery.sizeOf(context).width;
+    _controller.value = Matrix4.identity()
+      ..translateByDouble(-(_mapWidth - width) / 2, -48.0, 0, 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasCenteredMap) {
+      _hasCenteredMap = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _centerMap();
+      });
+    }
+    final height = (MediaQuery.sizeOf(context).height * 0.7).clamp(
+      460.0,
+      720.0,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.22)),
+      ),
+      child: SizedBox(
+        height: height,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(17),
+          child: Stack(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 14,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: region.color,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          region.name,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: AppTheme.text,
-                            fontWeight: FontWeight.w900,
+              InteractiveViewer(
+                transformationController: _controller,
+                constrained: false,
+                minScale: 0.28,
+                maxScale: 2.8,
+                boundaryMargin: const EdgeInsets.all(180),
+                child: SizedBox(
+                  width: _mapWidth,
+                  height: _mapHeight,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        'assets/world/hok_world.png',
+                        fit: BoxFit.cover,
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x12000000), Color(0x56000000)],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${region.representativeHeroes.length} representative heroes',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: AppTheme.muted,
+                      ),
+                      for (final region in widget.regions)
+                        if (_regionAnchors[region.id] case final anchor?)
+                          Positioned(
+                            left: anchor.dx - 46,
+                            top: anchor.dy - 40,
+                            child: _WorldRegionMarker(
+                              region: region,
+                              onTap: () => widget.onOpenDetail(region),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: AppTheme.muted),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                region.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-              ),
-              if (region.representativeHeroes.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 58,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: region.representativeHeroes.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(width: 10),
-                    itemBuilder: (context, index) {
-                      return _HeroPreview(
-                        hero: region.representativeHeroes[index],
-                      );
-                    },
+                    ],
                   ),
                 ),
-              ],
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: IconButton.filledTonal(
+                  tooltip: 'Recenter map',
+                  onPressed: _centerMap,
+                  icon: const Icon(Icons.center_focus_strong_rounded),
+                ),
+              ),
+              Positioned(
+                left: 14,
+                bottom: 14,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.58),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      child: Text(
+                        'Pinch to zoom · Drag to explore',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -280,38 +342,49 @@ class _WorldRegionCard extends StatelessWidget {
   }
 }
 
-class _HeroPreview extends StatelessWidget {
-  const _HeroPreview({required this.hero});
+class _WorldRegionMarker extends StatelessWidget {
+  const _WorldRegionMarker({required this.region, required this.onTap});
 
-  final HeroSummary hero;
+  final WorldMapRegion region;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 118,
-      child: Row(
-        children: [
-          AppImage(
-            url: hero.avatar,
-            aspectRatio: 1,
-            width: 42,
-            height: 42,
-            borderRadius: 12,
-            semanticLabel: '${hero.name} avatar',
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              hero.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w700,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: SizedBox(
+          width: 92,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: region.color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [BoxShadow(color: region.color, blurRadius: 14)],
+                ),
               ),
-            ),
+              const SizedBox(height: 4),
+              Text(
+                region.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  shadows: const [Shadow(color: Colors.black, blurRadius: 5)],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -68,7 +68,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Hero Relationships'));
+    await tester.tap(find.byTooltip('Hero Relationships'));
     await tester.pumpAndSettle();
 
     expect(find.text('Hero Relationships'), findsOneWidget);
@@ -109,11 +109,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -380));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Angela').last);
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/202');
-    expect(find.text('Hero #202'), findsOneWidget);
+    expect(find.byType(HeroDetailScreen), findsOneWidget);
   });
 
   testWidgets('relationships route focuses hero from hokx hero query', (

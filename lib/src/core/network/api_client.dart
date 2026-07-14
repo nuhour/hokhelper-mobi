@@ -112,6 +112,7 @@ class ApiClient {
     final json = switch (data) {
       Map<String, dynamic>() => data,
       Map() => Map<String, dynamic>.from(data),
+      List() => <String, dynamic>{'result': data},
       _ => throw const ApiError(
         kind: ApiErrorKind.backend,
         message: 'Unexpected backend response',

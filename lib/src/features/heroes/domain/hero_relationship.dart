@@ -19,6 +19,22 @@ class HeroRelationship {
   final int weight;
   final String description;
 
+  HeroRelationship withHeroNames({
+    String? sourceHeroName,
+    String? targetHeroName,
+  }) {
+    return HeroRelationship(
+      id: id,
+      sourceHeroId: sourceHeroId,
+      sourceHeroName: sourceHeroName ?? this.sourceHeroName,
+      targetHeroId: targetHeroId,
+      targetHeroName: targetHeroName ?? this.targetHeroName,
+      title: title,
+      weight: weight,
+      description: description,
+    );
+  }
+
   factory HeroRelationship.fromJson(Map<String, dynamic> json) {
     return HeroRelationship(
       id: _readString(json, const ['id', 'relationship_id']),
