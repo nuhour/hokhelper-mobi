@@ -241,8 +241,8 @@ void main() {
 
     expect(find.text('Skin Detail'), findsOneWidget);
     expect(find.text('Hunter Series'), findsWidgets);
-    expect(find.text('4.5'), findsWidgets);
-    expect(find.text('12 ratings'), findsOneWidget);
+    expect(find.byIcon(Icons.star_rounded), findsWidgets);
+    expect(find.text('12 ratings'), findsWidgets);
   });
 
   testWidgets('filters skins from initial search query', (tester) async {

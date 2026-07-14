@@ -35,7 +35,7 @@ class AppRatingStars extends StatelessWidget {
             size: size,
             color: AppTheme.gold,
           ),
-        if (showCount && ratingCount > 0) ...[
+        if (showCount) ...[
           SizedBox(width: size * 0.25),
           Icon(
             Icons.people_alt_outlined,
@@ -44,7 +44,7 @@ class AppRatingStars extends StatelessWidget {
           ),
           const SizedBox(width: 2),
           Text(
-            _compactCount(ratingCount),
+            '${_compactCount(ratingCount)} ratings',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,

@@ -47,6 +47,7 @@ final skinGalleryQueryProvider =
             sort: query.sort.apiValue,
             order: 'desc',
             search: query.search,
+            minRating: query.minRating,
             lanePosition: query.lanePosition,
           );
     });
@@ -62,26 +63,32 @@ class _SkinGalleryQuery {
   const _SkinGalleryQuery({
     this.sort = _SkinSort.latest,
     this.search = '',
+    this.minRating = 0,
     this.lanePosition,
   });
 
   final _SkinSort sort;
   final String search;
+  final double minRating;
   final int? lanePosition;
 
   bool get isDefault =>
-      sort == _SkinSort.latest && search.trim().isEmpty && lanePosition == null;
+      sort == _SkinSort.latest &&
+      search.trim().isEmpty &&
+      minRating <= 0 &&
+      lanePosition == null;
 
   @override
   bool operator ==(Object other) {
     return other is _SkinGalleryQuery &&
         other.sort == sort &&
         other.search == search &&
+        other.minRating == minRating &&
         other.lanePosition == lanePosition;
   }
 
   @override
-  int get hashCode => Object.hash(sort, search, lanePosition);
+  int get hashCode => Object.hash(sort, search, minRating, lanePosition);
 }
 
 class SkinGalleryScreen extends ConsumerStatefulWidget {
@@ -89,12 +96,16 @@ class SkinGalleryScreen extends ConsumerStatefulWidget {
     this.initialSkinId,
     this.initialLanePosition,
     this.initialSearchQuery,
+    this.initialMinRating = 0,
+    this.onSkinSelected,
     super.key,
   });
 
   final int? initialSkinId;
   final int? initialLanePosition;
   final String? initialSearchQuery;
+  final double initialMinRating;
+  final ValueChanged<int>? onSkinSelected;
 
   @override
   ConsumerState<SkinGalleryScreen> createState() => _SkinGalleryScreenState();
@@ -105,6 +116,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   String _query = '';
   _SkinViewMode _viewMode = _SkinViewMode.poster;
   _SkinSort _sort = _SkinSort.latest;
+  double _minRating = 0;
   int? _lanePosition;
   int? _openedInitialSkinId;
   int? _ratingSkinId;
@@ -122,6 +134,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       _searchController.text = initialQuery;
     }
     _lanePosition = widget.initialLanePosition;
+    _minRating = widget.initialMinRating.clamp(0, 5).toDouble();
   }
 
   @override
@@ -135,6 +148,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     final galleryQuery = _SkinGalleryQuery(
       sort: _sort,
       search: _query,
+      minRating: _minRating,
       lanePosition: _lanePosition,
     );
     final galleryValue = ref.watch(skinGalleryQueryProvider(galleryQuery));
@@ -324,6 +338,9 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
           if (_lanePosition != null && skin.heroPosition != _lanePosition) {
             return false;
           }
+          if (skin.rating < _minRating) {
+            return false;
+          }
 
           if (normalizedQuery.isEmpty) {
             return true;
@@ -351,6 +368,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
   }
 
   void _openDetail(BuildContext context, int skinId) {
+    if (widget.onSkinSelected != null) {
+      widget.onSkinSelected!(skinId);
+      return;
+    }
     final router = GoRouter.maybeOf(context);
     final listPath = router == null
         ? null
@@ -366,7 +387,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => _SkinDetailSheet(skinId: skinId),
+      builder: (context) => SkinDetailScreen(skinId: skinId, asSheet: true),
     ).whenComplete(() {
       if (mounted && router != null && listPath != null) {
         final currentPath = router.routeInformationProvider.value.uri.path;
@@ -440,6 +461,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
             sort: _sort.apiValue,
             order: 'desc',
             search: _query,
+            minRating: _minRating,
             lanePosition: _lanePosition,
           );
 
@@ -834,16 +856,23 @@ class _SkinCardRatingSheet extends StatelessWidget {
   }
 }
 
-class _SkinDetailSheet extends ConsumerStatefulWidget {
-  const _SkinDetailSheet({required this.skinId});
+class SkinDetailScreen extends ConsumerStatefulWidget {
+  const SkinDetailScreen({
+    required this.skinId,
+    this.onBack,
+    this.asSheet = false,
+    super.key,
+  });
 
   final int skinId;
+  final VoidCallback? onBack;
+  final bool asSheet;
 
   @override
-  ConsumerState<_SkinDetailSheet> createState() => _SkinDetailSheetState();
+  ConsumerState<SkinDetailScreen> createState() => _SkinDetailScreenState();
 }
 
-class _SkinDetailSheetState extends ConsumerState<_SkinDetailSheet> {
+class _SkinDetailScreenState extends ConsumerState<SkinDetailScreen> {
   var _isRating = false;
   double? _ratingOverride;
   int? _ratingCountOverride;
@@ -852,43 +881,74 @@ class _SkinDetailSheetState extends ConsumerState<_SkinDetailSheet> {
   Widget build(BuildContext context) {
     final detailValue = ref.watch(skinDetailProvider(widget.skinId));
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.86,
-      minChildSize: 0.5,
-      maxChildSize: 0.94,
-      builder: (context, scrollController) {
-        return ListView(
-          controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.muted.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(999),
-                ),
+    Widget buildList(ScrollController? controller) => ListView(
+      controller: controller,
+      padding: EdgeInsets.fromLTRB(20, widget.asSheet ? 16 : 20, 20, 28),
+      children: [
+        if (widget.asSheet) ...[
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.muted.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
-            const SizedBox(height: 18),
-            const AppSectionHeader(title: 'Skin Detail'),
-            const SizedBox(height: 14),
-            AppAsyncView<SkinDetail>(
-              value: detailValue,
-              retry: () => ref.invalidate(skinDetailProvider(widget.skinId)),
-              data: (detail) => _SkinDetailContent(
-                detail: detail,
-                rating: _ratingOverride ?? detail.rating,
-                ratingCount: _ratingCountOverride ?? detail.ratingCount,
-                isRating: _isRating,
-                onRate: _rateSkin,
-              ),
-            ),
-          ],
-        );
+          ),
+          const SizedBox(height: 18),
+        ],
+        const AppSectionHeader(title: 'Skin Detail'),
+        const SizedBox(height: 14),
+        AppAsyncView<SkinDetail>(
+          value: detailValue,
+          retry: () => ref.invalidate(skinDetailProvider(widget.skinId)),
+          data: (detail) => _SkinDetailContent(
+            detail: detail,
+            rating: _ratingOverride ?? detail.rating,
+            ratingCount: _ratingCountOverride ?? detail.ratingCount,
+            isRating: _isRating,
+            onRate: _rateSkin,
+          ),
+        ),
+      ],
+    );
+
+    if (widget.asSheet) {
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.86,
+        minChildSize: 0.5,
+        maxChildSize: 0.94,
+        builder: (context, scrollController) => buildList(scrollController),
+      );
+    }
+    if (widget.onBack == null) {
+      return buildList(null);
+    }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) widget.onBack!();
       },
+      child: Stack(
+        children: [
+          buildList(null),
+          Positioned(
+            top: 10,
+            left: 12,
+            child: Material(
+              color: AppTheme.bg.withValues(alpha: 0.86),
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: 'Back to skins',
+                onPressed: widget.onBack,
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -993,10 +1053,10 @@ class _SkinDetailContent extends StatelessWidget {
               _DetailChip(label: detail.seriesName),
             if (detail.regionName.isNotEmpty)
               _DetailChip(label: detail.regionName),
-            _DetailChip(label: rating.toStringAsFixed(1)),
-            _DetailChip(label: '$ratingCount ratings'),
           ],
         ),
+        const SizedBox(height: 14),
+        AppRatingStars(rating: rating, ratingCount: ratingCount, size: 20),
         const SizedBox(height: 14),
         _SkinRatingControl(rating: rating, isRating: isRating, onRate: onRate),
         if (detail.linkUrl.isNotEmpty) ...[

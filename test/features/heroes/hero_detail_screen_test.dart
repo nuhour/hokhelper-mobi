@@ -22,6 +22,10 @@ void main() {
                 'rating_count': 12,
                 'baseTechVideo': 'https://media.example.com/lam.mp4',
                 'lore': 'Lam rides the waves between battlefields.',
+                'height': '180 cm',
+                'world_region': 'Navenia',
+                'identity': 'Sea Hunter',
+                'energy': 'Mana',
               },
               'skills': [
                 {
@@ -55,21 +59,47 @@ void main() {
     expect(find.text('Shark Rider'), findsOneWidget);
     expect(find.text('Assassin / Fighter'), findsOneWidget);
     expect(find.byIcon(Icons.star_rounded), findsWidgets);
-    expect(find.text('12'), findsOneWidget);
+    expect(find.text('12 ratings'), findsOneWidget);
     expect(find.byTooltip('Play hero introduction'), findsOneWidget);
-    expect(find.byTooltip('Play Wavebreaker'), findsOneWidget);
     expect(find.text('T1'), findsOneWidget);
     expect(find.text('52.1%'), findsOneWidget);
-    expect(find.text('Skills'), findsOneWidget);
-    expect(find.text('Wavebreaker'), findsOneWidget);
-    expect(find.text('Cooldown 8s'), findsOneWidget);
-    expect(find.text('Lore'), findsOneWidget);
+    expect(find.text('Skills', skipOffstage: false), findsOneWidget);
+    expect(find.text('Wavebreaker', skipOffstage: false), findsOneWidget);
+    expect(find.text('Cooldown 8s', skipOffstage: false), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Lore'),
+      260,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('hero-detail-scroll-view')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Lore', skipOffstage: false), findsOneWidget);
+    expect(find.text('180 cm', skipOffstage: false), findsOneWidget);
+    expect(find.text('Navenia', skipOffstage: false), findsOneWidget);
     expect(
-      find.text('Lam rides the waves between battlefields.'),
+      find.text(
+        'Lam rides the waves between battlefields.',
+        skipOffstage: false,
+      ),
       findsOneWidget,
     );
-    expect(find.text('History'), findsOneWidget);
-    expect(find.text('Jungle tuning'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Jungle tuning'),
+      260,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('hero-detail-scroll-view')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('History', skipOffstage: false), findsOneWidget);
+    expect(find.text('Jungle tuning', skipOffstage: false), findsOneWidget);
     expect(find.textContaining('"hero"'), findsNothing);
   });
 }

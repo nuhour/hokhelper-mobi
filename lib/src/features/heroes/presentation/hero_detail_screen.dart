@@ -151,6 +151,38 @@ class _HeroDetailContent extends StatelessWidget {
       'image',
     ]);
     final lore = _readString(hero, const ['lore', 'story', 'background']);
+    final profile = [
+      _ProfileItem(
+        label: 'Height',
+        value: _readString(hero, const ['height']),
+        icon: Icons.straighten_rounded,
+        color: AppTheme.cyan,
+      ),
+      _ProfileItem(
+        label: 'Weight',
+        value: _readString(hero, const ['weight']),
+        icon: Icons.monitor_weight_outlined,
+        color: const Color(0xFFF59E0B),
+      ),
+      _ProfileItem(
+        label: 'World',
+        value: _readString(hero, const ['world_region', 'worldRegion']),
+        icon: Icons.public_outlined,
+        color: const Color(0xFFFB7185),
+      ),
+      _ProfileItem(
+        label: 'Identity',
+        value: _readString(hero, const ['identity']),
+        icon: Icons.person_outline_rounded,
+        color: const Color(0xFF22C55E),
+      ),
+      _ProfileItem(
+        label: 'Energy',
+        value: _readString(hero, const ['energy']),
+        icon: Icons.local_fire_department_outlined,
+        color: const Color(0xFFA855F7),
+      ),
+    ];
     final heroVideoUrl = _readString(hero, const [
       'baseTechVideo',
       'base_tech_video',
@@ -167,6 +199,7 @@ class _HeroDetailContent extends StatelessWidget {
     final pickRate = _readPercent(stats, hero, const ['pick_rate', 'pickRate']);
 
     return ListView(
+      key: const ValueKey('hero-detail-scroll-view'),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
@@ -208,17 +241,19 @@ class _HeroDetailContent extends StatelessWidget {
           title: 'Lore',
           icon: Icons.menu_book_outlined,
           emptyMessage: 'No lore available.',
-          children: lore.isEmpty
-              ? const []
-              : [
-                  Text(
-                    _cleanMarkup(lore),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.text,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
+          children: [
+            _ProfileGrid(items: profile),
+            if (lore.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                _cleanMarkup(lore),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.text,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 18),
         _DetailSection(
@@ -389,6 +424,7 @@ class _HeroHeader extends StatelessWidget {
                       _VideoPlayButton(
                         url: videoUrl,
                         tooltip: 'Play hero introduction',
+                        prominent: true,
                       ),
                   ],
                 ),
@@ -515,6 +551,105 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ProfileItem {
+  const _ProfileItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+}
+
+class _ProfileGrid extends StatelessWidget {
+  const _ProfileGrid({required this.items});
+
+  final List<_ProfileItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 2.35,
+      ),
+      itemBuilder: (context, index) => _ProfileCard(item: items[index]),
+    );
+  }
+}
+
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.item});
+
+  final _ProfileItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = item.value.isEmpty ? 'Unknown' : item.value;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.15)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: item.color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(item.icon, size: 16, color: item.color),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppTheme.muted,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -757,18 +892,39 @@ class _HistoryTypeLabel extends StatelessWidget {
 }
 
 class _VideoPlayButton extends StatelessWidget {
-  const _VideoPlayButton({required this.url, required this.tooltip});
+  const _VideoPlayButton({
+    required this.url,
+    required this.tooltip,
+    this.prominent = false,
+  });
 
   final String url;
   final String tooltip;
+  final bool prominent;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton.filledTonal(
+    return IconButton(
       tooltip: tooltip,
       onPressed: () => _openVideo(context, url),
-      icon: const Icon(Icons.play_circle_fill_rounded),
-      color: AppTheme.cyan,
+      style: IconButton.styleFrom(
+        minimumSize: Size.square(prominent ? 36 : 30),
+        maximumSize: Size.square(prominent ? 36 : 30),
+        padding: EdgeInsets.zero,
+        backgroundColor: prominent
+            ? Colors.white.withValues(alpha: 0.14)
+            : AppTheme.panelAlt,
+        foregroundColor: prominent ? Colors.white : AppTheme.muted,
+        side: BorderSide(
+          color: prominent
+              ? Colors.white.withValues(alpha: 0.24)
+              : AppTheme.muted.withValues(alpha: 0.22),
+        ),
+      ),
+      icon: Icon(
+        prominent ? Icons.play_arrow_rounded : Icons.play_circle_outline,
+        size: prominent ? 21 : 17,
+      ),
     );
   }
 

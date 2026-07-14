@@ -40,8 +40,16 @@ class HeroSummary {
       ]),
       title: _readString(json, const ['title', 'heroTitle']),
       position: _readInt(json, const ['position', 'mainJob', 'main_job']),
-      mainJob: _readString(json, const ['mainJobName', 'main_job_name']),
-      minorJob: _readString(json, const ['minorJobName', 'minor_job_name']),
+      mainJob: _readJobLabel(
+        json,
+        const ['mainJobName', 'main_job_name'],
+        const ['mainJob', 'main_job'],
+      ),
+      minorJob: _readJobLabel(
+        json,
+        const ['minorJobName', 'minor_job_name'],
+        const ['minorJob', 'minor_job'],
+      ),
       tier: _readString(json, const ['tier', 'hot']),
       rating: _readDouble(json, const ['rating', 'avg_rating']),
       ratingCount: _readInt(json, const ['rating_count', 'ratingCount']) ?? 0,
@@ -117,5 +125,25 @@ class HeroSummary {
     }
 
     return 0;
+  }
+
+  static String _readJobLabel(
+    Map<String, dynamic> json,
+    List<String> labelKeys,
+    List<String> idKeys,
+  ) {
+    final label = _readString(json, labelKeys);
+    if (label.isNotEmpty) {
+      return label;
+    }
+    return switch (_readInt(json, idKeys)) {
+      1 => 'Tank',
+      2 => 'Fighter',
+      3 => 'Assassin',
+      4 => 'Mage',
+      5 => 'Marksman',
+      6 => 'Support',
+      _ => '',
+    };
   }
 }

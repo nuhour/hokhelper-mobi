@@ -581,13 +581,12 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/skin-gallery',
         redirect: (context, state) {
-          final skinId = int.tryParse(
-            state.uri.queryParameters['skin_id'] ?? '',
+          final queryParameters = Map<String, String>.from(
+            state.uri.queryParameters,
           );
+          final skinId = int.tryParse(queryParameters['skin_id'] ?? '');
           if (skinId != null && skinId > 0) {
-            final queryParameters = Map<String, String>.from(
-              state.uri.queryParameters,
-            )..remove('skin_id');
+            queryParameters.remove('skin_id');
             return Uri(
               path: '/skin-gallery/$skinId',
               queryParameters: queryParameters.isEmpty ? null : queryParameters,
@@ -596,10 +595,15 @@ GoRouter createAppRouter() {
           return null;
         },
         builder: (context, state) => _standalonePage(
-          fallbackRoute: '/content',
+          fallbackRoute: '/?tab=skins',
           child: SkinGalleryScreen(
             initialLanePosition: _initialLanePosition(state.uri),
             initialSearchQuery: state.uri.queryParameters['q'],
+            initialMinRating:
+                double.tryParse(
+                  state.uri.queryParameters['min_rating'] ?? '',
+                ) ??
+                0,
           ),
         ),
         routes: [
@@ -607,13 +611,18 @@ GoRouter createAppRouter() {
             path: ':skinId',
             builder: (context, state) {
               return _standalonePage(
-                fallbackRoute: '/skin-gallery',
+                fallbackRoute: '/?tab=skins',
                 child: SkinGalleryScreen(
                   initialSkinId: int.tryParse(
                     state.pathParameters['skinId'] ?? '',
                   ),
                   initialLanePosition: _initialLanePosition(state.uri),
                   initialSearchQuery: state.uri.queryParameters['q'],
+                  initialMinRating:
+                      double.tryParse(
+                        state.uri.queryParameters['min_rating'] ?? '',
+                      ) ??
+                      0,
                 ),
               );
             },
@@ -828,6 +837,9 @@ GoRouter createAppRouter() {
                 builder: (context, state) => HomeScreen(
                   initialPortalTab: state.uri.queryParameters['tab'],
                   initialHeroId: state.uri.queryParameters['hero_id'],
+                  initialSkinId: int.tryParse(
+                    state.uri.queryParameters['skin_id'] ?? '',
+                  ),
                 ),
               ),
             ],
@@ -928,13 +940,13 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'skins',
-                    builder: (context, state) => _standalonePage(
-                      fallbackRoute: '/content',
-                      child: SkinGalleryScreen(
-                        initialLanePosition: _initialLanePosition(state.uri),
-                        initialSearchQuery: state.uri.queryParameters['q'],
-                      ),
-                    ),
+                    redirect: (context, state) => Uri(
+                      path: '/',
+                      queryParameters: {
+                        'tab': 'skins',
+                        ...state.uri.queryParameters,
+                      },
+                    ).toString(),
                   ),
                   GoRoute(
                     path: 'cgs',

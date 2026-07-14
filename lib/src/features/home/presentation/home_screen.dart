@@ -24,10 +24,16 @@ final homeStatsProvider = FutureProvider<HomeStats>((ref) {
 });
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({this.initialPortalTab, this.initialHeroId, super.key});
+  const HomeScreen({
+    this.initialPortalTab,
+    this.initialHeroId,
+    this.initialSkinId,
+    super.key,
+  });
 
   final String? initialPortalTab;
   final String? initialHeroId;
+  final int? initialSkinId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -51,6 +57,7 @@ class HomeScreen extends ConsumerWidget {
                   result: stats.result,
                   initialPortalTab: initialPortalTab,
                   initialHeroId: initialHeroId,
+                  initialSkinId: initialSkinId,
                 ),
               ],
             ),
@@ -66,11 +73,13 @@ class _HomePortalFramework extends StatefulWidget {
     required this.result,
     this.initialPortalTab,
     this.initialHeroId,
+    this.initialSkinId,
   });
 
   final Map<String, dynamic> result;
   final String? initialPortalTab;
   final String? initialHeroId;
+  final int? initialSkinId;
 
   @override
   State<_HomePortalFramework> createState() => _HomePortalFrameworkState();
@@ -80,6 +89,7 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
   late final PageController _pageController;
   int _selectedPage = 3;
   String? _openedHeroId;
+  int? _openedSkinId;
 
   @override
   void initState() {
@@ -88,6 +98,7 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
     _openedHeroId = widget.initialHeroId?.trim().isEmpty ?? true
         ? null
         : widget.initialHeroId!.trim();
+    _openedSkinId = widget.initialSkinId;
     _pageController = PageController(initialPage: _selectedPage);
   }
 
@@ -104,6 +115,9 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
         if (index != 2) {
           _openedHeroId = null;
         }
+        if (index != 1) {
+          _openedSkinId = null;
+        }
       });
     }
     _pageController.animateToPage(
@@ -118,10 +132,14 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
     super.didUpdateWidget(oldWidget);
     final nextPage = _portalPageIndex(widget.initialPortalTab);
     final nextHeroId = widget.initialHeroId?.trim();
-    if (nextPage != _selectedPage || nextHeroId != _openedHeroId) {
+    final nextSkinId = widget.initialSkinId;
+    if (nextPage != _selectedPage ||
+        nextHeroId != _openedHeroId ||
+        nextSkinId != _openedSkinId) {
       setState(() {
         _selectedPage = nextPage;
         _openedHeroId = nextHeroId?.isEmpty ?? true ? null : nextHeroId;
+        _openedSkinId = nextSkinId;
       });
       _pageController.jumpToPage(nextPage);
     }
@@ -155,7 +173,12 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
             },
             children: [
               const EsportsScreen(),
-              const SkinGalleryScreen(),
+              _openedSkinId == null
+                  ? SkinGalleryScreen(onSkinSelected: _openSkinDetail)
+                  : SkinDetailScreen(
+                      skinId: _openedSkinId!,
+                      onBack: _closeSkinDetail,
+                    ),
               _openedHeroId == null
                   ? HeroGalleryScreen(onHeroSelected: _openHeroDetail)
                   : HeroDetailScreen(
@@ -178,6 +201,16 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
   void _closeHeroDetail() {
     setState(() => _openedHeroId = null);
     context.go('/?tab=heroes');
+  }
+
+  void _openSkinDetail(int skinId) {
+    setState(() => _openedSkinId = skinId);
+    context.go('/?tab=skins&skin_id=$skinId');
+  }
+
+  void _closeSkinDetail() {
+    setState(() => _openedSkinId = null);
+    context.go('/?tab=skins');
   }
 }
 
