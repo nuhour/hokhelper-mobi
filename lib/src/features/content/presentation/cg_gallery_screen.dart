@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/routing/portal_link.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_video_player_sheet.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/cg_detail.dart';
 import '../domain/content_item_summary.dart';
@@ -188,15 +189,8 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: [
-            const AppSectionHeader(title: 'CG Gallery'),
-            const SizedBox(height: 10),
-            Text(
-              'Watch HOK cinematics, trailers, hero videos, ratings, and comments.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 18),
+            const AppSectionHeader(title: 'CG Center'),
+            const SizedBox(height: 14),
             TextField(
               controller: _searchController,
               onChanged: (value) => setState(() {
@@ -223,32 +217,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            SegmentedButton<_CgSort>(
-              segments: const [
-                ButtonSegment(
-                  value: _CgSort.updated,
-                  label: Text('Updated'),
-                  icon: Icon(Icons.update),
-                ),
-                ButtonSegment(
-                  value: _CgSort.rating,
-                  label: Text('Rating'),
-                  icon: Icon(Icons.star_border),
-                ),
-                ButtonSegment(
-                  value: _CgSort.created,
-                  label: Text('Created'),
-                  icon: Icon(Icons.calendar_today_outlined),
-                ),
-                ButtonSegment(
-                  value: _CgSort.views,
-                  label: Text('Views'),
-                  icon: Icon(Icons.visibility_outlined),
-                ),
-              ],
-              selected: {_sort},
-              onSelectionChanged: (value) => setState(() {
-                _sort = value.first;
+            _CgSortBar(
+              selected: _sort,
+              onSelected: (value) => setState(() {
+                _sort = value;
                 _resetLoadedPages();
               }),
             ),
@@ -586,6 +558,39 @@ class _FocusedHeroBanner extends StatelessWidget {
   }
 }
 
+class _CgSortBar extends StatelessWidget {
+  const _CgSortBar({required this.selected, required this.onSelected});
+
+  final _CgSort selected;
+  final ValueChanged<_CgSort> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    const entries = [
+      (_CgSort.updated, Icons.update, 'Updated'),
+      (_CgSort.rating, Icons.star_outline_rounded, 'Rating'),
+      (_CgSort.created, Icons.calendar_today_outlined, 'Created'),
+      (_CgSort.views, Icons.visibility_outlined, 'Views'),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final entry in entries) ...[
+            ChoiceChip(
+              avatar: Icon(entry.$2, size: 16),
+              label: Text(entry.$3),
+              selected: selected == entry.$1,
+              onSelected: (_) => onSelected(entry.$1),
+            ),
+            if (entry != entries.last) const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _CgCard extends StatelessWidget {
   const _CgCard({required this.cg, required this.onTap});
 
@@ -594,6 +599,9 @@ class _CgCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final heroAvatarUrl = cg.heroId == null
+        ? ''
+        : 'https://hokhelper.com/static/game/hero/${cg.heroId}.png';
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.panel,
@@ -606,74 +614,114 @@ class _CgCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    AppImage(
-                      url: cg.imageUrl,
-                      width: 104,
-                      height: 68,
-                      borderRadius: 12,
-                      semanticLabel: cg.title,
-                    ),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.all(6),
-                        child: Icon(
-                          Icons.play_arrow,
-                          color: AppTheme.gold,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.center,
                     children: [
-                      Text(
-                        cg.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppTheme.text,
-                          fontWeight: FontWeight.w900,
+                      AppImage(
+                        url: cg.imageUrl,
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 0,
+                        semanticLabel: cg.title,
+                      ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.24),
                         ),
                       ),
-                      const SizedBox(height: 5),
-                      Text(
-                        cg.heroName.isEmpty ? 'Video' : cg.heroName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${_compact(cg.viewCount)} views · ${cg.rating.toStringAsFixed(1)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.gold),
+                      Center(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.56),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppImage(
+                      url: heroAvatarUrl,
+                      width: 38,
+                      height: 38,
+                      borderRadius: 19,
+                      semanticLabel: cg.heroName,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            cg.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: AppTheme.text,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            cg.heroName.isEmpty ? 'Video' : cg.heroName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    AppRatingStars(
+                      rating: cg.rating,
+                      ratingCount: cg.ratingCount,
+                      size: 11,
+                      showCount: false,
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(60, 0, 12, 12),
+                child: Text(
+                  '${_compact(cg.viewCount)} views · ${cg.ratingCount} ratings',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppTheme.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -984,27 +1032,48 @@ class _CgDetailContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            AppImage(
-              url: detail.coverUrl,
-              width: double.infinity,
-              height: 210,
-              borderRadius: 18,
-              semanticLabel: detail.title,
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: detail.playUrl.isEmpty
+                ? null
+                : () => showAppVideoPlayer(
+                    context,
+                    url: detail.playUrl,
+                    title: detail.title,
+                  ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AppImage(
+                  url: detail.coverUrl,
+                  width: double.infinity,
+                  height: 210,
+                  borderRadius: 18,
+                  semanticLabel: detail.title,
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.56),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.32),
+                    ),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.56),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(12),
-                child: Icon(Icons.play_arrow, color: AppTheme.gold, size: 34),
-              ),
-            ),
-          ],
+          ),
         ),
         const SizedBox(height: 16),
         Text(
@@ -1027,29 +1096,22 @@ class _CgDetailContent extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [
-            _DetailChip(label: '${_compact(viewCount)} views'),
-            _DetailChip(label: rating.toStringAsFixed(1)),
-            _DetailChip(label: '$ratingCount ratings'),
-          ],
+          children: [_DetailChip(label: '${_compact(viewCount)} views')],
         ),
+        const SizedBox(height: 14),
+        AppRatingStars(rating: rating, ratingCount: ratingCount, size: 18),
         const SizedBox(height: 14),
         _CgRatingControl(rating: rating, isRating: isRating, onRate: onRate),
         if (detail.playUrl.isNotEmpty) ...[
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () => context.go(externalLinkRoute(detail.playUrl)),
+            onPressed: () => showAppVideoPlayer(
+              context,
+              url: detail.playUrl,
+              title: detail.title,
+            ),
             icon: const Icon(Icons.play_circle_outline, size: 18),
             label: const Text('Play video'),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            detail.playUrl,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
           ),
         ],
       ],

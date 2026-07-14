@@ -56,7 +56,7 @@ void main() {
     await tester.tap(find.widgetWithText(ListTile, 'CG Gallery'));
     await tester.pumpAndSettle();
 
-    expect(find.text('CG Gallery'), findsOneWidget);
+    expect(find.text('CG Center'), findsOneWidget);
     expect(find.text('Lam Cinematic'), findsOneWidget);
   });
 }

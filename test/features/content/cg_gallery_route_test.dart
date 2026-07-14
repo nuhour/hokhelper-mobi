@@ -5,6 +5,7 @@ import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_video_player_sheet.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/cg_detail.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
@@ -267,7 +268,7 @@ void main() {
     );
   });
 
-  testWidgets('cg detail play links open through the mobile link route', (
+  testWidgets('cg detail video opens in an in-app player panel', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(800, 1200);
@@ -307,8 +308,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('CG Detail'), findsOneWidget);
-    expect(find.text('https://example.test/cg/501.mp4'), findsOneWidget);
-
     final playButton = find.widgetWithText(
       FilledButton,
       'Play video',
@@ -320,12 +319,9 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     await tester.tap(playButton.last);
-    await tester.pumpAndSettle();
+    await tester.pump();
 
-    expect(router.routeInformationProvider.value.uri.path, '/external-link');
-    expect(
-      router.routeInformationProvider.value.uri.queryParameters['url'],
-      'https://example.test/cg/501.mp4',
-    );
+    expect(router.routeInformationProvider.value.uri.path, '/cg/501');
+    expect(find.byType(AppVideoPlayerSheet), findsOneWidget);
   });
 }

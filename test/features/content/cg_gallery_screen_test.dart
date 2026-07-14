@@ -265,7 +265,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('CG Gallery'), findsOneWidget);
+    expect(find.text('CG Center'), findsOneWidget);
     expect(find.text('Lam Cinematic'), findsOneWidget);
     expect(find.text('Angela Trailer'), findsOneWidget);
 
@@ -279,7 +279,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('CG Detail'), findsOneWidget);
-    expect(find.text('https://example.test/lam.mp4'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Play video'), findsOneWidget);
     expect(find.text('2,301 views'), findsOneWidget);
     expect(find.text('Great cinematic.'), findsOneWidget);
     expect(find.text('2026-07-03 08:30'), findsOneWidget);

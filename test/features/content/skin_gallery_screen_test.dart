@@ -220,6 +220,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Skin Gallery'), findsOneWidget);
+    expect(find.byTooltip('CG Center'), findsOneWidget);
     expect(find.text('Crimson Hunter'), findsOneWidget);
     expect(find.text('Moonlight Tune'), findsOneWidget);
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_rating_stars.dart';
+import '../../../core/widgets/app_video_player_sheet.dart';
 import '../../settings/presentation/settings_controller.dart';
 import 'hero_gallery_screen.dart';
 
@@ -906,7 +906,7 @@ class _VideoPlayButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: tooltip,
-      onPressed: () => _openVideo(context, url),
+      onPressed: () => showAppVideoPlayer(context, url: url, title: tooltip),
       style: IconButton.styleFrom(
         minimumSize: Size.square(prominent ? 36 : 30),
         maximumSize: Size.square(prominent ? 36 : 30),
@@ -926,17 +926,6 @@ class _VideoPlayButton extends StatelessWidget {
         size: prominent ? 21 : 17,
       ),
     );
-  }
-
-  Future<void> _openVideo(BuildContext context, String rawUrl) async {
-    final uri = Uri.tryParse(rawUrl.trim());
-    if (uri == null || !uri.hasScheme) return;
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open this video')),
-      );
-    }
   }
 }
 

@@ -175,7 +175,16 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: [
-            const AppSectionHeader(title: 'Skin Gallery'),
+            Row(
+              children: [
+                const Expanded(child: AppSectionHeader(title: 'Skin Gallery')),
+                IconButton.filledTonal(
+                  tooltip: 'CG Center',
+                  onPressed: () => context.push('/cg'),
+                  icon: const Icon(Icons.movie_filter_outlined),
+                ),
+              ],
+            ),
             const SizedBox(height: 14),
             TextField(
               controller: _searchController,
