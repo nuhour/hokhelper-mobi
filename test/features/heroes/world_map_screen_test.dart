@@ -34,7 +34,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('World Map'), findsOneWidget);
+    expect(find.byTooltip('Exit world map'), findsOneWidget);
     expect(find.text('Sunset Sea'), findsOneWidget);
     expect(find.text('Great River Basin'), findsOneWidget);
 

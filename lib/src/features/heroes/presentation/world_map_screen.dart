@@ -40,6 +40,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
@@ -48,6 +49,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -73,6 +75,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
           _openInitialHeroRegion(regions);
 
           return Stack(
+            fit: StackFit.expand,
             children: [
               Positioned.fill(
                 child: _WorldAtlas(
@@ -88,54 +91,9 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       IconButton.filledTonal(
-                        tooltip: 'Back',
-                        onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ),
-                      const SizedBox(width: 10),
-                      IgnorePointer(
-                        child: SizedBox(
-                          width: 184,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.14),
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 9,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'World Map',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          color: AppTheme.text,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'World Region Atlas',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(color: Colors.white70),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        tooltip: 'Exit world map',
+                        onPressed: () => context.go('/heroes'),
+                        icon: const Icon(Icons.close_rounded),
                       ),
                     ],
                   ),

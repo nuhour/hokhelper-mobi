@@ -86,6 +86,7 @@ class _HeroRelationshipsScreenState
           }
 
           return Stack(
+            fit: StackFit.expand,
             children: [
               Positioned.fill(
                 child: _HeroRelationshipNetwork(
@@ -103,19 +104,22 @@ class _HeroRelationshipsScreenState
                 ),
               ),
               SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: _NetworkModeControls(
-                    viewMode: _viewMode,
-                    onViewModeChanged: (mode) {
-                      setState(() {
-                        if (mode == _RelationshipViewMode.focus &&
-                            _focusedHero.isEmpty) {
-                          _focusedHero = _randomFocusHero(relationships);
-                        }
-                        _viewMode = mode;
-                      });
-                    },
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
+                    child: _NetworkModeControls(
+                      viewMode: _viewMode,
+                      onViewModeChanged: (mode) {
+                        setState(() {
+                          if (mode == _RelationshipViewMode.focus &&
+                              _focusedHero.isEmpty) {
+                            _focusedHero = _randomFocusHero(relationships);
+                          }
+                          _viewMode = mode;
+                        });
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -230,30 +234,32 @@ class _NetworkModeControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.52),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(5),
-        child: SegmentedButton<_RelationshipViewMode>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(
-              value: _RelationshipViewMode.focus,
-              icon: Icon(Icons.center_focus_strong_rounded),
-              label: Text('Focus'),
-            ),
-            ButtonSegment(
-              value: _RelationshipViewMode.global,
-              icon: Icon(Icons.hub_outlined),
-              label: Text('Global'),
-            ),
-          ],
-          selected: {viewMode},
-          onSelectionChanged: (value) => onViewModeChanged(value.first),
+    return IntrinsicWidth(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.52),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: SegmentedButton<_RelationshipViewMode>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(
+                value: _RelationshipViewMode.focus,
+                icon: Icon(Icons.center_focus_strong_rounded),
+                label: Text('Focus'),
+              ),
+              ButtonSegment(
+                value: _RelationshipViewMode.global,
+                icon: Icon(Icons.hub_outlined),
+                label: Text('Global'),
+              ),
+            ],
+            selected: {viewMode},
+            onSelectionChanged: (value) => onViewModeChanged(value.first),
+          ),
         ),
       ),
     );
@@ -468,6 +474,7 @@ class _RelationshipNetworkLayout {
           .toDouble();
       final center = Offset(canvasSize / 2, canvasSize / 2);
       final goldenAngle = math.pi * (3 - math.sqrt(5));
+      final maxRadius = canvasSize * 0.43;
       final nodes = [
         for (var index = 0; index < allKeys.length; index++)
           _ChainNode(
@@ -478,9 +485,10 @@ class _RelationshipNetworkLayout {
                 center +
                 Offset.fromDirection(
                   index * goldenAngle,
-                  38 * math.sqrt(index),
+                  maxRadius *
+                      math.sqrt(index / math.max(1, allKeys.length - 1)),
                 ),
-            size: 32,
+            size: 38,
             showLabel: false,
             highlighted: allKeys[index] == focusKey,
           ),
