@@ -7,6 +7,7 @@ import '../../../core/routing/portal_link.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/content_item_summary.dart';
@@ -708,7 +709,11 @@ class _SkinCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _SkinRatingBadge(rating: skin.rating),
+                    AppRatingStars(
+                      rating: skin.rating,
+                      ratingCount: skin.ratingCount,
+                      size: isSplash ? 15 : 11,
+                    ),
                   ],
                 ),
               ),
@@ -764,31 +769,6 @@ class _SkinSeriesPill extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SkinRatingBadge extends StatelessWidget {
-  const _SkinRatingBadge({required this.rating});
-
-  final double rating;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.star_rounded, color: AppTheme.gold, size: 17),
-        const SizedBox(width: 2),
-        Text(
-          rating > 0 ? rating.toStringAsFixed(1) : '--',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.gold,
-            fontWeight: FontWeight.w900,
-            shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
-          ),
-        ),
-      ],
     );
   }
 }

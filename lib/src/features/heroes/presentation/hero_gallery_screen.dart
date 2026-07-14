@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/heroes_repository.dart';
@@ -73,9 +74,14 @@ class _HeroGalleryQuery {
 }
 
 class HeroGalleryScreen extends ConsumerStatefulWidget {
-  const HeroGalleryScreen({this.initialSearchQuery, super.key});
+  const HeroGalleryScreen({
+    this.initialSearchQuery,
+    this.onHeroSelected,
+    super.key,
+  });
 
   final String? initialSearchQuery;
+  final ValueChanged<String>? onHeroSelected;
 
   @override
   ConsumerState<HeroGalleryScreen> createState() => _HeroGalleryScreenState();
@@ -248,7 +254,10 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                           ),
                       itemCount: visibleHeroes.length,
                       itemBuilder: (context, index) {
-                        return _HeroCard(hero: visibleHeroes[index]);
+                        return _HeroCard(
+                          hero: visibleHeroes[index],
+                          onSelected: widget.onHeroSelected,
+                        );
                       },
                     ),
                   ),
@@ -356,15 +365,19 @@ class _LaneFilterOption {
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.hero});
+  const _HeroCard({required this.hero, this.onSelected});
 
   final HeroSummary hero;
+  final ValueChanged<String>? onSelected;
 
   @override
   Widget build(BuildContext context) {
     final detailRouteId = hero.detailRouteId;
     final tier = hero.tier.isEmpty ? '--' : hero.tier.toUpperCase();
-    final ratingLabel = hero.rating > 0 ? hero.rating.toStringAsFixed(1) : '--';
+    final roleLabels = [
+      hero.mainJob,
+      hero.minorJob,
+    ].where((value) => value.isNotEmpty).join(' / ');
 
     return Material(
       key: ValueKey('hero-card-${hero.id}'),
@@ -372,7 +385,9 @@ class _HeroCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: detailRouteId == null ? null : () => _openDetail(context),
+        onTap: detailRouteId == null
+            ? null
+            : () => _openDetail(context, detailRouteId),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -407,40 +422,51 @@ class _HeroCard extends StatelessWidget {
             Positioned(top: 8, right: 8, child: _HeroTierBadge(tier: tier)),
             Positioned(
               left: 10,
-              right: 56,
+              right: 10,
               bottom: 9,
-              child: Text(
-                hero.name.isEmpty ? 'Hero #${hero.id}' : hero.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
-                ),
-              ),
-            ),
-            Positioned(
-              right: 9,
-              bottom: 10,
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Icon(
-                    Icons.star_rounded,
-                    color: AppTheme.gold,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    ratingLabel,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w900,
-                      shadows: const [
-                        Shadow(color: Colors.black, blurRadius: 6),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (roleLabels.isNotEmpty)
+                          Text(
+                            roleLabels,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w700,
+                                  shadows: const [
+                                    Shadow(color: Colors.black, blurRadius: 6),
+                                  ],
+                                ),
+                          ),
+                        Text(
+                          hero.name.isEmpty ? 'Hero #${hero.id}' : hero.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                shadows: const [
+                                  Shadow(color: Colors.black, blurRadius: 6),
+                                ],
+                              ),
+                        ),
                       ],
                     ),
+                  ),
+                  const SizedBox(width: 6),
+                  AppRatingStars(
+                    rating: hero.rating,
+                    ratingCount: hero.ratingCount,
+                    size: 12,
                   ),
                 ],
               ),
@@ -451,9 +477,9 @@ class _HeroCard extends StatelessWidget {
     );
   }
 
-  void _openDetail(BuildContext context) {
-    final detailRouteId = hero.detailRouteId;
-    if (detailRouteId == null) {
+  void _openDetail(BuildContext context, String detailRouteId) {
+    if (onSelected != null) {
+      onSelected!(detailRouteId);
       return;
     }
     final router = GoRouter.of(context);
@@ -527,16 +553,17 @@ class _HeroTierBadge extends StatelessWidget {
     };
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: color.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
+        boxShadow: const [BoxShadow(color: Colors.black, blurRadius: 6)],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
         child: Text(
           tier,
           style: TextStyle(
-            color: color,
+            color: Colors.white,
             fontSize: 10,
             fontWeight: FontWeight.w900,
           ),

@@ -45,7 +45,7 @@ class ContentItemSummary {
       landscapeImageUrl: _readString(
         map['image_url'] ?? map['landscapeUrl'] ?? map['landscape_image_url'],
       ),
-      subtitle: _readString(map['series_name'] ?? map['region_name']),
+      subtitle: _readString(map['series_name']),
       rating: _readDouble(map['rating']),
       ratingCount: _readInt(map['rating_count'] ?? map['ratingCount']),
       viewCount: 0,

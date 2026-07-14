@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_rating_stars.dart';
 import '../../settings/presentation/settings_controller.dart';
 import 'hero_gallery_screen.dart';
 
@@ -57,29 +59,53 @@ class HeroDetailScreen extends ConsumerWidget {
     required this.heroId,
     this.focusHistory = false,
     this.initialFocus,
+    this.onBack,
     super.key,
   });
 
   final String heroId;
   final bool focusHistory;
   final HeroDetailFocus? initialFocus;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailValue = ref.watch(selectedRegionHeroDetailProvider(heroId));
 
-    return Scaffold(
-      appBar: AppBar(title: Text('Hero #$heroId')),
-      body: AppAsyncView<Map<String, dynamic>>(
-        value: detailValue,
-        retry: () => ref.invalidate(selectedRegionHeroDetailProvider(heroId)),
-        data: (detail) => _HeroDetailContent(
-          detail: detail,
-          routeHeroId: heroId,
-          focus: focusHistory
-              ? HeroDetailFocus.history
-              : initialFocus ?? HeroDetailFocus.skills,
-        ),
+    final body = AppAsyncView<Map<String, dynamic>>(
+      value: detailValue,
+      retry: () => ref.invalidate(selectedRegionHeroDetailProvider(heroId)),
+      data: (detail) => _HeroDetailContent(
+        detail: detail,
+        routeHeroId: heroId,
+        focus: focusHistory
+            ? HeroDetailFocus.history
+            : initialFocus ?? HeroDetailFocus.skills,
+      ),
+    );
+    if (onBack == null) return body;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) onBack!();
+      },
+      child: Stack(
+        children: [
+          body,
+          Positioned(
+            top: 10,
+            left: 12,
+            child: Material(
+              color: AppTheme.bg.withValues(alpha: 0.86),
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: 'Back to heroes',
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -125,6 +151,12 @@ class _HeroDetailContent extends StatelessWidget {
       'image',
     ]);
     final lore = _readString(hero, const ['lore', 'story', 'background']);
+    final heroVideoUrl = _readString(hero, const [
+      'baseTechVideo',
+      'base_tech_video',
+      'videoUrl',
+      'video_url',
+    ]);
     final roles = _roleLabel(hero);
     final rating = _readDouble(hero, const ['rating', 'avg_rating']);
     final ratingCount = _readInt(hero, const ['rating_count', 'ratings']);
@@ -145,6 +177,7 @@ class _HeroDetailContent extends StatelessWidget {
           roles: roles,
           rating: rating,
           ratingCount: ratingCount,
+          videoUrl: heroVideoUrl,
         ),
         const SizedBox(height: 14),
         if (focus == HeroDetailFocus.history) ...[
@@ -303,6 +336,7 @@ class _HeroHeader extends StatelessWidget {
     required this.roles,
     required this.rating,
     required this.ratingCount,
+    required this.videoUrl,
   });
 
   final String name;
@@ -311,14 +345,11 @@ class _HeroHeader extends StatelessWidget {
   final String roles;
   final double? rating;
   final int ratingCount;
+  final String videoUrl;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final ratingLabel = rating == null
-        ? '--'
-        : '${rating!.toStringAsFixed(1)} / 5';
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -341,14 +372,25 @@ class _HeroHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w800,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.headlineSmall?.copyWith(
+                          color: AppTheme.text,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (videoUrl.isNotEmpty)
+                      _VideoPlayButton(
+                        url: videoUrl,
+                        tooltip: 'Play hero introduction',
+                      ),
+                  ],
                 ),
                 if (title.isNotEmpty) ...[
                   const SizedBox(height: 4),
@@ -366,17 +408,10 @@ class _HeroHeader extends StatelessWidget {
                   _InfoPill(icon: Icons.category_outlined, label: roles),
                 ],
                 const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _InfoPill(icon: Icons.star_outline, label: ratingLabel),
-                    if (ratingCount > 0)
-                      _InfoPill(
-                        icon: Icons.people_outline,
-                        label: '$ratingCount ratings',
-                      ),
-                  ],
+                AppRatingStars(
+                  rating: rating ?? 0,
+                  ratingCount: ratingCount,
+                  size: 18,
                 ),
               ],
             ),
@@ -553,6 +588,11 @@ class _SkillTile extends StatelessWidget {
     final icon = _readString(skill, const ['iconUrl', 'icon_url', 'icon']);
     final order = _readInt(skill, const ['order', 'skill_index']);
     final cooldown = _readCooldown(skill);
+    final videoUrl = _readString(skill, const [
+      'videoUrl',
+      'video_url',
+      'default_video_url',
+    ]);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -585,6 +625,11 @@ class _SkillTile extends StatelessWidget {
                     ),
                     if (order >= 0) _TinyLabel(label: _skillTypeLabel(order)),
                     if (cooldown.isNotEmpty) _TinyLabel(label: cooldown),
+                    if (videoUrl.isNotEmpty)
+                      _VideoPlayButton(
+                        url: videoUrl,
+                        tooltip: 'Play ${name.isEmpty ? 'skill' : name}',
+                      ),
                   ],
                 ),
                 if (description.isNotEmpty) ...[
@@ -635,7 +680,7 @@ class _HistoryTile extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              if (type.isNotEmpty) _TinyLabel(label: type),
+              if (type.isNotEmpty) _HistoryTypeLabel(type: type),
               if (date.isNotEmpty) _TinyLabel(label: date),
             ],
           ),
@@ -676,6 +721,66 @@ class _TinyLabel extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _HistoryTypeLabel extends StatelessWidget {
+  const _HistoryTypeLabel({required this.type});
+
+  final String type;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = type.trim().toLowerCase();
+    final color = switch (normalized) {
+      'buff' => const Color(0xFF22C55E),
+      'nerf' => const Color(0xFFEF4444),
+      'adjust' || 'adjustment' => AppTheme.cyan,
+      _ => AppTheme.muted,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
+      ),
+      child: Text(
+        type,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoPlayButton extends StatelessWidget {
+  const _VideoPlayButton({required this.url, required this.tooltip});
+
+  final String url;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton.filledTonal(
+      tooltip: tooltip,
+      onPressed: () => _openVideo(context, url),
+      icon: const Icon(Icons.play_circle_fill_rounded),
+      color: AppTheme.cyan,
+    );
+  }
+
+  Future<void> _openVideo(BuildContext context, String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl.trim());
+    if (uri == null || !uri.hasScheme) return;
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open this video')),
+      );
+    }
   }
 }
 

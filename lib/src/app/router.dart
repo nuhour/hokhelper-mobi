@@ -825,7 +825,10 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/',
-                builder: (context, state) => const HomeScreen(),
+                builder: (context, state) => HomeScreen(
+                  initialPortalTab: state.uri.queryParameters['tab'],
+                  initialHeroId: state.uri.queryParameters['hero_id'],
+                ),
               ),
             ],
           ),

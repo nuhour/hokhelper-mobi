@@ -6,6 +6,8 @@ class HeroSummary {
     required this.avatar,
     required this.title,
     this.position,
+    this.mainJob = '',
+    this.minorJob = '',
     this.tier = '',
     this.rating = 0,
     this.ratingCount = 0,
@@ -17,6 +19,8 @@ class HeroSummary {
   final String avatar;
   final String title;
   final int? position;
+  final String mainJob;
+  final String minorJob;
   final String tier;
   final double rating;
   final int ratingCount;
@@ -36,6 +40,8 @@ class HeroSummary {
       ]),
       title: _readString(json, const ['title', 'heroTitle']),
       position: _readInt(json, const ['position', 'mainJob', 'main_job']),
+      mainJob: _readString(json, const ['mainJobName', 'main_job_name']),
+      minorJob: _readString(json, const ['minorJobName', 'minor_job_name']),
       tier: _readString(json, const ['tier', 'hot']),
       rating: _readDouble(json, const ['rating', 'avg_rating']),
       ratingCount: _readInt(json, const ['rating_count', 'ratingCount']) ?? 0,

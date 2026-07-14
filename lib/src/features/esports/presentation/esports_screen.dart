@@ -116,70 +116,69 @@ class _EsportsScreenState extends ConsumerState<EsportsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const AppSectionHeader(title: 'Esports'),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Live matches, tournament form, teams, and pro players.',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                    ),
-                    const SizedBox(height: 14),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppTheme.panel,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        dividerColor: Colors.transparent,
-                        labelColor: AppTheme.gold,
-                        unselectedLabelColor: AppTheme.muted,
-                        onTap: widget.syncRouteOnTabTap
-                            ? (index) => _syncRouteWithTab(context, index)
-                            : null,
-                        tabs: [
-                          Tab(text: 'Matches'),
-                          Tab(text: 'Stats'),
-                          Tab(text: 'Teams'),
-                          Tab(text: 'Players'),
-                        ],
-                      ),
-                    ),
-                  ],
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AppSectionHeader(title: 'Esports'),
+                const SizedBox(height: 6),
+                Text(
+                  'Live matches, tournament form, teams, and pro players.',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
                 ),
-              ),
+                const SizedBox(height: 14),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppTheme.panel,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    labelColor: AppTheme.gold,
+                    unselectedLabelColor: AppTheme.muted,
+                    onTap: widget.syncRouteOnTabTap
+                        ? (index) => _syncRouteWithTab(context, index)
+                        : null,
+                    tabs: [
+                      Tab(text: 'Matches'),
+                      Tab(text: 'Stats'),
+                      Tab(text: 'Teams'),
+                      Tab(text: 'Players'),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ];
-        },
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _MatchesTab(value: ref.watch(esportsMatchesProvider)),
-            const _StatsTab(),
-            _TeamsTab(
-              value: ref.watch(esportsTeamsProvider),
-              focusedTeamId: widget.initialTeamId,
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _MatchesTab(value: ref.watch(esportsMatchesProvider)),
+                const _StatsTab(),
+                _TeamsTab(
+                  value: ref.watch(esportsTeamsProvider),
+                  focusedTeamId: widget.initialTeamId,
+                ),
+                _PlayersTab(
+                  value: ref.watch(esportsPlayersProvider),
+                  focusedPlayerId: widget.initialPlayerId,
+                ),
+              ],
             ),
-            _PlayersTab(
-              value: ref.watch(esportsPlayersProvider),
-              focusedPlayerId: widget.initialPlayerId,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

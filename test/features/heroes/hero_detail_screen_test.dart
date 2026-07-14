@@ -20,6 +20,7 @@ void main() {
                 'minorJobName': 'Fighter',
                 'rating': 4.6,
                 'rating_count': 12,
+                'baseTechVideo': 'https://media.example.com/lam.mp4',
                 'lore': 'Lam rides the waves between battlefields.',
               },
               'skills': [
@@ -28,6 +29,7 @@ void main() {
                   'description': 'Dash forward and damage enemies.',
                   'order': 1,
                   'cooldown': 8000,
+                  'videoUrl': 'https://media.example.com/wavebreaker.mp4',
                 },
               ],
               'history': [
@@ -52,7 +54,10 @@ void main() {
     expect(find.text('Lam'), findsWidgets);
     expect(find.text('Shark Rider'), findsOneWidget);
     expect(find.text('Assassin / Fighter'), findsOneWidget);
-    expect(find.text('4.6 / 5'), findsOneWidget);
+    expect(find.byIcon(Icons.star_rounded), findsWidgets);
+    expect(find.text('12'), findsOneWidget);
+    expect(find.byTooltip('Play hero introduction'), findsOneWidget);
+    expect(find.byTooltip('Play Wavebreaker'), findsOneWidget);
     expect(find.text('T1'), findsOneWidget);
     expect(find.text('52.1%'), findsOneWidget);
     expect(find.text('Skills'), findsOneWidget);

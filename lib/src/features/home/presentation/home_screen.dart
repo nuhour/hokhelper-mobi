@@ -11,6 +11,7 @@ import '../../../core/widgets/app_image.dart';
 import '../../content/presentation/skin_gallery_screen.dart';
 import '../../esports/presentation/esports_screen.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
+import '../../heroes/presentation/hero_detail_screen.dart';
 import '../../search/presentation/search_screen.dart';
 import '../data/home_repository.dart';
 
@@ -23,7 +24,10 @@ final homeStatsProvider = FutureProvider<HomeStats>((ref) {
 });
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({this.initialPortalTab, this.initialHeroId, super.key});
+
+  final String? initialPortalTab;
+  final String? initialHeroId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,7 +46,13 @@ class HomeScreen extends ConsumerWidget {
             loadingStyle: AppAsyncLoadingStyle.dashboard,
             data: (stats) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [_HomePortalFramework(result: stats.result)],
+              children: [
+                _HomePortalFramework(
+                  result: stats.result,
+                  initialPortalTab: initialPortalTab,
+                  initialHeroId: initialHeroId,
+                ),
+              ],
             ),
           ),
         ],
@@ -52,9 +62,15 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _HomePortalFramework extends StatefulWidget {
-  const _HomePortalFramework({required this.result});
+  const _HomePortalFramework({
+    required this.result,
+    this.initialPortalTab,
+    this.initialHeroId,
+  });
 
   final Map<String, dynamic> result;
+  final String? initialPortalTab;
+  final String? initialHeroId;
 
   @override
   State<_HomePortalFramework> createState() => _HomePortalFrameworkState();
@@ -63,11 +79,15 @@ class _HomePortalFramework extends StatefulWidget {
 class _HomePortalFrameworkState extends State<_HomePortalFramework> {
   late final PageController _pageController;
   int _selectedPage = 3;
-  var _showPortalTopBar = true;
+  String? _openedHeroId;
 
   @override
   void initState() {
     super.initState();
+    _selectedPage = _portalPageIndex(widget.initialPortalTab);
+    _openedHeroId = widget.initialHeroId?.trim().isEmpty ?? true
+        ? null
+        : widget.initialHeroId!.trim();
     _pageController = PageController(initialPage: _selectedPage);
   }
 
@@ -81,6 +101,9 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
     if (_selectedPage != index) {
       setState(() {
         _selectedPage = index;
+        if (index != 2) {
+          _openedHeroId = null;
+        }
       });
     }
     _pageController.animateToPage(
@@ -90,11 +113,18 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
     );
   }
 
-  void _setPortalTopBarVisible(bool visible) {
-    if (_showPortalTopBar == visible) {
-      return;
+  @override
+  void didUpdateWidget(covariant _HomePortalFramework oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextPage = _portalPageIndex(widget.initialPortalTab);
+    final nextHeroId = widget.initialHeroId?.trim();
+    if (nextPage != _selectedPage || nextHeroId != _openedHeroId) {
+      setState(() {
+        _selectedPage = nextPage;
+        _openedHeroId = nextHeroId?.isEmpty ?? true ? null : nextHeroId;
+      });
+      _pageController.jumpToPage(nextPage);
     }
-    setState(() => _showPortalTopBar = visible);
   }
 
   @override
@@ -107,17 +137,9 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        IgnorePointer(
-          ignoring: !_showPortalTopBar,
-          child: AnimatedOpacity(
-            opacity: _showPortalTopBar ? 1 : 0,
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            child: _HomePortalTopBar(
-              selectedIndex: _selectedPage,
-              onSelected: _selectPage,
-            ),
-          ),
+        _HomePortalTopBar(
+          selectedIndex: _selectedPage,
+          onSelected: _selectPage,
         ),
         const SizedBox(height: 18),
         SizedBox(
@@ -129,25 +151,43 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
             onPageChanged: (index) {
               setState(() {
                 _selectedPage = index;
-                if (index != 3) {
-                  _showPortalTopBar = true;
-                }
               });
             },
             children: [
               const EsportsScreen(),
               const SkinGalleryScreen(),
-              const HeroGalleryScreen(),
-              _HomeLandingTab(
-                result: widget.result,
-                onPortalTopBarVisibilityChanged: _setPortalTopBarVisible,
-              ),
+              _openedHeroId == null
+                  ? HeroGalleryScreen(onHeroSelected: _openHeroDetail)
+                  : HeroDetailScreen(
+                      heroId: _openedHeroId!,
+                      onBack: _closeHeroDetail,
+                    ),
+              _HomeLandingTab(result: widget.result),
             ],
           ),
         ),
       ],
     );
   }
+
+  void _openHeroDetail(String heroId) {
+    setState(() => _openedHeroId = heroId);
+    context.go('/?tab=heroes&hero_id=$heroId');
+  }
+
+  void _closeHeroDetail() {
+    setState(() => _openedHeroId = null);
+    context.go('/?tab=heroes');
+  }
+}
+
+int _portalPageIndex(String? tab) {
+  return switch (tab?.trim().toLowerCase()) {
+    'esports' => 0,
+    'skins' => 1,
+    'heroes' => 2,
+    _ => 3,
+  };
 }
 
 class _HomePortalTopBar extends StatelessWidget {
@@ -209,13 +249,9 @@ class _HomePortalTopBar extends StatelessWidget {
 }
 
 class _HomeLandingTab extends StatefulWidget {
-  const _HomeLandingTab({
-    required this.result,
-    required this.onPortalTopBarVisibilityChanged,
-  });
+  const _HomeLandingTab({required this.result});
 
   final Map<String, dynamic> result;
-  final ValueChanged<bool> onPortalTopBarVisibilityChanged;
 
   @override
   State<_HomeLandingTab> createState() => _HomeLandingTabState();
@@ -223,17 +259,6 @@ class _HomeLandingTab extends StatefulWidget {
 
 class _HomeLandingTabState extends State<_HomeLandingTab> {
   var _showWorld = false;
-
-  bool _onScrollNotification(UserScrollNotification notification) {
-    final offset = notification.metrics.pixels;
-    if (notification.direction == ScrollDirection.forward || offset <= 16) {
-      widget.onPortalTopBarVisibilityChanged(true);
-    } else if (notification.direction == ScrollDirection.reverse &&
-        offset > 16) {
-      widget.onPortalTopBarVisibilityChanged(false);
-    }
-    return false;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -245,62 +270,59 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
     final bottomNavigationGap = MediaQuery.viewPaddingOf(context).bottom + 104;
     return Stack(
       children: [
-        NotificationListener<UserScrollNotification>(
-          onNotification: _onScrollNotification,
-          child: ListView(
-            key: const ValueKey('home-landing-scroll-view'),
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(bottom: bottomNavigationGap),
-            children: [
-              Stack(
-                children: [
-                  Positioned.fill(
-                    child: backgroundUrl.isNotEmpty
-                        ? AppImage(
-                            url: backgroundUrl,
-                            fit: BoxFit.cover,
-                            borderRadius: 0,
-                            semanticLabel: 'Honor of Kings season background',
-                          )
-                        : const ColoredBox(color: AppTheme.bg),
-                  ),
-                  const Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0x66020617),
-                            Color(0xCC020617),
-                            Color(0xF7020617),
-                          ],
-                          stops: [0, 0.36, 1],
-                        ),
+        ListView(
+          key: const ValueKey('home-landing-scroll-view'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(bottom: bottomNavigationGap),
+          children: [
+            Stack(
+              children: [
+                Positioned.fill(
+                  child: backgroundUrl.isNotEmpty
+                      ? AppImage(
+                          url: backgroundUrl,
+                          fit: BoxFit.cover,
+                          borderRadius: 0,
+                          semanticLabel: 'Honor of Kings season background',
+                        )
+                      : const ColoredBox(color: AppTheme.bg),
+                ),
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x66020617),
+                          Color(0xCC020617),
+                          Color(0xF7020617),
+                        ],
+                        stops: [0, 0.36, 1],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
-                    child: Column(
-                      children: [
-                        _HomeHeroBanner(
-                          seasonName: seasonName,
-                          showWorld: _showWorld,
-                          onWorldChanged: (value) {
-                            setState(() => _showWorld = value);
-                          },
-                        ),
-                        const SizedBox(height: 18),
-                        _HomePortalPreviews(result: widget.result),
-                      ],
-                    ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+                  child: Column(
+                    children: [
+                      _HomeHeroBanner(
+                        seasonName: seasonName,
+                        showWorld: _showWorld,
+                        onWorldChanged: (value) {
+                          setState(() => _showWorld = value);
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      _HomePortalPreviews(result: widget.result),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 28),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+          ],
         ),
       ],
     );
