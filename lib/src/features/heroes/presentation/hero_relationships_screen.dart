@@ -2,13 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/hero_relationship.dart';
 import '../domain/hero_summary.dart';
@@ -51,9 +49,8 @@ class HeroRelationshipsScreen extends ConsumerStatefulWidget {
 
 class _HeroRelationshipsScreenState
     extends ConsumerState<HeroRelationshipsScreen> {
-  String _query = '';
   String _focusedHero = '';
-  _RelationshipViewMode _viewMode = _RelationshipViewMode.focus;
+  _RelationshipViewMode _viewMode = _RelationshipViewMode.global;
   bool _didResolveInitialFocus = false;
 
   @override
@@ -80,152 +77,53 @@ class _HeroRelationshipsScreenState
         data: (rawRelationships) {
           final relationships = _withHeroNames(rawRelationships, graphHeroes);
           _resolveInitialFocus(relationships);
-          final heroNames = _collectHeroNames(relationships);
-          final visibleRelationships = _filterRelationships(relationships);
+          if (relationships.isEmpty) {
+            return const AppEmptyState(
+              icon: Icons.hub_outlined,
+              title: 'No relationships found',
+              message: 'Pull to refresh and load the hero network again.',
+            );
+          }
 
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(heroRelationshipsProvider.future),
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const AppSectionHeader(title: 'Hero Relationships'),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Explore lore links, rivalries, and ally networks.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.muted),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          onChanged: (value) {
-                            setState(() {
-                              _query = value;
-                              _focusedHero = '';
-                            });
-                          },
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.search),
-                            hintText: 'Search heroes or relationship titles',
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _RelationshipSummary(
-                          total: relationships.length,
-                          visible: visibleRelationships.length,
-                          focusedHero: _focusedHero,
-                        ),
-                        if (heroNames.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          _HeroFocusRail(
-                            heroNames: heroNames,
-                            focusedHero: _focusedHero,
-                            onSelected: (name) {
-                              setState(() {
-                                _focusedHero = _focusedHero == name ? '' : name;
-                                _query = '';
-                              });
-                            },
-                          ),
-                        ],
-                      ],
-                    ),
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: _HeroRelationshipNetwork(
+                  relationships: relationships,
+                  heroes: graphHeroes,
+                  focusedHero: _focusedHero,
+                  viewMode: _viewMode,
+                  expand: true,
+                  onHeroSelected: (heroName) {
+                    setState(() {
+                      _focusedHero = heroName;
+                      _viewMode = _RelationshipViewMode.focus;
+                    });
+                  },
+                ),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _NetworkModeControls(
+                    viewMode: _viewMode,
+                    onViewModeChanged: (mode) {
+                      setState(() {
+                        if (mode == _RelationshipViewMode.focus &&
+                            _focusedHero.isEmpty) {
+                          _focusedHero = _randomFocusHero(relationships);
+                        }
+                        _viewMode = mode;
+                      });
+                    },
                   ),
                 ),
-                if (relationships.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: AppEmptyState(
-                      icon: Icons.hub_outlined,
-                      title: 'No relationships found',
-                      message:
-                          'Pull to refresh and load the hero network again.',
-                    ),
-                  )
-                else if (visibleRelationships.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: AppEmptyState(
-                      icon: Icons.search_off_outlined,
-                      title: 'No matching links',
-                      message: 'Try a different hero name or clear the focus.',
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        children: [
-                          _RelationshipChainBoard(
-                            relationships: _query.trim().isEmpty
-                                ? relationships
-                                : visibleRelationships,
-                            heroes: graphHeroes,
-                            focusedHero: _focusedHero,
-                            viewMode: _viewMode,
-                            onViewModeChanged: (mode) {
-                              setState(() => _viewMode = mode);
-                            },
-                            onHeroSelected: (heroName) {
-                              setState(() {
-                                _focusedHero = heroName;
-                                _query = '';
-                                _viewMode = _RelationshipViewMode.focus;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          ...visibleRelationships.map(
-                            (relationship) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _RelationshipCard(
-                                relationship: relationship,
-                                focusedHero: _focusedHero,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
     );
-  }
-
-  List<HeroRelationship> _filterRelationships(
-    List<HeroRelationship> relationships,
-  ) {
-    final query = _query.trim().toLowerCase();
-
-    return relationships
-        .where((relationship) {
-          if (_focusedHero.isNotEmpty && !relationship.involves(_focusedHero)) {
-            return false;
-          }
-
-          if (query.isEmpty) {
-            return true;
-          }
-
-          final haystack = [
-            relationship.sourceHeroName,
-            relationship.targetHeroName,
-            relationship.title,
-            relationship.description,
-          ].join(' ').toLowerCase();
-          return haystack.contains(query);
-        })
-        .toList(growable: false);
   }
 
   List<HeroRelationship> _withHeroNames(
@@ -298,197 +196,65 @@ class _HeroRelationshipsScreenState
     _didResolveInitialFocus = true;
     if (focusedHero.isNotEmpty) {
       _focusedHero = focusedHero;
-      _query = '';
     }
   }
 
-  List<String> _collectHeroNames(List<HeroRelationship> relationships) {
-    final names = <String>{};
-    for (final relationship in relationships) {
-      if (relationship.sourceHeroName.isNotEmpty) {
-        names.add(relationship.sourceHeroName);
-      }
-      if (relationship.targetHeroName.isNotEmpty) {
-        names.add(relationship.targetHeroName);
-      }
+  String _randomFocusHero(List<HeroRelationship> relationships) {
+    final heroes = <String>{
+      for (final relationship in relationships) ...[
+        if (relationship.sourceHeroName.isNotEmpty)
+          relationship.sourceHeroName
+        else
+          relationship.sourceHeroId,
+        if (relationship.targetHeroName.isNotEmpty)
+          relationship.targetHeroName
+        else
+          relationship.targetHeroId,
+      ],
+    }.where((hero) => hero.isNotEmpty).toList(growable: false);
+    if (heroes.isEmpty) {
+      return '';
     }
-
-    return names.toList()..sort();
+    return heroes[math.Random().nextInt(heroes.length)];
   }
 }
 
-class _RelationshipSummary extends StatelessWidget {
-  const _RelationshipSummary({
-    required this.total,
-    required this.visible,
-    required this.focusedHero,
-  });
-
-  final int total;
-  final int visible;
-  final String focusedHero;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$total links',
-            style: textTheme.titleMedium?.copyWith(
-              color: AppTheme.text,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            focusedHero.isEmpty
-                ? '$visible currently visible'
-                : 'Focused: $focusedHero',
-            style: textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroFocusRail extends StatelessWidget {
-  const _HeroFocusRail({
-    required this.heroNames,
-    required this.focusedHero,
-    required this.onSelected,
-  });
-
-  final List<String> heroNames;
-  final String focusedHero;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 42,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: heroNames.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final heroName = heroNames[index];
-          final selected = heroName == focusedHero;
-
-          return ChoiceChip(
-            label: Text(heroName),
-            selected: selected,
-            onSelected: (_) => onSelected(heroName),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _RelationshipChainBoard extends StatelessWidget {
-  const _RelationshipChainBoard({
-    required this.relationships,
-    required this.heroes,
-    required this.focusedHero,
+class _NetworkModeControls extends StatelessWidget {
+  const _NetworkModeControls({
     required this.viewMode,
     required this.onViewModeChanged,
-    required this.onHeroSelected,
   });
 
-  final List<HeroRelationship> relationships;
-  final List<HeroSummary> heroes;
-  final String focusedHero;
   final _RelationshipViewMode viewMode;
   final ValueChanged<_RelationshipViewMode> onViewModeChanged;
-  final ValueChanged<String> onHeroSelected;
 
   @override
   Widget build(BuildContext context) {
-    final nodeCount = <String>{
-      for (final relationship in relationships) ...[
-        _relationshipKey(
-          relationship.sourceHeroId,
-          relationship.sourceHeroName,
-        ),
-        _relationshipKey(
-          relationship.targetHeroId,
-          relationship.targetHeroName,
-        ),
-      ],
-    }.length;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.cyan.withValues(alpha: 0.22)),
+        color: Colors.black.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.account_tree_outlined, color: AppTheme.cyan),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Hero Network',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              Text(
-                '$nodeCount heroes',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppTheme.muted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<_RelationshipViewMode>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(
-                value: _RelationshipViewMode.focus,
-                icon: Icon(Icons.center_focus_strong_rounded),
-                label: Text('Focus'),
-              ),
-              ButtonSegment(
-                value: _RelationshipViewMode.global,
-                icon: Icon(Icons.hub_outlined),
-                label: Text('Global'),
-              ),
-            ],
-            selected: {viewMode},
-            onSelectionChanged: (value) => onViewModeChanged(value.first),
-          ),
-          const SizedBox(height: 10),
-          _HeroRelationshipNetwork(
-            relationships: relationships,
-            heroes: heroes,
-            focusedHero: focusedHero,
-            viewMode: viewMode,
-            onHeroSelected: onHeroSelected,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(5),
+        child: SegmentedButton<_RelationshipViewMode>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(
+              value: _RelationshipViewMode.focus,
+              icon: Icon(Icons.center_focus_strong_rounded),
+              label: Text('Focus'),
+            ),
+            ButtonSegment(
+              value: _RelationshipViewMode.global,
+              icon: Icon(Icons.hub_outlined),
+              label: Text('Global'),
+            ),
+          ],
+          selected: {viewMode},
+          onSelectionChanged: (value) => onViewModeChanged(value.first),
+        ),
       ),
     );
   }
@@ -501,6 +267,7 @@ class _HeroRelationshipNetwork extends StatefulWidget {
     required this.focusedHero,
     required this.viewMode,
     required this.onHeroSelected,
+    this.expand = false,
   });
 
   final List<HeroRelationship> relationships;
@@ -508,6 +275,7 @@ class _HeroRelationshipNetwork extends StatefulWidget {
   final String focusedHero;
   final _RelationshipViewMode viewMode;
   final ValueChanged<String> onHeroSelected;
+  final bool expand;
 
   @override
   State<_HeroRelationshipNetwork> createState() =>
@@ -571,50 +339,57 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork> {
       viewMode: widget.viewMode,
     );
     _canvasSize = layout.canvasSize;
-    final height = widget.viewMode == _RelationshipViewMode.global
-        ? 340.0
-        : 360.0;
-
-    return SizedBox(
-      key: _viewerKey,
-      height: height,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(color: Color(0xFF030712)),
-          child: InteractiveViewer(
-            transformationController: _controller,
-            constrained: false,
-            minScale: 0.25,
-            maxScale: 3.0,
-            boundaryMargin: const EdgeInsets.all(160),
-            child: SizedBox(
-              width: layout.canvasSize,
-              height: layout.canvasSize,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _RelationshipNetworkPainter(layout: layout),
-                    ),
-                  ),
-                  for (final node in layout.nodes)
-                    Positioned(
-                      left: node.position.dx - 38,
-                      top: node.position.dy - node.size / 2,
-                      width: 76,
-                      child: _RelationshipAvatarNode(
-                        node: node,
-                        onTap: () => widget.onHeroSelected(node.name),
+    final content = KeyedSubtree(
+      key: ValueKey('relationship-network-${widget.viewMode.name}'),
+      child: SizedBox(
+        key: _viewerKey,
+        child: ClipRRect(
+          borderRadius: widget.expand
+              ? BorderRadius.zero
+              : BorderRadius.circular(12),
+          child: DecoratedBox(
+            decoration: const BoxDecoration(color: Color(0xFF030712)),
+            child: InteractiveViewer(
+              transformationController: _controller,
+              constrained: false,
+              minScale: 0.25,
+              maxScale: 3.0,
+              boundaryMargin: const EdgeInsets.all(160),
+              child: SizedBox(
+                width: layout.canvasSize,
+                height: layout.canvasSize,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _RelationshipNetworkPainter(layout: layout),
                       ),
                     ),
-                ],
+                    for (final node in layout.nodes)
+                      Positioned(
+                        left: node.position.dx - 38,
+                        top: node.position.dy - node.size / 2,
+                        width: 76,
+                        child: _RelationshipAvatarNode(
+                          node: node,
+                          onTap: () => widget.onHeroSelected(node.name),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+    if (widget.expand) {
+      return SizedBox.expand(child: content);
+    }
+    return SizedBox(
+      height: widget.viewMode == _RelationshipViewMode.global ? 340 : 360,
+      child: content,
     );
   }
 }
@@ -984,153 +759,5 @@ class _RelationshipNetworkPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RelationshipNetworkPainter oldDelegate) {
     return oldDelegate.layout != layout;
-  }
-}
-
-class _RelationshipCard extends StatelessWidget {
-  const _RelationshipCard({
-    required this.relationship,
-    required this.focusedHero,
-  });
-
-  final HeroRelationship relationship;
-  final String focusedHero;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final title = relationship.title.isEmpty
-        ? 'Relationship #${relationship.id}'
-        : relationship.title;
-    final counterpart = focusedHero.isEmpty
-        ? null
-        : relationship.otherHeroName(focusedHero);
-
-    return Material(
-      color: AppTheme.panel,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                _WeightBadge(weight: relationship.weight),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                _HeroNamePill(
-                  name: relationship.sourceHeroName,
-                  heroId: relationship.sourceHeroId,
-                ),
-                const Icon(Icons.sync_alt, color: AppTheme.muted, size: 18),
-                _HeroNamePill(
-                  name: relationship.targetHeroName,
-                  heroId: relationship.targetHeroId,
-                ),
-              ],
-            ),
-            if (counterpart != null && counterpart.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                'Connected with $counterpart',
-                style: textTheme.bodySmall?.copyWith(color: AppTheme.cyan),
-              ),
-            ],
-            if (relationship.description.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                relationship.description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroNamePill extends StatelessWidget {
-  const _HeroNamePill({required this.name, required this.heroId});
-
-  final String name;
-  final String heroId;
-
-  @override
-  Widget build(BuildContext context) {
-    final trimmedHeroId = heroId.trim();
-    final pill = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.cyan.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        name.isEmpty ? 'Unknown hero' : name,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppTheme.cyan,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-
-    if (trimmedHeroId.isEmpty) {
-      return pill;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: () => context.go('/heroes/$trimmedHeroId'),
-        child: pill,
-      ),
-    );
-  }
-}
-
-class _WeightBadge extends StatelessWidget {
-  const _WeightBadge({required this.weight});
-
-  final int weight;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppTheme.gold.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        weight <= 0 ? 'Link' : '$weight',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: AppTheme.gold,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
   }
 }

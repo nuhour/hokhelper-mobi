@@ -71,54 +71,11 @@ void main() {
     await tester.tap(find.byTooltip('Hero Relationships'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Hero Relationships'), findsOneWidget);
-    expect(find.text('Starlight Pact'), findsOneWidget);
+    expect(find.text('Global'), findsOneWidget);
+    expect(find.text('Starlight Pact'), findsNothing);
   });
 
-  testWidgets('relationship hero name pills open hero detail routes', (
-    tester,
-  ) async {
-    final router = _buildRouter();
-    router.go('/relationships');
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          heroRelationshipsProvider.overrideWith((ref) async {
-            return const [
-              HeroRelationship(
-                id: '1',
-                sourceHeroId: '101',
-                sourceHeroName: 'Lam',
-                targetHeroId: '202',
-                targetHeroName: 'Angela',
-                title: 'Starlight Pact',
-                weight: 86,
-                description: 'They share a story arc.',
-              ),
-            ];
-          }),
-          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
-            return {
-              'hero': {'id': int.tryParse(heroId) ?? 202, 'name': 'Angela'},
-            };
-          }),
-        ],
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -380));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Angela').last);
-    await tester.pumpAndSettle();
-
-    expect(router.routeInformationProvider.value.uri.path, '/heroes/202');
-    expect(find.byType(HeroDetailScreen), findsOneWidget);
-  });
-
-  testWidgets('relationships route focuses hero from hokx hero query', (
+  testWidgets('relationships route keeps the global graph for a hero query', (
     tester,
   ) async {
     final router = _buildRouter();
@@ -158,12 +115,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/relationships');
-    expect(find.text('Focused: Lam'), findsOneWidget);
-    expect(find.text('Starlight Pact'), findsOneWidget);
+    expect(find.text('Global'), findsOneWidget);
+    expect(find.text('Starlight Pact'), findsNothing);
     expect(find.text('River Memory'), findsNothing);
   });
 
-  testWidgets('app router relationship query opens focused mobile graph', (
+  testWidgets('app router relationship query opens unrestricted mobile graph', (
     tester,
   ) async {
     final router = createAppRouter()..go('/relationships?hero_id=166');
@@ -202,8 +159,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/relationships');
-    expect(find.text('Focused: Lam'), findsOneWidget);
-    expect(find.text('Starlight Pact'), findsOneWidget);
+    expect(find.text('Global'), findsOneWidget);
+    expect(find.text('Starlight Pact'), findsNothing);
     expect(find.text('River Memory'), findsNothing);
   });
 }

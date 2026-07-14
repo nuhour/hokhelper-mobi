@@ -31,29 +31,20 @@ void main() {
         child: const MaterialApp(home: WorldMapScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     expect(find.text('World Map'), findsOneWidget);
     expect(find.text('Sunset Sea'), findsOneWidget);
-    expect(find.text('Yaria'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Great River Basin'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
     expect(find.text('Great River Basin'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Sunset Sea'),
-      -400,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Sunset Sea'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.text('Great River Basin'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Domain Records'), findsOneWidget);
     expect(find.text('Representative Heroes'), findsOneWidget);
-    expect(find.text('Forest Child'), findsOneWidget);
+    expect(find.text('Shark Blade'), findsOneWidget);
   });
 
   testWidgets('opens focused region from initial hero id', (tester) async {
@@ -75,7 +66,9 @@ void main() {
         child: const MaterialApp(home: WorldMapScreen(initialHeroId: '199')),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Domain Records'), findsOneWidget);
     expect(find.text('Great River Basin'), findsWidgets);

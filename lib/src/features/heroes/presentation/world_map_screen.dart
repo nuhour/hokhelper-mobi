@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,7 +9,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/hero_summary.dart';
 import '../domain/world_map_region.dart';
@@ -32,6 +34,24 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
   String? _openedInitialHeroId;
 
   @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(covariant WorldMapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialHeroId != widget.initialHeroId) {
@@ -52,40 +72,76 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
           final regions = attachWorldMapHeroes(heroes);
           _openInitialHeroRegion(regions);
 
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(worldMapHeroesProvider.future),
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const AppSectionHeader(title: 'World Map'),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Browse the Honor of Kings world by domain records and representative heroes.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.muted),
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: _WorldAtlas(
+                  regions: regions,
+                  immersive: true,
+                  onOpenDetail: (region) => _openRegionDetail(context, region),
+                ),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton.filledTonal(
+                        tooltip: 'Back',
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                      const SizedBox(width: 10),
+                      IgnorePointer(
+                        child: SizedBox(
+                          width: 184,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.14),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 9,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'World Map',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: AppTheme.text,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'World Region Atlas',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  sliver: SliverToBoxAdapter(
-                    child: _WorldAtlas(
-                      regions: regions,
-                      onOpenDetail: (region) =>
-                          _openRegionDetail(context, region),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
@@ -188,10 +244,15 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
 }
 
 class _WorldAtlas extends StatefulWidget {
-  const _WorldAtlas({required this.regions, required this.onOpenDetail});
+  const _WorldAtlas({
+    required this.regions,
+    required this.onOpenDetail,
+    this.immersive = false,
+  });
 
   final List<WorldMapRegion> regions;
   final ValueChanged<WorldMapRegion> onOpenDetail;
+  final bool immersive;
 
   @override
   State<_WorldAtlas> createState() => _WorldAtlasState();
@@ -240,10 +301,26 @@ class _WorldAtlasState extends State<_WorldAtlas>
     super.dispose();
   }
 
-  void _centerMap() {
-    final width = context.size?.width ?? MediaQuery.sizeOf(context).width;
+  bool _centerMap() {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) {
+      return false;
+    }
+    final viewport = renderBox.size;
+    final scale = widget.immersive
+        ? math.max(viewport.width / _mapWidth, viewport.height / _mapHeight)
+        : 1.0;
+    final scaledWidth = _mapWidth * scale;
+    final scaledHeight = _mapHeight * scale;
     _controller.value = Matrix4.identity()
-      ..translateByDouble(-(_mapWidth - width) / 2, -48.0, 0, 1);
+      ..translateByDouble(
+        (viewport.width - scaledWidth) / 2,
+        (viewport.height - scaledHeight) / 2,
+        0,
+        1,
+      )
+      ..scaleByDouble(scale, scale, 1, 1);
+    return true;
   }
 
   @override
@@ -251,7 +328,9 @@ class _WorldAtlasState extends State<_WorldAtlas>
     if (!_hasCenteredMap) {
       _hasCenteredMap = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _centerMap();
+        if (mounted && !_centerMap()) {
+          _hasCenteredMap = false;
+        }
       });
     }
     final height = (MediaQuery.sizeOf(context).height * 0.7).clamp(
@@ -259,16 +338,21 @@ class _WorldAtlasState extends State<_WorldAtlas>
       720.0,
     );
 
-    return DecoratedBox(
+    final atlas = DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.22)),
+        borderRadius: widget.immersive
+            ? BorderRadius.zero
+            : BorderRadius.circular(18),
+        border: widget.immersive
+            ? null
+            : Border.all(color: AppTheme.muted.withValues(alpha: 0.22)),
       ),
-      child: SizedBox(
-        height: height,
+      child: SizedBox.expand(
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(17),
+          borderRadius: widget.immersive
+              ? BorderRadius.zero
+              : BorderRadius.circular(17),
           child: Stack(
             children: [
               InteractiveViewer(
@@ -385,6 +469,7 @@ class _WorldAtlasState extends State<_WorldAtlas>
         ),
       ),
     );
+    return widget.immersive ? atlas : SizedBox(height: height, child: atlas);
   }
 }
 

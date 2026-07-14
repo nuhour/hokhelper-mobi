@@ -5,7 +5,9 @@ import 'package:hok_helper_mobile/src/features/heroes/domain/hero_relationship.d
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_relationships_screen.dart';
 
 void main() {
-  testWidgets('renders filters and focused hero relationships', (tester) async {
+  testWidgets('opens the unrestricted global relationship network', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -39,23 +41,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Hero Relationships'), findsOneWidget);
-    expect(find.text('2 links'), findsOneWidget);
-    expect(find.text('Lam'), findsWidgets);
-    expect(find.text('Starlight Pact'), findsOneWidget);
-    expect(find.text('Battle Memory'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField), 'Angela');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Starlight Pact'), findsOneWidget);
+    expect(find.text('Global'), findsOneWidget);
+    expect(find.text('Focus'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('2 links'), findsNothing);
+    expect(find.text('Starlight Pact'), findsNothing);
     expect(find.text('Battle Memory'), findsNothing);
 
-    await tester.tap(find.text('Lam').first);
+    await tester.tap(find.text('Focus'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Focused: Lam'), findsOneWidget);
-    expect(find.text('Starlight Pact'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('relationship-network-focus')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('hydrates focused hero from initial hero id', (tester) async {
@@ -94,8 +93,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Focused: Lam'), findsOneWidget);
-    expect(find.text('Starlight Pact'), findsOneWidget);
-    expect(find.text('River Memory'), findsNothing);
+    expect(find.text('Global'), findsOneWidget);
+    expect(find.text('Focus'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
   });
 }
