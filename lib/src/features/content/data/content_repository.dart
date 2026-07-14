@@ -65,11 +65,7 @@ class ContentRepository {
     String search = '',
     int? heroId,
   }) async {
-    final filterRules = _cgFilterRules(
-      regionId,
-      search: search,
-      heroId: heroId,
-    );
+    final filterRules = _cgFilterRules(search: search, heroId: heroId);
     final json = await apiClient.postJson(
       '/cg/list',
       body: {
@@ -198,14 +194,10 @@ class ContentRepository {
     ];
   }
 
-  List<Map<String, Object>> _cgFilterRules(
-    int regionId, {
-    String search = '',
-    int? heroId,
-  }) {
+  List<Map<String, Object>> _cgFilterRules({String search = '', int? heroId}) {
     final trimmedSearch = search.trim();
     return [
-      {'field': 'region_id', 'op': 'eq', 'value': regionId},
+      // CG is global media and its Django model has no region_id column.
       if (heroId != null) {'field': 'hero_id', 'op': 'eq', 'value': heroId},
       if (trimmedSearch.isNotEmpty) ...[
         {

@@ -128,7 +128,7 @@ void main() {
     expect(comments.single.content, 'Great cinematic.');
   });
 
-  test('loads cg gallery with web-compatible sort and order', () async {
+  test('loads global cg gallery with compatible sort and order', () async {
     final apiClient = _FakeApiClient();
     final repository = ContentRepository(apiClient: apiClient);
 
@@ -146,9 +146,7 @@ void main() {
       'pageSize': 12,
       'sort': 'created_at',
       'order': 'asc',
-      'filterRules': [
-        {'field': 'region_id', 'op': 'eq', 'value': 2},
-      ],
+      'filterRules': [],
     });
   });
 
@@ -165,7 +163,6 @@ void main() {
       'sort': 'updated_at',
       'order': 'desc',
       'filterRules': [
-        {'field': 'region_id', 'op': 'eq', 'value': 2},
         {'field': 'hero_id', 'op': 'eq', 'value': 199},
         {'field': 'title1_key', 'op': 'contains', 'value': 'lam', 'ig': true},
         {'field': 'hero_name', 'op': 'contains', 'value': 'lam', 'ig': true},
