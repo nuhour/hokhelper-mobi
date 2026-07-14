@@ -41,7 +41,7 @@ Future<void> _scrollHomeUntilVisible(
 
 Finder _portalMenuScrollable() {
   return find.descendant(
-    of: find.byType(BottomSheet),
+    of: find.byKey(const ValueKey('home-portal-menu-drawer')),
     matching: find.byWidgetPredicate(
       (widget) =>
           widget is Scrollable && widget.axisDirection == AxisDirection.down,
@@ -247,7 +247,11 @@ void main() {
     await tester.tap(find.byIcon(Icons.menu_rounded));
     await tester.pumpAndSettle();
 
-    expect(find.text('站点菜单'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('home-portal-menu-drawer')),
+      findsOneWidget,
+    );
+    expect(find.text('站点菜单'), findsNothing);
     expect(find.text('首页'), findsWidgets);
     expect(find.text('英雄'), findsWidgets);
     expect(find.text('图鉴'), findsWidgets);
@@ -284,6 +288,10 @@ void main() {
     expect(find.text('关于站点'), findsNothing);
     expect(find.text('关系图谱'), findsNothing);
     expect(find.text('王者大陆'), findsNothing);
+
+    await tester.tap(find.byTooltip('Close menu'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home-portal-menu-drawer')), findsNothing);
   });
 
   testWidgets('home screen renders hokx portal preview sections', (

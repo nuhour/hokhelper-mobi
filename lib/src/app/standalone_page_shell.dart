@@ -9,12 +9,14 @@ class StandalonePageShell extends StatelessWidget {
     required this.fallbackRoute,
     required this.child,
     this.title,
+    this.alwaysUseFallback = false,
     super.key,
   });
 
   final String fallbackRoute;
   final String? title;
   final Widget child;
+  final bool alwaysUseFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,7 @@ class StandalonePageShell extends StatelessWidget {
 
   void _goBack(BuildContext context) {
     final router = GoRouter.of(context);
-    if (router.canPop()) {
+    if (!alwaysUseFallback && router.canPop()) {
       router.pop();
       return;
     }

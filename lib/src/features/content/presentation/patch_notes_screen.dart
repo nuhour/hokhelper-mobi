@@ -2,16 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers/core_providers.dart';
 import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../heroes/data/heroes_repository.dart';
 import '../domain/patch_note_summary.dart';
 import 'content_screen.dart';
 
 const _patchNotesPageSize = 120;
+
+final _patchHeroesRepositoryProvider = Provider<HeroesRepository>((ref) {
+  return HeroesRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+final patchHeroDirectoryProvider = FutureProvider<Map<int, PatchHeroIdentity>>((
+  ref,
+) async {
+  final regionId = await ref.watch(patchNotesRegionProvider.future);
+  final heroes = await ref
+      .watch(_patchHeroesRepositoryProvider)
+      .loadHeroes(regionId, pageSize: 300);
+  final directory = <int, PatchHeroIdentity>{};
+  for (final hero in heroes) {
+    final identity = PatchHeroIdentity(name: hero.name, avatarUrl: hero.avatar);
+    _addHeroIdentity(directory, hero.id, identity);
+    _addHeroIdentity(directory, hero.heroId, identity);
+  }
+  return directory;
+});
 
 class PatchNotesScreen extends ConsumerStatefulWidget {
   const PatchNotesScreen({this.initialNoteId, super.key});
@@ -86,7 +108,17 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
               value: patchNotesValue,
               retry: () => ref.invalidate(patchNotesProvider),
               data: (items) {
-                final allItems = [...items, ..._extraNotes];
+                final rawItems = [...items, ..._extraNotes];
+                final needsHeroDirectory = rawItems.any(
+                  (note) => note.heroChanges.any(
+                    (change) => change.needsIdentityResolution,
+                  ),
+                );
+                final heroDirectory = needsHeroDirectory
+                    ? ref.watch(patchHeroDirectoryProvider).valueOrNull ??
+                          const <int, PatchHeroIdentity>{}
+                    : const <int, PatchHeroIdentity>{};
+                final allItems = _resolvePatchHeroes(rawItems, heroDirectory);
                 _openInitialNoteIfNeeded(allItems);
                 final filteredItems = _filterByHero(allItems, _heroFilter);
                 if (filteredItems.isEmpty) {
@@ -244,6 +276,29 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
   }
 }
 
+void _addHeroIdentity(
+  Map<int, PatchHeroIdentity> directory,
+  String id,
+  PatchHeroIdentity identity,
+) {
+  final parsedId = int.tryParse(id);
+  if (parsedId != null && parsedId > 0) {
+    directory.putIfAbsent(parsedId, () => identity);
+  }
+}
+
+List<PatchNoteSummary> _resolvePatchHeroes(
+  List<PatchNoteSummary> notes,
+  Map<int, PatchHeroIdentity> directory,
+) {
+  if (directory.isEmpty) {
+    return notes;
+  }
+  return notes
+      .map((note) => note.resolveHeroes(directory))
+      .toList(growable: false);
+}
+
 class _PatchTimelineCard extends StatelessWidget {
   const _PatchTimelineCard({required this.note, required this.onTap});
 
@@ -378,7 +433,15 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final note = _visibleNote;
+    final rawNote = _visibleNote;
+    final needsHeroDirectory = rawNote.heroChanges.any(
+      (change) => change.needsIdentityResolution,
+    );
+    final heroDirectory = needsHeroDirectory
+        ? ref.watch(patchHeroDirectoryProvider).valueOrNull ??
+              const <int, PatchHeroIdentity>{}
+        : const <int, PatchHeroIdentity>{};
+    final note = rawNote.resolveHeroes(heroDirectory);
     return SafeArea(
       top: false,
       child: DraggableScrollableSheet(

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
+import 'package:hok_helper_mobile/src/features/content/domain/patch_note_summary.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -131,5 +132,28 @@ void main() {
     expect(note.preview, 'Lam and Angela adjusted.');
     expect(note.heroChanges, hasLength(1));
     expect(note.heroChanges.single.heroName, 'Lam');
+  });
+
+  test('resolves history-only hero ids with gallery identities', () {
+    final note = PatchNoteSummary.fromJson(const {
+      'id': 42,
+      'title': 'Version 1.2.3 Patch Notes',
+      'hero_histories': [
+        {'hero_id': 2598, 'change_type': 'buff'},
+      ],
+    });
+
+    final resolved = note.resolveHeroes(const {
+      2598: PatchHeroIdentity(
+        name: 'Agudo',
+        avatarUrl: 'https://example.test/agudo.png',
+      ),
+    });
+
+    expect(resolved.heroChanges.single.heroName, 'Agudo');
+    expect(
+      resolved.heroChanges.single.avatarUrl,
+      'https://example.test/agudo.png',
+    );
   });
 }

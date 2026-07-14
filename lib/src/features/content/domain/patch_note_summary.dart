@@ -21,6 +21,35 @@ class PatchNoteSummary {
   final String content;
   final List<PatchHeroChange> heroChanges;
 
+  PatchNoteSummary resolveHeroes(Map<int, PatchHeroIdentity> heroes) {
+    if (heroChanges.isEmpty || heroes.isEmpty) {
+      return this;
+    }
+
+    final hasResolvableChange = heroChanges.any((change) {
+      return change.needsIdentityResolution &&
+          heroes.containsKey(change.heroId);
+    });
+    if (!hasResolvableChange) {
+      return this;
+    }
+    final resolvedChanges = heroChanges
+        .map((change) => change.resolveHero(heroes[change.heroId]))
+        .toList(growable: false);
+
+    return PatchNoteSummary(
+      id: id,
+      version: version,
+      title: title,
+      date: date,
+      preview: preview,
+      changeCount: changeCount,
+      tags: tags,
+      content: content,
+      heroChanges: resolvedChanges,
+    );
+  }
+
   factory PatchNoteSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     final title = _readString(map['title'], fallback: 'Patch Note');
@@ -58,20 +87,54 @@ class PatchHeroChange {
   final String avatarUrl;
   final String changeType;
 
+  bool get needsIdentityResolution =>
+      heroId > 0 && _isUnknownHeroName(heroName);
+
+  PatchHeroChange resolveHero(PatchHeroIdentity? hero) {
+    if (hero == null || !needsIdentityResolution) {
+      return this;
+    }
+
+    return PatchHeroChange(
+      heroId: heroId,
+      heroName: _isUnknownHeroName(heroName) && hero.name.isNotEmpty
+          ? hero.name
+          : heroName,
+      avatarUrl: avatarUrl.isEmpty ? hero.avatarUrl : avatarUrl,
+      changeType: changeType,
+    );
+  }
+
   factory PatchHeroChange.fromJson(Object? json, int index) {
     final map = json is Map ? json : const <String, Object?>{};
-    final heroId = _readInt(map['hero_id'] ?? map['heroId']);
+    final hero = map['hero'] is Map ? map['hero'] as Map : const {};
+    final heroId = _readInt(
+      map['hero_id'] ?? map['heroId'] ?? map['id'] ?? hero['id'],
+    );
 
     return PatchHeroChange(
       heroId: heroId,
       heroName: _readString(
-        map['hero_name'] ?? map['heroName'],
+        map['hero_name'] ?? map['heroName'] ?? map['name'] ?? hero['name'],
         fallback: heroId > 0 ? 'Unknown Hero ${index + 1}' : 'Unknown Hero',
       ),
-      avatarUrl: _readString(map['avatar_url'] ?? map['avatarUrl']),
+      avatarUrl: _readString(
+        map['avatar_url'] ??
+            map['avatarUrl'] ??
+            map['hero_avatar_url'] ??
+            hero['avatar_url'] ??
+            hero['avatarUrl'],
+      ),
       changeType: _normalizeChangeType(map['change_type'] ?? map['changeType']),
     );
   }
+}
+
+class PatchHeroIdentity {
+  const PatchHeroIdentity({required this.name, required this.avatarUrl});
+
+  final String name;
+  final String avatarUrl;
 }
 
 bool isPatchNotePost(Object? json) {
@@ -138,4 +201,8 @@ String _normalizeChangeType(Object? value) {
     return 'nerf';
   }
   return 'adjust';
+}
+
+bool _isUnknownHeroName(String value) {
+  return value.trim().toLowerCase().startsWith('unknown hero');
 }

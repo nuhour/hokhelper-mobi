@@ -308,15 +308,47 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
 }
 
 void _showPortalMenu(BuildContext context) {
-  showModalBottomSheet<void>(
+  showGeneralDialog<void>(
     context: context,
-    useSafeArea: true,
-    isScrollControlled: true,
-    backgroundColor: AppTheme.panel,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (sheetContext) => const _PortalMenuSheet(),
+    useRootNavigator: true,
+    barrierDismissible: true,
+    barrierLabel: 'Close menu',
+    barrierColor: Colors.black.withValues(alpha: 0.62),
+    transitionDuration: const Duration(milliseconds: 240),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: 0.84,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Material(
+              key: const ValueKey('home-portal-menu-drawer'),
+              color: AppTheme.panel,
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(22),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: const _PortalMenuSheet(),
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curvedAnimation = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(-1, 0),
+          end: Offset.zero,
+        ).animate(curvedAnimation),
+        child: child,
+      );
+    },
   );
 }
 
@@ -374,50 +406,23 @@ class _PortalMenuSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
-      ),
+    return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.muted.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(999),
-                ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                tooltip: 'Close menu',
+                onPressed: () =>
+                    Navigator.of(context, rootNavigator: true).pop(),
+                icon: const Icon(Icons.close, color: AppTheme.muted),
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.menu_book_outlined, color: AppTheme.gold),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '站点菜单',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, color: AppTheme.muted),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Flexible(
+            Expanded(
               child: ListView.separated(
-                shrinkWrap: true,
                 itemCount: _groups.length,
                 separatorBuilder: (context, index) => Divider(
                   color: AppTheme.outline.withValues(alpha: 0.75),
@@ -491,8 +496,9 @@ class _PortalMenuChip extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
         onTap: () {
-          Navigator.of(context).pop();
-          context.go(link.route);
+          final router = GoRouter.of(context);
+          Navigator.of(context, rootNavigator: true).pop();
+          router.go(link.route);
         },
         child: Ink(
           decoration: BoxDecoration(

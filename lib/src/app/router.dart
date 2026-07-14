@@ -50,10 +50,12 @@ Widget _standalonePage({
   required String fallbackRoute,
   required Widget child,
   String? title,
+  bool alwaysUseFallback = false,
 }) {
   return StandalonePageShell(
     fallbackRoute: fallbackRoute,
     title: title,
+    alwaysUseFallback: alwaysUseFallback,
     child: child,
   );
 }
@@ -943,7 +945,8 @@ GoRouter createAppRouter() {
                   GoRoute(
                     path: 'patch-notes',
                     builder: (context, state) => _standalonePage(
-                      fallbackRoute: '/content',
+                      fallbackRoute: '/',
+                      alwaysUseFallback: true,
                       child: PatchNotesScreen(
                         initialNoteId: int.tryParse(
                           state.uri.queryParameters['note_id'] ??
