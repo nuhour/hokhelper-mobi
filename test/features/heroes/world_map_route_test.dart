@@ -33,6 +33,7 @@ GoRouter _buildRouter() {
 
 void main() {
   testWidgets('hero gallery opens world map route', (tester) async {
+    final router = _buildRouter();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -59,16 +60,23 @@ void main() {
             ];
           }),
         ],
-        child: MaterialApp.router(routerConfig: _buildRouter()),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('World Map'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('World Map'));
+    await tester.pump();
+    await tester.pump();
 
-    expect(find.text('World Map'), findsOneWidget);
+    expect(find.byTooltip('Exit world map'), findsOneWidget);
     expect(find.text('Sunset Sea'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Exit world map'));
+    await tester.pump();
+
+    expect(router.routeInformationProvider.value.uri.path, '/heroes');
+    expect(find.byTooltip('World Map'), findsOneWidget);
   });
 
   testWidgets('world map representative hero rows open hero detail routes', (
@@ -100,15 +108,23 @@ void main() {
         child: MaterialApp.router(routerConfig: router),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
+    await tester.drag(
+      find.byType(InteractiveViewer).first,
+      const Offset(260, 0),
+    );
+    await tester.pump();
     await tester.tap(find.text('Sunset Sea'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Forest Child'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/1');
-    expect(find.text('Hero #1'), findsOneWidget);
+    expect(find.byType(HeroDetailScreen), findsOneWidget);
   });
 
   testWidgets('app router world map query opens focused region detail', (
@@ -134,7 +150,9 @@ void main() {
         child: HokHelperApp(router: router),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(router.routeInformationProvider.value.uri.path, '/world-map');
     expect(find.text('Domain Records'), findsOneWidget);

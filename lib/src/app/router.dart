@@ -633,7 +633,7 @@ GoRouter createAppRouter() {
         path: '/cg',
         redirect: (context, state) => _cgGalleryRedirect(state.uri),
         builder: (context, state) => _standalonePage(
-          fallbackRoute: '/content',
+          fallbackRoute: '/?tab=skins',
           child: CgGalleryScreen(
             initialHeroId: int.tryParse(
               state.uri.queryParameters['hero_id'] ?? '',
@@ -662,7 +662,7 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/relationships',
         builder: (context, state) => _standalonePage(
-          fallbackRoute: '/heroes',
+          fallbackRoute: '/?tab=heroes',
           child: HeroRelationshipsScreen(
             initialHeroId: state.uri.queryParameters['hero_id'],
             initialHeroName:
@@ -674,7 +674,7 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/world-map',
         builder: (context, state) => _standalonePage(
-          fallbackRoute: '/heroes',
+          fallbackRoute: '/?tab=heroes',
           child: WorldMapScreen(
             initialHeroId: state.uri.queryParameters['hero_id'],
           ),

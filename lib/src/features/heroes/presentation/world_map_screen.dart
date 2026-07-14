@@ -92,7 +92,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
                     children: [
                       IconButton.filledTonal(
                         tooltip: 'Exit world map',
-                        onPressed: () => context.go('/heroes'),
+                        onPressed: () => _exitWorldMap(context),
                         icon: const Icon(Icons.close_rounded),
                       ),
                     ],
@@ -134,6 +134,15 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
       }
       _openRegionDetail(context, focusedRegion!);
     });
+  }
+
+  void _exitWorldMap(BuildContext context) {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+    context.go('/?tab=heroes');
   }
 
   void _openRegionDetail(BuildContext context, WorldMapRegion region) {

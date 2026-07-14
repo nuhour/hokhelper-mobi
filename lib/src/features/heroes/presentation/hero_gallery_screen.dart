@@ -152,13 +152,13 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                             ),
                             IconButton.filledTonal(
                               tooltip: 'World Map',
-                              onPressed: () => context.go('/world-map'),
+                              onPressed: () => context.push('/world-map'),
                               icon: const Icon(Icons.travel_explore_outlined),
                             ),
                             const SizedBox(width: 8),
                             IconButton.filledTonal(
                               tooltip: 'Hero Relationships',
-                              onPressed: () => context.go('/relationships'),
+                              onPressed: () => context.push('/relationships'),
                               icon: const Icon(Icons.hub_outlined),
                             ),
                           ],
