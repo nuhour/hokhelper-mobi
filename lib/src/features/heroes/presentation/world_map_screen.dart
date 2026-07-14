@@ -197,7 +197,8 @@ class _WorldAtlas extends StatefulWidget {
   State<_WorldAtlas> createState() => _WorldAtlasState();
 }
 
-class _WorldAtlasState extends State<_WorldAtlas> {
+class _WorldAtlasState extends State<_WorldAtlas>
+    with TickerProviderStateMixin {
   static const _mapWidth = 1500.0;
   static const _mapHeight = 743.0;
   static const _regionAnchors = <String, Offset>{
@@ -213,17 +214,29 @@ class _WorldAtlasState extends State<_WorldAtlas> {
   };
 
   late final TransformationController _controller;
+  late final AnimationController _cloudFrontController;
+  late final AnimationController _cloudBackController;
   var _hasCenteredMap = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TransformationController();
+    _cloudFrontController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 32),
+    )..repeat();
+    _cloudBackController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 47),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _cloudFrontController.dispose();
+    _cloudBackController.dispose();
     super.dispose();
   }
 
@@ -297,6 +310,39 @@ class _WorldAtlasState extends State<_WorldAtlas> {
                   ),
                 ),
               ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ClipRect(
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([
+                        _cloudFrontController,
+                        _cloudBackController,
+                      ]),
+                      builder: (context, child) {
+                        return Stack(
+                          children: [
+                            _FloatingCloudBand(
+                              progress: _cloudBackController.value,
+                              assetPath: 'assets/world/cloud_2.png',
+                              topFactor: 0.02,
+                              opacity: 0.31,
+                              scale: 1.36,
+                              reverse: true,
+                            ),
+                            _FloatingCloudBand(
+                              progress: _cloudFrontController.value,
+                              assetPath: 'assets/world/cloud_1.png',
+                              topFactor: 0.12,
+                              opacity: 0.43,
+                              scale: 1.56,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
               Positioned(
                 top: 12,
                 right: 12,
@@ -338,6 +384,54 @@ class _WorldAtlasState extends State<_WorldAtlas> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FloatingCloudBand extends StatelessWidget {
+  const _FloatingCloudBand({
+    required this.progress,
+    required this.assetPath,
+    required this.topFactor,
+    required this.opacity,
+    required this.scale,
+    this.reverse = false,
+  });
+
+  final double progress;
+  final String assetPath;
+  final double topFactor;
+  final double opacity;
+  final double scale;
+  final bool reverse;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final imageWidth = width * scale;
+        final travel = width + imageWidth;
+        final start = reverse
+            ? progress * travel - imageWidth
+            : width - progress * travel;
+
+        return Stack(
+          children: [
+            for (var index = -1; index <= 1; index++)
+              Positioned(
+                top:
+                    constraints.maxHeight * topFactor + (index.isEven ? 0 : 26),
+                left: start + index * travel,
+                width: imageWidth,
+                child: Opacity(
+                  opacity: opacity,
+                  child: Image.asset(assetPath, fit: BoxFit.fitWidth),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

@@ -68,20 +68,26 @@ class HeroRelationship {
     );
   }
 
-  bool involves(String heroName) {
-    final needle = heroName.trim().toLowerCase();
+  bool involves(String heroNameOrId) {
+    final needle = heroNameOrId.trim().toLowerCase();
     if (needle.isEmpty) {
       return false;
     }
 
     return sourceHeroName.toLowerCase() == needle ||
-        targetHeroName.toLowerCase() == needle;
+        targetHeroName.toLowerCase() == needle ||
+        sourceHeroId.toLowerCase() == needle ||
+        targetHeroId.toLowerCase() == needle;
   }
 
-  String otherHeroName(String heroName) {
-    return sourceHeroName.toLowerCase() == heroName.trim().toLowerCase()
-        ? targetHeroName
-        : sourceHeroName;
+  String otherHeroName(String heroNameOrId) {
+    final needle = heroNameOrId.trim().toLowerCase();
+    final sourceMatches =
+        sourceHeroName.toLowerCase() == needle ||
+        sourceHeroId.toLowerCase() == needle;
+    return sourceMatches
+        ? (targetHeroName.isEmpty ? targetHeroId : targetHeroName)
+        : (sourceHeroName.isEmpty ? sourceHeroId : sourceHeroName);
   }
 
   static String _readString(Map<String, dynamic> json, List<String> keys) {
