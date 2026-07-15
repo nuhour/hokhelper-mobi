@@ -3,6 +3,7 @@ import 'package:hok_helper_mobile/src/features/stats/domain/stats_trends.dart';
 StatsTrendTable sampleStatsTrendTable({
   String dimension = 'hero_rank',
   String view = 'base',
+  List<Object?>? rows,
 }) {
   return StatsTrendTable.fromJson({
     'dimension': dimension,
@@ -33,39 +34,50 @@ StatsTrendTable sampleStatsTrendTable({
       },
       {'id': 'trend_smoothed', 'label': 'Trend', 'type': 'sparkline'},
     ],
-    'rows': const [
-      {
-        'hero': {'id': 199, 'heroId': '199', 'name': 'Lam', 'position': '3'},
-        'wr': 56.1,
-        'pick_rate': 18.4,
-        'bp_rate': 71.0,
-        'avg_kills': 8.2,
-        'trend_smoothed': [52.0, 54.0, 53.0, 56.1],
-        'core_trend_points': [
+    'rows':
+        rows ??
+        const [
           {
-            'snapshot_date': '2026-07-14',
-            'wr': 53.0,
-            'pick_rate': 17.9,
-            'ban_rate': 12.0,
-            'bp_rate': 29.9,
-          },
-          {
-            'snapshot_date': '2026-07-15',
+            'hero': {
+              'id': 199,
+              'heroId': '199',
+              'name': 'Lam',
+              'position': '3',
+            },
             'wr': 56.1,
             'pick_rate': 18.4,
-            'ban_rate': 13.0,
-            'bp_rate': 31.4,
+            'avg_kills': 8.2,
+            'trend_smoothed': [52.0, 54.0, 53.0, 56.1],
+            'core_trend_points': [
+              {
+                'snapshot_date': '2026-07-14',
+                'wr': 53.0,
+                'pick_rate': 17.9,
+                'ban_rate': 12.0,
+                'bp_rate': 29.9,
+              },
+              {
+                'snapshot_date': '2026-07-15',
+                'wr': 56.1,
+                'pick_rate': 18.4,
+                'ban_rate': 13.0,
+                'bp_rate': 31.4,
+              },
+            ],
+          },
+          {
+            'hero': {
+              'id': 166,
+              'heroId': '166',
+              'name': 'Yaria',
+              'position': '4',
+            },
+            'wr': 60.2,
+            'pick_rate': 11.5,
+            'avg_kills': 2.4,
+            'trend_smoothed': [58.0, 57.0, 59.0, 60.2],
           },
         ],
-      },
-      {
-        'hero': {'id': 166, 'heroId': '166', 'name': 'Yaria', 'position': '4'},
-        'wr': 60.2,
-        'pick_rate': 11.5,
-        'avg_kills': 2.4,
-        'trend_smoothed': [58.0, 57.0, 59.0, 60.2],
-      },
-    ],
     'available_views': const [
       {'id': 'base', 'label': 'Base'},
       {'id': 'prep', 'label': 'Preparation'},

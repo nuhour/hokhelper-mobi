@@ -90,6 +90,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   }
 
   Widget _buildTable(StatsTrendTable table) {
+    final trendBadges = _rankSevenDayTrendBadges(table.rows);
     final search = _searchController.text.trim().toLowerCase();
     var rows = table.rows
         .where((row) {
@@ -248,6 +249,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                           row: rows[index],
                           rank: index + 1,
                           showSparkline: hasSparkline,
+                          trendBadge:
+                              trendBadges[_trendRowKey(rows[index])] ??
+                              _TrendBadge.none,
                           focused:
                               int.tryParse(rows[index].id) == focusedHeroId,
                           onTap:
@@ -529,6 +533,7 @@ class _TrendIdentityCell extends StatelessWidget {
     required this.row,
     required this.rank,
     required this.showSparkline,
+    required this.trendBadge,
     required this.focused,
     required this.onTap,
   });
@@ -536,6 +541,7 @@ class _TrendIdentityCell extends StatelessWidget {
   final StatsTrendRow row;
   final int rank;
   final bool showSparkline;
+  final _TrendBadge trendBadge;
   final bool focused;
   final VoidCallback? onTap;
 
@@ -607,7 +613,7 @@ class _TrendIdentityCell extends StatelessWidget {
                   ? _MiniSparkline(
                       key: ValueKey('trend-signal-${row.kind}-${row.id}'),
                       values: row.sparkline,
-                      heatValue: _double(row.raw['bp_rate']),
+                      badge: trendBadge,
                       showSignal: true,
                     )
                   : Text(
@@ -1705,23 +1711,23 @@ class _MiniSparkline extends StatelessWidget {
   const _MiniSparkline({
     required this.values,
     this.color,
-    this.heatValue = double.nan,
+    this.badge = _TrendBadge.none,
     this.showSignal = false,
     super.key,
   });
 
   final List<double> values;
   final Color? color;
-  final double heatValue;
+  final _TrendBadge badge;
   final bool showSignal;
 
   @override
   Widget build(BuildContext context) {
     final signal = _TrendSignal.resolve(
       values: values,
-      heatValue: heatValue,
+      badge: badge,
       fallbackColor: color ?? Theme.of(context).colorScheme.primary,
-      useHeatPalette: showSignal,
+      useSignalPalette: showSignal,
     );
     return Semantics(
       label: signal.semanticLabel,
@@ -1734,7 +1740,7 @@ class _MiniSparkline extends StatelessWidget {
                 0,
                 showSignal ? 5 : 1,
                 showSignal ? 9 : 0,
-                showSignal && signal.isHot ? 7 : 1,
+                showSignal && badge != _TrendBadge.none ? 8 : 1,
               ),
               child: CustomPaint(
                 painter: _MiniSparklinePainter(
@@ -1762,17 +1768,16 @@ class _MiniSparkline extends StatelessWidget {
                 color: signal.color,
               ),
             ),
-          if (showSignal && signal.isHot)
+          if (showSignal && badge != _TrendBadge.none)
             Positioned(
               left: 1,
-              bottom: -4,
+              bottom: -5,
               child: Text(
-                '热',
+                badge.emoji,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: signal.color,
-                  fontSize: 9,
+                  fontSize: 11,
                   height: 1,
-                  fontWeight: FontWeight.w900,
                 ),
               ),
             ),
@@ -1784,11 +1789,46 @@ class _MiniSparkline extends StatelessWidget {
 
 enum _TrendDirection { up, steady, down }
 
+enum _TrendBadge {
+  none(''),
+  hot('🔥'),
+  cold('🧊');
+
+  const _TrendBadge(this.emoji);
+
+  final String emoji;
+}
+
+String _trendRowKey(StatsTrendRow row) => '${row.kind}:${row.id}';
+
+Map<String, _TrendBadge> _rankSevenDayTrendBadges(List<StatsTrendRow> rows) {
+  final changes = <(StatsTrendRow, double)>[];
+  for (final row in rows) {
+    final values = row.sparkline.where((value) => value.isFinite).toList();
+    if (values.length < 2) continue;
+    final recent = values.skip(math.max(0, values.length - 7)).toList();
+    final start = recent.first;
+    final end = recent.last;
+    final denominator = math.max(start.abs(), 0.0001);
+    final changeRate = (end - start) / denominator;
+    if (changeRate.abs() > 0.000001) changes.add((row, changeRate));
+  }
+
+  final risers = changes.where((item) => item.$2 > 0).toList()
+    ..sort((a, b) => b.$2.compareTo(a.$2));
+  final fallers = changes.where((item) => item.$2 < 0).toList()
+    ..sort((a, b) => a.$2.compareTo(b.$2));
+  return {
+    for (final item in risers.take(2)) _trendRowKey(item.$1): _TrendBadge.hot,
+    for (final item in fallers.take(2)) _trendRowKey(item.$1): _TrendBadge.cold,
+  };
+}
+
 class _TrendSignal {
   const _TrendSignal({
     required this.color,
     required this.direction,
-    required this.isHot,
+    required this.badge,
   });
 
   static const _cold = Color(0xFF2997FF);
@@ -1797,41 +1837,38 @@ class _TrendSignal {
 
   final Color color;
   final _TrendDirection direction;
-  final bool isHot;
+  final _TrendBadge badge;
 
-  String get semanticLabel => switch (direction) {
-    _TrendDirection.up => isHot ? 'Hot trend rising' : 'Trend rising',
-    _TrendDirection.steady => isHot ? 'Hot trend steady' : 'Trend steady',
-    _TrendDirection.down => isHot ? 'Hot trend falling' : 'Trend falling',
-  };
+  String get semanticLabel {
+    final rankLabel = switch (badge) {
+      _TrendBadge.hot => 'Top seven-day riser',
+      _TrendBadge.cold => 'Top seven-day faller',
+      _TrendBadge.none => 'Seven-day trend',
+    };
+    final directionLabel = switch (direction) {
+      _TrendDirection.up => 'rising',
+      _TrendDirection.steady => 'steady',
+      _TrendDirection.down => 'falling',
+    };
+    return '$rankLabel, $directionLabel';
+  }
 
   factory _TrendSignal.resolve({
     required List<double> values,
-    required double heatValue,
+    required _TrendBadge badge,
     required Color fallbackColor,
-    required bool useHeatPalette,
+    required bool useSignalPalette,
   }) {
     final valid = values.where((value) => value.isFinite).toList();
     final direction = _resolveDirection(valid);
-    final hasHeat = useHeatPalette && heatValue.isFinite;
-    final color = hasHeat
-        ? heatValue >= 60
-              ? _hot
-              : heatValue >= 25
-              ? _warm
-              : _cold
-        : useHeatPalette
-        ? switch (direction) {
-            _TrendDirection.up => _hot,
-            _TrendDirection.steady => _warm,
-            _TrendDirection.down => _cold,
+    final color = useSignalPalette
+        ? switch (badge) {
+            _TrendBadge.hot => _hot,
+            _TrendBadge.cold => _cold,
+            _TrendBadge.none => _warm,
           }
         : fallbackColor;
-    return _TrendSignal(
-      color: color,
-      direction: direction,
-      isHot: hasHeat && heatValue >= 60,
-    );
+    return _TrendSignal(color: color, direction: direction, badge: badge);
   }
 
   static _TrendDirection _resolveDirection(List<double> values) {

@@ -37,8 +37,37 @@ void main() {
     expect(find.text('Win Rate'), findsOneWidget);
     expect(find.text('56.10%'), findsOneWidget);
     expect(find.byKey(const ValueKey('trend-signal-hero-199')), findsOneWidget);
-    expect(find.text('热'), findsOneWidget);
+    expect(find.text('🔥'), findsNWidgets(2));
+    expect(find.text('热'), findsNothing);
     expect(find.byIcon(Icons.arrow_drop_up_rounded), findsWidgets);
+  });
+
+  testWidgets('marks only the two largest seven-day rises and falls', (
+    tester,
+  ) async {
+    final rows = <Object?>[
+      _trendFixtureRow(1, [50, 51, 52, 54, 57, 59, 62]),
+      _trendFixtureRow(2, [50, 51, 53, 55, 57, 58, 60]),
+      _trendFixtureRow(3, [50, 50, 51, 51, 52, 52, 53]),
+      _trendFixtureRow(4, [60, 58, 55, 53, 50, 47, 44]),
+      _trendFixtureRow(5, [60, 59, 57, 55, 53, 51, 49]),
+      _trendFixtureRow(6, [60, 60, 59, 59, 58, 58, 57]),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(rows: rows),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('🔥'), findsNWidgets(2));
+    expect(find.text('🧊'), findsNWidgets(2));
+    expect(find.text('热'), findsNothing);
   });
 
   testWidgets('changes dimension and sends the matching table query', (
@@ -129,4 +158,19 @@ void main() {
     expect(find.text('Equipment'), findsWidgets);
     expect(find.text('Core trend'), findsOneWidget);
   });
+}
+
+Map<String, Object?> _trendFixtureRow(int id, List<num> trend) {
+  return {
+    'hero': {
+      'id': id,
+      'heroId': '$id',
+      'name': 'Hero $id',
+      'position': '${id % 5}',
+    },
+    'wr': trend.last,
+    'pick_rate': 10 + id,
+    'avg_kills': id,
+    'trend_smoothed': trend,
+  };
 }
