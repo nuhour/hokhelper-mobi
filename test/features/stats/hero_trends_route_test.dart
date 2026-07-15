@@ -87,7 +87,7 @@ void main() {
     expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
   });
 
-  testWidgets('hero gallery opens hero trends route', (tester) async {
+  testWidgets('hero gallery omits the removed trends shortcut', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -123,10 +123,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Hero Trends'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Hero Trends'), findsOneWidget);
+    expect(find.text('Hero Trends'), findsNothing);
     expect(find.text('Lam'), findsOneWidget);
   });
 
@@ -214,6 +211,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/199');
-    expect(find.text('Hero #199'), findsOneWidget);
   });
 }

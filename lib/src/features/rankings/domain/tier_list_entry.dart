@@ -3,6 +3,7 @@ class TierListEntry {
     required this.heroId,
     required this.externalHeroId,
     required this.name,
+    this.avatarUrl = '',
     required this.mainJob,
     required this.tier,
     required this.position,
@@ -13,11 +14,26 @@ class TierListEntry {
   final int heroId;
   final String externalHeroId;
   final String name;
+  final String avatarUrl;
   final String mainJob;
   final String tier;
   final int position;
   final double score;
   final double winRate;
+
+  TierListEntry withAvatarUrl(String value) {
+    return TierListEntry(
+      heroId: heroId,
+      externalHeroId: externalHeroId,
+      name: name,
+      avatarUrl: value,
+      mainJob: mainJob,
+      tier: tier,
+      position: position,
+      score: score,
+      winRate: winRate,
+    );
+  }
 
   factory TierListEntry.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -26,6 +42,12 @@ class TierListEntry {
       heroId: _readInt(map['hero_id'] ?? map['id']),
       externalHeroId: _readString(map['heroId'] ?? map['hero_id']),
       name: _readString(map['name'], fallback: 'Hero'),
+      avatarUrl: _readString(
+        map['avatar_url_large'] ??
+            map['avatar_url_medium'] ??
+            map['avatar_url'] ??
+            map['avatar'],
+      ),
       mainJob: _readString(map['mainJob'] ?? map['main_job']),
       tier: _readString(map['tier'], fallback: 'T?').toUpperCase(),
       position: _readInt(map['position']),

@@ -51,14 +51,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Player Leaderboard'), findsOneWidget);
+    expect(find.text('Player / Region'), findsOneWidget);
     expect(find.text('Ranked'), findsAtLeastNWidgets(1));
     expect(find.text('Peak'), findsOneWidget);
     expect(find.text('Top Mid'), findsOneWidget);
     expect(find.text('112 stars'), findsOneWidget);
     expect(find.text('68.40% win'), findsOneWidget);
     expect(find.text('Pro'), findsOneWidget);
-    expect(find.text('Diaochan · 99.1'), findsOneWidget);
+    expect(find.text('Favorite Heroes'), findsOneWidget);
+    expect(find.text('99.1'), findsOneWidget);
 
     await tester.tap(find.text('Peak'));
     await tester.pumpAndSettle();

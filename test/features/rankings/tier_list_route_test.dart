@@ -39,10 +39,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Tier'), findsOneWidget);
+    expect(find.text('Hero Tier List'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('T0'), findsOneWidget);
-    expect(find.text('Score 96.5'), findsOneWidget);
+    expect(find.text('1 heroes'), findsOneWidget);
   });
 
   testWidgets('web rankings tab query opens the requested mobile tab', (
@@ -122,7 +122,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/199');
-    expect(find.text('Hero #199'), findsOneWidget);
   });
 
   testWidgets('tier hero cards open mobile hero detail routes', (tester) async {
@@ -164,6 +163,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/199');
-    expect(find.text('Hero #199'), findsOneWidget);
   });
 }

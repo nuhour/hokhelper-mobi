@@ -127,7 +127,9 @@ void main() {
     expect(find.text('Win 52.7%'), findsOneWidget);
   });
 
-  testWidgets('renders tier list entries from the tier tab', (tester) async {
+  testWidgets('renders grouped tier list without internal tabs', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -149,16 +151,16 @@ void main() {
             ];
           }),
         ],
-        child: const MaterialApp(home: Scaffold(body: HeroRankingScreen())),
+        child: const MaterialApp(home: Scaffold(body: TierRankingScreen())),
       ),
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Tier'));
     await tester.pumpAndSettle();
 
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('T0'), findsOneWidget);
-    expect(find.text('Score 96.5'), findsOneWidget);
-    expect(find.text('Win 55.0%'), findsOneWidget);
+    expect(find.text('1 heroes'), findsOneWidget);
+    expect(find.text('Heroes'), findsNothing);
+    expect(find.text('Players'), findsNothing);
+    expect(find.text('Equips'), findsNothing);
   });
 }

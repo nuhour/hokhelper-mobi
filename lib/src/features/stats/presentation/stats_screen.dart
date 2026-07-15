@@ -347,7 +347,7 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
             children: const [
               PlayerLeaderboardScreen(),
               HeroTrendsScreen(),
-              HeroRankingScreen(initialTabIndex: 3),
+              TierRankingScreen(),
             ],
           ),
         ),

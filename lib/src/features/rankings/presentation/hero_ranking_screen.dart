@@ -6,7 +6,9 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/rankings_repository.dart';
 import '../domain/equip_ranking_entry.dart';
@@ -62,6 +64,63 @@ final tierRankingProvider = FutureProvider<List<TierListEntry>>((ref) async {
       .loadTierList(settings.region.regionId);
 });
 
+final tierRankingDisplayProvider = FutureProvider<List<TierListEntry>>((
+  ref,
+) async {
+  final entries = await ref.watch(tierRankingProvider.future);
+  final heroes = ref.watch(heroGalleryProvider).valueOrNull ?? const [];
+  if (heroes.isEmpty) {
+    return entries;
+  }
+
+  final avatarById = <String, String>{};
+  for (final hero in heroes) {
+    if (hero.avatar.isEmpty) {
+      continue;
+    }
+    avatarById[hero.id] = hero.avatar;
+    if (hero.heroId.isNotEmpty) {
+      avatarById[hero.heroId] = hero.avatar;
+    }
+  }
+  return entries
+      .map((entry) {
+        if (entry.avatarUrl.isNotEmpty) {
+          return entry;
+        }
+        final avatar =
+            avatarById[entry.externalHeroId] ??
+            avatarById['${entry.heroId}'] ??
+            '';
+        return avatar.isEmpty ? entry : entry.withAvatarUrl(avatar);
+      })
+      .toList(growable: false);
+});
+
+class TierRankingScreen extends ConsumerStatefulWidget {
+  const TierRankingScreen({super.key});
+
+  @override
+  ConsumerState<TierRankingScreen> createState() => _TierRankingScreenState();
+}
+
+class _TierRankingScreenState extends ConsumerState<TierRankingScreen> {
+  List<TierListEntry>? _previousEntries;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = ref.watch(tierRankingDisplayProvider);
+    final loaded = value.valueOrNull;
+    if (loaded != null) {
+      _previousEntries = loaded;
+    }
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: _TierListTab(tierValue: value, previousEntries: _previousEntries),
+    );
+  }
+}
+
 class HeroRankingScreen extends ConsumerStatefulWidget {
   const HeroRankingScreen({super.key, this.initialTabIndex = 0});
 
@@ -96,7 +155,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
     final rankingValue = ref.watch(heroRankingProvider);
     final playerValue = ref.watch(playerRankingProvider);
     final equipValue = ref.watch(equipRankingProvider);
-    final tierValue = ref.watch(tierRankingProvider);
+    final tierValue = ref.watch(tierRankingDisplayProvider);
     final selectedSort = ref.watch(selectedHeroRankingSortProvider);
 
     return Column(
@@ -292,41 +351,224 @@ class _EquipRankingTab extends ConsumerWidget {
 }
 
 class _TierListTab extends ConsumerWidget {
-  const _TierListTab({required this.tierValue});
+  const _TierListTab({required this.tierValue, this.previousEntries});
 
   final AsyncValue<List<TierListEntry>> tierValue;
+  final List<TierListEntry>? previousEntries;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AppAsyncView<List<TierListEntry>>(
       value: tierValue,
-      retry: () => ref.invalidate(tierRankingProvider),
-      data: (entries) => RefreshIndicator(
-        onRefresh: () => ref.refresh(tierRankingProvider.future),
-        child: entries.isEmpty
-            ? const CustomScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: AppEmptyState(
-                      icon: Icons.workspace_premium_outlined,
-                      title: 'No tier data found',
-                      message: 'Pull to refresh once tier snapshots are ready.',
+      previousData: previousEntries,
+      loadingStyle: AppAsyncLoadingStyle.gallery,
+      retry: () => ref.invalidate(tierRankingDisplayProvider),
+      data: (entries) {
+        final groups = <String, List<TierListEntry>>{};
+        for (final entry in entries) {
+          groups.putIfAbsent(entry.tier, () => []).add(entry);
+        }
+        final tiers = groups.keys.toList(growable: false)
+          ..sort((a, b) => _tierOrder(a).compareTo(_tierOrder(b)));
+
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(tierRankingDisplayProvider.future),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.workspace_premium_outlined,
+                    size: 19,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Hero Tier List',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${entries.length} heroes',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  IconButton(
+                    tooltip: 'Refresh',
+                    onPressed: () => ref.invalidate(tierRankingDisplayProvider),
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (entries.isEmpty)
+                const SizedBox(
+                  height: 360,
+                  child: AppEmptyState(
+                    icon: Icons.workspace_premium_outlined,
+                    title: 'No tier data found',
+                    message: 'Pull to refresh once tier snapshots are ready.',
+                  ),
+                ),
+              for (final tier in tiers) ...[
+                _TierGroup(tier: tier, entries: groups[tier]!),
+                const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+int _tierOrder(String tier) {
+  final match = RegExp(r'\d+').firstMatch(tier);
+  return int.tryParse(match?.group(0) ?? '') ?? 99;
+}
+
+class _TierGroup extends StatelessWidget {
+  const _TierGroup({required this.tier, required this.entries});
+
+  final String tier;
+  final List<TierListEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final tierColor = switch (tier) {
+      'T0' => const Color(0xFFEF4444),
+      'T1' => const Color(0xFFF97316),
+      'T2' => const Color(0xFFF2B705),
+      'T3' => const Color(0xFF22C55E),
+      _ => const Color(0xFF64748B),
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors?.surfaceSlate ?? AppTheme.panel,
+        border: Border.all(color: colors?.outlineSoft ?? AppTheme.outline),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Column(
+          children: [
+            Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              color: tierColor,
+              child: Row(
+                children: [
+                  Text(
+                    tier,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${entries.length}',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
-              )
-            : ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                itemCount: entries.length,
-                itemBuilder: (context, index) {
-                  return _TierListCard(entry: entries[index], rank: index + 1);
-                },
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final count = constraints.maxWidth >= 430 ? 6 : 5;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: count,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 6,
+                      childAspectRatio: 0.78,
+                    ),
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      return _CompactTierHero(entry: entries[index]);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactTierHero extends StatelessWidget {
+  const _CompactTierHero({required this.entry});
+
+  final TierListEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final heroRouteId = _heroRouteId(
+      externalHeroId: entry.externalHeroId,
+      heroId: entry.heroId,
+    );
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: heroRouteId.isEmpty
+          ? null
+          : () => context.go('/heroes/$heroRouteId'),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors?.surfaceMuted ?? AppTheme.panelAlt,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppImage(
+                url: entry.avatarUrl,
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                semanticLabel: entry.name,
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: heroRouteId.isEmpty
+                    ? null
+                    : () => context.go('/heroes/$heroRouteId'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 22),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  entry.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors?.onSurfaceStrong,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -602,130 +844,6 @@ class _EquipRankingCard extends StatelessWidget {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TierListCard extends StatelessWidget {
-  const _TierListCard({required this.entry, required this.rank});
-
-  final TierListEntry entry;
-  final int rank;
-
-  @override
-  Widget build(BuildContext context) {
-    final heroRouteId = _heroRouteId(
-      externalHeroId: entry.externalHeroId,
-      heroId: entry.heroId,
-    );
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: heroRouteId.isEmpty
-            ? null
-            : () => context.go('/heroes/$heroRouteId'),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppTheme.panel,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    _TierBadge(label: entry.tier),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            entry.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: AppTheme.text,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            entry.mainJob.isEmpty
-                                ? 'Hero'
-                                : 'Lane ${entry.mainJob}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppTheme.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _RankBadge(rank: entry.position > 0 ? entry.position : rank),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _MetricChip(
-                      label: 'Score',
-                      value: entry.score.toStringAsFixed(1),
-                    ),
-                    _MetricChip(
-                      label: 'Win',
-                      value: _formatPercent(entry.winRate),
-                    ),
-                    if (entry.externalHeroId.isNotEmpty)
-                      _MetricChip(label: 'Hero ID', value: entry.externalHeroId),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TierBadge extends StatelessWidget {
-  const _TierBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.gold.withValues(alpha: 0.2),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: Center(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.gold,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
         ),
       ),
     );

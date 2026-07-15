@@ -43,9 +43,10 @@ void main() {
 
     expect(find.text('Hero Trends'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
-    expect(find.text('Score 13.80'), findsOneWidget);
-    expect(find.text('56.10% win'), findsOneWidget);
-    expect(find.text('31.40% damage'), findsOneWidget);
+    expect(find.text('Score'), findsOneWidget);
+    expect(find.text('13.80'), findsOneWidget);
+    expect(find.text('56.10%'), findsOneWidget);
+    expect(find.text('31.40%'), findsOneWidget);
 
     await tester.tap(find.text('Win Rate'));
     await tester.pumpAndSettle();

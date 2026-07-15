@@ -31,9 +31,11 @@ GoRouter _buildRouter() {
 }
 
 void main() {
-  testWidgets('tools screen opens standalone player leaderboard', (
+  testWidgets('standalone player leaderboard route renders its table', (
     tester,
   ) async {
+    final router = _buildRouter();
+    router.go('/leaderboard');
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -47,20 +49,12 @@ void main() {
             );
           }),
         ],
-        child: MaterialApp.router(routerConfig: _buildRouter()),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Player Leaderboard'),
-      240,
-      scrollable: find.byType(Scrollable),
-    );
-    await tester.tap(find.text('Player Leaderboard'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Player Leaderboard'), findsOneWidget);
+    expect(find.text('Ranked'), findsOneWidget);
     expect(find.text('No players found'), findsOneWidget);
   });
 

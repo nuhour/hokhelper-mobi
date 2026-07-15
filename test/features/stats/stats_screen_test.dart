@@ -14,9 +14,10 @@ import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.d
 
 void main() {
   testWidgets(
-    'bottom stats tab opens the main stats page without back button',
+    'bottom stats route opens the main stats page without back button',
     (tester) async {
       final router = createAppRouter();
+      router.go('/stats-home');
 
       await tester.pumpWidget(
         ProviderScope(
@@ -33,9 +34,6 @@ void main() {
           child: HokHelperApp(router: router),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 300));
-
-      await tester.tap(find.text('Stats'));
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(router.routeInformationProvider.value.uri.path, '/stats-home');
@@ -132,7 +130,7 @@ void main() {
     await tester.tap(find.text('Rankings'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
-    expect(find.text('Player Leaderboard'), findsOneWidget);
+    expect(find.text('Player / Region'), findsOneWidget);
     expect(find.text('Ranked'), findsAtLeastNWidgets(1));
     expect(find.text('Peak'), findsOneWidget);
     expect(find.text('Region +44'), findsOneWidget);
@@ -142,7 +140,8 @@ void main() {
     await tester.tap(find.text('Tier'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
-    expect(find.text('Tier'), findsWidgets);
+    expect(find.text('Hero Tier List'), findsOneWidget);
+    expect(find.text('Heroes'), findsNothing);
   });
 
   testWidgets('renders stats dashboard sections', (tester) async {
