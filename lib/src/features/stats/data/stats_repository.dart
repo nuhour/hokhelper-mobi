@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../domain/hero_trend_row.dart';
 import '../domain/stats_dashboard.dart';
+import '../domain/stats_trends.dart';
 
 class StatsRepository {
   const StatsRepository({required this.apiClient});
@@ -70,6 +71,47 @@ class StatsRepository {
           return row.id > 0 && row.name.isNotEmpty;
         })
         .toList(growable: false);
+  }
+
+  Future<StatsTrendTable> loadTrendTable({
+    required StatsTrendQuery query,
+    required String regionCode,
+  }) async {
+    final request = <String, dynamic>{
+      'dimension': query.dimension,
+      'baseline': query.baseline,
+      'view': query.view,
+      'window_days': query.windowDays,
+      'snapshot_date': query.snapshotDate,
+      'region': query.region.isNotEmpty ? query.region : regionCode,
+      'equip_type': query.equipType,
+      'lang': regionCode,
+      'lite': 1,
+    }..removeWhere((key, value) => value == null || value == '');
+    final json = await apiClient.getJson('/stats/table', query: request);
+    return StatsTrendTable.fromJson(json['data'] ?? json['result'] ?? json);
+  }
+
+  Future<StatsTrendDetail> loadTrendDetail({
+    required StatsTrendDetailRequest request,
+    required String regionCode,
+  }) async {
+    final row = request.row;
+    final query = request.query;
+    final requestQuery = <String, dynamic>{
+      if (row.kind == 'equip') 'equip_id': int.tryParse(row.id),
+      if (row.kind == 'hero') 'hero_id': int.tryParse(row.id),
+      'baseline': query.baseline == 'all' ? 'peak_1000' : query.baseline,
+      'window_days': query.windowDays,
+      'snapshot_date': query.snapshotDate,
+      'region': query.region.isNotEmpty ? query.region : regionCode,
+      'lang': regionCode,
+    }..removeWhere((key, value) => value == null || value == '');
+    final json = await apiClient.getJson(
+      '/stats/hero-combos',
+      query: requestQuery,
+    );
+    return StatsTrendDetail.fromJson(json['data'] ?? json['result'] ?? json);
   }
 
   Future<StatsEquipDetail> loadEquipDetail({

@@ -14,6 +14,7 @@ import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart'
 import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
+import 'package:hok_helper_mobile/src/features/stats/domain/stats_trends.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
 
@@ -335,7 +336,15 @@ void main() {
             statsDashboardProvider.overrideWith(
               (ref, entry) async => const StatsDashboard(),
             ),
-            heroTrendsProvider.overrideWith((ref) async => const []),
+            heroTrendTableProvider.overrideWith((ref, query) async {
+              return StatsTrendTable.fromJson({
+                'dimension': query.dimension,
+                'baseline': query.baseline,
+                'view': query.view,
+                'columns': const [],
+                'rows': const [],
+              });
+            }),
             heroRankingProvider.overrideWith((ref) async => const []),
             playerRankingProvider.overrideWith((ref) async => const []),
             equipRankingProvider.overrideWith((ref) async => const []),

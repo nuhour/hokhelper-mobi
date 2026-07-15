@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
-import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_detail_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
-import 'package:hok_helper_mobile/src/features/stats/domain/hero_trend_row.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
+
+import 'stats_trends_fixture.dart';
 
 GoRouter _buildRouter() {
   return GoRouter(
@@ -26,11 +26,6 @@ GoRouter _buildRouter() {
           ),
         ),
       ),
-      GoRoute(
-        path: '/heroes/:heroId',
-        builder: (context, state) =>
-            HeroDetailScreen(heroId: state.pathParameters['heroId']!),
-      ),
     ],
   );
 }
@@ -46,32 +41,9 @@ void main() {
       ProviderScope(
         overrides: [
           heroGalleryProvider.overrideWith((ref) async => const []),
-          heroTrendsProvider.overrideWith((ref) async {
-            return const [
-              HeroTrendRow(
-                id: 199,
-                name: 'Lam',
-                avatarUrl: '',
-                winRate: 56.1,
-                mvpScore: 13.8,
-                mvpRate: 22.5,
-                dmgShare: 31.4,
-                takeDmgShare: 28.7,
-                ecoShare: 24.1,
-              ),
-              HeroTrendRow(
-                id: 166,
-                name: 'Yaria',
-                avatarUrl: '',
-                winRate: 60.2,
-                mvpScore: 9.2,
-                mvpRate: 11.4,
-                dmgShare: 12.1,
-                takeDmgShare: 18.2,
-                ecoShare: 17.7,
-              ),
-            ];
-          }),
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(),
+          ),
         ],
         child: HokHelperApp(router: router),
       ),
@@ -81,10 +53,10 @@ void main() {
     final uri = router.routeInformationProvider.value.uri;
     expect(uri.path, '/trends');
     expect(uri.queryParameters['hero_id'], '166');
-    expect(find.text('Focused hero'), findsOneWidget);
-    final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
-    final lamTopLeft = tester.getTopLeft(find.text('Lam'));
-    expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
+    final yaria = find.byKey(const ValueKey('trend-row-hero-166'));
+    final lam = find.byKey(const ValueKey('trend-row-hero-199'));
+    expect(yaria, findsOneWidget);
+    expect(tester.getTopLeft(yaria).dy, lessThan(tester.getTopLeft(lam).dy));
   });
 
   testWidgets('hero gallery omits the removed trends shortcut', (tester) async {
@@ -102,21 +74,6 @@ void main() {
               ),
             ];
           }),
-          heroTrendsProvider.overrideWith((ref) async {
-            return const [
-              HeroTrendRow(
-                id: 199,
-                name: 'Lam',
-                avatarUrl: '',
-                winRate: 56.1,
-                mvpScore: 13.8,
-                mvpRate: 22.5,
-                dmgShare: 31.4,
-                takeDmgShare: 28.7,
-                ecoShare: 24.1,
-              ),
-            ];
-          }),
         ],
         child: MaterialApp.router(routerConfig: _buildRouter()),
       ),
@@ -127,53 +84,9 @@ void main() {
     expect(find.text('Lam'), findsOneWidget);
   });
 
-  testWidgets('web trend hero query opens with a focused hero', (tester) async {
-    final router = _buildRouter();
-    router.go('/trends?hero_id=166');
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          heroGalleryProvider.overrideWith((ref) async => const []),
-          heroTrendsProvider.overrideWith((ref) async {
-            return const [
-              HeroTrendRow(
-                id: 199,
-                name: 'Lam',
-                avatarUrl: '',
-                winRate: 56.1,
-                mvpScore: 13.8,
-                mvpRate: 22.5,
-                dmgShare: 31.4,
-                takeDmgShare: 28.7,
-                ecoShare: 24.1,
-              ),
-              HeroTrendRow(
-                id: 166,
-                name: 'Yaria',
-                avatarUrl: '',
-                winRate: 60.2,
-                mvpScore: 9.2,
-                mvpRate: 11.4,
-                dmgShare: 12.1,
-                takeDmgShare: 18.2,
-                ecoShare: 17.7,
-              ),
-            ];
-          }),
-        ],
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Focused hero'), findsOneWidget);
-    final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
-    final lamTopLeft = tester.getTopLeft(find.text('Lam'));
-    expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
-  });
-
-  testWidgets('hero trend cards open hero detail routes', (tester) async {
+  testWidgets('trend row opens an in-app stats panel and keeps route', (
+    tester,
+  ) async {
     final router = _buildRouter();
     router.go('/trends');
 
@@ -181,35 +94,22 @@ void main() {
       ProviderScope(
         overrides: [
           heroGalleryProvider.overrideWith((ref) async => const []),
-          heroTrendsProvider.overrideWith((ref) async {
-            return const [
-              HeroTrendRow(
-                id: 199,
-                name: 'Lam',
-                avatarUrl: '',
-                winRate: 56.1,
-                mvpScore: 13.8,
-                mvpRate: 22.5,
-                dmgShare: 31.4,
-                takeDmgShare: 28.7,
-                ecoShare: 24.1,
-              ),
-            ];
-          }),
-          selectedRegionHeroDetailProvider.overrideWith((ref, heroId) async {
-            return {
-              'hero': {'id': int.tryParse(heroId) ?? 199, 'name': 'Lam'},
-            };
-          }),
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(),
+          ),
+          heroTrendDetailProvider.overrideWith(
+            (ref, request) async => sampleStatsTrendDetail(),
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Lam'));
+    await tester.tap(find.byKey(const ValueKey('trend-row-hero-199')));
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/heroes/199');
+    expect(router.routeInformationProvider.value.uri.path, '/trends');
+    expect(find.text('Core trend'), findsOneWidget);
   });
 }

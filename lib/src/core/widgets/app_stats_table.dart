@@ -9,6 +9,7 @@ class AppStatsTableColumn {
     this.width = 86,
     this.onHeaderTap,
     this.selected = false,
+    this.sortAscending,
   });
 
   final String label;
@@ -16,6 +17,7 @@ class AppStatsTableColumn {
   final double width;
   final VoidCallback? onHeaderTap;
   final bool selected;
+  final bool? sortAscending;
 }
 
 class AppStatsTable extends StatefulWidget {
@@ -255,7 +257,13 @@ class _HeaderCell extends StatelessWidget {
           ),
           if (column.selected) ...[
             const SizedBox(width: 3),
-            Icon(Icons.arrow_downward_rounded, size: 13, color: color),
+            Icon(
+              column.sortAscending == true
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
+              size: 13,
+              color: color,
+            ),
           ],
         ],
       ),

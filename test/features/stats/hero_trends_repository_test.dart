@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/stats/data/stats_repository.dart';
+import 'package:hok_helper_mobile/src/features/stats/domain/stats_trends.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -70,5 +71,37 @@ void main() {
     expect(rows.single.dmgShare, closeTo(31.4, 0.001));
     expect(rows.single.takeDmgShare, closeTo(28.7, 0.001));
     expect(rows.single.ecoShare, closeTo(24.1, 0.001));
+  });
+
+  test('loads metadata driven trend table with the selected scope', () async {
+    final apiClient = _FakeApiClient();
+    final repository = StatsRepository(apiClient: apiClient);
+
+    final table = await repository.loadTrendTable(
+      query: const StatsTrendQuery(
+        dimension: 'equip_rank',
+        baseline: 'top_rank',
+        view: 'main',
+        windowDays: 7,
+        snapshotDate: '2026-07-14',
+        region: 'id',
+        equipType: '2',
+      ),
+      regionCode: 'en',
+    );
+
+    expect(apiClient.getPath, '/stats/table');
+    expect(apiClient.getQuery, {
+      'dimension': 'equip_rank',
+      'baseline': 'top_rank',
+      'view': 'main',
+      'window_days': 7,
+      'snapshot_date': '2026-07-14',
+      'region': 'id',
+      'equip_type': '2',
+      'lang': 'en',
+      'lite': 1,
+    });
+    expect(table.rows, hasLength(1));
   });
 }

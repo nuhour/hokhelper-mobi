@@ -7,10 +7,11 @@ import 'package:hok_helper_mobile/src/features/rankings/domain/player_leaderboar
 import 'package:hok_helper_mobile/src/features/rankings/domain/player_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/player_leaderboard_screen.dart';
-import 'package:hok_helper_mobile/src/features/stats/domain/hero_trend_row.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
+
+import 'stats_trends_fixture.dart';
 
 void main() {
   testWidgets(
@@ -29,7 +30,9 @@ void main() {
             statsDashboardProvider.overrideWith(
               (ref, entry) async => const StatsDashboard(),
             ),
-            heroTrendsProvider.overrideWith((ref) async => const []),
+            heroTrendTableProvider.overrideWith(
+              (ref, query) async => sampleStatsTrendTable(),
+            ),
           ],
           child: HokHelperApp(router: router),
         ),
@@ -61,21 +64,9 @@ void main() {
           statsDashboardProvider.overrideWith(
             (ref, entry) async => const StatsDashboard(),
           ),
-          heroTrendsProvider.overrideWith((ref) async {
-            return const [
-              HeroTrendRow(
-                id: 199,
-                name: 'Lam',
-                avatarUrl: '',
-                winRate: 56.1,
-                mvpScore: 13.8,
-                mvpRate: 22.5,
-                dmgShare: 31.4,
-                takeDmgShare: 28.7,
-                ecoShare: 24.1,
-              ),
-            ];
-          }),
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(),
+          ),
           playerLeaderboardProvider.overrideWith((ref) async {
             return const PlayerLeaderboardResult(
               players: [
@@ -113,7 +104,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Rankings'), findsOneWidget);
-    expect(find.text('Tier'), findsOneWidget);
+    expect(find.text('Tier'), findsWidgets);
     expect(find.text('Trends'), findsOneWidget);
     expect(
       find.text('Browse rankings, tier lists, and hero trend signals.'),
@@ -121,11 +112,12 @@ void main() {
     );
     final rankingTopLeft = tester.getTopLeft(find.text('Rankings'));
     final trendTopLeft = tester.getTopLeft(find.text('Trends'));
-    final tierTopLeft = tester.getTopLeft(find.text('Tier'));
+    final tierTopLeft = tester.getTopLeft(find.text('Tier').first);
     expect(rankingTopLeft.dx, lessThan(trendTopLeft.dx));
     expect(trendTopLeft.dx, lessThan(tierTopLeft.dx));
-    expect(find.text('Hero Trends'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
+    expect(find.textContaining('Top 1000'), findsOneWidget);
+    expect(find.text('Win Rate'), findsOneWidget);
+    expect(find.byKey(const ValueKey('trend-row-hero-199')), findsOneWidget);
 
     await tester.tap(find.text('Rankings'));
     await tester.pumpAndSettle();

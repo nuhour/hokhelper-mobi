@@ -1,102 +1,129 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hok_helper_mobile/src/features/stats/domain/hero_trend_row.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 
+import 'stats_trends_fixture.dart';
+
 void main() {
-  testWidgets('renders hero trends and changes sorting metric', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          heroTrendsProvider.overrideWith((ref) async {
-            return const [
-              HeroTrendRow(
-                id: 199,
-                name: 'Lam',
-                avatarUrl: '',
-                winRate: 56.1,
-                mvpScore: 13.8,
-                mvpRate: 22.5,
-                dmgShare: 31.4,
-                takeDmgShare: 28.7,
-                ecoShare: 24.1,
-              ),
-              HeroTrendRow(
-                id: 166,
-                name: 'Yaria',
-                avatarUrl: '',
-                winRate: 60.2,
-                mvpScore: 9.2,
-                mvpRate: 11.4,
-                dmgShare: 12.1,
-                takeDmgShare: 18.2,
-                ecoShare: 17.7,
-              ),
-            ];
-          }),
-        ],
-        child: const MaterialApp(home: HeroTrendsScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Hero Trends'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
-    expect(find.text('Score'), findsOneWidget);
-    expect(find.text('13.80'), findsOneWidget);
-    expect(find.text('56.10%'), findsOneWidget);
-    expect(find.text('31.40%'), findsOneWidget);
-
-    await tester.tap(find.text('Win Rate'));
-    await tester.pumpAndSettle();
-
-    final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
-    final lamTopLeft = tester.getTopLeft(find.text('Lam'));
-    expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
-  });
-
-  testWidgets('initial hero id pins and labels the focused hero', (
+  testWidgets('renders metadata driven filters, views, groups, and columns', (
     tester,
   ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          heroTrendsProvider.overrideWith((ref) async {
-            return const [
-              HeroTrendRow(
-                id: 199,
-                name: 'Lam',
-                avatarUrl: '',
-                winRate: 56.1,
-                mvpScore: 13.8,
-                mvpRate: 22.5,
-                dmgShare: 31.4,
-                takeDmgShare: 28.7,
-                ecoShare: 24.1,
-              ),
-              HeroTrendRow(
-                id: 166,
-                name: 'Yaria',
-                avatarUrl: '',
-                winRate: 60.2,
-                mvpScore: 9.2,
-                mvpRate: 11.4,
-                dmgShare: 12.1,
-                takeDmgShare: 18.2,
-                ecoShare: 17.7,
-              ),
-            ];
+          heroTrendTableProvider.overrideWith((ref, query) async {
+            return sampleStatsTrendTable(
+              dimension: query.dimension,
+              view: query.view,
+            );
           }),
         ],
-        child: const MaterialApp(home: HeroTrendsScreen(initialHeroId: 166)),
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Focused hero'), findsOneWidget);
-    final yariaTopLeft = tester.getTopLeft(find.text('Yaria'));
-    final lamTopLeft = tester.getTopLeft(find.text('Lam'));
-    expect(yariaTopLeft.dy, lessThan(lamTopLeft.dy));
+    expect(find.text('Hero'), findsWidgets);
+    expect(find.text('Power'), findsOneWidget);
+    expect(find.text('Player'), findsOneWidget);
+    expect(find.text('Equipment'), findsOneWidget);
+    expect(find.text('Tier'), findsOneWidget);
+    expect(find.text('Base Stats'), findsOneWidget);
+    expect(find.text('Preparation'), findsOneWidget);
+    expect(find.text('All metrics'), findsOneWidget);
+    expect(find.text('Core'), findsOneWidget);
+    expect(find.text('KDA'), findsOneWidget);
+    expect(find.text('Win Rate'), findsOneWidget);
+    expect(find.text('56.10%'), findsOneWidget);
+  });
+
+  testWidgets('changes dimension and sends the matching table query', (
+    tester,
+  ) async {
+    final dimensions = <String>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith((ref, query) async {
+            dimensions.add(query.dimension);
+            return sampleStatsTrendTable(
+              dimension: query.dimension,
+              view: query.view,
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Power'));
+    await tester.pumpAndSettle();
+
+    expect(dimensions, contains('hero_rank'));
+    expect(dimensions, contains('power_rank'));
+  });
+
+  testWidgets('opens the complete trend scope filters without asset errors', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('Top 1000'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Trend scope'), findsOneWidget);
+    expect(find.text('Lane'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName.startsWith(
+              'assets/lane-icons/',
+            ),
+      ),
+      findsNWidgets(5),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('opens in-app hero detail sheet with multiple tabs', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(),
+          ),
+          heroTrendDetailProvider.overrideWith(
+            (ref, request) async => sampleStatsTrendDetail(),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('trend-row-hero-199')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Overview'), findsOneWidget);
+    expect(find.text('Power'), findsWidgets);
+    expect(find.text('Playstyle'), findsOneWidget);
+    expect(find.text('Equipment'), findsWidgets);
+    expect(find.text('Core trend'), findsOneWidget);
   });
 }
