@@ -36,6 +36,9 @@ void main() {
     expect(find.text('KDA'), findsOneWidget);
     expect(find.text('Win Rate'), findsOneWidget);
     expect(find.text('56.10%'), findsOneWidget);
+    expect(find.byKey(const ValueKey('trend-signal-hero-199')), findsOneWidget);
+    expect(find.text('热'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_drop_up_rounded), findsWidgets);
   });
 
   testWidgets('changes dimension and sends the matching table query', (

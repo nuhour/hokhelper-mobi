@@ -38,6 +38,7 @@ StatsTrendTable sampleStatsTrendTable({
         'hero': {'id': 199, 'heroId': '199', 'name': 'Lam', 'position': '3'},
         'wr': 56.1,
         'pick_rate': 18.4,
+        'bp_rate': 71.0,
         'avg_kills': 8.2,
         'trend_smoothed': [52.0, 54.0, 53.0, 56.1],
         'core_trend_points': [

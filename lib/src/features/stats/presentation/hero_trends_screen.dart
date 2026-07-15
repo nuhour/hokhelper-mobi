@@ -604,7 +604,12 @@ class _TrendIdentityCell extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: showSparkline && row.sparkline.length > 1
-                  ? _MiniSparkline(values: row.sparkline)
+                  ? _MiniSparkline(
+                      key: ValueKey('trend-signal-${row.kind}-${row.id}'),
+                      values: row.sparkline,
+                      heatValue: _double(row.raw['bp_rate']),
+                      showSignal: true,
+                    )
                   : Text(
                       row.name,
                       maxLines: 2,
@@ -1697,23 +1702,150 @@ class _TrendChartPainter extends CustomPainter {
 }
 
 class _MiniSparkline extends StatelessWidget {
-  const _MiniSparkline({required this.values, this.color});
+  const _MiniSparkline({
+    required this.values,
+    this.color,
+    this.heatValue = double.nan,
+    this.showSignal = false,
+    super.key,
+  });
 
   final List<double> values;
   final Color? color;
+  final double heatValue;
+  final bool showSignal;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _MiniSparklinePainter(
-        values: values,
-        color: color ?? Theme.of(context).colorScheme.primary,
-        baselineColor:
-            Theme.of(context).extension<HokThemeColors>()?.onSurfaceMuted ??
-            AppTheme.muted,
-      ),
-      size: const Size(double.infinity, double.infinity),
+    final signal = _TrendSignal.resolve(
+      values: values,
+      heatValue: heatValue,
+      fallbackColor: color ?? Theme.of(context).colorScheme.primary,
+      useHeatPalette: showSignal,
     );
+    return Semantics(
+      label: signal.semanticLabel,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                0,
+                showSignal ? 5 : 1,
+                showSignal ? 9 : 0,
+                showSignal && signal.isHot ? 7 : 1,
+              ),
+              child: CustomPaint(
+                painter: _MiniSparklinePainter(
+                  values: values,
+                  color: signal.color,
+                  baselineColor:
+                      Theme.of(
+                        context,
+                      ).extension<HokThemeColors>()?.onSurfaceMuted ??
+                      AppTheme.muted,
+                ),
+                size: const Size(double.infinity, double.infinity),
+              ),
+            ),
+          ),
+          if (showSignal && signal.direction != _TrendDirection.steady)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Icon(
+                signal.direction == _TrendDirection.up
+                    ? Icons.arrow_drop_up_rounded
+                    : Icons.arrow_drop_down_rounded,
+                size: 19,
+                color: signal.color,
+              ),
+            ),
+          if (showSignal && signal.isHot)
+            Positioned(
+              left: 1,
+              bottom: -4,
+              child: Text(
+                '热',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: signal.color,
+                  fontSize: 9,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _TrendDirection { up, steady, down }
+
+class _TrendSignal {
+  const _TrendSignal({
+    required this.color,
+    required this.direction,
+    required this.isHot,
+  });
+
+  static const _cold = Color(0xFF2997FF);
+  static const _warm = Color(0xFFFF9F0A);
+  static const _hot = Color(0xFFFF2D2D);
+
+  final Color color;
+  final _TrendDirection direction;
+  final bool isHot;
+
+  String get semanticLabel => switch (direction) {
+    _TrendDirection.up => isHot ? 'Hot trend rising' : 'Trend rising',
+    _TrendDirection.steady => isHot ? 'Hot trend steady' : 'Trend steady',
+    _TrendDirection.down => isHot ? 'Hot trend falling' : 'Trend falling',
+  };
+
+  factory _TrendSignal.resolve({
+    required List<double> values,
+    required double heatValue,
+    required Color fallbackColor,
+    required bool useHeatPalette,
+  }) {
+    final valid = values.where((value) => value.isFinite).toList();
+    final direction = _resolveDirection(valid);
+    final hasHeat = useHeatPalette && heatValue.isFinite;
+    final color = hasHeat
+        ? heatValue >= 60
+              ? _hot
+              : heatValue >= 25
+              ? _warm
+              : _cold
+        : useHeatPalette
+        ? switch (direction) {
+            _TrendDirection.up => _hot,
+            _TrendDirection.steady => _warm,
+            _TrendDirection.down => _cold,
+          }
+        : fallbackColor;
+    return _TrendSignal(
+      color: color,
+      direction: direction,
+      isHot: hasHeat && heatValue >= 60,
+    );
+  }
+
+  static _TrendDirection _resolveDirection(List<double> values) {
+    if (values.length < 2) return _TrendDirection.steady;
+    final sampleSize = math.min(3, values.length);
+    final start = values.take(sampleSize).reduce((a, b) => a + b) / sampleSize;
+    final end =
+        values.skip(values.length - sampleSize).reduce((a, b) => a + b) /
+        sampleSize;
+    final spread = values.reduce(math.max) - values.reduce(math.min);
+    final threshold = math.max(spread * 0.12, start.abs() * 0.003);
+    if (end - start > threshold) return _TrendDirection.up;
+    if (start - end > threshold) return _TrendDirection.down;
+    return _TrendDirection.steady;
   }
 }
 
@@ -1735,29 +1867,51 @@ class _MiniSparklinePainter extends CustomPainter {
     final minValue = valid.reduce(math.min);
     final maxValue = valid.reduce(math.max);
     final spread = math.max(maxValue - minValue, 0.0001);
+    final verticalPadding = math.max(1.5, size.height * 0.08);
     final baseline = valid.reduce((a, b) => a + b) / valid.length;
     final baselineY =
-        size.height - 3 - ((baseline - minValue) / spread) * (size.height - 6);
-    canvas.drawLine(
-      Offset(0, baselineY),
-      Offset(size.width, baselineY),
-      Paint()
-        ..color = baselineColor.withValues(alpha: 0.65)
-        ..strokeWidth = 1,
-    );
-    final path = Path();
+        size.height -
+        verticalPadding -
+        ((baseline - minValue) / spread) * (size.height - verticalPadding * 2);
+    final baselinePaint = Paint()
+      ..color = baselineColor.withValues(alpha: 0.7)
+      ..strokeWidth = 1;
+    for (var x = 0.0; x < size.width; x += 7) {
+      canvas.drawLine(
+        Offset(x, baselineY),
+        Offset(math.min(x + 4, size.width), baselineY),
+        baselinePaint,
+      );
+    }
+
+    final points = <Offset>[];
     for (var index = 0; index < valid.length; index++) {
       final x = size.width * index / (valid.length - 1);
       final y =
           size.height -
-          3 -
-          ((valid[index] - minValue) / spread) * (size.height - 6);
-      if (index == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
+          verticalPadding -
+          ((valid[index] - minValue) / spread) *
+              (size.height - verticalPadding * 2);
+      points.add(Offset(x, y));
     }
+
+    final path = _smoothPath(points);
+    final fillPath = Path.from(path)
+      ..lineTo(points.last.dx, size.height)
+      ..lineTo(points.first.dx, size.height)
+      ..close();
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            color.withValues(alpha: 0.24),
+            color.withValues(alpha: 0.02),
+          ],
+        ).createShader(Offset.zero & size),
+    );
     canvas.drawPath(
       path,
       Paint()
@@ -1769,9 +1923,33 @@ class _MiniSparklinePainter extends CustomPainter {
     );
   }
 
+  Path _smoothPath(List<Offset> points) {
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var index = 1; index < points.length; index++) {
+      final previous = points[index - 1];
+      final current = points[index];
+      final midpoint = Offset(
+        (previous.dx + current.dx) / 2,
+        (previous.dy + current.dy) / 2,
+      );
+      path.quadraticBezierTo(
+        previous.dx,
+        previous.dy,
+        midpoint.dx,
+        midpoint.dy,
+      );
+    }
+    final previous = points[points.length - 2];
+    final current = points.last;
+    path.quadraticBezierTo(previous.dx, previous.dy, current.dx, current.dy);
+    return path;
+  }
+
   @override
   bool shouldRepaint(_MiniSparklinePainter oldDelegate) {
-    return oldDelegate.values != values || oldDelegate.color != color;
+    return oldDelegate.values != values ||
+        oldDelegate.color != color ||
+        oldDelegate.baselineColor != baselineColor;
   }
 }
 
