@@ -1,0 +1,128 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/game_assistant/presentation/game_assistant_screen.dart';
+
+void main() {
+  testWidgets('renders game assistant preview and feature cards', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: GameAssistantScreen())),
+    );
+
+    expect(find.text('Game Assistant'), findsOneWidget);
+    expect(find.text('Mobile Companion App'), findsOneWidget);
+    expect(find.text('Jungle timers'), findsOneWidget);
+    expect(find.text('Gold analytics'), findsWidgets);
+    expect(find.text('Enemy cooldowns'), findsWidgets);
+    expect(find.text('AI tactical tips'), findsOneWidget);
+    expect(find.text('Live Match Console'), findsOneWidget);
+    expect(find.text('Ready on this device'), findsOneWidget);
+    expect(find.text('Android APK'), findsOneWidget);
+    expect(find.text('Web assistant'), findsOneWidget);
+    expect(find.text('Installed companion'), findsOneWidget);
+    expect(find.text('Coming soon'), findsNothing);
+  });
+
+  testWidgets('runs the live match timer controls', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: GameAssistantScreen())),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Start match'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('Blue Buff 15s'), findsOneWidget);
+
+    await tester.tap(find.text('Start match'));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('00:02'), findsOneWidget);
+    expect(find.text('Blue Buff 13s'), findsOneWidget);
+    expect(find.text('Pause'), findsOneWidget);
+
+    await tester.tap(find.text('Pause'));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('00:02'), findsOneWidget);
+
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+
+    expect(find.text('00:00'), findsOneWidget);
+    expect(find.text('Blue Buff 15s'), findsOneWidget);
+  });
+
+  testWidgets('tracks enemy cooldown windows during a match', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: GameAssistantScreen())),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Live Match Console'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Track flash'), findsOneWidget);
+    expect(find.text('Enemy Mid Flash 120s'), findsNothing);
+
+    await tester.tap(find.text('Track flash'));
+    await tester.pump();
+
+    expect(find.text('Enemy Mid Flash 120s'), findsOneWidget);
+
+    await tester.tap(find.text('Start match'));
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(find.text('Enemy Mid Flash 117s'), findsOneWidget);
+
+    await tester.tap(find.text('Reset'));
+    await tester.pump();
+
+    expect(find.text('Enemy Mid Flash 117s'), findsNothing);
+  });
+
+  testWidgets('opens with a tracked cooldown from hokx query state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: GameAssistantScreen(initialTrack: 'flash')),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Live Match Console'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Enemy Mid Flash 120s'), findsOneWidget);
+  });
+
+  testWidgets('web game assistant alias opens with tracked cooldown', (
+    tester,
+  ) async {
+    final router = createAppRouter()..go('/game-assistant?track=ultimate');
+
+    await tester.pumpWidget(ProviderScope(child: HokHelperApp(router: router)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Live Match Console'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/game-assistant',
+    );
+    expect(find.text('Enemy Mid Ultimate 45s'), findsOneWidget);
+  });
+}

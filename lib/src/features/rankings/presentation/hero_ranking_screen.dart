@@ -1,0 +1,1010 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/providers/core_providers.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_section_header.dart';
+import '../../heroes/presentation/hero_gallery_screen.dart';
+import '../../settings/presentation/settings_controller.dart';
+import '../data/rankings_repository.dart';
+import '../domain/equip_ranking_entry.dart';
+import '../domain/hero_ranking_entry.dart';
+import '../domain/player_ranking_entry.dart';
+import '../domain/tier_list_entry.dart';
+
+enum HeroRankingSort {
+  winRate('win_rate', 'Win'),
+  pickRate('pick_rate', 'Pick'),
+  banRate('ban_rate', 'Ban'),
+  mvpRate('mvp_rate', 'MVP');
+
+  const HeroRankingSort(this.apiValue, this.label);
+
+  final String apiValue;
+  final String label;
+}
+
+final rankingsRepositoryProvider = Provider<RankingsRepository>((ref) {
+  return RankingsRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+final selectedHeroRankingSortProvider = StateProvider<HeroRankingSort>((ref) {
+  return HeroRankingSort.winRate;
+});
+
+final heroRankingProvider = FutureProvider<List<HeroRankingEntry>>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  final sort = ref.watch(selectedHeroRankingSortProvider);
+  return ref
+      .watch(rankingsRepositoryProvider)
+      .loadHeroRanking(settings.region.regionId, sortBy: sort.apiValue);
+});
+
+final playerRankingProvider = FutureProvider<List<PlayerRankingEntry>>((
+  ref,
+) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(rankingsRepositoryProvider)
+      .loadPlayerRanking(settings.region.regionId);
+});
+
+final equipRankingProvider = FutureProvider<List<EquipRankingEntry>>((ref) {
+  return ref.watch(rankingsRepositoryProvider).loadEquipRanking();
+});
+
+final tierRankingProvider = FutureProvider<List<TierListEntry>>((ref) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(rankingsRepositoryProvider)
+      .loadTierList(settings.region.regionId);
+});
+
+final tierRankingDisplayProvider = FutureProvider<List<TierListEntry>>((
+  ref,
+) async {
+  final entries = await ref.watch(tierRankingProvider.future);
+  final heroes = ref.watch(heroGalleryProvider).valueOrNull ?? const [];
+  if (heroes.isEmpty) {
+    return entries;
+  }
+
+  final avatarById = <String, String>{};
+  for (final hero in heroes) {
+    if (hero.avatar.isEmpty) {
+      continue;
+    }
+    avatarById[hero.id] = hero.avatar;
+    if (hero.heroId.isNotEmpty) {
+      avatarById[hero.heroId] = hero.avatar;
+    }
+  }
+  return entries
+      .map((entry) {
+        if (entry.avatarUrl.isNotEmpty) {
+          return entry;
+        }
+        final avatar =
+            avatarById[entry.externalHeroId] ??
+            avatarById['${entry.heroId}'] ??
+            '';
+        return avatar.isEmpty ? entry : entry.withAvatarUrl(avatar);
+      })
+      .toList(growable: false);
+});
+
+class TierRankingScreen extends ConsumerStatefulWidget {
+  const TierRankingScreen({super.key});
+
+  @override
+  ConsumerState<TierRankingScreen> createState() => _TierRankingScreenState();
+}
+
+class _TierRankingScreenState extends ConsumerState<TierRankingScreen> {
+  List<TierListEntry>? _previousEntries;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = ref.watch(tierRankingDisplayProvider);
+    final loaded = value.valueOrNull;
+    if (loaded != null) {
+      _previousEntries = loaded;
+    }
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: _TierListTab(tierValue: value, previousEntries: _previousEntries),
+    );
+  }
+}
+
+class HeroRankingScreen extends ConsumerStatefulWidget {
+  const HeroRankingScreen({super.key, this.initialTabIndex = 0});
+
+  final int initialTabIndex;
+
+  @override
+  ConsumerState<HeroRankingScreen> createState() => _HeroRankingScreenState();
+}
+
+class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 4,
+      initialIndex: widget.initialTabIndex.clamp(0, 3),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rankingValue = ref.watch(heroRankingProvider);
+    final playerValue = ref.watch(playerRankingProvider);
+    final equipValue = ref.watch(equipRankingProvider);
+    final tierValue = ref.watch(tierRankingDisplayProvider);
+    final selectedSort = ref.watch(selectedHeroRankingSortProvider);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppSectionHeader(title: 'Hero Rankings'),
+              const SizedBox(height: 8),
+              Text(
+                'Compare heroes, players, equipment, and tier data.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+              ),
+              const SizedBox(height: 16),
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Heroes'),
+                  Tab(text: 'Players'),
+                  Tab(text: 'Equips'),
+                  Tab(text: 'Tier'),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _HeroRankingTab(
+                rankingValue: rankingValue,
+                selectedSort: selectedSort,
+              ),
+              _PlayerRankingTab(playerValue: playerValue),
+              _EquipRankingTab(equipValue: equipValue),
+              _TierListTab(tierValue: tierValue),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroRankingTab extends ConsumerWidget {
+  const _HeroRankingTab({
+    required this.rankingValue,
+    required this.selectedSort,
+  });
+
+  final AsyncValue<List<HeroRankingEntry>> rankingValue;
+  final HeroRankingSort selectedSort;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppAsyncView<List<HeroRankingEntry>>(
+      value: rankingValue,
+      retry: () => ref.invalidate(heroRankingProvider),
+      data: (entries) => RefreshIndicator(
+        onRefresh: () => ref.refresh(heroRankingProvider.future),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              sliver: SliverToBoxAdapter(
+                child: _SortSelector(selectedSort: selectedSort),
+              ),
+            ),
+            if (entries.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: AppEmptyState(
+                  icon: Icons.leaderboard_outlined,
+                  title: 'No rankings found',
+                  message: 'Pull to refresh or switch region in settings.',
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                sliver: SliverList.separated(
+                  itemCount: entries.length,
+                  itemBuilder: (context, index) {
+                    return _HeroRankingCard(
+                      entry: entries[index],
+                      rank: index + 1,
+                    );
+                  },
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerRankingTab extends ConsumerWidget {
+  const _PlayerRankingTab({required this.playerValue});
+
+  final AsyncValue<List<PlayerRankingEntry>> playerValue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppAsyncView<List<PlayerRankingEntry>>(
+      value: playerValue,
+      retry: () => ref.invalidate(playerRankingProvider),
+      data: (entries) => RefreshIndicator(
+        onRefresh: () => ref.refresh(playerRankingProvider.future),
+        child: entries.isEmpty
+            ? const CustomScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppEmptyState(
+                      icon: Icons.person_search_outlined,
+                      title: 'No players found',
+                      message: 'Pull to refresh or switch region in settings.',
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  return _PlayerRankingCard(
+                    entry: entries[index],
+                    rank: index + 1,
+                  );
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+              ),
+      ),
+    );
+  }
+}
+
+class _EquipRankingTab extends ConsumerWidget {
+  const _EquipRankingTab({required this.equipValue});
+
+  final AsyncValue<List<EquipRankingEntry>> equipValue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppAsyncView<List<EquipRankingEntry>>(
+      value: equipValue,
+      retry: () => ref.invalidate(equipRankingProvider),
+      data: (entries) => RefreshIndicator(
+        onRefresh: () => ref.refresh(equipRankingProvider.future),
+        child: entries.isEmpty
+            ? const CustomScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: AppEmptyState(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No equipment found',
+                      message:
+                          'Pull to refresh once equipment stats are ready.',
+                    ),
+                  ),
+                ],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  return _EquipRankingCard(
+                    entry: entries[index],
+                    rank: index + 1,
+                  );
+                },
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+              ),
+      ),
+    );
+  }
+}
+
+class _TierListTab extends ConsumerWidget {
+  const _TierListTab({required this.tierValue, this.previousEntries});
+
+  final AsyncValue<List<TierListEntry>> tierValue;
+  final List<TierListEntry>? previousEntries;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppAsyncView<List<TierListEntry>>(
+      value: tierValue,
+      previousData: previousEntries,
+      loadingStyle: AppAsyncLoadingStyle.gallery,
+      retry: () => ref.invalidate(tierRankingDisplayProvider),
+      data: (entries) {
+        final groups = <String, List<TierListEntry>>{};
+        for (final entry in entries) {
+          groups.putIfAbsent(entry.tier, () => []).add(entry);
+        }
+        final tiers = groups.keys.toList(growable: false)
+          ..sort((a, b) => _tierOrder(a).compareTo(_tierOrder(b)));
+
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(tierRankingDisplayProvider.future),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.workspace_premium_outlined,
+                    size: 19,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Hero Tier List',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${entries.length} heroes',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  IconButton(
+                    tooltip: 'Refresh',
+                    onPressed: () => ref.invalidate(tierRankingDisplayProvider),
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (entries.isEmpty)
+                const SizedBox(
+                  height: 360,
+                  child: AppEmptyState(
+                    icon: Icons.workspace_premium_outlined,
+                    title: 'No tier data found',
+                    message: 'Pull to refresh once tier snapshots are ready.',
+                  ),
+                ),
+              for (final tier in tiers) ...[
+                _TierGroup(tier: tier, entries: groups[tier]!),
+                const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+int _tierOrder(String tier) {
+  final match = RegExp(r'\d+').firstMatch(tier);
+  return int.tryParse(match?.group(0) ?? '') ?? 99;
+}
+
+class _TierGroup extends StatelessWidget {
+  const _TierGroup({required this.tier, required this.entries});
+
+  final String tier;
+  final List<TierListEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final tierColor = switch (tier) {
+      'T0' => const Color(0xFFEF4444),
+      'T1' => const Color(0xFFF97316),
+      'T2' => const Color(0xFFF2B705),
+      'T3' => const Color(0xFF22C55E),
+      _ => const Color(0xFF64748B),
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors?.surfaceSlate ?? AppTheme.panel,
+        border: Border.all(color: colors?.outlineSoft ?? AppTheme.outline),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Column(
+          children: [
+            Container(
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              color: tierColor,
+              child: Row(
+                children: [
+                  Text(
+                    tier,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${entries.length}',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final count = constraints.maxWidth >= 430 ? 6 : 5;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: count,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 6,
+                      childAspectRatio: 0.78,
+                    ),
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      return _CompactTierHero(entry: entries[index]);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactTierHero extends StatelessWidget {
+  const _CompactTierHero({required this.entry});
+
+  final TierListEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final heroRouteId = _heroRouteId(
+      externalHeroId: entry.externalHeroId,
+      heroId: entry.heroId,
+    );
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: heroRouteId.isEmpty
+          ? null
+          : () => context.go('/heroes/$heroRouteId'),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors?.surfaceMuted ?? AppTheme.panelAlt,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppImage(
+                url: entry.avatarUrl,
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                semanticLabel: entry.name,
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: heroRouteId.isEmpty
+                    ? null
+                    : () => context.go('/heroes/$heroRouteId'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 22),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  entry.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors?.onSurfaceStrong,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortSelector extends ConsumerWidget {
+  const _SortSelector({required this.selectedSort});
+
+  final HeroRankingSort selectedSort;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SegmentedButton<HeroRankingSort>(
+      segments: HeroRankingSort.values
+          .map(
+            (sort) => ButtonSegment<HeroRankingSort>(
+              value: sort,
+              label: Text(sort.label),
+            ),
+          )
+          .toList(growable: false),
+      selected: {selectedSort},
+      onSelectionChanged: (selection) {
+        ref.read(selectedHeroRankingSortProvider.notifier).state =
+            selection.single;
+      },
+      showSelectedIcon: false,
+    );
+  }
+}
+
+class _HeroRankingCard extends StatelessWidget {
+  const _HeroRankingCard({required this.entry, required this.rank});
+
+  final HeroRankingEntry entry;
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    final heroRouteId = _heroRouteId(
+      externalHeroId: entry.externalHeroId,
+      heroId: entry.heroId,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: heroRouteId.isEmpty
+            ? null
+            : () => context.go('/heroes/$heroRouteId'),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppTheme.panel,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    _RankBadge(rank: rank),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            entry.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: AppTheme.text,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            entry.mainJob.isEmpty ? 'Hero' : entry.mainJob,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _PrimaryRate(value: entry.winRate),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetricChip(
+                      label: 'Pick',
+                      value: _formatPercent(entry.pickRate),
+                    ),
+                    _MetricChip(
+                      label: 'Ban',
+                      value: _formatPercent(entry.banRate),
+                    ),
+                    _MetricChip(
+                      label: 'MVP',
+                      value: _formatPercent(entry.mvpRate),
+                    ),
+                    _MetricChip(
+                      label: 'K',
+                      value: entry.avgKills.toStringAsFixed(1),
+                    ),
+                    _MetricChip(
+                      label: 'A',
+                      value: entry.avgAssists.toStringAsFixed(1),
+                    ),
+                    _MetricChip(
+                      label: 'Grade',
+                      value: entry.avgGrade.toStringAsFixed(1),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerRankingCard extends StatelessWidget {
+  const _PlayerRankingCard({required this.entry, required this.rank});
+
+  final PlayerRankingEntry entry;
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                _RankBadge(rank: rank),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              entry.playerName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: AppTheme.text,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                          ),
+                          if (entry.playerTypeLabel.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            _TypeBadge(label: entry.playerTypeLabel),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Region ${entry.region}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                _PrimaryScore(value: entry.peakScore),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _MetricChip(label: 'Stars', value: entry.rankStars.toString()),
+                _MetricChip(label: 'Win', value: _formatPercent(entry.winRate)),
+                _MetricChip(
+                  label: 'KDA',
+                  value: entry.avgKda.toStringAsFixed(1),
+                ),
+                _MetricChip(
+                  label: 'Matches',
+                  value: entry.playCount.toString(),
+                ),
+                _MetricChip(
+                  label: 'Grade',
+                  value: entry.grade.toStringAsFixed(1),
+                ),
+                _MetricChip(label: 'MVP', value: entry.mvpCount.toString()),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EquipRankingCard extends StatelessWidget {
+  const _EquipRankingCard({required this.entry, required this.rank});
+
+  final EquipRankingEntry entry;
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _RankBadge(rank: rank),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                entry.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MetricChip(
+                  label: 'Pick',
+                  value: _formatPercent(entry.pickRate),
+                ),
+                const SizedBox(height: 8),
+                _MetricChip(label: 'Win', value: _formatPercent(entry.winRate)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryScore extends StatelessWidget {
+  const _PrimaryScore({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _formatScore(value),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppTheme.gold,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        Text(
+          'Peak',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+        ),
+      ],
+    );
+  }
+}
+
+class _TypeBadge extends StatelessWidget {
+  const _TypeBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.gold.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppTheme.gold,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RankBadge extends StatelessWidget {
+  const _RankBadge({required this.rank});
+
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: AppTheme.gold.withValues(alpha: 0.16),
+      child: Text(
+        '#$rank',
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: AppTheme.gold,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryRate extends StatelessWidget {
+  const _PrimaryRate({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _formatPercent(value),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppTheme.gold,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        Text(
+          'Win rate',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Text(
+          '$label $value',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _formatPercent(double value) {
+  return '${(value * 100).toStringAsFixed(1)}%';
+}
+
+String _heroRouteId({required String externalHeroId, required int heroId}) {
+  final external = externalHeroId.trim();
+  if (external.isNotEmpty) {
+    return external;
+  }
+  return heroId > 0 ? heroId.toString() : '';
+}
+
+String _formatScore(double value) {
+  final text = value.toStringAsFixed(1);
+  final parts = text.split('.');
+  final whole = parts.first;
+  final buffer = StringBuffer();
+  for (var i = 0; i < whole.length; i++) {
+    final remaining = whole.length - i;
+    buffer.write(whole[i]);
+    if (remaining > 1 && remaining % 3 == 1) {
+      buffer.write(',');
+    }
+  }
+  return '${buffer.toString()}.${parts.last}';
+}

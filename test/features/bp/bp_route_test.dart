@@ -1,0 +1,307 @@
+import 'dart:ui';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
+import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
+import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
+import 'package:hok_helper_mobile/src/features/bp/presentation/bp_scheme_detail_screen.dart';
+import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
+import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
+
+void main() {
+  testWidgets('BP dashboard card opens the focused mobile scheme detail', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/bp-simulator');
+    tester.view.physicalSize = const Size(1170, 2532);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpSchemesProvider.overrideWith((ref) async {
+            return const [
+              BpSchemeSummary(
+                id: '12',
+                name: 'KPL Finals Draft',
+                createdAt: '2026-07-03T10:00:00Z',
+                boMode: 7,
+                teamAName: 'Wolves',
+                teamBName: 'AG',
+                sideSelectionRule: 'loser_selects',
+                gameNumber: 3,
+                historyCount: 2,
+                currentStepIndex: 4,
+                blueBanCount: 1,
+                redBanCount: 1,
+                bluePickCount: 1,
+                redPickCount: 1,
+              ),
+            ];
+          }),
+          bpSchemeDetailProvider('12').overrideWith((ref) async {
+            return const BpSchemeSummary(
+              id: '12',
+              name: 'KPL Finals Draft',
+              createdAt: '2026-07-03T10:00:00Z',
+              boMode: 7,
+              teamAName: 'Wolves',
+              teamBName: 'AG',
+              sideSelectionRule: 'loser_selects',
+              gameNumber: 3,
+              historyCount: 2,
+              currentStepIndex: 4,
+              blueBanCount: 1,
+              redBanCount: 1,
+              bluePickCount: 1,
+              redPickCount: 1,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('KPL Finals Draft'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/bp-simulator/12',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['gameIndex'],
+      '2',
+    );
+    expect(find.text('BP Scheme'), findsOneWidget);
+    expect(find.text('Focused game: Game 3'), findsOneWidget);
+  });
+
+  testWidgets('BP scheme deep link opens a mobile scheme detail', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/tools/bp-simulator/12?gameIndex=1');
+    tester.view.physicalSize = const Size(1170, 2532);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpSchemeDetailProvider('12').overrideWith((ref) async {
+            return const BpSchemeSummary(
+              id: '12',
+              name: 'KPL Finals Draft',
+              createdAt: '2026-07-03T10:00:00Z',
+              boMode: 7,
+              teamAName: 'Wolves',
+              teamBName: 'AG',
+              sideSelectionRule: 'loser_selects',
+              gameNumber: 3,
+              historyCount: 2,
+              currentStepIndex: 4,
+              blueBanCount: 1,
+              redBanCount: 1,
+              bluePickCount: 1,
+              redPickCount: 1,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('BP Scheme'), findsOneWidget);
+    expect(find.text('KPL Finals Draft'), findsOneWidget);
+    expect(find.text('Wolves vs AG'), findsOneWidget);
+    expect(find.text('BO7'), findsOneWidget);
+    expect(find.text('Game 3 · Step 4'), findsOneWidget);
+    expect(find.text('Focused game: Game 2'), findsOneWidget);
+    expect(find.text('2 bans · 2 picks'), findsOneWidget);
+  });
+
+  testWidgets('legacy BP scheme_id query opens focused mobile scheme detail', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/bp-simulator?scheme_id=12&game_index=1');
+    tester.view.physicalSize = const Size(1170, 2532);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpSchemeDetailProvider('12').overrideWith((ref) async {
+            return const BpSchemeSummary(
+              id: '12',
+              name: 'KPL Finals Draft',
+              createdAt: '2026-07-03T10:00:00Z',
+              boMode: 7,
+              teamAName: 'Wolves',
+              teamBName: 'AG',
+              sideSelectionRule: 'loser_selects',
+              gameNumber: 3,
+              historyCount: 2,
+              currentStepIndex: 4,
+              blueBanCount: 1,
+              redBanCount: 1,
+              bluePickCount: 1,
+              redPickCount: 1,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/tools/bp-simulator/12');
+    expect(uri.queryParameters['gameIndex'], '1');
+    expect(find.text('BP Scheme'), findsOneWidget);
+    expect(find.text('KPL Finals Draft'), findsOneWidget);
+    expect(find.text('Focused game: Game 2'), findsOneWidget);
+  });
+
+  testWidgets(
+    'landscape BP editor locks the selected hero into the first ban',
+    (tester) async {
+      final router = createAppRouter();
+      router.go('/tools/bp-simulator/12');
+      tester.view.physicalSize = const Size(2532, 1170);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            bpSchemeDetailProvider('12').overrideWith((ref) async {
+              return const BpSchemeSummary(
+                id: '12',
+                name: 'KPL Finals Draft',
+                createdAt: '2026-07-03T10:00:00Z',
+                boMode: 7,
+                teamAName: 'Wolves',
+                teamBName: 'AG',
+                sideSelectionRule: 'loser_selects',
+                gameNumber: 1,
+                historyCount: 0,
+                currentStepIndex: 0,
+                blueBanCount: 0,
+                redBanCount: 0,
+                bluePickCount: 0,
+                redPickCount: 0,
+              );
+            }),
+            heroGalleryProvider.overrideWith((ref) async {
+              return const [
+                HeroSummary(
+                  id: '2624',
+                  name: 'Haya',
+                  avatar: '',
+                  title: '',
+                  position: 1,
+                ),
+              ];
+            }),
+          ],
+          child: HokHelperApp(router: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('开始 BP'), findsOneWidget);
+      await tester.tap(find.text('开始 BP'));
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel('Haya'));
+      await tester.pump();
+      await tester.tap(find.text('锁定'));
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Selected hero'), findsOneWidget);
+      expect(find.text('锁定'), findsNothing);
+    },
+  );
+
+  testWidgets('BO7 game seven uses the HOKX Peak lineup flow', (tester) async {
+    final router = createAppRouter();
+    router.go('/tools/bp-simulator/peak');
+    tester.view.physicalSize = const Size(2532, 1170);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          bpSchemeDetailProvider('peak').overrideWith((ref) async {
+            return const BpSchemeSummary(
+              id: 'peak',
+              name: 'BO7 Peak Draft',
+              createdAt: '2026-07-03T10:00:00Z',
+              boMode: 7,
+              teamAName: 'Wolves',
+              teamBName: 'AG',
+              sideSelectionRule: 'loser_selects',
+              gameNumber: 7,
+              historyCount: 6,
+              currentStepIndex: 0,
+              blueBanCount: 0,
+              redBanCount: 0,
+              bluePickCount: 0,
+              redPickCount: 0,
+            );
+          }),
+          heroGalleryProvider.overrideWith((ref) async {
+            return const [
+              HeroSummary(
+                id: '1',
+                name: 'Peak hero 1',
+                avatar: '',
+                title: '',
+                position: 1,
+              ),
+              HeroSummary(
+                id: '2',
+                name: 'Peak hero 2',
+                avatar: '',
+                title: '',
+                position: 2,
+              ),
+              HeroSummary(
+                id: '3',
+                name: 'Peak hero 3',
+                avatar: '',
+                title: '',
+                position: 3,
+              ),
+              HeroSummary(
+                id: '4',
+                name: 'Peak hero 4',
+                avatar: '',
+                title: '',
+                position: 4,
+              ),
+              HeroSummary(
+                id: '5',
+                name: 'Peak hero 5',
+                avatar: '',
+                title: '',
+                position: 5,
+              ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('还需选择 5 人'), findsOneWidget);
+    for (var index = 1; index <= 5; index++) {
+      await tester.tap(find.bySemanticsLabel('Peak hero $index'));
+      await tester.pump();
+    }
+
+    expect(find.text('展示对手'), findsOneWidget);
+  });
+}

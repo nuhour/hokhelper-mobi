@@ -1,0 +1,240 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/network/api_error.dart';
+import 'package:hok_helper_mobile/src/features/tierlist_tool/data/tierlist_tool_repository.dart';
+import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
+import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_tool_screen.dart';
+
+class _FakeTierListToolRepository extends TierListToolRepository {
+  _FakeTierListToolRepository() : super(apiClient: _NoopApiClient());
+
+  String? createdName;
+  String? deletedSchemeId;
+  Object? createError;
+
+  @override
+  Future<TierListSchemeSummary> createScheme({required String name}) async {
+    final error = createError;
+    if (error != null) {
+      throw error;
+    }
+    createdName = name;
+    return TierListSchemeSummary(
+      id: '77',
+      name: name,
+      createdAt: '2026-07-07T10:00:00Z',
+      updatedAt: '2026-07-07T10:00:00Z',
+      rows: const [
+        TierListSchemeRowSummary(
+          id: 't0',
+          label: 'T0',
+          color: 'bg-red-600',
+          heroCount: 0,
+        ),
+        TierListSchemeRowSummary(
+          id: 't1',
+          label: 'T1',
+          color: 'bg-orange-500',
+          heroCount: 0,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> deleteScheme(String schemeId) async {
+    deletedSchemeId = schemeId;
+  }
+}
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
+
+GoRouter _buildTierListCreateRouter() {
+  return GoRouter(
+    initialLocation: '/tools/tier-list',
+    routes: [
+      GoRoute(
+        path: '/tools/tier-list',
+        builder: (context, state) => const Scaffold(body: TierListToolScreen()),
+        routes: [
+          GoRoute(
+            path: ':schemeId',
+            builder: (context, state) => Scaffold(
+              body: Text('Editing ${state.pathParameters['schemeId']}'),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+void main() {
+  testWidgets('renders tier list scheme cards', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolSchemesProvider.overrideWith((ref) async {
+            return const [
+              TierListSchemeSummary(
+                id: '9',
+                name: 'Solo Queue Meta',
+                createdAt: '2026-07-01T08:00:00Z',
+                updatedAt: '2026-07-03T12:00:00Z',
+                rows: [
+                  TierListSchemeRowSummary(
+                    id: 'r1',
+                    label: 'T0',
+                    color: 'bg-red-600',
+                    heroCount: 2,
+                  ),
+                  TierListSchemeRowSummary(
+                    id: 'r2',
+                    label: 'T1',
+                    color: 'bg-orange-500',
+                    heroCount: 1,
+                  ),
+                ],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TierListToolScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tier List Tool'), findsOneWidget);
+    expect(find.text('Solo Queue Meta'), findsOneWidget);
+    expect(find.text('3 heroes'), findsOneWidget);
+    expect(find.text('Updated 2026-07-03'), findsOneWidget);
+    expect(find.text('T0 · 2'), findsOneWidget);
+    expect(find.text('T1 · 1'), findsOneWidget);
+  });
+
+  testWidgets('creates tier list schemes from the mobile tool screen', (
+    tester,
+  ) async {
+    final repository = _FakeTierListToolRepository();
+
+    final router = _buildTierListCreateRouter();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListToolSchemesProvider.overrideWith((ref) async => const []),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Tier List'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Tier list name'),
+      'Mobile Tier List',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdName, 'Mobile Tier List');
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/tier-list/77',
+    );
+    expect(router.routeInformationProvider.value.uri.queryParameters, isEmpty);
+    expect(find.text('Editing 77'), findsOneWidget);
+    expect(find.text('Tier list created'), findsOneWidget);
+  });
+
+  testWidgets('asks guests to sign in before saving tier lists', (
+    tester,
+  ) async {
+    final repository = _FakeTierListToolRepository()
+      ..createError = const ApiError(
+        kind: ApiErrorKind.authExpired,
+        message: 'Authentication credentials were not provided.',
+        statusCode: 401,
+      );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListToolSchemesProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TierListToolScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Tier List'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Tier list name'),
+      'Guest Tier List',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in to save tier lists'), findsOneWidget);
+  });
+
+  testWidgets('deletes tier list schemes from mobile cards', (tester) async {
+    final repository = _FakeTierListToolRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListToolSchemesProvider.overrideWith((ref) async {
+            return const [
+              TierListSchemeSummary(
+                id: '9',
+                name: 'Solo Queue Meta',
+                createdAt: '2026-07-01T08:00:00Z',
+                updatedAt: '2026-07-03T12:00:00Z',
+                rows: [
+                  TierListSchemeRowSummary(
+                    id: 'r1',
+                    label: 'T0',
+                    color: 'bg-red-600',
+                    heroCount: 2,
+                  ),
+                ],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TierListToolScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete tier list?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedSchemeId, '9');
+    expect(find.text('Solo Queue Meta'), findsNothing);
+    expect(find.text('Tier list deleted'), findsOneWidget);
+  });
+}
