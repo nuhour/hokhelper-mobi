@@ -225,18 +225,17 @@ void main() {
     expect(forumTopLeft.dx, lessThan(eventTopLeft.dx));
     expect(find.text('Best jungle rotation'), findsOneWidget);
     expect(find.text('coach'), findsOneWidget);
-    expect(find.text('18 likes · 7 comments'), findsOneWidget);
-    expect(find.text('Guide'), findsOneWidget);
+    expect(find.text('18'), findsOneWidget);
+    expect(find.text('#Guide'), findsOneWidget);
 
     await tester.tap(find.text('Leaks'));
     await tester.pumpAndSettle();
 
     expect(find.text('New Lam skin teaser'), findsOneWidget);
     expect(find.text('leaker · @leaker'), findsOneWidget);
-    expect(find.widgetWithText(TextButton, '91'), findsOneWidget);
-    expect(find.text('1200 views'), findsOneWidget);
-    expect(find.text('skin'), findsWidgets);
-    expect(find.text('Lam'), findsOneWidget);
+    expect(find.text('91'), findsOneWidget);
+    expect(find.text('1.2k'), findsOneWidget);
+    expect(find.text('SKIN'), findsOneWidget);
 
     await tester.tap(find.text('Event Help'));
     await tester.pumpAndSettle();
@@ -317,15 +316,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(TextButton, '91'), findsOneWidget);
+    expect(find.text('91'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, '91'));
+    await tester.tap(find.byIcon(Icons.favorite_border).last);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextButton, '92'), findsOneWidget);
+    expect(find.text('92'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, '92'));
+    await tester.tap(find.byIcon(Icons.favorite).last);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextButton, '91'), findsOneWidget);
+    expect(find.text('91'), findsOneWidget);
   });
 
   testWidgets('filters leaks from initial search query', (tester) async {
@@ -442,7 +441,7 @@ void main() {
 
     await tester.tap(find.text('Skin'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('All Platforms'));
+    await tester.tap(find.byIcon(Icons.public_outlined));
     await tester.pumpAndSettle();
     await tester.tap(find.text('YouTube').last);
     await tester.pumpAndSettle();
@@ -646,6 +645,8 @@ void main() {
       'jungle',
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.fiber_new_outlined));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Oldest'));
     await tester.pumpAndSettle();
 
@@ -683,11 +684,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Like'));
+    await tester.tap(find.byIcon(Icons.favorite_border));
     await tester.pumpAndSettle();
 
     expect(repository.likedPostId, '101');
-    expect(find.text('19 likes · 7 comments'), findsOneWidget);
+    expect(find.text('19'), findsOneWidget);
     expect(find.text('Post liked'), findsOneWidget);
   });
 
@@ -822,6 +823,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           communityRepositoryProvider.overrideWithValue(repository),
           communityPostsProvider.overrideWith((ref) async => const []),
           leakPostsProvider.overrideWith((ref) async => const []),
@@ -874,6 +876,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           communityRepositoryProvider.overrideWithValue(repository),
           communityPostsProvider.overrideWith((ref) async => const []),
           leakPostsProvider.overrideWith((ref) async => const []),
@@ -917,8 +920,8 @@ void main() {
       'Hero Matchups',
       'Squad Finder',
     ]);
-    expect(find.text('Hero Matchups'), findsWidgets);
-    expect(find.text('Squad Finder'), findsWidgets);
+    expect(find.text('#Hero Matchups'), findsOneWidget);
+    expect(find.text('#Squad Finder'), findsOneWidget);
   });
 
   testWidgets('deletes own community posts from my posts mode', (tester) async {
@@ -958,14 +961,17 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.widgetWithText(OutlinedButton, 'Delete', skipOffstage: false),
+      find.byIcon(Icons.delete_outline_rounded, skipOffstage: false),
       300,
       scrollable: _scrollableUnder(
         const ValueKey('community-posts-scroll-view'),
       ),
     );
-    final deleteButton = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Delete'),
+    final deleteButton = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(Icons.delete_outline_rounded),
+        matching: find.byType(IconButton),
+      ),
     );
     deleteButton.onPressed!();
     await tester.pumpAndSettle();

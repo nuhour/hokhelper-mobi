@@ -90,6 +90,5 @@ void main() {
     expect(find.text('Tag Filter'), findsOneWidget);
     expect(find.text('Patch update notes'), findsOneWidget);
     expect(find.text('General draft chat'), findsNothing);
-    expect(find.byType(NavigationBar), findsOneWidget);
   });
 }

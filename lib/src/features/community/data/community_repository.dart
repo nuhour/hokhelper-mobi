@@ -65,6 +65,31 @@ class CommunityRepository {
     return CommunityPostSummary.fromJson(json);
   }
 
+  Future<List<String>> loadPostTags(int regionId) async {
+    final json = await apiClient.getJson(
+      '/community/tags',
+      query: {
+        'region_id': regionId,
+        'filterRules': jsonEncode([
+          {'field': 'region_id', 'op': 'eq', 'value': regionId},
+        ]),
+      },
+    );
+    final result = json['result'];
+    final values = result is List
+        ? result
+        : json['rows'] is List
+        ? json['rows'] as List
+        : json['data'] is List
+        ? json['data'] as List
+        : const <Object?>[];
+    return values
+        .map((value) => value?.toString().trim() ?? '')
+        .where((value) => value.isNotEmpty && value.toLowerCase() != 'all')
+        .toSet()
+        .toList(growable: false);
+  }
+
   Future<void> deletePost(String postId) async {
     await apiClient.postJson('/community/posts/$postId/delete', body: {});
   }

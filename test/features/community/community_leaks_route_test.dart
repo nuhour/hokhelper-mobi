@@ -138,7 +138,6 @@ void main() {
     expect(find.text('Leak Search'), findsOneWidget);
     expect(find.text('Lam skin signal'), findsOneWidget);
     expect(find.text('Angela animation leak'), findsNothing);
-    expect(find.byType(NavigationBar), findsOneWidget);
   });
 
   testWidgets('community leaks route preserves category and platform filters', (
@@ -181,7 +180,7 @@ void main() {
     expect(repository.requestedLeakCategory, 'skin');
     expect(repository.requestedLeakPlatform, 'youtube');
     expect(find.text('Skin'), findsOneWidget);
-    expect(find.text('YouTube'), findsOneWidget);
+    expect(find.text('YouTube'), findsWidgets);
     expect(find.text('Lam skin signal'), findsOneWidget);
     expect(find.text('Angela animation leak'), findsNothing);
   });

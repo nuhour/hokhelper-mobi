@@ -10,6 +10,8 @@ class LeakPostSummary {
     required this.authorAvatarUrl,
     required this.mediaUrl,
     required this.mediaType,
+    this.videoUrl = '',
+    this.sourceUrl = '',
     required this.publishedAt,
     required this.likeCount,
     required this.viewCount,
@@ -26,6 +28,8 @@ class LeakPostSummary {
   final String authorAvatarUrl;
   final String mediaUrl;
   final String mediaType;
+  final String videoUrl;
+  final String sourceUrl;
   final String publishedAt;
   final int likeCount;
   final int viewCount;
@@ -33,6 +37,9 @@ class LeakPostSummary {
 
   String get authorLabel {
     if (authorName.isNotEmpty && authorHandle.isNotEmpty) {
+      if (authorName.toLowerCase() == authorHandle.toLowerCase()) {
+        return authorName;
+      }
       return '$authorName · $authorHandle';
     }
     return authorName.isNotEmpty ? authorName : authorHandle;
@@ -57,6 +64,8 @@ class LeakPostSummary {
       authorAvatarUrl: _readString(map['author_avatar_url']),
       mediaUrl: _readString(map['media_url']),
       mediaType: _readString(map['media_type']),
+      videoUrl: _readString(map['video_url']),
+      sourceUrl: _readString(map['source_url']),
       publishedAt: _readString(map['published_at'] ?? map['created_at']),
       likeCount: _readInt(map['like_count']),
       viewCount: _readInt(map['view_count']),

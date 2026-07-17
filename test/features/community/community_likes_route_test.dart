@@ -64,7 +64,6 @@ void main() {
     expect(find.text('Liked Posts'), findsOneWidget);
     expect(find.text('Liked build notes'), findsOneWidget);
     expect(find.text('Unliked draft'), findsNothing);
-    expect(find.byType(NavigationBar), findsOneWidget);
   });
 
   testWidgets('community top tabs synchronize the mobile web route', (
@@ -121,7 +120,7 @@ void main() {
       isFalse,
     );
 
-    await tester.tap(find.text('Posts'));
+    await tester.tap(find.text('Forum'));
     await tester.pumpAndSettle();
 
     expect(

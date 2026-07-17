@@ -57,12 +57,16 @@ class _FakeApiClient extends ApiClient {
             'source_url': 'https://example.test/source',
             'media_url': 'https://example.test/leak.jpg',
             'media_type': 'image',
+            'video_url': 'https://example.test/leak.mp4',
             'published_at': '2026-07-02T12:00:00Z',
             'like_count': 91,
             'view_count': 1200,
             'matched_keywords': ['Lam', 'skin'],
           },
         ],
+      },
+      '/community/tags' => const {
+        'result': ['All', 'Guide', 'Patch Notes', 'Guide'],
       },
       _ => throw StateError('Unexpected path $path'),
     };
@@ -127,6 +131,19 @@ void main() {
     expect(posts.single.authorName, 'coach');
     expect(posts.single.tags, ['Guide', 'Jungle']);
     expect(posts.single.metricText, '18 likes · 7 comments');
+  });
+
+  test('loads unique hokx community tags without the all sentinel', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final tags = await repository.loadPostTags(2);
+
+    expect(tags, ['Guide', 'Patch Notes']);
+    expect(apiClient.getQueries['/community/tags'], {
+      'region_id': 2,
+      'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
+    });
   });
 
   test('loads community posts with requested page parameters', () async {
@@ -198,6 +215,8 @@ void main() {
     expect(leaks.single.category, 'skin');
     expect(leaks.single.platform, 'youtube');
     expect(leaks.single.authorLabel, 'leaker · @leaker');
+    expect(leaks.single.sourceUrl, 'https://example.test/source');
+    expect(leaks.single.videoUrl, 'https://example.test/leak.mp4');
     expect(leaks.single.metricText, '91 likes · 1200 views');
     expect(leaks.single.keywords, ['Lam', 'skin']);
   });
