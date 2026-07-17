@@ -44,6 +44,8 @@ dependencies:
   shared_preferences: 2.3.3
   url_launcher: ^6.3.1
   video_player: ^2.9.3
+  country_code: ^1.1.0
+  country_flags: ^4.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

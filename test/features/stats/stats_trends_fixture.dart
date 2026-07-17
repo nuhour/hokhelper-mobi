@@ -88,6 +88,9 @@ StatsTrendTable sampleStatsTrendTable({
     ],
     'available_baselines': const ['all', 'peak_base', 'top_rank', 'peak_1000'],
     'available_window_days': const [1, 7, 30, 999],
+    'available_filters': const {
+      'region': ['36', '156', '360', '826', '840'],
+    },
     'meta': const {
       'sample_size': 2,
       'data_range': '2026-07-15',

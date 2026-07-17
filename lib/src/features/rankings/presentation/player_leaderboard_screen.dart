@@ -7,6 +7,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_stats_table.dart';
+import '../../../core/widgets/region_country_picker.dart';
 import '../domain/player_leaderboard_result.dart';
 import '../domain/player_ranking_entry.dart';
 import 'hero_ranking_screen.dart';
@@ -178,42 +179,18 @@ class _LeaderboardControls extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 8),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).dividerColor),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: selectedRegion,
-                  icon: const Icon(Icons.expand_more_rounded, size: 18),
-                  items: [
-                    const DropdownMenuItem(value: 0, child: Text('Global')),
-                    for (final region in regions)
-                      DropdownMenuItem(
-                        value: region,
-                        child: Text('Region +$region'),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    final nextRegion = value ?? 0;
-                    ref
-                            .read(
-                              selectedPlayerLeaderboardRegionProvider.notifier,
-                            )
-                            .state =
-                        nextRegion;
-                    _syncLeaderboardRoute(
-                      context,
-                      rankType: selectedType,
-                      regionId: nextRegion,
-                    );
-                  },
-                ),
-              ),
-            ),
+          RegionCountryPicker(
+            value: selectedRegion,
+            options: regions,
+            onChanged: (nextRegion) {
+              ref.read(selectedPlayerLeaderboardRegionProvider.notifier).state =
+                  nextRegion;
+              _syncLeaderboardRoute(
+                context,
+                rankType: selectedType,
+                regionId: nextRegion,
+              );
+            },
           ),
           IconButton(
             tooltip: 'Refresh',
@@ -264,8 +241,8 @@ class _LeaderboardTable extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rankType = ref.watch(selectedPlayerLeaderboardRankTypeProvider);
     return AppStatsTable(
-      fixedHeader: const Text('Player / Region'),
-      fixedColumnWidth: 158,
+      fixedHeader: const Text('Player'),
+      fixedColumnWidth: 164,
       rowHeight: 66,
       fixedCells: [
         for (var index = 0; index < players.length; index++)
@@ -276,15 +253,21 @@ class _LeaderboardTable extends ConsumerWidget {
           label: rankType == PlayerLeaderboardRankType.ranked
               ? 'Stars'
               : 'Peak Score',
+          header: rankType == PlayerLeaderboardRankType.ranked
+              ? const Tooltip(
+                  message: 'Stars',
+                  child: Icon(Icons.star_rounded, size: 19),
+                )
+              : null,
           width: 92,
           cells: [
             for (final player in players)
-              _MetricText(
-                rankType == PlayerLeaderboardRankType.ranked
-                    ? '${player.rankStars} stars'
-                    : '${player.peakScore.toStringAsFixed(0)} peak',
-                highlight: true,
-              ),
+              rankType == PlayerLeaderboardRankType.ranked
+                  ? _StarsMetric(value: player.rankStars)
+                  : _MetricText(
+                      player.peakScore.toStringAsFixed(0),
+                      highlight: true,
+                    ),
           ],
         ),
         AppStatsTableColumn(
@@ -336,7 +319,7 @@ class _LeaderboardTable extends ConsumerWidget {
         ),
         AppStatsTableColumn(
           label: 'Favorite Heroes',
-          width: 184,
+          width: 168,
           cells: [
             for (final player in players)
               _BestHeroesCell(heroes: player.bestHeroes),
@@ -420,12 +403,23 @@ class _PlayerIdentityCell extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              Text(
-                player.region > 0 ? 'Region +${player.region}' : 'Global',
-                maxLines: 1,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: colors?.onSurfaceMuted),
+              Row(
+                children: [
+                  RegionFlag(regionCode: player.region, width: 17),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      RegionCountry.fromRegionCode(player.region)?.isoCode ??
+                          'Global',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors?.onSurfaceMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -458,6 +452,24 @@ class _MetricText extends StatelessWidget {
   }
 }
 
+class _StarsMetric extends StatelessWidget {
+  const _StarsMetric({required this.value});
+
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 17, color: Color(0xFFF2B705)),
+        const SizedBox(width: 3),
+        _MetricText('$value', highlight: true),
+      ],
+    );
+  }
+}
+
 class _BestHeroesCell extends StatelessWidget {
   const _BestHeroesCell({required this.heroes});
 
@@ -469,23 +481,21 @@ class _BestHeroesCell extends StatelessWidget {
       return const Text('-');
     }
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        for (final hero in heroes.take(3)) ...[
-          AppImage(
-            url: hero.avatarUrl,
-            width: 28,
-            height: 28,
-            borderRadius: 14,
-            semanticLabel: hero.heroName,
+        for (final hero in heroes.take(3))
+          Tooltip(
+            message: hero.score > 0
+                ? '${hero.heroName} · ${hero.score.toStringAsFixed(1)}'
+                : hero.heroName,
+            child: AppImage(
+              url: hero.avatarUrl,
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              semanticLabel: hero.heroName,
+            ),
           ),
-          const SizedBox(width: 3),
-          Text(
-            hero.score.toStringAsFixed(1),
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
-          const SizedBox(width: 6),
-        ],
       ],
     );
   }

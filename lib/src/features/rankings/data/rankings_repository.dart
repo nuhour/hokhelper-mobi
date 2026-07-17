@@ -145,6 +145,31 @@ class RankingsRepository {
     return tierList.map(TierListEntry.fromJson).toList(growable: false);
   }
 
+  Future<List<TierHistoryPoint>> loadTierHistory({
+    required int heroId,
+    int windowDays = 999,
+  }) async {
+    final json = await apiClient.getJson(
+      '/ranking/tier-list/history',
+      query: {'hero_id': heroId, 'window_days': windowDays},
+    );
+    final data = json['data'];
+    final result = json['result'];
+    final envelope = data is Map
+        ? data
+        : result is Map
+        ? result
+        : json;
+    final history = envelope['history'];
+    if (history is! List) {
+      return const [];
+    }
+    return history
+        .map(TierHistoryPoint.fromJson)
+        .where((point) => point.date.year > 1970)
+        .toList(growable: false);
+  }
+
   int _readInt(Object? value) {
     if (value is int) {
       return value;

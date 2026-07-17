@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,6 +65,15 @@ final tierRankingProvider = FutureProvider<List<TierListEntry>>((ref) async {
       .watch(rankingsRepositoryProvider)
       .loadTierList(settings.region.regionId);
 });
+
+final tierHistoryProvider = FutureProvider.family<List<TierHistoryPoint>, int>((
+  ref,
+  heroId,
+) {
+  return ref.watch(rankingsRepositoryProvider).loadTierHistory(heroId: heroId);
+});
+
+final tierCompactModeProvider = StateProvider<bool>((ref) => true);
 
 final tierRankingDisplayProvider = FutureProvider<List<TierListEntry>>((
   ref,
@@ -358,6 +369,7 @@ class _TierListTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final compact = ref.watch(tierCompactModeProvider);
     return AppAsyncView<List<TierListEntry>>(
       value: tierValue,
       previousData: previousEntries,
@@ -392,9 +404,29 @@ class _TierListTab extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    '${entries.length} heroes',
-                    style: Theme.of(context).textTheme.labelMedium,
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: true,
+                        icon: Icon(Icons.grid_view_rounded, size: 17),
+                        tooltip: 'Compact',
+                      ),
+                      ButtonSegment(
+                        value: false,
+                        icon: Icon(Icons.view_agenda_outlined, size: 17),
+                        tooltip: 'Spacious',
+                      ),
+                    ],
+                    selected: {compact},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (selection) {
+                      ref.read(tierCompactModeProvider.notifier).state =
+                          selection.single;
+                    },
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
                   IconButton(
                     tooltip: 'Refresh',
@@ -414,7 +446,11 @@ class _TierListTab extends ConsumerWidget {
                   ),
                 ),
               for (final tier in tiers) ...[
-                _TierGroup(tier: tier, entries: groups[tier]!),
+                _TierGroup(
+                  tier: tier,
+                  entries: groups[tier]!,
+                  compact: compact,
+                ),
                 const SizedBox(height: 12),
               ],
             ],
@@ -431,10 +467,15 @@ int _tierOrder(String tier) {
 }
 
 class _TierGroup extends StatelessWidget {
-  const _TierGroup({required this.tier, required this.entries});
+  const _TierGroup({
+    required this.tier,
+    required this.entries,
+    required this.compact,
+  });
 
   final String tier;
   final List<TierListEntry> entries;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -486,7 +527,9 @@ class _TierGroup extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final count = constraints.maxWidth >= 430 ? 6 : 5;
+                  final count = compact
+                      ? (constraints.maxWidth >= 430 ? 6 : 5)
+                      : (constraints.maxWidth >= 430 ? 4 : 3);
                   return GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -494,11 +537,14 @@ class _TierGroup extends StatelessWidget {
                       crossAxisCount: count,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 6,
-                      childAspectRatio: 0.78,
+                      childAspectRatio: compact ? 0.78 : 0.9,
                     ),
                     itemCount: entries.length,
                     itemBuilder: (context, index) {
-                      return _CompactTierHero(entry: entries[index]);
+                      return _CompactTierHero(
+                        entry: entries[index],
+                        compact: compact,
+                      );
                     },
                   );
                 },
@@ -512,9 +558,10 @@ class _TierGroup extends StatelessWidget {
 }
 
 class _CompactTierHero extends StatelessWidget {
-  const _CompactTierHero({required this.entry});
+  const _CompactTierHero({required this.entry, required this.compact});
 
   final TierListEntry entry;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -523,56 +570,361 @@ class _CompactTierHero extends StatelessWidget {
       externalHeroId: entry.externalHeroId,
       heroId: entry.heroId,
     );
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: heroRouteId.isEmpty
-          ? null
-          : () => context.go('/heroes/$heroRouteId'),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors?.surfaceMuted ?? AppTheme.panelAlt,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppImage(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors?.surfaceMuted ?? AppTheme.panelAlt,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            InkResponse(
+              radius: compact ? 25 : 34,
+              onTap: entry.heroId <= 0
+                  ? null
+                  : () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      useSafeArea: true,
+                      builder: (context) => _TierHistorySheet(entry: entry),
+                    ),
+              child: AppImage(
                 url: entry.avatarUrl,
-                width: 42,
-                height: 42,
-                borderRadius: 21,
-                semanticLabel: entry.name,
+                width: compact ? 42 : 58,
+                height: compact ? 42 : 58,
+                borderRadius: compact ? 21 : 29,
+                semanticLabel: '${entry.name} tier history',
               ),
-              const SizedBox(height: 4),
-              TextButton(
-                onPressed: heroRouteId.isEmpty
-                    ? null
-                    : () => context.go('/heroes/$heroRouteId'),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 22),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  entry.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors?.onSurfaceStrong,
-                    fontWeight: FontWeight.w800,
-                  ),
+            ),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: heroRouteId.isEmpty
+                  ? null
+                  : () => context.go('/heroes/$heroRouteId'),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 22),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                entry.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors?.onSurfaceStrong,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            ],
-          ),
+            ),
+            if (!compact)
+              Text(
+                '${(entry.winRate * 100).toStringAsFixed(1)}% · ${entry.score.toStringAsFixed(1)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors?.onSurfaceMuted,
+                  fontSize: 10,
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 }
+
+class _TierHistorySheet extends ConsumerWidget {
+  const _TierHistorySheet({required this.entry});
+
+  final TierListEntry entry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value = ref.watch(tierHistoryProvider(entry.heroId));
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    return FractionallySizedBox(
+      heightFactor: 0.72,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                AppImage(
+                  url: entry.avatarUrl,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  semanticLabel: entry.name,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        'Historical tier changes',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: colors?.onSurfaceMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: value.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator.adaptive()),
+                error: (error, stackTrace) => Center(
+                  child: FilledButton.icon(
+                    onPressed: () =>
+                        ref.invalidate(tierHistoryProvider(entry.heroId)),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Retry'),
+                  ),
+                ),
+                data: (points) {
+                  if (points.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.show_chart_rounded,
+                      title: 'No tier history',
+                      message: 'Historical snapshots are not available yet.',
+                    );
+                  }
+                  return _TierHistoryChart(points: points);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TierHistoryChart extends StatelessWidget {
+  const _TierHistoryChart({required this.points});
+
+  static const sourceColors = <String, Color>{
+    'all': Color(0xFF60A5FA),
+    'peak_1000': Color(0xFFF472B6),
+    'peak_base': Color(0xFFF59E0B),
+    'top_rank': Color(0xFF34D399),
+  };
+
+  final List<TierHistoryPoint> points;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = <String, List<TierHistoryPoint>>{};
+    for (final point in points) {
+      groups.putIfAbsent(point.source, () => []).add(point);
+    }
+    for (final values in groups.values) {
+      values.sort((a, b) => a.date.compareTo(b.date));
+    }
+    final dates = points.map((point) => point.date).toList()..sort();
+    return Column(
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 6,
+          children: [
+            for (final entry in groups.entries)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: sourceColors[entry.key] ?? Colors.grey,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    _tierSourceLabel(entry.key),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).extension<HokThemeColors>()?.surfaceMuted ??
+                  AppTheme.panelAlt,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 14, 12, 8),
+              child: CustomPaint(
+                painter: _TierHistoryPainter(
+                  groups: groups,
+                  sourceColors: sourceColors,
+                  gridColor: Theme.of(context).dividerColor,
+                  labelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(_shortDate(dates.first)),
+            Text(_shortDate(dates.last)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _TierHistoryPainter extends CustomPainter {
+  const _TierHistoryPainter({
+    required this.groups,
+    required this.sourceColors,
+    required this.gridColor,
+    required this.labelColor,
+  });
+
+  final Map<String, List<TierHistoryPoint>> groups;
+  final Map<String, Color> sourceColors;
+  final Color gridColor;
+  final Color labelColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const left = 30.0;
+    const top = 8.0;
+    const right = 6.0;
+    const bottom = 8.0;
+    final chart = Rect.fromLTRB(
+      left,
+      top,
+      size.width - right,
+      size.height - bottom,
+    );
+    if (chart.width <= 0 || chart.height <= 0) return;
+
+    final gridPaint = Paint()
+      ..color = gridColor.withValues(alpha: 0.7)
+      ..strokeWidth = 1;
+    for (var tier = 0; tier <= 3; tier++) {
+      final y = chart.top + chart.height * tier / 3;
+      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), gridPaint);
+      final painter = TextPainter(
+        text: TextSpan(
+          text: 'T$tier',
+          style: TextStyle(color: labelColor, fontSize: 10),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(canvas, Offset(2, y - painter.height / 2));
+    }
+
+    final allPoints = groups.values.expand((points) => points).toList();
+    final minDate = allPoints
+        .map((point) => point.date.millisecondsSinceEpoch)
+        .reduce(math.min);
+    final maxDate = allPoints
+        .map((point) => point.date.millisecondsSinceEpoch)
+        .reduce(math.max);
+    final dateSpan = math.max(1, maxDate - minDate);
+
+    for (final entry in groups.entries) {
+      final values = entry.value;
+      if (values.isEmpty) continue;
+      final offsets = values
+          .map(
+            (point) => Offset(
+              chart.left +
+                  chart.width *
+                      (point.date.millisecondsSinceEpoch - minDate) /
+                      dateSpan,
+              chart.top + chart.height * point.tier.clamp(0, 3) / 3,
+            ),
+          )
+          .toList(growable: false);
+      final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
+      for (var i = 1; i < offsets.length; i++) {
+        final previous = offsets[i - 1];
+        final current = offsets[i];
+        final midpoint = Offset(
+          (previous.dx + current.dx) / 2,
+          (previous.dy + current.dy) / 2,
+        );
+        path.quadraticBezierTo(
+          previous.dx,
+          previous.dy,
+          midpoint.dx,
+          midpoint.dy,
+        );
+      }
+      if (offsets.length > 1) {
+        final beforeLast = offsets[offsets.length - 2];
+        final last = offsets.last;
+        path.quadraticBezierTo(beforeLast.dx, beforeLast.dy, last.dx, last.dy);
+      }
+      final color = sourceColors[entry.key] ?? Colors.grey;
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
+      for (final point in offsets) {
+        canvas.drawCircle(point, 2.6, Paint()..color = color);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TierHistoryPainter oldDelegate) {
+    return oldDelegate.groups != groups ||
+        oldDelegate.gridColor != gridColor ||
+        oldDelegate.labelColor != labelColor;
+  }
+}
+
+String _tierSourceLabel(String source) => switch (source) {
+  'peak_1000' => 'Peak Top 1000',
+  'peak_base' => 'Peak Base',
+  'top_rank' => 'Top Rank',
+  _ => 'All',
+};
+
+String _shortDate(DateTime date) =>
+    '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
 
 class _SortSelector extends ConsumerWidget {
   const _SortSelector({required this.selectedSort});

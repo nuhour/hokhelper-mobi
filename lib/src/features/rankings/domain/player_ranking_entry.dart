@@ -15,10 +15,18 @@ class PlayerBestHero {
 
   factory PlayerBestHero.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
+    // Ranking payloads use `id` for the local Hero PK and `hero_id` for the
+    // external game ID. Static assets are keyed by the local PK.
+    final heroId = _readInt(map['id'] ?? map['hero_id']);
     return PlayerBestHero(
-      heroId: _readInt(map['hero_id'] ?? map['id']),
+      heroId: heroId,
       heroName: _readString(map['hero_name'] ?? map['heroName']),
-      avatarUrl: _readString(map['avatar_url'] ?? map['avatarUrl']),
+      avatarUrl: _readString(
+        map['avatar_url'] ?? map['avatarUrl'],
+        fallback: heroId > 0
+            ? 'https://hokhelper.com/static/game/hero/$heroId.png'
+            : '',
+      ),
       playCount: _readInt(map['play_cnt'] ?? map['playCount']),
       score: _readDouble(map['score']),
     );

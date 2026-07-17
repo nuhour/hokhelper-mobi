@@ -33,6 +33,20 @@ void main() {
               ),
             ];
           }),
+          tierHistoryProvider.overrideWith((ref, heroId) async {
+            return [
+              TierHistoryPoint(
+                date: DateTime(2026, 7, 14),
+                tier: 1,
+                source: 'all',
+              ),
+              TierHistoryPoint(
+                date: DateTime(2026, 7, 15),
+                tier: 0,
+                source: 'all',
+              ),
+            ];
+          }),
         ],
         child: HokHelperApp(router: router),
       ),
@@ -42,7 +56,14 @@ void main() {
     expect(find.text('Hero Tier List'), findsOneWidget);
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('T0'), findsOneWidget);
-    expect(find.text('1 heroes'), findsOneWidget);
+    expect(find.byTooltip('Compact'), findsOneWidget);
+    expect(find.byTooltip('Spacious'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Lam tier history'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Historical tier changes'), findsOneWidget);
+    expect(find.text('All'), findsOneWidget);
   });
 
   testWidgets('web rankings tab query opens the requested mobile tab', (

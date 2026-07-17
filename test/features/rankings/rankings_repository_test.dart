@@ -22,6 +22,18 @@ class _FakeApiClient extends ApiClient {
   }) async {
     getPath = path;
     getQuery = query;
+    if (path == '/ranking/tier-list/history') {
+      return const {
+        'success': true,
+        'data': {
+          'hero_id': '42',
+          'history': [
+            {'date': '2026-07-14', 'tier': 1, 'source': 'all'},
+            {'date': '2026-07-15', 'tier': 0, 'source': 'all'},
+          ],
+        },
+      };
+    }
     if (path == '/ranking/players') {
       return const {
         'success': true,
@@ -42,7 +54,7 @@ class _FakeApiClient extends ApiClient {
               'player_type_label': '职业',
               'rank_type': 'peak',
               'best_heroes': [
-                {'hero_id': 199, 'play_cnt': 80, 'score': 99.5},
+                {'id': 2618, 'hero_id': 199, 'play_cnt': 80, 'score': 99.5},
               ],
             },
           ],
@@ -165,7 +177,11 @@ void main() {
     expect(entries.single.region, 2);
     expect(entries.single.playerTypeLabel, '职业');
     expect(entries.single.bestHeroes, hasLength(1));
-    expect(entries.single.bestHeroes.single.heroId, 199);
+    expect(entries.single.bestHeroes.single.heroId, 2618);
+    expect(
+      entries.single.bestHeroes.single.avatarUrl,
+      'https://hokhelper.com/static/game/hero/2618.png',
+    );
     expect(entries.single.bestHeroes.single.playCount, 80);
     expect(entries.single.bestHeroes.single.score, 99.5);
   });
@@ -206,5 +222,22 @@ void main() {
     expect(entries.single.position, 1);
     expect(entries.single.score, 96.5);
     expect(entries.single.winRate, 0.55);
+    expect(
+      entries.single.avatarUrl,
+      'https://hokhelper.com/static/game/hero/42.png',
+    );
+  });
+
+  test('loads tier history from the web-compatible endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = RankingsRepository(apiClient: apiClient);
+
+    final history = await repository.loadTierHistory(heroId: 42);
+
+    expect(apiClient.getPath, '/ranking/tier-list/history');
+    expect(apiClient.getQuery, {'hero_id': 42, 'window_days': 999});
+    expect(history, hasLength(2));
+    expect(history.first.tier, 1);
+    expect(history.last.source, 'all');
   });
 }

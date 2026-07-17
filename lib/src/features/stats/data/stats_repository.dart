@@ -83,7 +83,7 @@ class StatsRepository {
       'view': query.view,
       'window_days': query.windowDays,
       'snapshot_date': query.snapshotDate,
-      'region': query.region.isNotEmpty ? query.region : regionCode,
+      'region': query.region,
       'equip_type': query.equipType,
       'lang': regionCode,
       'lite': 1,

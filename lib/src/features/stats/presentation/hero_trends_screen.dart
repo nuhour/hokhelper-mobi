@@ -3,12 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/regions.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_stats_table.dart';
+import '../../../core/widgets/region_country_picker.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/stats_trends.dart';
 import 'stats_screen.dart';
@@ -956,18 +956,14 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                     }.contains(_draft.dimension)) ...[
                       const SizedBox(height: 14),
                       _FilterLabel(label: 'Region'),
-                      DropdownButtonFormField<String>(
-                        initialValue: _draft.region,
-                        items: [
-                          const DropdownMenuItem(value: '', child: Text('All')),
-                          for (final region in HokRegion.values)
-                            DropdownMenuItem(
-                              value: region.languageCode,
-                              child: Text(region.label),
-                            ),
-                        ],
+                      RegionCountryPicker(
+                        value: int.tryParse(_draft.region) ?? 0,
+                        options: widget.table.availableRegions,
+                        expanded: true,
                         onChanged: (value) => setState(() {
-                          _draft = _draft.copyWith(region: value ?? '');
+                          _draft = _draft.copyWith(
+                            region: value > 0 ? '$value' : '',
+                          );
                         }),
                       ),
                     ],

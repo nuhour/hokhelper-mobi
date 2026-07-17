@@ -51,20 +51,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Player / Region'), findsOneWidget);
+    expect(find.text('Player'), findsOneWidget);
     expect(find.text('Ranked'), findsAtLeastNWidgets(1));
     expect(find.text('Peak'), findsOneWidget);
     expect(find.text('Top Mid'), findsOneWidget);
-    expect(find.text('112 stars'), findsOneWidget);
+    expect(find.text('112'), findsOneWidget);
     expect(find.text('68.40% win'), findsOneWidget);
     expect(find.text('Pro'), findsOneWidget);
     expect(find.text('Favorite Heroes'), findsOneWidget);
-    expect(find.text('99.1'), findsOneWidget);
+    expect(find.byTooltip('Diaochan · 99.1'), findsOneWidget);
 
     await tester.tap(find.text('Peak'));
     await tester.pumpAndSettle();
 
-    expect(find.text('2490 peak'), findsOneWidget);
+    expect(find.text('2490'), findsOneWidget);
   });
 
   testWidgets('opens with initial rank type and region filter', (tester) async {
@@ -92,6 +92,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Peak'), findsAtLeastNWidgets(1));
-    expect(find.text('Region +44'), findsAtLeastNWidgets(1));
+    expect(find.text('BS (+44)'), findsAtLeastNWidgets(1));
   });
 }

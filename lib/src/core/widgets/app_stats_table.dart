@@ -11,6 +11,7 @@ class AppStatsTableColumn {
     this.selected = false,
     this.sortAscending,
     this.groupLabel = '',
+    this.header,
   });
 
   final String label;
@@ -20,6 +21,7 @@ class AppStatsTableColumn {
   final bool selected;
   final bool? sortAscending;
   final String groupLabel;
+  final Widget? header;
 }
 
 class AppStatsTable extends StatefulWidget {
@@ -333,15 +335,17 @@ class _HeaderCell extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Flexible(
-            child: Text(
-              column.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            child:
+                column.header ??
+                Text(
+                  column.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
           ),
           if (column.selected) ...[
             const SizedBox(width: 3),

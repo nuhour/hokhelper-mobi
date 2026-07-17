@@ -92,7 +92,7 @@ void main() {
       '44',
     );
     expect(find.text('Peak'), findsAtLeastNWidgets(1));
-    expect(find.text('Region +44'), findsAtLeastNWidgets(1));
+    expect(find.text('BS (+44)'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('leaderboard controls synchronize web route query', (
@@ -129,7 +129,7 @@ void main() {
 
     await tester.tap(find.text('Global').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Region +62').last);
+    await tester.tap(find.text('ID').last);
     await tester.pumpAndSettle();
 
     expect(

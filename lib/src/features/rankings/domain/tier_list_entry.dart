@@ -37,9 +37,10 @@ class TierListEntry {
 
   factory TierListEntry.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
+    final heroId = _readInt(map['hero_id'] ?? map['id']);
 
     return TierListEntry(
-      heroId: _readInt(map['hero_id'] ?? map['id']),
+      heroId: heroId,
       externalHeroId: _readString(map['heroId'] ?? map['hero_id']),
       name: _readString(map['name'], fallback: 'Hero'),
       avatarUrl: _readString(
@@ -47,12 +48,36 @@ class TierListEntry {
             map['avatar_url_medium'] ??
             map['avatar_url'] ??
             map['avatar'],
+        fallback: heroId > 0
+            ? 'https://hokhelper.com/static/game/hero/$heroId.png'
+            : '',
       ),
       mainJob: _readString(map['mainJob'] ?? map['main_job']),
       tier: _readString(map['tier'], fallback: 'T?').toUpperCase(),
       position: _readInt(map['position']),
       score: _readDouble(map['score']),
       winRate: _readRate(map['win_rate']),
+    );
+  }
+}
+
+class TierHistoryPoint {
+  const TierHistoryPoint({
+    required this.date,
+    required this.tier,
+    required this.source,
+  });
+
+  final DateTime date;
+  final int tier;
+  final String source;
+
+  factory TierHistoryPoint.fromJson(Object? json) {
+    final map = json is Map ? json : const <String, Object?>{};
+    return TierHistoryPoint(
+      date: DateTime.tryParse(_readString(map['date'])) ?? DateTime(1970),
+      tier: _readInt(map['tier']).clamp(0, 4),
+      source: _readString(map['source'], fallback: 'all'),
     );
   }
 }

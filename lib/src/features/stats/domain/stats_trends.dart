@@ -129,6 +129,7 @@ class StatsTrendTable {
     required this.availableViews,
     required this.availableBaselines,
     required this.availableWindowDays,
+    required this.availableRegions,
     required this.availableSnapshotDates,
     required this.latestSnapshotDate,
     required this.dataRange,
@@ -144,6 +145,7 @@ class StatsTrendTable {
   final List<StatsTrendView> availableViews;
   final List<String> availableBaselines;
   final List<int> availableWindowDays;
+  final List<int> availableRegions;
   final List<String> availableSnapshotDates;
   final String latestSnapshotDate;
   final String dataRange;
@@ -166,6 +168,7 @@ class StatsTrendTable {
   factory StatsTrendTable.fromJson(Object? value) {
     final json = _map(value);
     final meta = _map(json['meta']);
+    final availableFilters = _map(json['available_filters']);
     return StatsTrendTable(
       dimension: _string(json['dimension']),
       baseline: _string(json['baseline']),
@@ -186,6 +189,9 @@ class StatsTrendTable {
       ).map(_string).where((item) => item.isNotEmpty).toList(growable: false),
       availableWindowDays: _list(
         json['available_window_days'],
+      ).map(_integer).where((item) => item > 0).toList(growable: false),
+      availableRegions: _list(
+        availableFilters['region'],
       ).map(_integer).where((item) => item > 0).toList(growable: false),
       availableSnapshotDates: _list(
         meta['available_snapshot_dates'],
