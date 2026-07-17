@@ -47,6 +47,10 @@ StatsTrendTable sampleStatsTrendTable({
             'wr': 56.1,
             'pick_rate': 18.4,
             'avg_kills': 8.2,
+            'best_skill': {'id': 80115, 'name': 'Flash'},
+            'best_equip': [
+              {'id': 12211, 'name': 'Venomous Staff'},
+            ],
             'trend_smoothed': [52.0, 54.0, 53.0, 56.1],
             'core_trend_points': [
               {

@@ -10,6 +10,7 @@ class AppStatsTableColumn {
     this.onHeaderTap,
     this.selected = false,
     this.sortAscending,
+    this.groupLabel = '',
   });
 
   final String label;
@@ -18,6 +19,7 @@ class AppStatsTableColumn {
   final VoidCallback? onHeaderTap;
   final bool selected;
   final bool? sortAscending;
+  final String groupLabel;
 }
 
 class AppStatsTable extends StatefulWidget {
@@ -90,6 +92,17 @@ class _AppStatsTableState extends State<AppStatsTable> {
     final panel = colors?.surfaceSlate ?? AppTheme.panel;
     final panelAlt = colors?.surfaceMuted ?? AppTheme.panelAlt;
     final outline = colors?.outlineSoft ?? AppTheme.outline;
+    final hasGroupedHeader = widget.columns.any(
+      (column) => column.groupLabel.isNotEmpty,
+    );
+    final headerHeight = hasGroupedHeader ? 64.0 : 44.0;
+    final totalScrollableWidth = widget.columns.fold<double>(
+      0,
+      (total, column) => total + column.width,
+    );
+    final groupSpans = hasGroupedHeader
+        ? _buildGroupSpans(widget.columns)
+        : const <_ColumnGroupSpan>[];
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -102,7 +115,7 @@ class _AppStatsTableState extends State<AppStatsTable> {
         child: Column(
           children: [
             SizedBox(
-              height: 44,
+              height: headerHeight,
               child: ColoredBox(
                 color: panelAlt,
                 child: Row(
@@ -110,18 +123,72 @@ class _AppStatsTableState extends State<AppStatsTable> {
                     _FixedCell(
                       width: widget.fixedColumnWidth,
                       borderColor: outline,
-                      child: widget.fixedHeader,
+                      child: hasGroupedHeader
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 24),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: widget.fixedHeader,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : widget.fixedHeader,
                     ),
                     Expanded(
                       child: SingleChildScrollView(
                         controller: _headerController,
                         scrollDirection: Axis.horizontal,
                         physics: const ClampingScrollPhysics(),
-                        child: Row(
-                          children: [
-                            for (final column in widget.columns)
-                              _HeaderCell(column: column),
-                          ],
+                        child: SizedBox(
+                          width: totalScrollableWidth,
+                          child: hasGroupedHeader
+                              ? Column(
+                                  children: [
+                                    SizedBox(
+                                      height: 24,
+                                      child: Row(
+                                        children: [
+                                          for (final span in groupSpans)
+                                            _GroupHeaderCell(
+                                              span: span,
+                                              borderColor: outline,
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 40,
+                                      child: Row(
+                                        children: [
+                                          for (
+                                            var index = 0;
+                                            index < widget.columns.length;
+                                            index++
+                                          )
+                                            _HeaderCell(
+                                              column: widget.columns[index],
+                                              height: 40,
+                                              trailingBorder: _isGroupBoundary(
+                                                widget.columns,
+                                                index,
+                                              ),
+                                              borderColor: outline,
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    for (final column in widget.columns)
+                                      _HeaderCell(column: column),
+                                  ],
+                                ),
                         ),
                       ),
                     ),
@@ -170,15 +237,28 @@ class _AppStatsTableState extends State<AppStatsTable> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                for (final column in widget.columns)
+                                for (
+                                  var columnIndex = 0;
+                                  columnIndex < widget.columns.length;
+                                  columnIndex++
+                                )
                                   SizedBox(
-                                    width: column.width,
+                                    width: widget.columns[columnIndex].width,
                                     child: Column(
                                       children: [
-                                        for (final cell in column.cells)
+                                        for (final cell
+                                            in widget
+                                                .columns[columnIndex]
+                                                .cells)
                                           _BodyCell(
                                             height: widget.rowHeight,
                                             borderColor: outline,
+                                            trailingBorder:
+                                                hasGroupedHeader &&
+                                                _isGroupBoundary(
+                                                  widget.columns,
+                                                  columnIndex,
+                                                ),
                                             child: cell,
                                           ),
                                       ],
@@ -227,9 +307,17 @@ class _FixedCell extends StatelessWidget {
 }
 
 class _HeaderCell extends StatelessWidget {
-  const _HeaderCell({required this.column});
+  const _HeaderCell({
+    required this.column,
+    this.height = 44,
+    this.trailingBorder = false,
+    this.borderColor,
+  });
 
   final AppStatsTableColumn column;
+  final double height;
+  final bool trailingBorder;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -269,12 +357,76 @@ class _HeaderCell extends StatelessWidget {
       ),
     );
 
-    return SizedBox(
+    return Container(
       width: column.width,
-      height: 44,
+      height: height,
+      decoration: BoxDecoration(
+        border: trailingBorder && borderColor != null
+            ? Border(right: BorderSide(color: borderColor!))
+            : null,
+      ),
       child: column.onHeaderTap == null
           ? content
           : InkWell(onTap: column.onHeaderTap, child: content),
+    );
+  }
+}
+
+class _ColumnGroupSpan {
+  const _ColumnGroupSpan({required this.label, required this.width});
+
+  final String label;
+  final double width;
+}
+
+List<_ColumnGroupSpan> _buildGroupSpans(List<AppStatsTableColumn> columns) {
+  final spans = <_ColumnGroupSpan>[];
+  for (final column in columns) {
+    final label = column.groupLabel.isEmpty ? 'Metrics' : column.groupLabel;
+    if (spans.isNotEmpty && spans.last.label == label) {
+      final previous = spans.removeLast();
+      spans.add(
+        _ColumnGroupSpan(label: label, width: previous.width + column.width),
+      );
+    } else {
+      spans.add(_ColumnGroupSpan(label: label, width: column.width));
+    }
+  }
+  return spans;
+}
+
+bool _isGroupBoundary(List<AppStatsTableColumn> columns, int index) {
+  if (index >= columns.length - 1) return true;
+  return columns[index].groupLabel != columns[index + 1].groupLabel;
+}
+
+class _GroupHeaderCell extends StatelessWidget {
+  const _GroupHeaderCell({required this.span, required this.borderColor});
+
+  final _ColumnGroupSpan span;
+  final Color borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted =
+        Theme.of(context).extension<HokThemeColors>()?.onSurfaceMuted ??
+        AppTheme.muted;
+    return Container(
+      width: span.width,
+      height: 24,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border(right: BorderSide(color: borderColor)),
+      ),
+      child: Text(
+        span.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: muted,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

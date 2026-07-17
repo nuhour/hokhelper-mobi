@@ -31,12 +31,14 @@ void main() {
     expect(find.text('Tier'), findsOneWidget);
     expect(find.text('Base Stats'), findsOneWidget);
     expect(find.text('Preparation'), findsOneWidget);
-    expect(find.text('All metrics'), findsOneWidget);
+    expect(find.text('All metrics'), findsNothing);
     expect(find.text('Core'), findsOneWidget);
     expect(find.text('KDA'), findsOneWidget);
     expect(find.text('Win Rate'), findsOneWidget);
     expect(find.text('56.10%'), findsOneWidget);
     expect(find.byKey(const ValueKey('trend-signal-hero-199')), findsOneWidget);
+    expect(find.byKey(const ValueKey('trend-best-skill-199')), findsOneWidget);
+    expect(find.byKey(const ValueKey('trend-best-equip-199')), findsOneWidget);
     expect(find.text('🔥'), findsNWidgets(2));
     expect(find.text('热'), findsNothing);
     expect(find.byIcon(Icons.arrow_drop_up_rounded), findsWidgets);
@@ -68,6 +70,11 @@ void main() {
     expect(find.text('🔥'), findsNWidgets(2));
     expect(find.text('🧊'), findsNWidgets(2));
     expect(find.text('热'), findsNothing);
+    final fireCenter = tester.getCenter(find.text('🔥').first);
+    final trendCenter = tester.getCenter(
+      find.byKey(const ValueKey('trend-signal-hero-1')),
+    );
+    expect((fireCenter.dy - trendCenter.dy).abs(), lessThan(10));
   });
 
   testWidgets('changes dimension and sends the matching table query', (

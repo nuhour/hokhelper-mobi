@@ -51,7 +51,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   final _searchController = TextEditingController();
   StatsTrendQuery _query = const StatsTrendQuery();
   StatsTrendTable? _previousTable;
-  String _metricGroup = '';
+  StatsTrendTable? _previousSignalTable;
   String _sortColumn = '';
   bool _sortAscending = false;
   bool _showSearch = false;
@@ -65,7 +65,6 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   void _setQuery(StatsTrendQuery query) {
     setState(() {
       _query = query;
-      _metricGroup = '';
       _sortColumn = '';
       _sortAscending = false;
     });
@@ -74,8 +73,12 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(heroTrendTableProvider(_query));
+    final signalQuery = _query.copyWith(windowDays: 30);
+    final signalValue = ref.watch(heroTrendTableProvider(signalQuery));
     final loaded = value.valueOrNull;
+    final loadedSignals = signalValue.valueOrNull;
     if (loaded != null) _previousTable = loaded;
+    if (loadedSignals != null) _previousSignalTable = loadedSignals;
 
     return Material(
       color: Theme.of(context).scaffoldBackgroundColor,
@@ -83,14 +86,28 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
         value: value,
         previousData: _previousTable,
         loadingStyle: AppAsyncLoadingStyle.dashboard,
-        retry: () => ref.invalidate(heroTrendTableProvider(_query)),
-        data: _buildTable,
+        retry: () {
+          ref.invalidate(heroTrendTableProvider(_query));
+          ref.invalidate(heroTrendTableProvider(signalQuery));
+        },
+        data: (table) =>
+            _buildTable(table, loadedSignals ?? _previousSignalTable),
       ),
     );
   }
 
-  Widget _buildTable(StatsTrendTable table) {
-    final trendBadges = _rankSevenDayTrendBadges(table.rows);
+  Widget _buildTable(StatsTrendTable table, StatsTrendTable? signalTable) {
+    final signalRows =
+        signalTable?.dimension == table.dimension &&
+            signalTable?.view == table.view &&
+            signalTable?.baseline == table.baseline
+        ? signalTable!.rows
+        : table.rows;
+    final signalRowsByKey = {
+      for (final row in signalRows) _trendRowKey(row): row,
+    };
+    final trendBadges = _rankSevenDayTrendBadges(signalRows);
+    final monthDirections = _monthTrendDirections(signalRows);
     final search = _searchController.text.trim().toLowerCase();
     var rows = table.rows
         .where((row) {
@@ -124,20 +141,11 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
       (column) => column?.isIdentity == true,
       orElse: () => null,
     );
-    final groups = table.metricGroups;
-    if (_metricGroup.isNotEmpty && !groups.contains(_metricGroup)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _metricGroup = '');
-      });
-    }
     final columns = table.columns
-        .where((column) {
-          if (column.isIdentity || column.isSparkline) return false;
-          return _metricGroup.isEmpty || column.group == _metricGroup;
-        })
+        .where((column) => !column.isIdentity && !column.isSparkline)
         .toList(growable: false);
     final hasSparkline = table.columns.any((column) => column.isSparkline);
-    final fixedWidth = table.dimension == 'player_rank' ? 174.0 : 154.0;
+    final fixedWidth = table.dimension == 'player_rank' ? 174.0 : 164.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
@@ -175,7 +183,12 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
             rowCount: rows.length,
             onOpenFilters: () => _openFilters(table),
             onSearch: () => setState(() => _showSearch = !_showSearch),
-            onRefresh: () => ref.invalidate(heroTrendTableProvider(_query)),
+            onRefresh: () {
+              ref.invalidate(heroTrendTableProvider(_query));
+              ref.invalidate(
+                heroTrendTableProvider(_query.copyWith(windowDays: 30)),
+              );
+            },
           ),
           AnimatedSize(
             duration: const Duration(milliseconds: 180),
@@ -217,14 +230,6 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                     ),
                   ),
           ),
-          if (groups.isNotEmpty) ...[
-            const SizedBox(height: 7),
-            _MetricGroupStrip(
-              groups: groups,
-              selected: _metricGroup,
-              onChanged: (group) => setState(() => _metricGroup = group),
-            ),
-          ],
           const SizedBox(height: 7),
           Expanded(
             child: rows.isEmpty
@@ -252,6 +257,13 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                           trendBadge:
                               trendBadges[_trendRowKey(rows[index])] ??
                               _TrendBadge.none,
+                          monthDirection:
+                              monthDirections[_trendRowKey(rows[index])] ??
+                              _resolveTrendDirection(
+                                signalRowsByKey[_trendRowKey(rows[index])]
+                                        ?.sparkline ??
+                                    rows[index].sparkline,
+                              ),
                           focused:
                               int.tryParse(rows[index].id) == focusedHeroId,
                           onTap:
@@ -265,6 +277,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                       for (final column in columns)
                         AppStatsTableColumn(
                           label: _columnLabel(context, column.id, column.label),
+                          groupLabel: column.group.isEmpty
+                              ? 'Metrics'
+                              : _metricGroupLabel(context, column.group),
                           width: _columnWidth(column),
                           selected: _sortColumn == column.id,
                           sortAscending: _sortColumn == column.id
@@ -492,48 +507,13 @@ class _FilterSummaryBar extends StatelessWidget {
   }
 }
 
-class _MetricGroupStrip extends StatelessWidget {
-  const _MetricGroupStrip({
-    required this.groups,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<String> groups;
-  final String selected;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final options = ['', ...groups];
-    return SizedBox(
-      height: 31,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: options.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final group = options[index];
-          return ChoiceChip(
-            selected: selected == group,
-            showCheckmark: false,
-            label: Text(
-              group.isEmpty ? 'All metrics' : _metricGroupLabel(context, group),
-            ),
-            onSelected: (_) => onChanged(group),
-          );
-        },
-      ),
-    );
-  }
-}
-
 class _TrendIdentityCell extends StatelessWidget {
   const _TrendIdentityCell({
     required this.row,
     required this.rank,
     required this.showSparkline,
     required this.trendBadge,
+    required this.monthDirection,
     required this.focused,
     required this.onTap,
   });
@@ -542,6 +522,7 @@ class _TrendIdentityCell extends StatelessWidget {
   final int rank;
   final bool showSparkline;
   final _TrendBadge trendBadge;
+  final _TrendDirection monthDirection;
   final bool focused;
   final VoidCallback? onTap;
 
@@ -578,35 +559,7 @@ class _TrendIdentityCell extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AppImage(
-                  url: row.imageUrl,
-                  width: 32,
-                  height: 32,
-                  borderRadius: row.kind == 'equip' ? 8 : 16,
-                  semanticLabel: row.name,
-                ),
-                if (focused)
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            _TrendAvatarCluster(row: row, focused: focused),
             const SizedBox(width: 6),
             Expanded(
               child: showSparkline && row.sparkline.length > 1
@@ -614,6 +567,7 @@ class _TrendIdentityCell extends StatelessWidget {
                       key: ValueKey('trend-signal-${row.kind}-${row.id}'),
                       values: row.sparkline,
                       badge: trendBadge,
+                      direction: monthDirection,
                       showSignal: true,
                     )
                   : Text(
@@ -637,6 +591,134 @@ class _TrendIdentityCell extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TrendAvatarCluster extends StatelessWidget {
+  const _TrendAvatarCluster({required this.row, required this.focused});
+
+  final StatsTrendRow row;
+  final bool focused;
+
+  @override
+  Widget build(BuildContext context) {
+    final skill = _map(row.raw['best_skill']);
+    final equipValues = row.raw['best_equip'];
+    final equip = equipValues is List && equipValues.isNotEmpty
+        ? _map(equipValues.first)
+        : _map(equipValues);
+    final skillUrl = _trendAssetUrl(skill, 'summoner_skill');
+    final equipUrl = _trendAssetUrl(equip, 'equip');
+    return SizedBox(
+      width: 42,
+      height: 38,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 5,
+            top: 0,
+            child: AppImage(
+              url: row.imageUrl,
+              width: 32,
+              height: 32,
+              borderRadius: row.kind == 'equip' ? 8 : 16,
+              semanticLabel: row.name,
+            ),
+          ),
+          if (skillUrl.isNotEmpty)
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: _TrendLoadoutIcon(
+                key: ValueKey('trend-best-skill-${row.id}'),
+                url: skillUrl,
+                label: _trendAssetName(skill, 'Summoner skill'),
+              ),
+            ),
+          if (equipUrl.isNotEmpty)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: _TrendLoadoutIcon(
+                key: ValueKey('trend-best-equip-${row.id}'),
+                url: equipUrl,
+                label: _trendAssetName(equip, 'Equipment'),
+              ),
+            ),
+          if (focused)
+            Positioned(
+              right: 3,
+              top: -2,
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendLoadoutIcon extends StatelessWidget {
+  const _TrendLoadoutIcon({required this.url, required this.label, super.key});
+
+  final String url;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Container(
+        width: 17,
+        height: 17,
+        padding: const EdgeInsets.all(1),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(
+            color:
+                Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
+                AppTheme.outline,
+          ),
+        ),
+        child: AppImage(
+          url: url,
+          width: 15,
+          height: 15,
+          borderRadius: 4,
+          semanticLabel: label,
+        ),
+      ),
+    );
+  }
+}
+
+String _trendAssetUrl(Map<String, dynamic> item, String kind) {
+  final explicit = [item['icon_url'], item['image_url'], item['avatar_url']]
+      .map((value) => value?.toString().trim() ?? '')
+      .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+  if (explicit.isNotEmpty) return explicit;
+  final id = (item['id'] ?? item['skill_id'] ?? item['equip_id'])
+      ?.toString()
+      .trim();
+  return id == null || id.isEmpty
+      ? ''
+      : 'https://hokhelper.com/static/game/$kind/$id.png';
+}
+
+String _trendAssetName(Map<String, dynamic> item, String fallback) {
+  final name = item['name']?.toString().trim() ?? '';
+  return name.isEmpty ? fallback : name;
 }
 
 class _TrendValueCell extends StatelessWidget {
@@ -1712,6 +1794,7 @@ class _MiniSparkline extends StatelessWidget {
     required this.values,
     this.color,
     this.badge = _TrendBadge.none,
+    this.direction,
     this.showSignal = false,
     super.key,
   });
@@ -1719,6 +1802,7 @@ class _MiniSparkline extends StatelessWidget {
   final List<double> values;
   final Color? color;
   final _TrendBadge badge;
+  final _TrendDirection? direction;
   final bool showSignal;
 
   @override
@@ -1726,6 +1810,7 @@ class _MiniSparkline extends StatelessWidget {
     final signal = _TrendSignal.resolve(
       values: values,
       badge: badge,
+      direction: direction ?? _resolveTrendDirection(values),
       fallbackColor: color ?? Theme.of(context).colorScheme.primary,
       useSignalPalette: showSignal,
     );
@@ -1740,7 +1825,7 @@ class _MiniSparkline extends StatelessWidget {
                 0,
                 showSignal ? 5 : 1,
                 showSignal ? 9 : 0,
-                showSignal && badge != _TrendBadge.none ? 8 : 1,
+                1,
               ),
               child: CustomPaint(
                 painter: _MiniSparklinePainter(
@@ -1769,15 +1854,16 @@ class _MiniSparkline extends StatelessWidget {
               ),
             ),
           if (showSignal && badge != _TrendBadge.none)
-            Positioned(
-              left: 1,
-              bottom: -5,
-              child: Text(
-                badge.emoji,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: signal.color,
-                  fontSize: 11,
-                  height: 1,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Align(
+                  alignment: const Alignment(-0.96, 0.12),
+                  child: Text(
+                    badge.emoji,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(fontSize: 11, height: 1),
+                  ),
                 ),
               ),
             ),
@@ -1824,6 +1910,25 @@ Map<String, _TrendBadge> _rankSevenDayTrendBadges(List<StatsTrendRow> rows) {
   };
 }
 
+Map<String, _TrendDirection> _monthTrendDirections(List<StatsTrendRow> rows) {
+  return {
+    for (final row in rows)
+      _trendRowKey(row): _resolveTrendDirection(
+        row.sparkline.skip(math.max(0, row.sparkline.length - 30)).toList(),
+      ),
+  };
+}
+
+_TrendDirection _resolveTrendDirection(List<double> values) {
+  final valid = values.where((value) => value.isFinite).toList();
+  if (valid.length < 2) return _TrendDirection.steady;
+  final delta = valid.last - valid.first;
+  final threshold = math.max(valid.first.abs() * 0.0001, 0.000001);
+  if (delta > threshold) return _TrendDirection.up;
+  if (delta < -threshold) return _TrendDirection.down;
+  return _TrendDirection.steady;
+}
+
 class _TrendSignal {
   const _TrendSignal({
     required this.color,
@@ -1832,7 +1937,7 @@ class _TrendSignal {
   });
 
   static const _cold = Color(0xFF2997FF);
-  static const _warm = Color(0xFFFF9F0A);
+  static const _warm = Color(0xFFFBBF24);
   static const _hot = Color(0xFFFF2D2D);
 
   final Color color;
@@ -1843,7 +1948,7 @@ class _TrendSignal {
     final rankLabel = switch (badge) {
       _TrendBadge.hot => 'Top seven-day riser',
       _TrendBadge.cold => 'Top seven-day faller',
-      _TrendBadge.none => 'Seven-day trend',
+      _TrendBadge.none => 'One-month trend',
     };
     final directionLabel = switch (direction) {
       _TrendDirection.up => 'rising',
@@ -1856,33 +1961,18 @@ class _TrendSignal {
   factory _TrendSignal.resolve({
     required List<double> values,
     required _TrendBadge badge,
+    required _TrendDirection direction,
     required Color fallbackColor,
     required bool useSignalPalette,
   }) {
-    final valid = values.where((value) => value.isFinite).toList();
-    final direction = _resolveDirection(valid);
     final color = useSignalPalette
-        ? switch (badge) {
-            _TrendBadge.hot => _hot,
-            _TrendBadge.cold => _cold,
-            _TrendBadge.none => _warm,
+        ? switch (direction) {
+            _TrendDirection.up => _hot,
+            _TrendDirection.down => _warm,
+            _TrendDirection.steady => _cold,
           }
         : fallbackColor;
     return _TrendSignal(color: color, direction: direction, badge: badge);
-  }
-
-  static _TrendDirection _resolveDirection(List<double> values) {
-    if (values.length < 2) return _TrendDirection.steady;
-    final sampleSize = math.min(3, values.length);
-    final start = values.take(sampleSize).reduce((a, b) => a + b) / sampleSize;
-    final end =
-        values.skip(values.length - sampleSize).reduce((a, b) => a + b) /
-        sampleSize;
-    final spread = values.reduce(math.max) - values.reduce(math.min);
-    final threshold = math.max(spread * 0.12, start.abs() * 0.003);
-    if (end - start > threshold) return _TrendDirection.up;
-    if (start - end > threshold) return _TrendDirection.down;
-    return _TrendDirection.steady;
   }
 }
 
