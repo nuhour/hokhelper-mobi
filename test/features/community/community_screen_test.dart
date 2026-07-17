@@ -660,6 +660,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           communityRepositoryProvider.overrideWithValue(repository),
           communityPostsProvider.overrideWith((ref) async {
             return const [
@@ -690,6 +691,11 @@ void main() {
     expect(repository.likedPostId, '101');
     expect(find.text('19'), findsOneWidget);
     expect(find.text('Post liked'), findsOneWidget);
+
+    await tester.tap(find.text('Liked'));
+    await tester.pumpAndSettle();
+    expect(find.text('Liked Posts'), findsOneWidget);
+    expect(find.text('Best jungle rotation'), findsOneWidget);
   });
 
   testWidgets('loads more community posts after the first page', (
@@ -865,6 +871,11 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Post created'), findsOneWidget);
+
+    await tester.tap(find.text('Mine'));
+    await tester.pumpAndSettle();
+    expect(find.text('My Posts'), findsOneWidget);
+    expect(find.text('Mobile macro notes'), findsOneWidget);
   });
 
   testWidgets('creates community posts with recommended and custom tags', (

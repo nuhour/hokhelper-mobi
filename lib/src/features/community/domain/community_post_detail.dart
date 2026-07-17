@@ -18,18 +18,37 @@ class CommunityPostDetail {
     final postJson = map['post'];
     final postMap = postJson is Map ? postJson : map;
     final comments = map['comments'];
+    final commentRows = comments is List
+        ? comments
+        : _flattenCommentTree(map['comments_tree']);
 
     return CommunityPostDetail(
       post: CommunityPostSummary.fromJson(postMap),
       content: _readString(postMap['content'] ?? map['content']),
       isLiked: _readBool(postMap['is_liked'] ?? postMap['isLiked']),
-      comments: comments is List
-          ? comments
+      comments: commentRows.isNotEmpty
+          ? commentRows
                 .map(CommunityCommentSummary.fromJson)
                 .toList(growable: false)
           : const [],
     );
   }
+}
+
+List<Object?> _flattenCommentTree(Object? value) {
+  if (value is! List) return const [];
+  final flattened = <Object?>[];
+  void visit(List<dynamic> nodes) {
+    for (final node in nodes) {
+      if (node is! Map) continue;
+      flattened.add(node);
+      final children = node['children'];
+      if (children is List) visit(children);
+    }
+  }
+
+  visit(value);
+  return flattened;
 }
 
 class CommunityCommentSummary {

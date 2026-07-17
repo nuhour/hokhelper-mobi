@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/formatters/app_time_formatter.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -16,6 +17,8 @@ import '../../settings/presentation/settings_controller.dart';
 import '../data/community_repository.dart';
 import '../domain/community_post_summary.dart';
 import '../domain/leak_post_summary.dart';
+import '../domain/community_sticker.dart';
+import 'community_composer_assets.dart';
 
 final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
   return CommunityRepository(apiClient: ref.watch(apiClientProvider));
@@ -378,6 +381,9 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   final _createdPosts = <CommunityPostSummary>[];
   final _extraPosts = <CommunityPostSummary>[];
   final _deletedPostIds = <String>{};
+  final _createdPostIds = <String>{};
+  final _likedPostIds = <String>{};
+  final _unlikedPostIds = <String>{};
   final _selectedPostTags = <String>{_recommendedPostTags.first};
   var _search = '';
   var _sort = CommunityPostSort.newest;
@@ -424,11 +430,19 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
           CommunityInitialView.myPosts =>
             allPosts
                 .where(
-                  (post) => post.authorId > 0 && post.authorId == authUser?.id,
+                  (post) =>
+                      _createdPostIds.contains(post.id) ||
+                      (post.authorId > 0 && post.authorId == authUser?.id),
                 )
                 .toList(growable: false),
           CommunityInitialView.likedPosts =>
-            allPosts.where((post) => post.isLiked).toList(growable: false),
+            allPosts
+                .where(
+                  (post) =>
+                      !_unlikedPostIds.contains(post.id) &&
+                      (post.isLiked || _likedPostIds.contains(post.id)),
+                )
+                .toList(growable: false),
           CommunityInitialView.hot => allPosts,
         };
         final visiblePosts = tag.isEmpty
@@ -514,6 +528,17 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
                         ? () => _deletePost(context, post.id)
                         : null,
                     post: post,
+                    onLikeChanged: (liked) {
+                      setState(() {
+                        if (liked) {
+                          _likedPostIds.add(post.id);
+                          _unlikedPostIds.remove(post.id);
+                        } else {
+                          _unlikedPostIds.add(post.id);
+                          _likedPostIds.remove(post.id);
+                        }
+                      });
+                    },
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -621,6 +646,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
       _customTagController.clear();
       setState(() {
         _createdPosts.insert(0, createdPost);
+        _createdPostIds.add(createdPost.id);
         _createSubmitting = false;
         _selectedPostTags
           ..clear()
@@ -756,6 +782,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
                       },
                       selectedTags: _selectedPostTags,
                       titleController: _titleController,
+                      loadStickers: _loadStickers,
                     ),
                   ),
                 ),
@@ -765,6 +792,11 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
         );
       },
     );
+  }
+
+  Future<List<CommunitySticker>> _loadStickers() async {
+    final regionId = await ref.read(communityPostsRegionProvider.future);
+    return ref.read(communityRepositoryProvider).loadStickers(regionId);
   }
 }
 
@@ -1072,6 +1104,7 @@ class _CreatePostCard extends StatelessWidget {
     required this.onTagToggled,
     required this.selectedTags,
     required this.titleController,
+    required this.loadStickers,
   });
 
   final TextEditingController contentController;
@@ -1084,6 +1117,7 @@ class _CreatePostCard extends StatelessWidget {
   final ValueChanged<String> onTagToggled;
   final Set<String> selectedTags;
   final TextEditingController titleController;
+  final Future<List<CommunitySticker>> Function() loadStickers;
 
   @override
   Widget build(BuildContext context) {
@@ -1137,6 +1171,11 @@ class _CreatePostCard extends StatelessWidget {
                   border: OutlineInputBorder(),
                   labelText: 'Content',
                 ),
+              ),
+              const SizedBox(height: 4),
+              CommunityComposerAssets(
+                controller: contentController,
+                loadStickers: loadStickers,
               ),
               const SizedBox(height: 10),
               Text(
@@ -1591,10 +1630,15 @@ class _LeakFilterControls extends StatelessWidget {
 }
 
 class _PostCard extends ConsumerStatefulWidget {
-  const _PostCard({required this.post, this.onDelete});
+  const _PostCard({
+    required this.post,
+    required this.onLikeChanged,
+    this.onDelete,
+  });
 
   final CommunityPostSummary post;
   final VoidCallback? onDelete;
+  final ValueChanged<bool> onLikeChanged;
 
   @override
   ConsumerState<_PostCard> createState() => _PostCardState();
@@ -1645,7 +1689,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
                       ),
                       if (post.createdAt.isNotEmpty)
                         Text(
-                          _relativeTime(post.createdAt),
+                          AppTimeFormatter.relative(context, post.createdAt),
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(color: AppTheme.muted),
                         ),
@@ -1744,6 +1788,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
         _likeCount = result.likeCount;
         _likeSubmitting = false;
       });
+      widget.onLikeChanged(result.isLiked);
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
@@ -1918,7 +1963,10 @@ class _LeakCardState extends State<_LeakCard> {
                                 ),
                               ),
                               Text(
-                                _relativeTime(leak.publishedAt),
+                                AppTimeFormatter.relative(
+                                  context,
+                                  leak.publishedAt,
+                                ),
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(color: AppTheme.muted),
                               ),
@@ -2163,7 +2211,7 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  '${_platformLabel(leak.platform)} · ${_relativeTime(leak.publishedAt)}',
+                                  '${_platformLabel(leak.platform)} · ${AppTimeFormatter.relative(context, leak.publishedAt)}',
                                   style: Theme.of(context).textTheme.labelSmall
                                       ?.copyWith(color: AppTheme.muted),
                                 ),
@@ -2420,15 +2468,4 @@ String _compactCount(int value) {
     return '${(value / 1000).toStringAsFixed(value >= 10000 ? 0 : 1)}k';
   }
   return '$value';
-}
-
-String _relativeTime(String value) {
-  final date = DateTime.tryParse(value)?.toLocal();
-  if (date == null) return value;
-  final difference = DateTime.now().difference(date);
-  if (difference.isNegative || difference.inMinutes < 1) return 'Just now';
-  if (difference.inMinutes < 60) return '${difference.inMinutes}m';
-  if (difference.inHours < 24) return '${difference.inHours}h';
-  if (difference.inDays < 7) return '${difference.inDays}d';
-  return '${date.month}/${date.day}/${date.year}';
 }

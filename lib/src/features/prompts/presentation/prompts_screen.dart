@@ -12,6 +12,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_share_sheet.dart';
 import '../data/prompts_repository.dart';
 import '../domain/prompt_summary.dart';
 
@@ -1897,16 +1898,12 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
     messenger.showSnackBar(const SnackBar(content: Text('Prompt copied')));
   }
 
-  Future<void> _sharePrompt(BuildContext context) async {
-    await Clipboard.setData(
-      ClipboardData(text: '/tools/prompts?promptId=${widget.prompt.id}'),
+  Future<void> _sharePrompt(BuildContext context) {
+    return showAppShareSheet(
+      context,
+      title: widget.prompt.title,
+      url: 'https://hokhelper.com/tools/prompts?promptId=${widget.prompt.id}',
     );
-    if (!context.mounted) {
-      return;
-    }
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Prompt link copied')));
   }
 
   Future<void> _likePrompt(BuildContext context) async {

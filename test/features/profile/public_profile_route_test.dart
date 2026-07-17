@@ -281,10 +281,15 @@ void main() {
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
     await tester.pumpAndSettle();
+    expect(find.text('Facebook'), findsOneWidget);
+    await tester.tap(find.text('Copy'));
+    await tester.pumpAndSettle();
 
     expect(clipboardCall, isNotNull);
-    expect(clipboardCall!.arguments, {'text': '/profile/42'});
-    expect(find.text('Profile link copied'), findsOneWidget);
+    expect(clipboardCall!.arguments, {
+      'text': 'https://hokhelper.com/profile/42',
+    });
+    expect(find.text('Link copied'), findsOneWidget);
   });
 
   testWidgets('profile stats open following and followers lists', (

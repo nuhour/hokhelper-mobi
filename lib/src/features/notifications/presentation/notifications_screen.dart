@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/formatters/app_time_formatter.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
@@ -287,8 +288,7 @@ String? _resolveNotificationDestination(NotificationSummary notification) {
       classifier.contains('liked') ||
       classifier.contains('点赞');
   final link = normalizePortalLinkTarget(notification.link);
-  final isCommunityPostLike =
-      link.isEmpty || link.contains('/community/post/');
+  final isCommunityPostLike = link.isEmpty || link.contains('/community/post/');
   if (isLike && notification.actorId > 0 && isCommunityPostLike) {
     return '/profile/${notification.actorId}';
   }
@@ -384,7 +384,10 @@ class _NotificationCard extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        _formatTime(notification.createdAt),
+                        AppTimeFormatter.relative(
+                          context,
+                          notification.createdAt,
+                        ),
                         style: Theme.of(
                           context,
                         ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
@@ -568,11 +571,4 @@ String _targetItemLabel(String sourceType, String link) {
     return 'post';
   }
   return 'content';
-}
-
-String _formatTime(String value) {
-  if (value.isEmpty) {
-    return '';
-  }
-  return value.replaceFirst('T', ' ').replaceFirst(RegExp(r'\.\d+Z?$'), '');
 }

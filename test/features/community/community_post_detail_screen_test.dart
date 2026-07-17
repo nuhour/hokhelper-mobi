@@ -187,12 +187,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Like'));
+    await tester.tap(find.widgetWithText(TextButton, '18 likes'));
     await tester.pumpAndSettle();
 
     expect(repository.likedPostId, '99');
     expect(find.text('19 likes'), findsOneWidget);
-    expect(find.text('Liked'), findsOneWidget);
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
     expect(find.text('Post liked'), findsOneWidget);
   });
 
@@ -242,12 +242,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.tap(find.byTooltip('Share post'));
+    await tester.pumpAndSettle();
+    expect(find.text('Instagram'), findsOneWidget);
+    expect(find.text('Facebook'), findsOneWidget);
+    expect(find.text('Reddit'), findsOneWidget);
+
+    await tester.tap(find.text('Copy'));
     await tester.pumpAndSettle();
 
     expect(clipboardCall, isNotNull);
-    expect(clipboardCall!.arguments, {'text': '/community/post/99'});
-    expect(find.text('Post link copied'), findsOneWidget);
+    expect(clipboardCall!.arguments, {
+      'text': 'https://hokhelper.com/community/post/99',
+    });
+    expect(find.text('Link copied'), findsOneWidget);
   });
 
   testWidgets('creates comments from the mobile detail screen', (tester) async {

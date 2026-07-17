@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_share_sheet.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/profile_repository.dart';
 import '../domain/user_profile.dart';
@@ -337,15 +337,13 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
     }
   }
 
-  Future<void> _shareProfile(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: '/profile/${profile.id}'));
-    if (!mounted || !context.mounted) {
-      return;
-    }
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Profile link copied')),
+  Future<void> _shareProfile(BuildContext context) {
+    return showAppShareSheet(
+      context,
+      title: profile.displayName.isEmpty
+          ? profile.username
+          : profile.displayName,
+      url: 'https://hokhelper.com/profile/${profile.id}',
     );
   }
 

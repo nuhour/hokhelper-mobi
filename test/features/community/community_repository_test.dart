@@ -68,6 +68,17 @@ class _FakeApiClient extends ApiClient {
       '/community/tags' => const {
         'result': ['All', 'Guide', 'Patch Notes', 'Guide'],
       },
+      '/community/stickers' => const {
+        'result': {
+          'rows': [
+            {
+              'id': 's1',
+              'name': 'Victory',
+              'image_url': 'https://example.test/victory.webp',
+            },
+          ],
+        },
+      },
       _ => throw StateError('Unexpected path $path'),
     };
   }
@@ -143,6 +154,22 @@ void main() {
     expect(apiClient.getQueries['/community/tags'], {
       'region_id': 2,
       'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
+    });
+  });
+
+  test('loads insertable HOK stickers for article composers', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final stickers = await repository.loadStickers(2);
+
+    expect(stickers, hasLength(1));
+    expect(stickers.single.name, 'Victory');
+    expect(stickers.single.imageUrl, 'https://example.test/victory.webp');
+    expect(apiClient.getQueries['/community/stickers'], {
+      'page': 1,
+      'pageSize': 48,
+      'region_id': 2,
     });
   });
 

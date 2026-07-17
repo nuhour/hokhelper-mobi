@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
@@ -9,6 +8,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_share_sheet.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/builds_repository.dart';
 import '../domain/build_scheme_summary.dart';
@@ -435,16 +435,12 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
     }
   }
 
-  Future<void> _shareScheme(BuildContext context) async {
-    await Clipboard.setData(
-      ClipboardData(text: '/tools/build-sim?scheme=${widget.scheme.id}'),
+  Future<void> _shareScheme(BuildContext context) {
+    return showAppShareSheet(
+      context,
+      title: widget.scheme.title,
+      url: 'https://hokhelper.com/tools/build-sim?scheme=${widget.scheme.id}',
     );
-    if (!context.mounted) {
-      return;
-    }
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Build link copied')));
   }
 }
 

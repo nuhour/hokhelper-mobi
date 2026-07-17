@@ -267,10 +267,15 @@ void main() {
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
     await tester.pumpAndSettle();
+    expect(find.text('Facebook'), findsOneWidget);
+    await tester.tap(find.text('Copy'));
+    await tester.pumpAndSettle();
 
     expect(clipboardCall, isNotNull);
-    expect(clipboardCall!.arguments, {'text': '/tools/build-sim?scheme=7'});
-    expect(find.text('Build link copied'), findsOneWidget);
+    expect(clipboardCall!.arguments, {
+      'text': 'https://hokhelper.com/tools/build-sim?scheme=7',
+    });
+    expect(find.text('Link copied'), findsOneWidget);
   });
 
   testWidgets('switches public build explorer sorting like hokx', (

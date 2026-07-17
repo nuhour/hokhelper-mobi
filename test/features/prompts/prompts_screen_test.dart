@@ -476,9 +476,14 @@ void main() {
 
     await tester.tap(find.byTooltip('Share'));
     await tester.pumpAndSettle();
+    expect(find.text('Facebook'), findsOneWidget);
+    await tester.tap(find.text('Copy'));
+    await tester.pumpAndSettle();
 
-    expect(clipboardCall?.arguments, {'text': '/tools/prompts?promptId=7'});
-    expect(find.text('Prompt link copied'), findsOneWidget);
+    expect(clipboardCall?.arguments, {
+      'text': 'https://hokhelper.com/tools/prompts?promptId=7',
+    });
+    expect(find.text('Link copied'), findsOneWidget);
   });
 
   testWidgets('favorites prompt cards through the backend', (tester) async {

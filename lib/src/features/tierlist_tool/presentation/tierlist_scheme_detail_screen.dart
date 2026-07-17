@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_share_sheet.dart';
 import '../../heroes/domain/hero_summary.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../domain/tierlist_scheme_summary.dart';
@@ -1286,17 +1287,11 @@ class _TierListDetailCard extends StatelessWidget {
   Future<void> _shareTierList(
     BuildContext context,
     TierListSchemeSummary scheme,
-  ) async {
-    await Clipboard.setData(
-      ClipboardData(text: '/tools/tier-list/${scheme.id}'),
-    );
-    if (!context.mounted) {
-      return;
-    }
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Tier list link copied')),
+  ) {
+    return showAppShareSheet(
+      context,
+      title: scheme.name,
+      url: 'https://hokhelper.com/tools/tier-list/${scheme.id}',
     );
   }
 }

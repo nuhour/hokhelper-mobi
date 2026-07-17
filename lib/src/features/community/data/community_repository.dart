@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../../core/network/api_client.dart';
 import '../domain/community_post_detail.dart';
 import '../domain/community_post_summary.dart';
+import '../domain/community_sticker.dart';
 import '../domain/leak_post_summary.dart';
 
 enum CommunityPostSort {
@@ -62,7 +63,11 @@ class CommunityRepository {
         'region_id': regionId,
       },
     );
-    return CommunityPostSummary.fromJson(json);
+    final post = CommunityPostSummary.fromJson(_unwrapResult(json));
+    if (post.id.isEmpty) {
+      throw const FormatException('Post creation returned no post id');
+    }
+    return post;
   }
 
   Future<List<String>> loadPostTags(int regionId) async {
@@ -87,6 +92,26 @@ class CommunityRepository {
         .map((value) => value?.toString().trim() ?? '')
         .where((value) => value.isNotEmpty && value.toLowerCase() != 'all')
         .toSet()
+        .toList(growable: false);
+  }
+
+  Future<List<CommunitySticker>> loadStickers(
+    int regionId, {
+    String keyword = '',
+    int pageSize = 48,
+  }) async {
+    final json = await apiClient.getJson(
+      '/community/stickers',
+      query: {
+        'page': 1,
+        'pageSize': pageSize,
+        'region_id': regionId,
+        if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      },
+    );
+    return _readRows(json)
+        .map(CommunitySticker.fromJson)
+        .where((sticker) => sticker.imageUrl.isNotEmpty)
         .toList(growable: false);
   }
 
@@ -130,7 +155,7 @@ class CommunityRepository {
 
   Future<CommunityLikeResult> togglePostLike(String postId) async {
     final json = await apiClient.postJson('/community/posts/$postId/like');
-    return CommunityLikeResult.fromJson(json);
+    return CommunityLikeResult.fromJson(_unwrapResult(json));
   }
 
   Future<CommunityCommentSummary> createComment(
@@ -146,7 +171,11 @@ class CommunityRepository {
       '/community/posts/$postId/comments',
       body: body,
     );
-    return CommunityCommentSummary.fromJson(json);
+    final comment = CommunityCommentSummary.fromJson(_unwrapResult(json));
+    if (comment.id.isEmpty || comment.content.isEmpty) {
+      throw const FormatException('Comment creation returned invalid data');
+    }
+    return comment;
   }
 
   List<Object?> _readRows(Map<String, dynamic> json) {
@@ -159,6 +188,11 @@ class CommunityRepository {
     }
     return rows;
   }
+}
+
+Map<dynamic, dynamic> _unwrapResult(Map<String, dynamic> json) {
+  final result = json['result'];
+  return result is Map ? result : json;
 }
 
 class CommunityLikeResult {
