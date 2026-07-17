@@ -121,6 +121,32 @@ StatsTrendDetail sampleStatsTrendDetail() {
     ],
     'playstyle_trend_series': const [],
     'equip_trend_series': const [],
+    'hero_equip_stats': const [
+      {
+        'equip': {'id': 12211, 'name': 'Venomous Staff'},
+        'quantity': 3790,
+        'pick_rate': 70.24,
+        'win_rate': 54.2,
+      },
+    ],
+    'hero_skill_equip_stats': const [
+      {
+        'skill': {'id': 80115, 'name': 'Flash'},
+        'equips': [
+          {'id': 12211, 'name': 'Venomous Staff'},
+        ],
+        'match_count': 1200,
+        'win_rate': 55.4,
+      },
+    ],
+    'hero_master_builds': const [],
+    'hero_skill_position_stats': const [],
+    'hero_bp_stats': const {
+      'blue_pick_share': 50.0,
+      'blue_win_rate': 52.0,
+      'red_pick_share': 50.0,
+      'red_win_rate': 48.0,
+    },
     'synergy_list': const [],
     'counter_list': const [],
   });

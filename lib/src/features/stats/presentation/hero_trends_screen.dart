@@ -168,14 +168,6 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
               );
             },
           ),
-          if (table.availableViews.length > 1) ...[
-            const SizedBox(height: 7),
-            _ViewStrip(
-              views: table.availableViews,
-              selected: _query.view,
-              onChanged: (view) => _setQuery(_query.copyWith(view: view)),
-            ),
-          ],
           const SizedBox(height: 7),
           _FilterSummaryBar(
             query: _query,
@@ -266,10 +258,16 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                               ),
                           focused:
                               int.tryParse(rows[index].id) == focusedHeroId,
-                          onTap:
-                              rows[index].kind == 'hero' ||
-                                  rows[index].kind == 'equip'
-                              ? () => _openDetail(rows[index], table)
+                          onAvatarTap: rows[index].kind == 'hero'
+                              ? () => _openHeroPreparation(rows[index], table)
+                              : rows[index].kind == 'equip'
+                              ? () => _openTrendDetail(rows[index], table)
+                              : null,
+                          onTrendTap:
+                              hasSparkline &&
+                                  (rows[index].kind == 'hero' ||
+                                      rows[index].kind == 'equip')
+                              ? () => _openTrendDetail(rows[index], table)
                               : null,
                         ),
                     ],
@@ -322,19 +320,38 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
     if (result != null) _setQuery(result);
   }
 
-  void _openDetail(StatsTrendRow row, StatsTrendTable table) {
+  StatsTrendDetailRequest _detailRequest(
+    StatsTrendRow row,
+    StatsTrendTable table,
+  ) {
     final effectiveQuery =
         _query.snapshotDate.isEmpty && table.latestSnapshotDate.isNotEmpty
         ? _query.copyWith(snapshotDate: table.latestSnapshotDate)
         : _query;
+    return StatsTrendDetailRequest(row: row, query: effectiveQuery);
+  }
+
+  void _openHeroPreparation(StatsTrendRow row, StatsTrendTable table) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _TrendDetailSheet(
-        request: StatsTrendDetailRequest(row: row, query: effectiveQuery),
+      builder: (context) => _HeroPreparationSheet(
+        request: _detailRequest(row, table),
+        showOverview: _query.dimension != 'power_rank',
       ),
+    );
+  }
+
+  void _openTrendDetail(StatsTrendRow row, StatsTrendTable table) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          _TrendDetailSheet(request: _detailRequest(row, table)),
     );
   }
 }
@@ -380,39 +397,6 @@ class _DimensionStrip extends StatelessWidget {
               label: Text(_dimensionLabel(context, dimension)),
               onSelected: (_) => onChanged(dimension),
             ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ViewStrip extends StatelessWidget {
-  const _ViewStrip({
-    required this.views,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<StatsTrendView> views;
-  final String selected;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 34,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: views.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final view = views[index];
-          return ChoiceChip(
-            selected: selected == view.id,
-            showCheckmark: false,
-            label: Text(_viewLabel(context, view)),
-            onSelected: (_) => onChanged(view.id),
           );
         },
       ),
@@ -515,7 +499,8 @@ class _TrendIdentityCell extends StatelessWidget {
     required this.trendBadge,
     required this.monthDirection,
     required this.focused,
-    required this.onTap,
+    required this.onAvatarTap,
+    required this.onTrendTap,
   });
 
   final StatsTrendRow row;
@@ -524,70 +509,80 @@ class _TrendIdentityCell extends StatelessWidget {
   final _TrendBadge trendBadge;
   final _TrendDirection monthDirection;
   final bool focused;
-  final VoidCallback? onTap;
+  final VoidCallback? onAvatarTap;
+  final VoidCallback? onTrendTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<HokThemeColors>();
     return Semantics(
-      button: onTap != null,
-      label: [
-        if (focused) 'Focused',
-        if (onTap == null) row.name else 'Open ${row.name} trend details',
-      ].join(' '),
-      child: InkWell(
+      label: [if (focused) 'Focused', row.name].join(' '),
+      child: Row(
         key: ValueKey('trend-row-${row.kind}-${row.id}'),
-        onTap: onTap,
-        child: Row(
-          children: [
-            Container(
-              width: 22,
-              height: 22,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: rank <= 3
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '$rank',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: rank <= 3 ? Colors.white : colors?.onSurfaceMuted,
-                  fontWeight: FontWeight.w900,
-                ),
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: rank <= 3
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '$rank',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: rank <= 3 ? Colors.white : colors?.onSurfaceMuted,
+                fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(width: 4),
-            _TrendAvatarCluster(row: row, focused: focused),
-            const SizedBox(width: 6),
-            Expanded(
-              child: showSparkline && row.sparkline.length > 1
-                  ? _MiniSparkline(
-                      key: ValueKey('trend-signal-${row.kind}-${row.id}'),
-                      values: row.sparkline,
-                      badge: trendBadge,
-                      direction: monthDirection,
-                      showSignal: true,
-                    )
-                  : Text(
-                      row.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors?.onSurfaceStrong,
-                        fontWeight: FontWeight.w800,
+          ),
+          const SizedBox(width: 4),
+          Semantics(
+            button: onAvatarTap != null,
+            label: onAvatarTap == null
+                ? row.name
+                : 'Open ${row.name} preparation details',
+            child: InkResponse(
+              key: ValueKey('trend-avatar-${row.kind}-${row.id}'),
+              onTap: onAvatarTap,
+              radius: 24,
+              child: _TrendAvatarCluster(row: row, focused: focused),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Semantics(
+              button: onTrendTap != null,
+              label: onTrendTap == null
+                  ? null
+                  : 'Open ${row.name} trend details',
+              child: InkWell(
+                key: ValueKey('trend-curve-${row.kind}-${row.id}'),
+                onTap: onTrendTap,
+                child: showSparkline && row.sparkline.length > 1
+                    ? _MiniSparkline(
+                        key: ValueKey('trend-signal-${row.kind}-${row.id}'),
+                        values: row.sparkline,
+                        badge: trendBadge,
+                        direction: monthDirection,
+                        showSignal: true,
+                      )
+                    : Text(
+                        row.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: colors?.onSurfaceStrong,
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
-                    ),
-            ),
-            if (onTap != null)
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 14,
-                color: colors?.onSurfaceMuted,
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1073,6 +1068,616 @@ class _LaneFilter extends StatelessWidget {
   }
 }
 
+class _HeroPreparationSheet extends ConsumerStatefulWidget {
+  const _HeroPreparationSheet({
+    required this.request,
+    required this.showOverview,
+  });
+
+  final StatsTrendDetailRequest request;
+  final bool showOverview;
+
+  @override
+  ConsumerState<_HeroPreparationSheet> createState() =>
+      _HeroPreparationSheetState();
+}
+
+class _HeroPreparationSheetState extends ConsumerState<_HeroPreparationSheet> {
+  late String _tab = widget.showOverview ? 'overview' : 'power';
+
+  @override
+  Widget build(BuildContext context) {
+    final row = widget.request.row;
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final tabs = <(String, String, IconData)>[
+      if (widget.showOverview)
+        ('overview', 'Overview', Icons.dashboard_outlined),
+      ('power', 'Power', Icons.bolt_rounded),
+      ('hero_equip', 'Single Equip', Icons.shield_outlined),
+      ('skill_equip', 'Builds', Icons.view_carousel_outlined),
+      ('master_build', 'Pro Builds', Icons.workspace_premium_outlined),
+      ('playstyle', 'Skill Flow', Icons.route_rounded),
+      ('bp', 'BP', Icons.compare_arrows_rounded),
+    ];
+    final value = ref.watch(heroTrendDetailProvider(widget.request));
+    return Container(
+      height: MediaQuery.sizeOf(context).height * 0.92,
+      decoration: BoxDecoration(
+        color: colors?.surfaceSlate ?? AppTheme.panel,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: Column(
+        children: [
+          _StatsDetailHeader(
+            row: row,
+            subtitle: 'Hero preparation',
+            onClose: () => Navigator.pop(context),
+          ),
+          SizedBox(
+            height: 42,
+            child: ListView.separated(
+              key: const ValueKey('hero-preparation-tabs'),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              scrollDirection: Axis.horizontal,
+              itemCount: tabs.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                final tab = tabs[index];
+                return ChoiceChip(
+                  selected: _tab == tab.$1,
+                  showCheckmark: false,
+                  avatar: Icon(tab.$3, size: 16),
+                  label: Text(tab.$2),
+                  onSelected: (_) => setState(() => _tab = tab.$1),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: AppAsyncView<StatsTrendDetail>(
+              value: value,
+              loadingStyle: AppAsyncLoadingStyle.dashboard,
+              retry: () =>
+                  ref.invalidate(heroTrendDetailProvider(widget.request)),
+              data: (detail) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 2, 12, 24),
+                child: _HeroPreparationBody(
+                  tab: _tab,
+                  row: row,
+                  detail: detail,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsDetailHeader extends StatelessWidget {
+  const _StatsDetailHeader({
+    required this.row,
+    required this.subtitle,
+    required this.onClose,
+  });
+
+  final StatsTrendRow row;
+  final String subtitle;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 8),
+      child: Row(
+        children: [
+          AppImage(
+            url: row.imageUrl,
+            width: 40,
+            height: 40,
+            borderRadius: row.kind == 'equip' ? 9 : 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  row.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors?.onSurfaceMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Close details',
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroPreparationBody extends StatelessWidget {
+  const _HeroPreparationBody({
+    required this.tab,
+    required this.row,
+    required this.detail,
+  });
+
+  final String tab;
+  final StatsTrendRow row;
+  final StatsTrendDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (tab) {
+      'power' => _PowerDetail(detail: detail),
+      'hero_equip' => _PreparationEntityList(
+        title: 'Single equipment performance',
+        rows: detail.list('hero_equip_stats'),
+        identityKey: 'equip',
+      ),
+      'skill_equip' => _BuildPreparationList(
+        title: 'Completed builds',
+        rows: detail.list('hero_skill_equip_stats'),
+      ),
+      'master_build' => _BuildPreparationList(
+        title: 'Pro player builds',
+        rows: detail.list('hero_master_builds'),
+        showPlayer: true,
+      ),
+      'playstyle' => _PreparationEntityList(
+        title: 'Skill and lane performance',
+        rows: detail.list('hero_skill_position_stats'),
+        identityKey: 'skill',
+        showLane: true,
+      ),
+      'bp' => _BpPreparation(detail: detail),
+      _ => _PreparationOverview(row: row, detail: detail),
+    };
+  }
+}
+
+class _PreparationOverview extends StatelessWidget {
+  const _PreparationOverview({required this.row, required this.detail});
+
+  final StatsTrendRow row;
+  final StatsTrendDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _DetailSection(
+          title: 'Current performance',
+          child: _MetricGrid(
+            items: [
+              ('Win Rate', _percent(row.raw['wr'])),
+              ('Pick Rate', _percent(row.raw['pick_rate'])),
+              ('Ban Rate', _percent(row.raw['ban_rate'])),
+              ('BP Rate', _percent(row.raw['bp_rate'])),
+              ('Average Rating', _compactNumber(row.raw['avg_grade_game'])),
+              ('MVP Rate', _percent(row.raw['mvp_rate'])),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        _DetailSection(
+          title: 'Matchup summary',
+          child: _MetricGrid(
+            items: [
+              ('Synergy', _percent(detail.raw['synergy_rank'])),
+              ('Counter', _percent(detail.raw['counter_rank'])),
+              ('Combo Matches', _compactNumber(detail.raw['combo_matches'])),
+              ('Early Win', _percent(row.raw['early_win_rate'])),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PreparationEntityList extends StatelessWidget {
+  const _PreparationEntityList({
+    required this.title,
+    required this.rows,
+    required this.identityKey,
+    this.showLane = false,
+  });
+
+  final String title;
+  final List<Map<String, dynamic>> rows;
+  final String identityKey;
+  final bool showLane;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      title: title,
+      child: rows.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 22),
+              child: Center(child: Text('No data')),
+            )
+          : Column(
+              children: [
+                for (var index = 0; index < math.min(rows.length, 30); index++)
+                  _PreparationEntityRow(
+                    row: rows[index],
+                    identityKey: identityKey,
+                    showLane: showLane,
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class _PreparationEntityRow extends StatelessWidget {
+  const _PreparationEntityRow({
+    required this.row,
+    required this.identityKey,
+    required this.showLane,
+  });
+
+  final Map<String, dynamic> row;
+  final String identityKey;
+  final bool showLane;
+
+  @override
+  Widget build(BuildContext context) {
+    final entity = _map(row[identityKey]);
+    final url = _trendAssetUrl(
+      entity,
+      identityKey == 'skill' ? 'summoner_skill' : 'equip',
+    );
+    final name = entity['name']?.toString().trim();
+    final lane = (row['position_label'] ?? row['position_desc'])
+        ?.toString()
+        .trim();
+    final count = row['match_count'] ?? row['quantity'];
+    return Container(
+      constraints: const BoxConstraints(minHeight: 54),
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color:
+                Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
+                AppTheme.outline,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          AppImage(url: url, width: 34, height: 34, borderRadius: 17),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name == null || name.isEmpty ? '-' : name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  [
+                    if (showLane && lane != null && lane.isNotEmpty) lane,
+                    if (count != null) '${_compactNumber(count)} matches',
+                  ].join(' · '),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).extension<HokThemeColors>()?.onSurfaceMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _CompactRate(
+            label: 'Pick',
+            value: row['pick_rate'] ?? row['style_share'],
+          ),
+          const SizedBox(width: 10),
+          _CompactRate(label: 'Win', value: row['win_rate']),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactRate extends StatelessWidget {
+  const _CompactRate({required this.label, required this.value});
+
+  final String label;
+  final Object? value;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 48,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).extension<HokThemeColors>()?.onSurfaceMuted,
+            ),
+          ),
+          Text(
+            _percent(value),
+            maxLines: 1,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BuildPreparationList extends StatelessWidget {
+  const _BuildPreparationList({
+    required this.title,
+    required this.rows,
+    this.showPlayer = false,
+  });
+
+  final String title;
+  final List<Map<String, dynamic>> rows;
+  final bool showPlayer;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      title: title,
+      child: rows.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 22),
+              child: Center(child: Text('No data')),
+            )
+          : Column(
+              children: [
+                for (var index = 0; index < math.min(rows.length, 30); index++)
+                  _BuildPreparationRow(
+                    row: rows[index],
+                    showPlayer: showPlayer,
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class _BuildPreparationRow extends StatelessWidget {
+  const _BuildPreparationRow({required this.row, required this.showPlayer});
+
+  final Map<String, dynamic> row;
+  final bool showPlayer;
+
+  @override
+  Widget build(BuildContext context) {
+    final skill = _map(row['skill']);
+    final equips = _listOfMaps(row['equips']);
+    final player = row['player_name']?.toString().trim() ?? '';
+    final description = row['desc']?.toString().trim() ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color:
+                Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
+                AppTheme.outline,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AppImage(
+                url: _trendAssetUrl(skill, 'summoner_skill'),
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  showPlayer
+                      ? (player.isEmpty ? 'Pro build' : player)
+                      : (skill['name']?.toString() ?? 'Build'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              Text(
+                '${_compactNumber(row['match_count'])} · ${_percent(row['win_rate'])}',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(
+              description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ],
+          const SizedBox(height: 7),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final equip in equips.take(12)) ...[
+                  AppImage(
+                    url: _trendAssetUrl(equip, 'equip'),
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                  ),
+                  const SizedBox(width: 5),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BpPreparation extends StatelessWidget {
+  const _BpPreparation({required this.detail});
+
+  final StatsTrendDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final bp = detail.map('hero_bp_stats');
+    return _DetailSection(
+      title: 'Ban / Pick position',
+      child: bp.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 22),
+              child: Center(child: Text('No data')),
+            )
+          : Column(
+              children: [
+                _BpSideSummary(
+                  label: 'Blue side',
+                  color: const Color(0xFF3B82F6),
+                  data: bp,
+                  prefix: 'blue',
+                ),
+                const SizedBox(height: 12),
+                _BpSideSummary(
+                  label: 'Red side',
+                  color: const Color(0xFFEF4444),
+                  data: bp,
+                  prefix: 'red',
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _BpSideSummary extends StatelessWidget {
+  const _BpSideSummary({
+    required this.label,
+    required this.color,
+    required this.data,
+    required this.prefix,
+  });
+
+  final String label;
+  final Color color;
+  final Map<String, dynamic> data;
+  final String prefix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.36)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                'Pick ${_percent(data['${prefix}_pick_share'])} · Win ${_percent(data['${prefix}_win_rate'])}',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var slot = 1; slot <= 5; slot++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  SizedBox(width: 28, child: Text('P$slot')),
+                  Expanded(
+                    child: LinearProgressIndicator(
+                      value:
+                          (_double(data['${prefix}_slot${slot}_share']) / 100)
+                              .clamp(0.0, 1.0),
+                      minHeight: 5,
+                      color: color,
+                      backgroundColor: color.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 92,
+                    child: Text(
+                      '${_percent(data['${prefix}_slot${slot}_share'])} / ${_percent(data['${prefix}_slot${slot}_win_rate'])}',
+                      textAlign: TextAlign.end,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TrendDetailSheet extends ConsumerStatefulWidget {
   const _TrendDetailSheet({required this.request});
 
@@ -1161,6 +1766,7 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
                     SizedBox(
                       height: 42,
                       child: ListView.separated(
+                        key: const ValueKey('trend-detail-tabs'),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         scrollDirection: Axis.horizontal,
                         itemCount: tabs.length,
@@ -2135,19 +2741,6 @@ String _dimensionLabel(BuildContext context, _TrendDimension dimension) {
     _TrendDimension.player => '玩家',
     _TrendDimension.equipment => '装备',
     _TrendDimension.tier => '梯度',
-  };
-}
-
-String _viewLabel(BuildContext context, StatsTrendView view) {
-  if (Localizations.localeOf(context).languageCode == 'zh') return view.label;
-  return switch (view.id) {
-    'base' => 'Base Stats',
-    'prep' => 'Preparation',
-    'trend' => 'Trend Detail',
-    'peak' => 'Peak',
-    'ranked' => 'Ranked',
-    'main' => view.label,
-    _ => view.label,
   };
 }
 

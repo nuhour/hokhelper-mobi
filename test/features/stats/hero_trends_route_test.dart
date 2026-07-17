@@ -106,7 +106,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('trend-row-hero-199')));
+    await tester.tap(find.byKey(const ValueKey('trend-curve-hero-199')));
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/trends');

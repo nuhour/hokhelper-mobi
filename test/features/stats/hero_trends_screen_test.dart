@@ -29,8 +29,9 @@ void main() {
     expect(find.text('Player'), findsOneWidget);
     expect(find.text('Equipment'), findsOneWidget);
     expect(find.text('Tier'), findsOneWidget);
-    expect(find.text('Base Stats'), findsOneWidget);
-    expect(find.text('Preparation'), findsOneWidget);
+    expect(find.text('Base Stats'), findsNothing);
+    expect(find.text('Preparation'), findsNothing);
+    expect(find.text('Trend Detail'), findsNothing);
     expect(find.text('All metrics'), findsNothing);
     expect(find.text('Core'), findsOneWidget);
     expect(find.text('KDA'), findsOneWidget);
@@ -138,7 +139,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('opens in-app hero detail sheet with multiple tabs', (
+  testWidgets('avatar opens preparation details instead of trend details', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -156,13 +157,59 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('trend-row-hero-199')));
+    await tester.tap(find.byKey(const ValueKey('trend-avatar-hero-199')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hero preparation'), findsOneWidget);
+    expect(find.text('Overview'), findsOneWidget);
+    expect(find.text('Power'), findsWidgets);
+    expect(find.text('Single Equip'), findsOneWidget);
+    expect(find.text('Builds'), findsOneWidget);
+    await tester.tap(find.text('Single Equip'));
+    await tester.pumpAndSettle();
+    expect(find.text('Single equipment performance'), findsOneWidget);
+    expect(find.text('Venomous Staff'), findsOneWidget);
+    await tester.drag(
+      find.byKey(const ValueKey('hero-preparation-tabs')),
+      const Offset(-500, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pro Builds'), findsOneWidget);
+    expect(find.text('Skill Flow'), findsOneWidget);
+    expect(find.text('BP'), findsOneWidget);
+    expect(find.text('Matchups'), findsNothing);
+  });
+
+  testWidgets('curve opens the separate trend details tabs', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(),
+          ),
+          heroTrendDetailProvider.overrideWith(
+            (ref, request) async => sampleStatsTrendDetail(),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('trend-curve-hero-199')));
     await tester.pumpAndSettle();
 
     expect(find.text('Overview'), findsOneWidget);
     expect(find.text('Power'), findsWidgets);
     expect(find.text('Playstyle'), findsOneWidget);
     expect(find.text('Equipment'), findsWidgets);
+    await tester.drag(
+      find.byKey(const ValueKey('trend-detail-tabs')),
+      const Offset(-300, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Matchups'), findsOneWidget);
+    expect(find.text('Single Equip'), findsNothing);
     expect(find.text('Core trend'), findsOneWidget);
   });
 }
