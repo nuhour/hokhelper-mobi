@@ -207,6 +207,18 @@ Widget _buildMeScreenRouter(AuthUser user, UserProfile profile) {
         builder: (context, state) =>
             Scaffold(body: Text('Prompts ${state.uri.queryParameters['tab']}')),
       ),
+      GoRoute(
+        path: '/tools/build-sim',
+        builder: (context, state) => const Scaffold(body: Text('My builds')),
+      ),
+      GoRoute(
+        path: '/tools/tier-list',
+        builder: (context, state) => const Scaffold(body: Text('My tiers')),
+      ),
+      GoRoute(
+        path: '/tools/bp-simulator',
+        builder: (context, state) => const Scaffold(body: Text('My BP')),
+      ),
     ],
   );
 
@@ -343,16 +355,23 @@ void main() {
 
     expect(find.text('LV.7'), findsOneWidget);
     expect(find.text('1,200 XP'), findsOneWidget);
-    expect(find.text('Jungle main'), findsNothing);
+    expect(find.text('Jungle main'), findsOneWidget);
     expect(find.text('Posts'), findsWidgets);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Followers'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
     expect(find.byKey(const ValueKey('profile-likes-button')), findsOneWidget);
     expect(find.text('6'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('profile-social-links-dropdown')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Discord'), findsOneWidget);
+    expect(find.text('lam#0001'), findsOneWidget);
   });
 
-  testWidgets('signed-in profile exposes hokx favorite shortcuts', (
+  testWidgets('signed-in profile exposes personal scheme shortcuts', (
     tester,
   ) async {
     const user = AuthUser(
@@ -365,20 +384,21 @@ void main() {
     await tester.pumpWidget(_buildMeScreenRouter(user, _profile));
     await tester.pumpAndSettle();
 
-    expect(find.text('My Favorites'), findsOneWidget);
-    expect(find.text('Posts'), findsWidgets);
-    expect(find.text('Builds'), findsOneWidget);
-    expect(find.text('Prompts'), findsOneWidget);
+    expect(find.text('My Schemes'), findsOneWidget);
+    expect(find.text('Build Schemes'), findsOneWidget);
+    expect(find.text('Tier Schemes'), findsOneWidget);
+    expect(find.text('BP Schemes'), findsOneWidget);
+    expect(find.text('AI Prompts'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Prompts'));
+    await tester.ensureVisible(find.text('AI Prompts'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Prompts'));
+    await tester.tap(find.text('AI Prompts'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Prompts favorites'), findsOneWidget);
+    expect(find.text('Prompts myPrompts'), findsOneWidget);
   });
 
-  testWidgets('signed-in profile opens liked posts on mobile community tab', (
+  testWidgets('signed-in profile likes button opens liked posts', (
     tester,
   ) async {
     const user = AuthUser(
@@ -391,9 +411,7 @@ void main() {
     await tester.pumpWidget(_buildMeScreenRouter(user, _profile));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Posts').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Posts').last);
+    await tester.tap(find.byKey(const ValueKey('profile-likes-button')));
     await tester.pumpAndSettle();
 
     expect(find.text('Community likes'), findsOneWidget);
@@ -601,7 +619,7 @@ void main() {
       'https://example.test/new.png',
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Bio'),
+      find.widgetWithText(TextFormField, 'Personal signature'),
       'Roamer main',
     );
     await tester.enterText(

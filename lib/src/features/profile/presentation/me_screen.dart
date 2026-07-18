@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -249,6 +250,21 @@ class _ProfileOverview extends StatelessWidget {
           ).textTheme.bodyMedium?.copyWith(color: colors.muted),
         ),
         if (profile != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            profile!.bio.isEmpty
+                ? AppLocalizations.of(context).profileNoSignature
+                : profile!.bio,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: profile!.bio.isEmpty ? colors.muted : colors.text,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SocialLinksDropdown(links: profile!.socialLinks),
           const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -283,7 +299,7 @@ class _ProfileOverview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 26),
-          const _FavoriteShortcuts(),
+          const _MySchemeShortcuts(),
         ],
       ],
     );
@@ -575,11 +591,14 @@ class _LikesButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _ProfileColors.of(context);
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final foreground = isLight ? AppTheme.lightText : Colors.white;
     return Material(
-      color: colors.panel,
+      color: Colors.white.withValues(alpha: isLight ? 0.72 : 0.12),
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: colors.border),
+        side: BorderSide(
+          color: Colors.white.withValues(alpha: isLight ? 0.92 : 0.24),
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: InkWell(
@@ -593,14 +612,14 @@ class _LikesButton extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.favorite_rounded, size: 19, color: colors.accent),
+                Icon(Icons.favorite_rounded, size: 19, color: foreground),
                 const SizedBox(height: 3),
                 Text(
                   _formatNumber(count),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: colors.text,
+                    color: foreground,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -609,6 +628,229 @@ class _LikesButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SocialLinksDropdown extends StatelessWidget {
+  const _SocialLinksDropdown({required this.links});
+
+  final Map<String, dynamic> links;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
+    final l10n = AppLocalizations.of(context);
+    final boundPlatforms = _socialPlatforms
+        .where((platform) => _socialValue(links, platform.key).isNotEmpty)
+        .toList(growable: false);
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Material(
+        color: colors.panel,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: colors.border),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
+          key: const ValueKey('profile-social-links-dropdown'),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+          childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          title: Row(
+            children: [
+              Text(
+                l10n.profileSocialLinks,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: colors.muted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: boundPlatforms.isEmpty
+                    ? Text(
+                        l10n.profileNoSocialLinks,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: colors.muted),
+                      )
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final platform in boundPlatforms)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 9),
+                                child: Icon(
+                                  platform.icon,
+                                  size: 19,
+                                  color: platform.color,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
+          children: [
+            if (boundPlatforms.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  l10n.profileSocialLinksHint,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.muted),
+                ),
+              )
+            else
+              for (final platform in boundPlatforms)
+                ListTile(
+                  dense: true,
+                  leading: Icon(platform.icon, color: platform.color),
+                  title: Text(
+                    platform.label,
+                    style: TextStyle(
+                      color: colors.text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  subtitle: Text(
+                    _socialValue(links, platform.key),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: colors.muted),
+                  ),
+                  trailing: Icon(
+                    Icons.open_in_new_rounded,
+                    size: 18,
+                    color: colors.muted,
+                  ),
+                  onTap: () => _openSocialLink(
+                    context,
+                    platform,
+                    _socialValue(links, platform.key),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialPlatform {
+  const _SocialPlatform({
+    required this.key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.profilePrefix,
+  });
+
+  final String key;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String profilePrefix;
+}
+
+const _socialPlatforms = [
+  _SocialPlatform(
+    key: 'instagram',
+    label: 'Instagram',
+    icon: Icons.camera_alt_outlined,
+    color: Color(0xFFE1306C),
+    profilePrefix: 'https://instagram.com/',
+  ),
+  _SocialPlatform(
+    key: 'tiktok',
+    label: 'TikTok',
+    icon: Icons.music_note_rounded,
+    color: Color(0xFF25F4EE),
+    profilePrefix: 'https://www.tiktok.com/@',
+  ),
+  _SocialPlatform(
+    key: 'youtube',
+    label: 'YouTube',
+    icon: Icons.smart_display_rounded,
+    color: Color(0xFFFF0033),
+    profilePrefix: 'https://youtube.com/@',
+  ),
+  _SocialPlatform(
+    key: 'facebook',
+    label: 'Facebook',
+    icon: Icons.facebook_rounded,
+    color: Color(0xFF1877F2),
+    profilePrefix: 'https://facebook.com/',
+  ),
+  _SocialPlatform(
+    key: 'x',
+    label: 'X',
+    icon: Icons.alternate_email_rounded,
+    color: Color(0xFF94A3B8),
+    profilePrefix: 'https://x.com/',
+  ),
+  _SocialPlatform(
+    key: 'whatsapp',
+    label: 'WhatsApp',
+    icon: Icons.chat_rounded,
+    color: Color(0xFF25D366),
+    profilePrefix: 'https://wa.me/',
+  ),
+  _SocialPlatform(
+    key: 'discord',
+    label: 'Discord',
+    icon: Icons.forum_rounded,
+    color: Color(0xFF5865F2),
+    profilePrefix: 'https://discord.com/users/',
+  ),
+  _SocialPlatform(
+    key: 'telegram',
+    label: 'Telegram',
+    icon: Icons.send_rounded,
+    color: Color(0xFF229ED9),
+    profilePrefix: 'https://t.me/',
+  ),
+  _SocialPlatform(
+    key: 'reddit',
+    label: 'Reddit',
+    icon: Icons.reddit_rounded,
+    color: Color(0xFFFF4500),
+    profilePrefix: 'https://reddit.com/user/',
+  ),
+];
+
+String _socialValue(Map<String, dynamic> links, String key) {
+  return links[key]?.toString().trim() ?? '';
+}
+
+Future<void> _openSocialLink(
+  BuildContext context,
+  _SocialPlatform platform,
+  String value,
+) async {
+  final normalized = value.startsWith('http://') || value.startsWith('https://')
+      ? value
+      : '${platform.profilePrefix}${value.replaceFirst(RegExp(r'^@'), '')}';
+  final uri = Uri.tryParse(normalized);
+  try {
+    if (uri != null &&
+        await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      return;
+    }
+  } catch (_) {
+    // The message below keeps invalid or unavailable platform links recoverable.
+  }
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).profileLinkFailed)),
     );
   }
 }
@@ -887,8 +1129,8 @@ class _ProfilePill extends StatelessWidget {
   }
 }
 
-class _FavoriteShortcuts extends StatelessWidget {
-  const _FavoriteShortcuts();
+class _MySchemeShortcuts extends StatelessWidget {
+  const _MySchemeShortcuts();
 
   @override
   Widget build(BuildContext context) {
@@ -898,7 +1140,7 @@ class _FavoriteShortcuts extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.profileFavorites,
+          l10n.profileMySchemes,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: colors.text,
             fontWeight: FontWeight.w900,
@@ -914,21 +1156,10 @@ class _FavoriteShortcuts extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: _FavoriteShortcutTile(
-                  icon: Icons.forum_outlined,
-                  label: l10n.profilePosts,
-                  route: '/content/community?tab=likes',
-                ),
-              ),
-              SizedBox(
-                height: 64,
-                child: VerticalDivider(color: colors.border),
-              ),
-              Expanded(
-                child: _FavoriteShortcutTile(
+                child: _SchemeShortcutTile(
                   icon: Icons.bolt_outlined,
-                  label: l10n.profileBuilds,
-                  route: '/tools/build-sim?filter=favorites',
+                  label: l10n.profileBuildSchemes,
+                  route: '/tools/build-sim',
                 ),
               ),
               SizedBox(
@@ -936,10 +1167,40 @@ class _FavoriteShortcuts extends StatelessWidget {
                 child: VerticalDivider(color: colors.border),
               ),
               Expanded(
-                child: _FavoriteShortcutTile(
+                child: _SchemeShortcutTile(
+                  icon: Icons.format_list_numbered_rounded,
+                  label: l10n.profileTierSchemes,
+                  route: '/tools/tier-list',
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.panel,
+            border: Border.all(color: colors.border),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _SchemeShortcutTile(
+                  icon: Icons.account_tree_outlined,
+                  label: l10n.profileBpSchemes,
+                  route: '/tools/bp-simulator',
+                ),
+              ),
+              SizedBox(
+                height: 64,
+                child: VerticalDivider(color: colors.border),
+              ),
+              Expanded(
+                child: _SchemeShortcutTile(
                   icon: Icons.auto_awesome_outlined,
-                  label: l10n.profilePrompts,
-                  route: '/tools/prompts?tab=favorites',
+                  label: l10n.profilePromptSchemes,
+                  route: '/tools/prompts?tab=myPrompts',
                 ),
               ),
             ],
@@ -950,8 +1211,8 @@ class _FavoriteShortcuts extends StatelessWidget {
   }
 }
 
-class _FavoriteShortcutTile extends StatelessWidget {
-  const _FavoriteShortcutTile({
+class _SchemeShortcutTile extends StatelessWidget {
+  const _SchemeShortcutTile({
     required this.icon,
     required this.label,
     required this.route,
@@ -1007,7 +1268,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   late final TextEditingController _displayNameController;
   late final TextEditingController _avatarController;
   late final TextEditingController _bioController;
-  late final TextEditingController _discordController;
+  late final Map<String, TextEditingController> _socialControllers;
   bool _saving = false;
 
   @override
@@ -1018,9 +1279,12 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
     );
     _avatarController = TextEditingController(text: widget.profile.avatar);
     _bioController = TextEditingController(text: widget.profile.bio);
-    _discordController = TextEditingController(
-      text: widget.profile.socialLinks['discord']?.toString() ?? '',
-    );
+    _socialControllers = {
+      for (final platform in _socialPlatforms)
+        platform.key: TextEditingController(
+          text: widget.profile.socialLinks[platform.key]?.toString() ?? '',
+        ),
+    };
   }
 
   @override
@@ -1028,13 +1292,17 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
     _displayNameController.dispose();
     _avatarController.dispose();
     _bioController.dispose();
-    _discordController.dispose();
+    for (final controller in _socialControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final l10n = AppLocalizations.of(context);
+    final colors = _ProfileColors.of(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -1069,17 +1337,55 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _bioController,
-                decoration: const InputDecoration(labelText: 'Bio'),
+                decoration: InputDecoration(
+                  labelText: l10n.profileSignature,
+                  hintText: l10n.profileSignatureHint,
+                ),
                 minLines: 3,
                 maxLines: 5,
                 textInputAction: TextInputAction.newline,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _discordController,
-                decoration: const InputDecoration(labelText: 'Discord'),
-                textInputAction: TextInputAction.done,
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Icon(Icons.link_rounded, size: 20, color: colors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.profileSocialLinks,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colors.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.profileSocialLinksHint,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.muted),
+              ),
+              const SizedBox(height: 12),
+              for (var index = 0; index < _socialPlatforms.length; index++) ...[
+                TextFormField(
+                  controller: _socialControllers[_socialPlatforms[index].key],
+                  decoration: InputDecoration(
+                    labelText: _socialPlatforms[index].label,
+                    prefixIcon: Icon(
+                      _socialPlatforms[index].icon,
+                      color: _socialPlatforms[index].color,
+                    ),
+                    hintText: 'https://',
+                  ),
+                  keyboardType: TextInputType.url,
+                  textInputAction: index == _socialPlatforms.length - 1
+                      ? TextInputAction.done
+                      : TextInputAction.next,
+                ),
+                if (index != _socialPlatforms.length - 1)
+                  const SizedBox(height: 10),
+              ],
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -1108,14 +1414,20 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
 
     setState(() => _saving = true);
     try {
-      final discord = _discordController.text.trim();
+      final socialLinks = <String, String>{};
+      for (final platform in _socialPlatforms) {
+        final value = _socialControllers[platform.key]!.text.trim();
+        if (value.isNotEmpty) {
+          socialLinks[platform.key] = value;
+        }
+      }
       await ref
           .read(profileRepositoryProvider)
           .updateProfile(
             displayName: _displayNameController.text.trim(),
             avatar: _avatarController.text.trim(),
             bio: _bioController.text.trim(),
-            socialLinks: discord.isEmpty ? const {} : {'discord': discord},
+            socialLinks: socialLinks,
           );
       ref.invalidate(currentUserProfileProvider);
       if (!mounted) {
