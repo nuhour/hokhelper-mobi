@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
@@ -24,6 +25,15 @@ class SettingsScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                _SettingsActionTile(
+                  tileKey: const ValueKey('settings-profile-tile'),
+                  icon: Icons.manage_accounts_outlined,
+                  title: l10n.profileAccountTitle,
+                  subtitle: l10n.profileAccountSubtitle,
+                  actionLabel: l10n.profileManage,
+                  onTap: () => context.push('/settings/profile'),
+                ),
+                const SizedBox(height: 12),
                 _SettingsSegment<String>(
                   icon: Icons.language_outlined,
                   title: l10n.settingsLanguageTitle,

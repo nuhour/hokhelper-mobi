@@ -52,6 +52,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Clear Cache'), findsOneWidget);
+    expect(find.text('Personal Information'), findsOneWidget);
+    expect(find.byKey(const ValueKey('settings-profile-tile')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('settings-clear-cache-tile')));
     await tester.pump();
     expect(find.text('Cache cleared'), findsOneWidget);

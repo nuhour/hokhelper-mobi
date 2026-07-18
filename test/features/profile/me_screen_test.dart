@@ -178,6 +178,19 @@ Widget _buildMeScreenWithRepository(
   );
 }
 
+Widget _buildProfileSettingsWithRepository(
+  AuthUser user,
+  ProfileRepository repository,
+) {
+  return ProviderScope(
+    overrides: [
+      authControllerProvider.overrideWith(() => _TestAuthController(user)),
+      profileRepositoryProvider.overrideWithValue(repository),
+    ],
+    child: const MaterialApp(home: ProfileAccountSettingsScreen()),
+  );
+}
+
 Widget _buildMeScreenRouter(AuthUser user, UserProfile profile) {
   final router = GoRouter(
     initialLocation: '/me',
@@ -270,7 +283,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Logout'), findsOneWidget);
+    expect(
+      find.text('@very-long-username-that-should-not-break-layout'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('me-settings-button')), findsOneWidget);
   });
 
   testWidgets('signed-out profile shows login CTA', (tester) async {
@@ -278,7 +295,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.widgetWithText(FilledButton, 'Login'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
   });
 
   testWidgets('signed-out profile can open settings from header', (
@@ -326,11 +343,13 @@ void main() {
 
     expect(find.text('LV.7'), findsOneWidget);
     expect(find.text('1,200 XP'), findsOneWidget);
-    expect(find.text('Jungle main'), findsOneWidget);
+    expect(find.text('Jungle main'), findsNothing);
     expect(find.text('Posts'), findsWidgets);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Followers'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-likes-button')), findsOneWidget);
+    expect(find.text('6'), findsOneWidget);
   });
 
   testWidgets('signed-in profile exposes hokx favorite shortcuts', (
@@ -566,11 +585,11 @@ void main() {
     );
     final repository = _FakeProfileRepository(_profile);
 
-    await tester.pumpWidget(_buildMeScreenWithRepository(user, repository));
+    await tester.pumpWidget(
+      _buildProfileSettingsWithRepository(user, repository),
+    );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Edit profile'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit profile'));
+    await tester.tap(find.byKey(const ValueKey('profile-edit-tile')));
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -611,11 +630,11 @@ void main() {
     );
     final repository = _FakeProfileRepository(_profile);
 
-    await tester.pumpWidget(_buildMeScreenWithRepository(user, repository));
+    await tester.pumpWidget(
+      _buildProfileSettingsWithRepository(user, repository),
+    );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Change password'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Change password'));
+    await tester.tap(find.byKey(const ValueKey('profile-password-tile')));
     await tester.pumpAndSettle();
 
     await tester.enterText(

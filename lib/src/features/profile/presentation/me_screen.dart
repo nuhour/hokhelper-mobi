@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
-import '../../../core/widgets/app_section_header.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../auth/domain/auth_user.dart';
@@ -29,20 +28,39 @@ class MeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authValue = ref.watch(authControllerProvider);
     final l10n = AppLocalizations.of(context);
+    final colors = _ProfileColors.of(context);
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
-        AppSectionHeader(
-          title: l10n.navMe,
-          action: IconButton(
-            key: const ValueKey('me-settings-button'),
-            tooltip: l10n.settingsTitle,
-            onPressed: () => context.go('/settings'),
-            icon: const Icon(Icons.settings_outlined),
+        SizedBox(
+          height: 52,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                key: const Key('profile-notifications-button'),
+                tooltip: l10n.profileNotifications,
+                onPressed: () => context.push('/notifications'),
+                icon: const Icon(Icons.notifications_none_rounded),
+              ),
+              Text(
+                l10n.navMe,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: colors.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('me-settings-button'),
+                tooltip: l10n.settingsTitle,
+                onPressed: () => context.go('/settings'),
+                icon: const Icon(Icons.settings_outlined),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         AppAsyncView<AuthUser?>(
           value: authValue,
           data: (user) {
@@ -68,11 +86,49 @@ class _SignedOutProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: FilledButton.icon(
-        onPressed: () => context.push('/login'),
-        icon: const Icon(Icons.login),
-        label: const Text('Login'),
+    final colors = _ProfileColors.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 56),
+      child: Column(
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.raised,
+              border: Border.all(color: colors.border, width: 2),
+            ),
+            child: Icon(
+              Icons.person_outline_rounded,
+              size: 42,
+              color: colors.muted,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.profileGuestTitle,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: colors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.profileGuestSubtitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.muted),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () => context.push('/login'),
+            icon: const Icon(Icons.login_rounded),
+            label: Text(l10n.profileLogin),
+          ),
+        ],
       ),
     );
   }
@@ -89,17 +145,17 @@ class _SignedInProfile extends ConsumerWidget {
     final profileValue = ref.watch(currentUserProfileProvider);
 
     return profileValue.when(
-      data: (profile) => _ProfileCard(
+      data: (profile) => _ProfileOverview(
         user: user,
         profile: profile,
         initialFollowListType: initialFollowListType,
       ),
-      loading: () => _ProfileCard(user: user),
+      loading: () => _ProfileOverview(user: user),
       error: (error, stackTrace) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ProfileCard(user: user),
+          _ProfileOverview(user: user),
           const SizedBox(height: 12),
           Text(
             error.toString(),
@@ -116,8 +172,8 @@ class _SignedInProfile extends ConsumerWidget {
   }
 }
 
-class _ProfileCard extends ConsumerWidget {
-  const _ProfileCard({
+class _ProfileOverview extends StatelessWidget {
+  const _ProfileOverview({
     required this.user,
     this.profile,
     this.initialFollowListType,
@@ -128,151 +184,217 @@ class _ProfileCard extends ConsumerWidget {
   final _MeFollowListType? initialFollowListType;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final displayName = profile?.displayName.isNotEmpty == true
         ? profile!.displayName
         : user.displayName?.isNotEmpty == true
         ? user.displayName!
         : user.username;
-    final email = profile?.email.isNotEmpty == true
-        ? profile!.email
-        : user.email;
     final avatarInitial = displayName.isNotEmpty
         ? displayName.substring(0, 1).toUpperCase()
         : '?';
+    final colors = _ProfileColors.of(context);
+    final username = profile?.username.isNotEmpty == true
+        ? profile!.username
+        : user.username;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppTheme.gold.withValues(alpha: 0.16),
-              child: Text(
-                avatarInitial,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.gold,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              displayName,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              email,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-            ),
-            if (profile != null) ...[
-              const SizedBox(height: 16),
-              Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 108,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                alignment: Alignment.center,
                 children: [
-                  _LevelBadge(
-                    profile: profile!,
-                    onTap: () => _showPointsRulesSheet(context, profile!),
+                  _ProfileAvatar(
+                    avatarUrl: profile?.avatar ?? '',
+                    fallback: avatarInitial,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(child: _ProgressBar(profile: profile!)),
+                  if (profile != null)
+                    Positioned(
+                      left: constraints.maxWidth / 2 + 58,
+                      top: 23,
+                      child: _LikesButton(
+                        count: profile!.stats.likes,
+                        onTap: () => context.go('/content/community?tab=likes'),
+                      ),
+                    ),
                 ],
-              ),
-              const SizedBox(height: 18),
-              _AutoOpenMeFollowList(
-                profile: profile!,
-                initialFollowListType: initialFollowListType,
-                child: _StatsGrid(
-                  stats: profile!.stats,
-                  onPostsTap: () => context.go('/content/community?tab=my'),
-                  onFollowingTap: () => _showFollowListSheet(
-                    context,
-                    userId: profile!.id,
-                    type: _MeFollowListType.following,
-                  ),
-                  onFollowersTap: () => _showFollowListSheet(
-                    context,
-                    userId: profile!.id,
-                    type: _MeFollowListType.followers,
-                  ),
-                ),
-              ),
-              if (profile!.bio.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                Text(
-                  profile!.bio,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.text),
-                ),
-              ],
-              if (profile!.socialLinks.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text(
-                  profile!.socialLinks.entries
-                      .map((entry) => '${entry.key}: ${entry.value}')
-                      .join('  ·  '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                ),
-              ],
-              const SizedBox(height: 18),
-              const _FavoriteShortcuts(),
-            ],
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: colors.text,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '@$username',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: colors.muted),
+        ),
+        if (profile != null) ...[
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
               children: [
-                if (profile != null)
-                  FilledButton.icon(
-                    onPressed: () => _showEditProfileSheet(context, profile!),
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edit profile'),
-                  ),
-                OutlinedButton.icon(
-                  onPressed: () => _showChangePasswordSheet(context),
-                  icon: const Icon(Icons.lock_reset),
-                  label: const Text('Change password'),
+                _LevelBadge(
+                  profile: profile!,
+                  onTap: () => _showPointsRulesSheet(context, profile!),
                 ),
-                OutlinedButton.icon(
-                  key: const Key('profile-notifications-button'),
-                  onPressed: () => context.push('/notifications'),
-                  icon: const Icon(Icons.notifications_none_outlined),
-                  label: const Text('Notifications'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    ref.read(authControllerProvider.notifier).logout();
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
-                ),
+                const SizedBox(width: 12),
+                Expanded(child: _ProgressBar(profile: profile!)),
               ],
             ),
-          ],
+          ),
+          const SizedBox(height: 22),
+          _AutoOpenMeFollowList(
+            profile: profile!,
+            initialFollowListType: initialFollowListType,
+            child: _StatsGrid(
+              stats: profile!.stats,
+              onPostsTap: () => context.go('/content/community?tab=my'),
+              onFollowingTap: () => _showFollowListSheet(
+                context,
+                userId: profile!.id,
+                type: _MeFollowListType.following,
+              ),
+              onFollowersTap: () => _showFollowListSheet(
+                context,
+                userId: profile!.id,
+                type: _MeFollowListType.followers,
+              ),
+            ),
+          ),
+          const SizedBox(height: 26),
+          const _FavoriteShortcuts(),
+        ],
+      ],
+    );
+  }
+
+  void _showPointsRulesSheet(BuildContext context, UserProfile profile) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _PointsRulesSheet(profile: profile),
+    );
+  }
+}
+
+class ProfileAccountSettingsScreen extends ConsumerWidget {
+  const ProfileAccountSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final authValue = ref.watch(authControllerProvider);
+    final colors = _ProfileColors.of(context);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.profileAccountTitle)),
+      body: SafeArea(
+        child: AppAsyncView<AuthUser?>(
+          value: authValue,
+          data: (user) {
+            if (user == null) {
+              return Center(
+                child: FilledButton.icon(
+                  onPressed: () => context.push('/login'),
+                  icon: const Icon(Icons.login_rounded),
+                  label: Text(l10n.profileLogin),
+                ),
+              );
+            }
+            return ref
+                .watch(currentUserProfileProvider)
+                .when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => Center(
+                    child: TextButton.icon(
+                      onPressed: () =>
+                          ref.invalidate(currentUserProfileProvider),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(l10n.retry),
+                    ),
+                  ),
+                  data: (profile) => ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _AccountIdentityPanel(profile: profile),
+                      const SizedBox(height: 16),
+                      Material(
+                        color: colors.panel,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(color: colors.border),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: [
+                            _AccountActionTile(
+                              key: const ValueKey('profile-edit-tile'),
+                              icon: Icons.badge_outlined,
+                              title: l10n.profileEditTitle,
+                              subtitle: l10n.profileEditSubtitle,
+                              onTap: () =>
+                                  _showEditProfileSheet(context, profile),
+                            ),
+                            Divider(height: 1, color: colors.border),
+                            _AccountActionTile(
+                              key: const ValueKey('profile-password-tile'),
+                              icon: Icons.lock_reset_rounded,
+                              title: l10n.profilePasswordTitle,
+                              subtitle: l10n.profilePasswordSubtitle,
+                              onTap: () => _showChangePasswordSheet(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      OutlinedButton.icon(
+                        key: const ValueKey('profile-logout-button'),
+                        onPressed: () async {
+                          await ref
+                              .read(authControllerProvider.notifier)
+                              .logout();
+                          if (context.mounted) {
+                            context.go('/me');
+                          }
+                        },
+                        icon: const Icon(Icons.logout_rounded),
+                        label: Text(l10n.profileLogout),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                          side: BorderSide(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.error.withValues(alpha: 0.45),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+          },
         ),
       ),
     );
@@ -295,13 +417,198 @@ class _ProfileCard extends ConsumerWidget {
       builder: (_) => const _ChangePasswordSheet(),
     );
   }
+}
 
-  void _showPointsRulesSheet(BuildContext context, UserProfile profile) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _PointsRulesSheet(profile: profile),
+class _AccountIdentityPanel extends StatelessWidget {
+  const _AccountIdentityPanel({required this.profile});
+
+  final UserProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
+    final name = profile.displayName.isNotEmpty
+        ? profile.displayName
+        : profile.username;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.panel,
+        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: 60,
+              child: FittedBox(
+                child: _ProfileAvatar(
+                  avatarUrl: profile.avatar,
+                  fallback: name.isEmpty ? '?' : name[0].toUpperCase(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: colors.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    profile.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: colors.muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountActionTile extends StatelessWidget {
+  const _AccountActionTile({
+    required super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: Icon(icon, color: colors.primary),
+      title: Text(
+        title,
+        style: TextStyle(color: colors.text, fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        subtitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: colors.muted),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, color: colors.muted),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.avatarUrl, required this.fallback});
+
+  final String avatarUrl;
+  final String fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
+    final fallbackWidget = Center(
+      child: Text(
+        fallback,
+        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          color: colors.primary,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+    return Container(
+      width: 96,
+      height: 96,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: colors.panel,
+        border: Border.all(color: colors.primary, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.18),
+            blurRadius: 20,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: ColoredBox(
+          color: colors.raised,
+          child: avatarUrl.trim().isEmpty
+              ? fallbackWidget
+              : Image.network(
+                  avatarUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => fallbackWidget,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LikesButton extends StatelessWidget {
+  const _LikesButton({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
+    return Material(
+      color: colors.panel,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        key: const ValueKey('profile-likes-button'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 56, maxWidth: 82),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.favorite_rounded, size: 19, color: colors.accent),
+                const SizedBox(height: 3),
+                Text(
+                  _formatNumber(count),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: colors.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -585,37 +892,58 @@ class _FavoriteShortcuts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'My Favorites',
+          l10n.profileFavorites,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: AppTheme.text,
+            color: colors.text,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 10),
-        Column(
-          children: const [
-            _FavoriteShortcutTile(
-              icon: Icons.forum_outlined,
-              label: 'Posts',
-              route: '/content/community?tab=likes',
-            ),
-            SizedBox(height: 8),
-            _FavoriteShortcutTile(
-              icon: Icons.bolt_outlined,
-              label: 'Builds',
-              route: '/tools/build-sim?filter=favorites',
-            ),
-            SizedBox(height: 8),
-            _FavoriteShortcutTile(
-              icon: Icons.auto_awesome_outlined,
-              label: 'Prompts',
-              route: '/tools/prompts?tab=favorites',
-            ),
-          ],
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.panel,
+            border: Border.all(color: colors.border),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _FavoriteShortcutTile(
+                  icon: Icons.forum_outlined,
+                  label: l10n.profilePosts,
+                  route: '/content/community?tab=likes',
+                ),
+              ),
+              SizedBox(
+                height: 64,
+                child: VerticalDivider(color: colors.border),
+              ),
+              Expanded(
+                child: _FavoriteShortcutTile(
+                  icon: Icons.bolt_outlined,
+                  label: l10n.profileBuilds,
+                  route: '/tools/build-sim?filter=favorites',
+                ),
+              ),
+              SizedBox(
+                height: 64,
+                child: VerticalDivider(color: colors.border),
+              ),
+              Expanded(
+                child: _FavoriteShortcutTile(
+                  icon: Icons.auto_awesome_outlined,
+                  label: l10n.profilePrompts,
+                  route: '/tools/prompts?tab=favorites',
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -635,42 +963,29 @@ class _FavoriteShortcutTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         onTap: () => context.push(route),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: AppTheme.panelAlt,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(
-              children: [
-                Icon(icon, color: AppTheme.gold, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+        child: SizedBox(
+          height: 72,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: colors.primary, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colors.text,
+                  fontWeight: FontWeight.w800,
                 ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: AppTheme.muted,
-                  size: 20,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1076,18 +1391,19 @@ class _LevelBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
     final badge = DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.gold.withValues(alpha: 0.16),
+        color: colors.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.35)),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.35)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Text(
           'LV.${profile.level}',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.gold,
+            color: colors.primary,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1115,6 +1431,7 @@ class _ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = _ProfileColors.of(context);
     final progress = (profile.levelProgress / 100).clamp(0.0, 1.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1122,7 +1439,7 @@ class _ProgressBar extends StatelessWidget {
         Text(
           '${_formatNumber(profile.points)} XP',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.text,
+            color: colors.text,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1132,8 +1449,8 @@ class _ProgressBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 8,
-            backgroundColor: Colors.white.withValues(alpha: 0.08),
-            valueColor: const AlwaysStoppedAnimation(AppTheme.gold),
+            backgroundColor: colors.raised,
+            valueColor: AlwaysStoppedAnimation(colors.primary),
           ),
         ),
       ],
@@ -1156,29 +1473,41 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 2.6,
+    final colors = _ProfileColors.of(context);
+    final l10n = AppLocalizations.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.panel,
+        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(8),
       ),
-      children: [
-        _StatTile(label: 'Posts', value: stats.posts, onTap: onPostsTap),
-        _StatTile(
-          label: 'Following',
-          value: stats.following,
-          onTap: onFollowingTap,
-        ),
-        _StatTile(
-          label: 'Followers',
-          value: stats.followers,
-          onTap: onFollowersTap,
-        ),
-        _StatTile(label: 'Likes', value: stats.likes),
-      ],
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatTile(
+              label: l10n.profilePosts,
+              value: stats.posts,
+              onTap: onPostsTap,
+            ),
+          ),
+          SizedBox(height: 44, child: VerticalDivider(color: colors.border)),
+          Expanded(
+            child: _StatTile(
+              label: l10n.profileFollowing,
+              value: stats.following,
+              onTap: onFollowingTap,
+            ),
+          ),
+          SizedBox(height: 44, child: VerticalDivider(color: colors.border)),
+          Expanded(
+            child: _StatTile(
+              label: l10n.profileFollowers,
+              value: stats.followers,
+              onTap: onFollowersTap,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1192,48 +1521,78 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tile = DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        border: onTap == null
-            ? null
-            : Border.all(color: AppTheme.gold.withValues(alpha: 0.24)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _formatNumber(value),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
+    final colors = _ProfileColors.of(context);
+    final tile = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 13),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            _formatNumber(value),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: colors.text,
+              fontWeight: FontWeight.w900,
             ),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.muted),
+          ),
+        ],
       ),
     );
     if (onTap == null) {
       return tile;
     }
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: tile,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: tile,
+      ),
+    );
+  }
+}
+
+class _ProfileColors {
+  const _ProfileColors({
+    required this.panel,
+    required this.raised,
+    required this.border,
+    required this.primary,
+    required this.accent,
+    required this.text,
+    required this.muted,
+  });
+
+  final Color panel;
+  final Color raised;
+  final Color border;
+  final Color primary;
+  final Color accent;
+  final Color text;
+  final Color muted;
+
+  static _ProfileColors of(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _ProfileColors(
+      panel: scheme.surface,
+      raised: scheme.surfaceContainerHigh,
+      border: scheme.outlineVariant,
+      primary: scheme.primary,
+      accent: scheme.error,
+      text: scheme.onSurface,
+      muted: Theme.of(context).brightness == Brightness.light
+          ? AppTheme.lightMuted
+          : AppTheme.muted,
     );
   }
 }
