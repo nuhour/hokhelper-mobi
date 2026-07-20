@@ -153,6 +153,19 @@ void main() {
     expect(match.winnerSide, 'b');
   });
 
+  test('does not expose stale historical matches as upcoming', () {
+    final match = EsportsMatchSummary.fromJson(const {
+      'id': 12,
+      'status_key': 'upcoming',
+      'start_time': '2024-06-28T11:00:00Z',
+      'team_a': {'name': 'Wolves'},
+      'team_b': {'name': 'AG'},
+    });
+
+    expect(match.statusKey, 'finished');
+    expect(match.statusLabel, 'Finished');
+  });
+
   test('loads esports teams sorted by win rate', () async {
     final apiClient = _FakeApiClient();
     final repository = EsportsRepository(apiClient: apiClient);

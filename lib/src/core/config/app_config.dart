@@ -2,6 +2,7 @@ class AppConfig {
   const AppConfig({
     required this.apiBaseUrl,
     required this.apiPrefix,
+    this.mediaBaseUrl = 'https://hokhelper.com',
     this.httpProxy = '',
   });
 
@@ -13,6 +14,10 @@ class AppConfig {
       defaultValue: 'https://api.hokhelper.com',
     ),
     apiPrefix: String.fromEnvironment('HOK_API_PREFIX', defaultValue: '/hokx'),
+    mediaBaseUrl: String.fromEnvironment(
+      'HOK_MEDIA_BASE_URL',
+      defaultValue: 'https://hokhelper.com',
+    ),
     httpProxy: String.fromEnvironment('HOK_HTTP_PROXY'),
   );
 
@@ -23,6 +28,7 @@ class AppConfig {
 
   final String apiBaseUrl;
   final String apiPrefix;
+  final String mediaBaseUrl;
   final String httpProxy;
 
   String get apiRoot {

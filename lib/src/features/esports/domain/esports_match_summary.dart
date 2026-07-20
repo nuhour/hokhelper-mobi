@@ -89,6 +89,13 @@ class EsportsMatchSummary {
     final map = json is Map ? json : const <String, Object?>{};
     final teamA = map['team_a'] is Map ? map['team_a'] as Map : const {};
     final teamB = map['team_b'] is Map ? map['team_b'] as Map : const {};
+    final startTime = _readString(map['start_time'] ?? map['scheduled_at']);
+    final endTime = _readString(map['end_time'] ?? map['ended_at']);
+    final statusKey = _normalizeStatusKey(
+      map['status_key'] ?? map['status'],
+      startTime: startTime,
+      endTime: endTime,
+    );
 
     return EsportsMatchSummary(
       id: _readString(map['id']),
@@ -108,9 +115,9 @@ class EsportsMatchSummary {
       teamBLogoUrl: _readString(teamB['logo_url']),
       scoreA: _readNullableInt(map['score_a']),
       scoreB: _readNullableInt(map['score_b']),
-      statusKey: _readString(map['status_key'] ?? map['status']),
-      startTime: _readString(map['start_time'] ?? map['scheduled_at']),
-      endTime: _readString(map['end_time'] ?? map['ended_at']),
+      statusKey: statusKey,
+      startTime: startTime,
+      endTime: endTime,
       streamUrl: _readString(map['stream_url'] ?? map['live_addr']),
       vodUrl: _readString(map['vod_url']),
       bestOf: _readInt(map['bo'] ?? map['best_of']),
@@ -118,6 +125,32 @@ class EsportsMatchSummary {
       winCamp: _readInt(map['win_camp']),
     );
   }
+}
+
+String _normalizeStatusKey(
+  Object? value, {
+  required String startTime,
+  required String endTime,
+}) {
+  final raw = _readString(value).trim().toLowerCase();
+  final normalized = switch (raw) {
+    '0' => 'upcoming',
+    '1' => 'live',
+    '2' => 'finished',
+    _ => raw,
+  };
+  if (normalized != 'upcoming') {
+    return normalized;
+  }
+  if (endTime.trim().isNotEmpty) {
+    return 'finished';
+  }
+  final scheduledAt = DateTime.tryParse(startTime.trim());
+  if (scheduledAt != null &&
+      scheduledAt.isBefore(DateTime.now().subtract(const Duration(hours: 8)))) {
+    return 'finished';
+  }
+  return normalized;
 }
 
 String _titleCase(String value) {

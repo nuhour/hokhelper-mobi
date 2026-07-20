@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../config/app_config.dart';
 import '../theme/app_theme.dart';
 
 class AppImage extends StatelessWidget {
@@ -29,7 +30,7 @@ class AppImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = url?.trim();
+    final imageUrl = _resolveImageUrl(url);
     final label = semanticLabel?.trim();
     final ratio = aspectRatio ?? defaultAspectRatio;
     final resolvedWidth = width ?? (height == null ? null : height! * ratio);
@@ -80,6 +81,21 @@ class AppImage extends StatelessWidget {
       child: ExcludeSemantics(child: image),
     );
   }
+}
+
+String? _resolveImageUrl(String? value) {
+  final imageUrl = value?.trim();
+  if (imageUrl == null || imageUrl.isEmpty) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/')) {
+    final origin = AppConfig.current.mediaBaseUrl.replaceFirst(
+      RegExp(r'/+$'),
+      '',
+    );
+    return '$origin$imageUrl';
+  }
+  return imageUrl;
 }
 
 class _ImagePlaceholder extends StatelessWidget {

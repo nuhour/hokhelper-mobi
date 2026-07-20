@@ -275,18 +275,26 @@ class _MatchesTab extends ConsumerStatefulWidget {
 
 class _MatchesTabState extends ConsumerState<_MatchesTab> {
   String _leagueFilter = 'all';
+  bool _leagueSelectionTouched = false;
   String _statusFilter = 'all';
   String _dateFilter = '';
 
   @override
   Widget build(BuildContext context) {
+    final meta = ref.watch(esportsMetaProvider).valueOrNull;
+    final leagueFilter = _effectiveLeagueFilter(
+      meta,
+      selected: _leagueFilter,
+      selectionTouched: _leagueSelectionTouched,
+    );
+    final leagueRequestValue = _leagueRequestValue(meta, leagueFilter);
     final baseMatches = widget.value.valueOrNull ?? const [];
     final hasLeagueInBase = baseMatches.any(
-      (match) => match.leagueName == _leagueFilter,
+      (match) => match.leagueName == leagueFilter,
     );
-    final activeProvider = _leagueFilter == 'all' || hasLeagueInBase
+    final activeProvider = leagueFilter == 'all' || hasLeagueInBase
         ? null
-        : esportsMatchesByLeagueProvider(_leagueFilter);
+        : esportsMatchesByLeagueProvider(leagueRequestValue);
     final activeValue = activeProvider == null
         ? widget.value
         : ref.watch(activeProvider);
@@ -304,11 +312,11 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
           );
         }
         final leagueOptions = _leagueNames(
-          ref.watch(esportsMetaProvider).valueOrNull,
+          meta,
           matches.map((match) => match.leagueName),
         );
-        final selectedLeague = leagueOptions.contains(_leagueFilter)
-            ? _leagueFilter
+        final selectedLeague = leagueOptions.contains(leagueFilter)
+            ? leagueFilter
             : 'all';
         final statusOptions = _matchStatusOptions(matches);
         final selectedStatus =
@@ -347,6 +355,7 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
                 onChanged: (value) {
                   setState(() {
                     _leagueFilter = value;
+                    _leagueSelectionTouched = true;
                   });
                 },
               ),
@@ -409,11 +418,18 @@ class _StatsTab extends ConsumerStatefulWidget {
 class _StatsTabState extends ConsumerState<_StatsTab> {
   int _rankType = 1;
   String _leagueFilter = 'all';
+  bool _leagueSelectionTouched = false;
   final Map<String, List<EsportsStatSummary>> _cachedStats = {};
 
   @override
   Widget build(BuildContext context) {
     final meta = ref.watch(esportsMetaProvider).valueOrNull;
+    final leagueFilter = _effectiveLeagueFilter(
+      meta,
+      selected: _leagueFilter,
+      selectionTouched: _leagueSelectionTouched,
+    );
+    final leagueRequestValue = _leagueRequestValue(meta, leagueFilter);
     final rankTypes = meta?.rankTypes.isNotEmpty == true
         ? meta!.rankTypes
         : const [
@@ -425,16 +441,16 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
     final selectedRank = rankTypes.any((type) => type.value == _rankType)
         ? _rankType
         : rankTypes.first.value;
-    final statsProvider = _leagueFilter == 'all'
+    final statsProvider = leagueFilter == 'all'
         ? null
         : esportsStatsByQueryProvider((
             rankType: selectedRank,
-            league: _leagueFilter,
+            league: leagueRequestValue,
           ));
     final value = statsProvider == null
         ? ref.watch(esportsStatsByRankProvider(selectedRank))
         : ref.watch(statsProvider);
-    final cacheKey = '$selectedRank:${_leagueFilter.trim()}';
+    final cacheKey = '$selectedRank:${leagueFilter.trim()}';
     final freshStats = value.valueOrNull;
     if (freshStats != null) {
       _cachedStats[cacheKey] = freshStats;
@@ -444,8 +460,8 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
       meta,
       stats.map((stat) => stat.leagueName),
     );
-    final selectedLeague = leagueNames.contains(_leagueFilter)
-        ? _leagueFilter
+    final selectedLeague = leagueNames.contains(leagueFilter)
+        ? leagueFilter
         : 'all';
     final visibleStats = stats
         .where(
@@ -475,7 +491,10 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
                 value: selectedLeague,
                 fallbackLabel: 'All Leagues',
                 options: _textFilterOptions(leagueNames),
-                onChanged: (league) => setState(() => _leagueFilter = league),
+                onChanged: (league) => setState(() {
+                  _leagueFilter = league;
+                  _leagueSelectionTouched = true;
+                }),
               ),
             ],
           ),
@@ -518,16 +537,24 @@ class _TeamsTab extends ConsumerStatefulWidget {
 
 class _TeamsTabState extends ConsumerState<_TeamsTab> {
   String _leagueFilter = 'all';
+  bool _leagueSelectionTouched = false;
 
   @override
   Widget build(BuildContext context) {
+    final meta = ref.watch(esportsMetaProvider).valueOrNull;
+    final leagueFilter = _effectiveLeagueFilter(
+      meta,
+      selected: _leagueFilter,
+      selectionTouched: _leagueSelectionTouched,
+    );
+    final leagueRequestValue = _leagueRequestValue(meta, leagueFilter);
     final baseTeams = widget.value.valueOrNull ?? const [];
     final hasLeagueInBase = baseTeams.any(
-      (team) => team.leagueName == _leagueFilter,
+      (team) => team.leagueName == leagueFilter,
     );
-    final activeProvider = _leagueFilter == 'all' || hasLeagueInBase
+    final activeProvider = leagueFilter == 'all' || hasLeagueInBase
         ? null
-        : esportsTeamsByLeagueProvider(_leagueFilter);
+        : esportsTeamsByLeagueProvider(leagueRequestValue);
     final activeValue = activeProvider == null
         ? widget.value
         : ref.watch(activeProvider);
@@ -545,11 +572,11 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
           );
         }
         final leagues = _leagueNames(
-          ref.watch(esportsMetaProvider).valueOrNull,
+          meta,
           teams.map((team) => team.leagueName),
         );
-        final selectedLeague = leagues.contains(_leagueFilter)
-            ? _leagueFilter
+        final selectedLeague = leagues.contains(leagueFilter)
+            ? leagueFilter
             : 'all';
         final visibleTeams = teams
             .where(
@@ -566,7 +593,10 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
                 value: selectedLeague,
                 fallbackLabel: 'All Leagues',
                 options: _textFilterOptions(leagues),
-                onChanged: (league) => setState(() => _leagueFilter = league),
+                onChanged: (league) => setState(() {
+                  _leagueFilter = league;
+                  _leagueSelectionTouched = true;
+                }),
               ),
             ],
           ),
@@ -601,18 +631,26 @@ class _PlayersTab extends ConsumerStatefulWidget {
 
 class _PlayersTabState extends ConsumerState<_PlayersTab> {
   String _leagueFilter = 'all';
+  bool _leagueSelectionTouched = false;
   String _teamFilter = 'all';
   String _roleFilter = 'all';
 
   @override
   Widget build(BuildContext context) {
+    final meta = ref.watch(esportsMetaProvider).valueOrNull;
+    final leagueFilter = _effectiveLeagueFilter(
+      meta,
+      selected: _leagueFilter,
+      selectionTouched: _leagueSelectionTouched,
+    );
+    final leagueRequestValue = _leagueRequestValue(meta, leagueFilter);
     final basePlayers = widget.value.valueOrNull ?? const [];
     final hasLeagueInBase = basePlayers.any(
-      (player) => player.leagueName == _leagueFilter,
+      (player) => player.leagueName == leagueFilter,
     );
-    final activeProvider = _leagueFilter == 'all' || hasLeagueInBase
+    final activeProvider = leagueFilter == 'all' || hasLeagueInBase
         ? null
-        : esportsPlayersByLeagueProvider(_leagueFilter);
+        : esportsPlayersByLeagueProvider(leagueRequestValue);
     final activeValue = activeProvider == null
         ? widget.value
         : ref.watch(activeProvider);
@@ -631,15 +669,15 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
         }
         final teamOptions = _playerTeamOptions(players);
         final leagueOptions = _leagueNames(
-          ref.watch(esportsMetaProvider).valueOrNull,
+          meta,
           players.map((player) => player.leagueName),
         );
         final roleOptions = _playerRoleOptions(players);
         final selectedTeam = teamOptions.contains(_teamFilter)
             ? _teamFilter
             : 'all';
-        final selectedLeague = leagueOptions.contains(_leagueFilter)
-            ? _leagueFilter
+        final selectedLeague = leagueOptions.contains(leagueFilter)
+            ? leagueFilter
             : 'all';
         final selectedRole = roleOptions.contains(_roleFilter)
             ? _roleFilter
@@ -666,6 +704,7 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
                 onChanged: (value) {
                   setState(() {
                     _leagueFilter = value;
+                    _leagueSelectionTouched = true;
                   });
                 },
               ),
@@ -2191,6 +2230,42 @@ List<String> _leagueNames(EsportsMeta? meta, Iterable<String> fallback) {
   return names.toList()..sort();
 }
 
+String _effectiveLeagueFilter(
+  EsportsMeta? meta, {
+  required String selected,
+  required bool selectionTouched,
+}) {
+  if (selectionTouched) {
+    return selected;
+  }
+  final leagues = [...?meta?.leagues]
+    ..sort((a, b) {
+      final aTime = DateTime.tryParse(a.startTime)?.millisecondsSinceEpoch ?? 0;
+      final bTime = DateTime.tryParse(b.startTime)?.millisecondsSinceEpoch ?? 0;
+      return bTime.compareTo(aTime);
+    });
+  for (final league in leagues) {
+    if (league.name.trim().isNotEmpty) {
+      return league.name.trim();
+    }
+  }
+  return selected;
+}
+
+String _leagueRequestValue(EsportsMeta? meta, String leagueName) {
+  for (final league in meta?.leagues ?? const <EsportsLeague>[]) {
+    if (league.name.trim() == leagueName.trim()) {
+      if (league.sourceId.trim().isNotEmpty) {
+        return league.sourceId.trim();
+      }
+      if (league.id.trim().isNotEmpty) {
+        return league.id.trim();
+      }
+    }
+  }
+  return leagueName;
+}
+
 List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
   final statusByValue = <String, String>{};
   for (final match in matches) {
@@ -2199,15 +2274,6 @@ List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
       statusByValue[value] = match.statusLabel;
     }
   }
-  const statusDefaults = {
-    'live': 'Live',
-    'upcoming': 'Upcoming',
-    'finished': 'Finished',
-  };
-  statusByValue.addAll({
-    for (final entry in statusDefaults.entries)
-      if (!statusByValue.containsKey(entry.key)) entry.key: entry.value,
-  });
   const preferredOrder = ['live', 'upcoming', 'finished'];
   final extraValues =
       statusByValue.keys

@@ -18,16 +18,25 @@ class EsportsMeta {
 }
 
 class EsportsLeague {
-  const EsportsLeague({required this.id, required this.name});
+  const EsportsLeague({
+    required this.id,
+    required this.name,
+    this.sourceId = '',
+    this.startTime = '',
+  });
 
   final String id;
   final String name;
+  final String sourceId;
+  final String startTime;
 
   factory EsportsLeague.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     return EsportsLeague(
       id: (map['id'] ?? '').toString(),
       name: (map['name_edit'] ?? map['name'] ?? '').toString(),
+      sourceId: (map['source_id'] ?? map['cc_league_id'] ?? '').toString(),
+      startTime: (map['start_time'] ?? '').toString(),
     );
   }
 }
