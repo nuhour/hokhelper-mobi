@@ -21,7 +21,7 @@ class EsportsRepository {
       '/esports/matches/list',
       body: {
         'page': 1,
-        'pageSize': 60,
+        'pageSize': 200,
         'sort': 'start_time',
         'order': 'desc',
         if (league != null && league != 'all') 'league': league,
@@ -35,7 +35,7 @@ class EsportsRepository {
       '/esports/teams/list',
       body: {
         'page': 1,
-        'pageSize': 60,
+        'pageSize': 200,
         'sort': 'win_rate',
         'order': 'desc',
         if (league != null && league != 'all') 'league': league,
@@ -49,7 +49,7 @@ class EsportsRepository {
       '/esports/players/list',
       body: {
         'page': 1,
-        'pageSize': 80,
+        'pageSize': 200,
         'sort': 'grade',
         'order': 'desc',
         if (league != null && league != 'all') 'league': league,
@@ -61,15 +61,17 @@ class EsportsRepository {
   Future<List<EsportsStatSummary>> loadStats({
     int rankType = 1,
     String? league,
+    int regionId = 2,
   }) async {
     final json = await apiClient.postJson(
       '/esports/stats/list',
       body: {
         'page': 1,
-        'pageSize': 40,
+        'pageSize': 500,
         'sort': 'winRate',
         'order': 'desc',
         'rank_type': rankType,
+        'region_id': regionId,
         if (league != null && league != 'all') 'league': league,
       },
     );

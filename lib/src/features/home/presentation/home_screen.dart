@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -172,7 +171,7 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
               });
             },
             children: [
-              const EsportsScreen(),
+              const EsportsScreen(syncRouteOnTabTap: false),
               _openedSkinId == null
                   ? SkinGalleryScreen(onSkinSelected: _openSkinDetail)
                   : SkinDetailScreen(
@@ -843,7 +842,7 @@ class _HomeMainHeroContent extends StatelessWidget {
         _HomeHeroButton(
           label: 'Core Stats',
           icon: Icons.bar_chart_rounded,
-          onTap: () => context.go('/tools/stats?entry=home_core'),
+          onTap: () => context.go('/stats-home'),
         ),
         _HomeHeroButton(
           label: 'Tier List',
@@ -1021,7 +1020,7 @@ class _TrendingHeroCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => context.go('/tools/stats?entry=home_core'),
+        onTap: () => context.go('/stats-home'),
         child: Ink(
           decoration: BoxDecoration(
             color: AppTheme.panel,
@@ -1305,7 +1304,7 @@ class _HomeHeroRankingTable extends StatelessWidget {
     return _HomeDataSection(
       icon: Icons.bar_chart_outlined,
       title: 'Hero Rankings',
-      route: '/tools/stats?entry=home_core',
+      route: '/stats-home',
       child: _HomeDataTable(columns: columns, rows: dataRows, maxRows: 116),
     );
   }
@@ -2482,7 +2481,7 @@ class _HomePrimaryActions extends StatelessWidget {
           child: _PrimaryActionCard(
             title: 'View Core Stats',
             subtitle: 'Home metrics',
-            route: '/tools/stats?entry=home_core',
+            route: '/stats-home',
             icon: Icons.bar_chart_outlined,
           ),
         ),

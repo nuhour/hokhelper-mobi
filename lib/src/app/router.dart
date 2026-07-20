@@ -720,7 +720,7 @@ GoRouter createAppRouter() {
             path: 'teams/:teamId',
             builder: (context, state) {
               return _standalonePage(
-                fallbackRoute: '/esports',
+                fallbackRoute: '/?tab=esports',
                 child: EsportsScreen(
                   initialTab: EsportsInitialTab.teams,
                   initialTeamId: state.pathParameters['teamId'],
@@ -732,7 +732,7 @@ GoRouter createAppRouter() {
             path: 'players/:playerId',
             builder: (context, state) {
               return _standalonePage(
-                fallbackRoute: '/esports',
+                fallbackRoute: '/?tab=esports',
                 child: EsportsScreen(
                   initialTab: EsportsInitialTab.players,
                   initialPlayerId: state.pathParameters['playerId'],

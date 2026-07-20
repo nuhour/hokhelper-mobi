@@ -121,7 +121,7 @@ void main() {
 
     expect(apiClient.postBodies['/esports/matches/list'], {
       'page': 1,
-      'pageSize': 60,
+      'pageSize': 200,
       'sort': 'start_time',
       'order': 'desc',
     });
@@ -161,7 +161,7 @@ void main() {
 
     expect(apiClient.postBodies['/esports/teams/list'], {
       'page': 1,
-      'pageSize': 60,
+      'pageSize': 200,
       'sort': 'win_rate',
       'order': 'desc',
     });
@@ -180,7 +180,7 @@ void main() {
 
     expect(apiClient.postBodies['/esports/players/list'], {
       'page': 1,
-      'pageSize': 80,
+      'pageSize': 200,
       'sort': 'grade',
       'order': 'desc',
     });
@@ -201,10 +201,11 @@ void main() {
 
     expect(apiClient.postBodies['/esports/stats/list'], {
       'page': 1,
-      'pageSize': 40,
+      'pageSize': 500,
       'sort': 'winRate',
       'order': 'desc',
       'rank_type': 1,
+      'region_id': 2,
     });
     expect(stats, hasLength(1));
     expect(stats.single.objectName, 'Luban No.7');

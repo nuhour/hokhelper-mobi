@@ -210,7 +210,7 @@ class _ProfileOverview extends StatelessWidget {
               return Stack(
                 alignment: Alignment.center,
                 children: [
-                  _ProfileAvatar(
+                  ProfileAvatar(
                     avatarUrl: profile?.avatar ?? '',
                     fallback: avatarInitial,
                   ),
@@ -264,18 +264,18 @@ class _ProfileOverview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _SocialLinksDropdown(links: profile!.socialLinks),
+          ProfileSocialLinksDropdown(links: profile!.socialLinks),
           const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                _LevelBadge(
+                ProfileLevelBadge(
                   profile: profile!,
                   onTap: () => _showPointsRulesSheet(context, profile!),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: _ProgressBar(profile: profile!)),
+                Expanded(child: ProfileProgressBar(profile: profile!)),
               ],
             ),
           ),
@@ -283,7 +283,7 @@ class _ProfileOverview extends StatelessWidget {
           _AutoOpenMeFollowList(
             profile: profile!,
             initialFollowListType: initialFollowListType,
-            child: _StatsGrid(
+            child: ProfileStatsRow(
               stats: profile!.stats,
               onPostsTap: () => context.go('/content/community?tab=my'),
               onFollowingTap: () => _showFollowListSheet(
@@ -459,7 +459,7 @@ class _AccountIdentityPanel extends StatelessWidget {
             SizedBox.square(
               dimension: 60,
               child: FittedBox(
-                child: _ProfileAvatar(
+                child: ProfileAvatar(
                   avatarUrl: profile.avatar,
                   fallback: name.isEmpty ? '?' : name[0].toUpperCase(),
                 ),
@@ -534,8 +534,12 @@ class _AccountActionTile extends StatelessWidget {
   }
 }
 
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.avatarUrl, required this.fallback});
+class ProfileAvatar extends StatelessWidget {
+  const ProfileAvatar({
+    required this.avatarUrl,
+    required this.fallback,
+    super.key,
+  });
 
   final String avatarUrl;
   final String fallback;
@@ -595,12 +599,7 @@ class _LikesButton extends StatelessWidget {
     final foreground = isLight ? AppTheme.lightText : Colors.white;
     return Material(
       color: Colors.white.withValues(alpha: isLight ? 0.72 : 0.12),
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: isLight ? 0.92 : 0.24),
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         key: const ValueKey('profile-likes-button'),
         onTap: onTap,
@@ -632,8 +631,8 @@ class _LikesButton extends StatelessWidget {
   }
 }
 
-class _SocialLinksDropdown extends StatelessWidget {
-  const _SocialLinksDropdown({required this.links});
+class ProfileSocialLinksDropdown extends StatelessWidget {
+  const ProfileSocialLinksDropdown({required this.links, super.key});
 
   final Map<String, dynamic> links;
 
@@ -1695,8 +1694,8 @@ class _PointsRule {
   final int points;
 }
 
-class _LevelBadge extends StatelessWidget {
-  const _LevelBadge({required this.profile, this.onTap});
+class ProfileLevelBadge extends StatelessWidget {
+  const ProfileLevelBadge({required this.profile, this.onTap, super.key});
 
   final UserProfile profile;
   final VoidCallback? onTap;
@@ -1736,8 +1735,8 @@ class _LevelBadge extends StatelessWidget {
   }
 }
 
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.profile});
+class ProfileProgressBar extends StatelessWidget {
+  const ProfileProgressBar({required this.profile, super.key});
 
   final UserProfile profile;
 
@@ -1770,12 +1769,13 @@ class _ProgressBar extends StatelessWidget {
   }
 }
 
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({
+class ProfileStatsRow extends StatelessWidget {
+  const ProfileStatsRow({
     required this.stats,
     this.onPostsTap,
     this.onFollowingTap,
     this.onFollowersTap,
+    super.key,
   });
 
   final ProfileStats stats;
@@ -1880,7 +1880,6 @@ class _ProfileColors {
     required this.raised,
     required this.border,
     required this.primary,
-    required this.accent,
     required this.text,
     required this.muted,
   });
@@ -1889,7 +1888,6 @@ class _ProfileColors {
   final Color raised;
   final Color border;
   final Color primary;
-  final Color accent;
   final Color text;
   final Color muted;
 
@@ -1900,7 +1898,6 @@ class _ProfileColors {
       raised: scheme.surfaceContainerHigh,
       border: scheme.outlineVariant,
       primary: scheme.primary,
-      accent: scheme.error,
       text: scheme.onSurface,
       muted: Theme.of(context).brightness == Brightness.light
           ? AppTheme.lightMuted

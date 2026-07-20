@@ -7,6 +7,10 @@ class EsportsStatSummary {
     required this.imageUrl,
     required this.leagueName,
     required this.metrics,
+    this.rankType = 1,
+    this.heroId = '',
+    this.heroName = '',
+    this.heroIconUrl = '',
     this.teamId = '',
     this.teamName = '',
     this.teamLogoUrl = '',
@@ -22,6 +26,10 @@ class EsportsStatSummary {
   final String imageUrl;
   final String leagueName;
   final List<EsportsStatMetric> metrics;
+  final int rankType;
+  final String heroId;
+  final String heroName;
+  final String heroIconUrl;
   final String teamId;
   final String teamName;
   final String teamLogoUrl;
@@ -63,6 +71,10 @@ class EsportsStatSummary {
       ]),
       leagueName: _readString(map['league_name']),
       metrics: _readMetrics(map, stats, display),
+      rankType: _readInt(map['rank_type'], fallback: 1),
+      heroId: _readString(hero['hero_id'] ?? hero['id']),
+      heroName: heroName,
+      heroIconUrl: _readString(hero['hero_icon'] ?? hero['icon_url']),
       teamId: _readString(team['id'] ?? map['team_id']),
       teamName: teamName,
       teamLogoUrl: _readString(team['logo_url']),
@@ -104,9 +116,6 @@ List<EsportsStatMetric> _readMetrics(
       continue;
     }
     metrics.add(EsportsStatMetric(label: _metricLabel(key), value: value));
-    if (metrics.length == 4) {
-      break;
-    }
   }
   return metrics;
 }

@@ -64,7 +64,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('Matches'), findsOneWidget);
     expect(find.text('KPL Spring'), findsOneWidget);
     expect(find.text('Wolves'), findsWidgets);
     expect(find.text('AG'), findsOneWidget);

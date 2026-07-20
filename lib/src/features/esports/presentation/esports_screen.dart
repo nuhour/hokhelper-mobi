@@ -7,7 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
+import '../../settings/presentation/settings_controller.dart';
 import '../data/esports_repository.dart';
 import '../domain/esports_match_summary.dart';
 import '../domain/esports_meta.dart';
@@ -23,9 +23,19 @@ final esportsMatchesProvider = FutureProvider<List<EsportsMatchSummary>>((ref) {
   return ref.watch(esportsRepositoryProvider).loadMatches();
 });
 
+final esportsMatchesByLeagueProvider =
+    FutureProvider.family<List<EsportsMatchSummary>, String>((ref, league) {
+      return ref.watch(esportsRepositoryProvider).loadMatches(league: league);
+    });
+
 final esportsTeamsProvider = FutureProvider<List<EsportsTeamSummary>>((ref) {
   return ref.watch(esportsRepositoryProvider).loadTeams();
 });
+
+final esportsTeamsByLeagueProvider =
+    FutureProvider.family<List<EsportsTeamSummary>, String>((ref, league) {
+      return ref.watch(esportsRepositoryProvider).loadTeams(league: league);
+    });
 
 final esportsPlayersProvider = FutureProvider<List<EsportsPlayerSummary>>((
   ref,
@@ -33,8 +43,19 @@ final esportsPlayersProvider = FutureProvider<List<EsportsPlayerSummary>>((
   return ref.watch(esportsRepositoryProvider).loadPlayers();
 });
 
+final esportsPlayersByLeagueProvider =
+    FutureProvider.family<List<EsportsPlayerSummary>, String>((ref, league) {
+      return ref.watch(esportsRepositoryProvider).loadPlayers(league: league);
+    });
+
 final esportsStatsProvider = FutureProvider<List<EsportsStatSummary>>((ref) {
-  return ref.watch(esportsRepositoryProvider).loadStats();
+  return ref
+      .watch(appSettingsControllerProvider.future)
+      .then(
+        (settings) => ref
+            .watch(esportsRepositoryProvider)
+            .loadStats(regionId: settings.region.regionId),
+      );
 });
 
 final esportsStatsByRankProvider =
@@ -42,7 +63,36 @@ final esportsStatsByRankProvider =
       if (rankType == 1) {
         return ref.watch(esportsStatsProvider.future);
       }
-      return ref.watch(esportsRepositoryProvider).loadStats(rankType: rankType);
+      return ref
+          .watch(appSettingsControllerProvider.future)
+          .then(
+            (settings) => ref
+                .watch(esportsRepositoryProvider)
+                .loadStats(
+                  rankType: rankType,
+                  regionId: settings.region.regionId,
+                ),
+          );
+    });
+
+typedef _EsportsStatsQuery = ({int rankType, String league});
+
+final esportsStatsByQueryProvider =
+    FutureProvider.family<List<EsportsStatSummary>, _EsportsStatsQuery>((
+      ref,
+      query,
+    ) {
+      return ref
+          .watch(appSettingsControllerProvider.future)
+          .then(
+            (settings) => ref
+                .watch(esportsRepositoryProvider)
+                .loadStats(
+                  rankType: query.rankType,
+                  league: query.league,
+                  regionId: settings.region.regionId,
+                ),
+          );
     });
 
 final esportsMetaProvider = FutureProvider<EsportsMeta>((ref) {
@@ -80,7 +130,7 @@ class EsportsScreen extends ConsumerStatefulWidget {
     this.initialTab = EsportsInitialTab.matches,
     this.initialTeamId,
     this.initialPlayerId,
-    this.syncRouteOnTabTap = false,
+    this.syncRouteOnTabTap = true,
   });
 
   final EsportsInitialTab initialTab;
@@ -117,48 +167,15 @@ class _EsportsScreenState extends ConsumerState<EsportsScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppSectionHeader(title: 'Esports'),
-                const SizedBox(height: 6),
-                Text(
-                  'Live matches, tournament form, teams, and pro players.',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                ),
-                const SizedBox(height: 14),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppTheme.panel,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: true,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    dividerColor: Colors.transparent,
-                    labelColor: AppTheme.gold,
-                    unselectedLabelColor: AppTheme.muted,
-                    onTap: widget.syncRouteOnTabTap
-                        ? (index) => _syncRouteWithTab(context, index)
-                        : null,
-                    tabs: [
-                      Tab(text: 'Matches'),
-                      Tab(text: 'Stats'),
-                      Tab(text: 'Teams'),
-                      Tab(text: 'Players'),
-                    ],
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: _EsportsTabStrip(
+              controller: _tabController,
+              labels: const ['Matches', 'Stats', 'Teams', 'Players'],
+              onTap: widget.syncRouteOnTabTap
+                  ? (index) => _syncRouteWithTab(context, index)
+                  : null,
             ),
           ),
           Expanded(
@@ -206,6 +223,47 @@ class _EsportsScreenState extends ConsumerState<EsportsScreen>
   }
 }
 
+class _EsportsTabStrip extends StatelessWidget {
+  const _EsportsTabStrip({
+    required this.controller,
+    required this.labels,
+    this.onTap,
+  });
+
+  final TabController controller;
+  final List<String> labels;
+  final ValueChanged<int>? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TabBar(
+        controller: controller,
+        isScrollable: true,
+        tabAlignment: TabAlignment.center,
+        dividerColor: Colors.transparent,
+        indicator: const UnderlineTabIndicator(
+          borderSide: BorderSide(color: AppTheme.gold, width: 3),
+          borderRadius: BorderRadius.all(Radius.circular(999)),
+          insets: EdgeInsets.symmetric(horizontal: 18),
+        ),
+        indicatorSize: TabBarIndicatorSize.label,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+        labelColor: AppTheme.text,
+        unselectedLabelColor: AppTheme.muted,
+        labelStyle: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+        unselectedLabelStyle: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        onTap: onTap,
+        tabs: [for (final label in labels) Tab(text: label, height: 42)],
+      ),
+    );
+  }
+}
+
 class _MatchesTab extends ConsumerStatefulWidget {
   const _MatchesTab({required this.value});
 
@@ -222,9 +280,21 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
 
   @override
   Widget build(BuildContext context) {
+    final baseMatches = widget.value.valueOrNull ?? const [];
+    final hasLeagueInBase = baseMatches.any(
+      (match) => match.leagueName == _leagueFilter,
+    );
+    final activeProvider = _leagueFilter == 'all' || hasLeagueInBase
+        ? null
+        : esportsMatchesByLeagueProvider(_leagueFilter);
+    final activeValue = activeProvider == null
+        ? widget.value
+        : ref.watch(activeProvider);
     return AppAsyncView<List<EsportsMatchSummary>>(
-      value: widget.value,
-      retry: () => ref.invalidate(esportsMatchesProvider),
+      value: activeValue,
+      retry: () => activeProvider == null
+          ? ref.invalidate(esportsMatchesProvider)
+          : ref.invalidate(activeProvider),
       data: (matches) {
         if (matches.isEmpty) {
           return const AppEmptyState(
@@ -233,7 +303,10 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
             message: 'Pull to refresh and try again.',
           );
         }
-        final leagueOptions = _matchLeagueOptions(matches);
+        final leagueOptions = _leagueNames(
+          ref.watch(esportsMetaProvider).valueOrNull,
+          matches.map((match) => match.leagueName),
+        );
         final selectedLeague = leagueOptions.contains(_leagueFilter)
             ? _leagueFilter
             : 'all';
@@ -311,9 +384,10 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
             ...matchSections,
         ];
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(esportsMatchesProvider.future),
+          onRefresh: () => activeProvider == null
+              ? ref.refresh(esportsMatchesProvider.future)
+              : ref.refresh(activeProvider.future),
           child: ListView.separated(
-            cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -334,6 +408,8 @@ class _StatsTab extends ConsumerStatefulWidget {
 
 class _StatsTabState extends ConsumerState<_StatsTab> {
   int _rankType = 1;
+  String _leagueFilter = 'all';
+  final Map<String, List<EsportsStatSummary>> _cachedStats = {};
 
   @override
   Widget build(BuildContext context) {
@@ -349,40 +425,83 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
     final selectedRank = rankTypes.any((type) => type.value == _rankType)
         ? _rankType
         : rankTypes.first.value;
-    final value = ref.watch(esportsStatsByRankProvider(selectedRank));
-    return AppAsyncView<List<EsportsStatSummary>>(
-      value: value,
-      retry: () => ref.invalidate(esportsStatsByRankProvider(selectedRank)),
-      data: (stats) {
-        if (stats.isEmpty) {
-          return const AppEmptyState(
-            icon: Icons.leaderboard_outlined,
-            title: 'No stats data',
-            message: 'Pull to refresh and try again.',
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: () =>
-              ref.refresh(esportsStatsByRankProvider(selectedRank).future),
-          child: ListView(
-            cacheExtent: 900,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+    final statsProvider = _leagueFilter == 'all'
+        ? null
+        : esportsStatsByQueryProvider((
+            rankType: selectedRank,
+            league: _leagueFilter,
+          ));
+    final value = statsProvider == null
+        ? ref.watch(esportsStatsByRankProvider(selectedRank))
+        : ref.watch(statsProvider);
+    final cacheKey = '$selectedRank:${_leagueFilter.trim()}';
+    final freshStats = value.valueOrNull;
+    if (freshStats != null) {
+      _cachedStats[cacheKey] = freshStats;
+    }
+    final stats = freshStats ?? _cachedStats[cacheKey] ?? const [];
+    final leagueNames = _leagueNames(
+      meta,
+      stats.map((stat) => stat.leagueName),
+    );
+    final selectedLeague = leagueNames.contains(_leagueFilter)
+        ? _leagueFilter
+        : 'all';
+    final visibleStats = stats
+        .where(
+          (stat) =>
+              selectedLeague == 'all' || stat.leagueName == selectedLeague,
+        )
+        .toList(growable: false);
+
+    return RefreshIndicator(
+      onRefresh: () => statsProvider == null
+          ? ref.refresh(esportsStatsByRankProvider(selectedRank).future)
+          : ref.refresh(statsProvider.future),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        children: [
+          _StatsIntroCard(
+            rankTypes: rankTypes,
+            selectedRank: selectedRank,
+            onRankChanged: (rankType) => setState(() => _rankType = rankType),
+          ),
+          const SizedBox(height: 10),
+          _FilterCard(
             children: [
-              _StatsIntroCard(
-                rankTypes: rankTypes,
-                selectedRank: selectedRank,
-                onRankChanged: (rankType) {
-                  setState(() {
-                    _rankType = rankType;
-                  });
-                },
+              _FilterDropdown(
+                width: 220,
+                value: selectedLeague,
+                fallbackLabel: 'All Leagues',
+                options: _textFilterOptions(leagueNames),
+                onChanged: (league) => setState(() => _leagueFilter = league),
               ),
-              const SizedBox(height: 12),
-              _EsportsStatsTable(stats: stats),
             ],
           ),
-        );
-      },
+          if (value.isLoading) ...[
+            const SizedBox(height: 10),
+            const LinearProgressIndicator(minHeight: 2),
+          ],
+          const SizedBox(height: 12),
+          if (visibleStats.isNotEmpty)
+            _EsportsStatsTable(stats: visibleStats, rankType: selectedRank)
+          else if (value.hasError)
+            AppEmptyState(
+              icon: Icons.cloud_off_outlined,
+              title: 'Stats unavailable',
+              message: '${value.error}',
+            )
+          else if (!value.isLoading)
+            const AppEmptyState(
+              icon: Icons.leaderboard_outlined,
+              title: 'No stats data',
+              message: 'Try another league or pull to refresh.',
+            )
+          else
+            const _StatsLoadingTable(),
+        ],
+      ),
     );
   }
 }
@@ -402,9 +521,21 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final baseTeams = widget.value.valueOrNull ?? const [];
+    final hasLeagueInBase = baseTeams.any(
+      (team) => team.leagueName == _leagueFilter,
+    );
+    final activeProvider = _leagueFilter == 'all' || hasLeagueInBase
+        ? null
+        : esportsTeamsByLeagueProvider(_leagueFilter);
+    final activeValue = activeProvider == null
+        ? widget.value
+        : ref.watch(activeProvider);
     return AppAsyncView<List<EsportsTeamSummary>>(
-      value: widget.value,
-      retry: () => ref.invalidate(esportsTeamsProvider),
+      value: activeValue,
+      retry: () => activeProvider == null
+          ? ref.invalidate(esportsTeamsProvider)
+          : ref.invalidate(activeProvider),
       data: (teams) {
         if (teams.isEmpty) {
           return const AppEmptyState(
@@ -413,13 +544,10 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
             message: 'Pull to refresh and try again.',
           );
         }
-        final leagues =
-            teams
-                .map((team) => team.leagueName)
-                .where((league) => league.isNotEmpty)
-                .toSet()
-                .toList()
-              ..sort();
+        final leagues = _leagueNames(
+          ref.watch(esportsMetaProvider).valueOrNull,
+          teams.map((team) => team.leagueName),
+        );
         final selectedLeague = leagues.contains(_leagueFilter)
             ? _leagueFilter
             : 'all';
@@ -446,9 +574,10 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
           ...visibleTeams.map((team) => _TeamCard(team: team)),
         ];
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(esportsTeamsProvider.future),
+          onRefresh: () => activeProvider == null
+              ? ref.refresh(esportsTeamsProvider.future)
+              : ref.refresh(activeProvider.future),
           child: ListView.separated(
-            cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -477,9 +606,21 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
 
   @override
   Widget build(BuildContext context) {
+    final basePlayers = widget.value.valueOrNull ?? const [];
+    final hasLeagueInBase = basePlayers.any(
+      (player) => player.leagueName == _leagueFilter,
+    );
+    final activeProvider = _leagueFilter == 'all' || hasLeagueInBase
+        ? null
+        : esportsPlayersByLeagueProvider(_leagueFilter);
+    final activeValue = activeProvider == null
+        ? widget.value
+        : ref.watch(activeProvider);
     return AppAsyncView<List<EsportsPlayerSummary>>(
-      value: widget.value,
-      retry: () => ref.invalidate(esportsPlayersProvider),
+      value: activeValue,
+      retry: () => activeProvider == null
+          ? ref.invalidate(esportsPlayersProvider)
+          : ref.invalidate(activeProvider),
       data: (players) {
         if (players.isEmpty) {
           return const AppEmptyState(
@@ -489,13 +630,10 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
           );
         }
         final teamOptions = _playerTeamOptions(players);
-        final leagueOptions =
-            players
-                .map((player) => player.leagueName)
-                .where((league) => league.isNotEmpty)
-                .toSet()
-                .toList()
-              ..sort();
+        final leagueOptions = _leagueNames(
+          ref.watch(esportsMetaProvider).valueOrNull,
+          players.map((player) => player.leagueName),
+        );
         final roleOptions = _playerRoleOptions(players);
         final selectedTeam = teamOptions.contains(_teamFilter)
             ? _teamFilter
@@ -568,9 +706,10 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
                 .map((player) => _PlayerCard(player: player)),
         ];
         return RefreshIndicator(
-          onRefresh: () => ref.refresh(esportsPlayersProvider.future),
+          onRefresh: () => activeProvider == null
+              ? ref.refresh(esportsPlayersProvider.future)
+              : ref.refresh(activeProvider.future),
           child: ListView.separated(
-            cacheExtent: 900,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) => cards[index],
             separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -1087,93 +1226,74 @@ class _StatsIntroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PanelCard(
-      accentColor: AppTheme.gold,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: [
-          Row(
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppTheme.gold.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.all(9),
-                  child: Icon(
-                    Icons.leaderboard_outlined,
-                    color: AppTheme.gold,
-                    size: 22,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Esports Stats',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      'Hero rankings and player performance',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 38,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: rankTypes.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final rankType = rankTypes[index];
-                final selected = rankType.value == selectedRank;
-                return ChoiceChip(
-                  label: Text(rankType.label),
-                  selected: selected,
-                  onSelected: (_) => onRankChanged(rankType.value),
-                  selectedColor: AppTheme.gold,
-                  backgroundColor: Colors.black.withValues(alpha: 0.18),
-                  side: BorderSide(
-                    color: selected
-                        ? AppTheme.gold
-                        : Colors.white.withValues(alpha: 0.10),
-                  ),
-                  labelStyle: TextStyle(
-                    color: selected ? AppTheme.bg : AppTheme.muted,
-                    fontWeight: FontWeight.w900,
-                  ),
-                );
-              },
+          for (var index = 0; index < rankTypes.length; index++) ...[
+            _UnderlineSelectButton(
+              label: rankTypes[index].label,
+              selected: rankTypes[index].value == selectedRank,
+              onTap: () => onRankChanged(rankTypes[index].value),
             ),
-          ),
+            if (index != rankTypes.length - 1) const SizedBox(width: 22),
+          ],
         ],
       ),
     );
   }
 }
 
+class _UnderlineSelectButton extends StatelessWidget {
+  const _UnderlineSelectButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: selected ? AppTheme.text : AppTheme.muted,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 5),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: selected ? 20 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: AppTheme.gold,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _EsportsStatsTable extends StatelessWidget {
-  const _EsportsStatsTable({required this.stats});
+  const _EsportsStatsTable({required this.stats, required this.rankType});
 
   final List<EsportsStatSummary> stats;
+  final int rankType;
 
   @override
   Widget build(BuildContext context) {
@@ -1185,8 +1305,8 @@ class _EsportsStatsTable extends StatelessWidget {
         }
       }
     }
-    final columns = metricLabels.take(4).toList(growable: false);
-    final tableWidth = 276.0 + columns.length * 92;
+    final columns = metricLabels.toList(growable: false);
+    final tableWidth = 206.0 + columns.length * 106;
     final leagueName = stats
         .map((stat) => stat.leagueName)
         .firstWhere((name) => name.isNotEmpty, orElse: () => '');
@@ -1235,9 +1355,13 @@ class _EsportsStatsTable extends StatelessWidget {
               width: tableWidth,
               child: Column(
                 children: [
-                  _StatsTableHeader(columns: columns),
+                  _StatsTableHeader(columns: columns, rankType: rankType),
                   for (final stat in stats)
-                    _StatsTableRow(stat: stat, columns: columns),
+                    _StatsTableRow(
+                      stat: stat,
+                      columns: columns,
+                      rankType: rankType,
+                    ),
                 ],
               ),
             ),
@@ -1248,10 +1372,57 @@ class _EsportsStatsTable extends StatelessWidget {
   }
 }
 
+class _StatsLoadingTable extends StatelessWidget {
+  const _StatsLoadingTable();
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = AppTheme.muted.withValues(alpha: 0.18);
+    return _PanelCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(width: 96, height: 18, color: placeholder),
+              const Spacer(),
+              Container(width: 62, height: 12, color: placeholder),
+            ],
+          ),
+          const SizedBox(height: 18),
+          for (var index = 0; index < 5; index++) ...[
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: placeholder,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Container(height: 13, color: placeholder)),
+                const SizedBox(width: 28),
+                Container(width: 72, height: 13, color: placeholder),
+              ],
+            ),
+            if (index != 4) ...[
+              const SizedBox(height: 16),
+              Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
+              const SizedBox(height: 16),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _StatsTableHeader extends StatelessWidget {
-  const _StatsTableHeader({required this.columns});
+  const _StatsTableHeader({required this.columns, required this.rankType});
 
   final List<String> columns;
+  final int rankType;
 
   @override
   Widget build(BuildContext context) {
@@ -1273,10 +1444,12 @@ class _StatsTableHeader extends StatelessWidget {
             width: 38,
             child: Center(child: Text('#', style: labelStyle)),
           ),
-          SizedBox(width: 144, child: Text('Player / Hero', style: labelStyle)),
-          SizedBox(width: 94, child: Text('Team', style: labelStyle)),
+          SizedBox(
+            width: 168,
+            child: Text(_statsObjectLabel(rankType), style: labelStyle),
+          ),
           for (final column in columns)
-            SizedBox(width: 92, child: Text(column, style: labelStyle)),
+            SizedBox(width: 106, child: Text(column, style: labelStyle)),
         ],
       ),
     );
@@ -1284,10 +1457,15 @@ class _StatsTableHeader extends StatelessWidget {
 }
 
 class _StatsTableRow extends StatelessWidget {
-  const _StatsTableRow({required this.stat, required this.columns});
+  const _StatsTableRow({
+    required this.stat,
+    required this.columns,
+    required this.rankType,
+  });
 
   final EsportsStatSummary stat;
   final List<String> columns;
+  final int rankType;
 
   @override
   Widget build(BuildContext context) {
@@ -1315,11 +1493,13 @@ class _StatsTableRow extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: 144, child: _StatsIdentityCell(stat: stat)),
-          SizedBox(width: 94, child: _StatsTeamCell(stat: stat)),
+          SizedBox(
+            width: 168,
+            child: _StatsIdentityCell(stat: stat, rankType: rankType),
+          ),
           for (final column in columns)
             SizedBox(
-              width: 92,
+              width: 106,
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1340,16 +1520,37 @@ class _StatsTableRow extends StatelessWidget {
 }
 
 class _StatsIdentityCell extends StatelessWidget {
-  const _StatsIdentityCell({required this.stat});
+  const _StatsIdentityCell({required this.stat, required this.rankType});
 
   final EsportsStatSummary stat;
+  final int rankType;
 
   @override
   Widget build(BuildContext context) {
-    final isPlayer = stat.playerId.isNotEmpty;
-    final route = isPlayer ? '/esports/players/${stat.playerId}' : null;
-    final imageUrl = isPlayer ? stat.playerAvatarUrl : stat.imageUrl;
-    final title = isPlayer ? stat.playerName : stat.objectName;
+    final isTeam = rankType == 1;
+    final isPlayer = rankType == 2 || rankType == 3;
+    final route = isTeam && stat.teamId.isNotEmpty
+        ? '/esports/teams/${stat.teamId}'
+        : isPlayer && stat.playerId.isNotEmpty
+        ? '/esports/players/${stat.playerId}'
+        : null;
+    final imageUrl = switch (rankType) {
+      1 => stat.teamLogoUrl,
+      2 => stat.playerAvatarUrl,
+      3 || 4 => stat.heroIconUrl,
+      _ => stat.imageUrl,
+    };
+    final title = switch (rankType) {
+      1 => stat.teamName.isEmpty ? stat.objectName : stat.teamName,
+      2 || 3 => stat.playerName.isEmpty ? stat.objectName : stat.playerName,
+      4 => stat.heroName.isEmpty ? stat.objectName : stat.heroName,
+      _ => stat.objectName,
+    };
+    final subtitle = rankType == 3
+        ? stat.heroName
+        : rankType == 2
+        ? stat.subtitle.replaceFirst(stat.teamName, '').replaceAll(' · ', '')
+        : '';
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: route == null ? null : () => context.go(route),
@@ -1379,9 +1580,9 @@ class _StatsIdentityCell extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  if (stat.subtitle.isNotEmpty)
+                  if (subtitle.isNotEmpty)
                     Text(
-                      stat.subtitle,
+                      subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1399,45 +1600,13 @@ class _StatsIdentityCell extends StatelessWidget {
   }
 }
 
-class _StatsTeamCell extends StatelessWidget {
-  const _StatsTeamCell({required this.stat});
-
-  final EsportsStatSummary stat;
-
-  @override
-  Widget build(BuildContext context) {
-    if (stat.teamId.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => context.go('/esports/teams/${stat.teamId}'),
-      child: Row(
-        children: [
-          AppImage(
-            url: stat.teamLogoUrl,
-            width: 30,
-            height: 30,
-            borderRadius: 8,
-            semanticLabel: stat.teamName,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              stat.teamName,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppTheme.muted,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+String _statsObjectLabel(int rankType) => switch (rankType) {
+  1 => 'Team',
+  2 => 'Player',
+  3 => 'Player Hero',
+  4 => 'Hero',
+  _ => 'Entry',
+};
 
 class _FocusedTeamCard extends StatelessWidget {
   const _FocusedTeamCard({required this.team});
@@ -2014,15 +2183,12 @@ EsportsPlayerSummary? _findPlayer(
   return null;
 }
 
-List<String> _matchLeagueOptions(List<EsportsMatchSummary> matches) {
-  final leagues = <String>{};
-  for (final match in matches) {
-    final leagueName = match.leagueName.trim();
-    if (leagueName.isNotEmpty) {
-      leagues.add(leagueName);
-    }
-  }
-  return leagues.toList()..sort();
+List<String> _leagueNames(EsportsMeta? meta, Iterable<String> fallback) {
+  final names = <String>{
+    ...?meta?.leagues.map((league) => league.name.trim()),
+    ...fallback.map((name) => name.trim()),
+  }..removeWhere((name) => name.isEmpty);
+  return names.toList()..sort();
 }
 
 List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {

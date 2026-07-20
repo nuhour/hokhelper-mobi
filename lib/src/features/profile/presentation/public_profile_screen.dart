@@ -33,7 +33,6 @@ class PublicProfileScreen extends ConsumerWidget {
     final signedInUser = ref.watch(authControllerProvider).valueOrNull;
 
     return Scaffold(
-      backgroundColor: AppTheme.bg,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(publicUserProfileProvider(userId));
@@ -124,159 +123,138 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
     final avatarInitial = profile.displayName.isNotEmpty
         ? profile.displayName.substring(0, 1).toUpperCase()
         : '?';
+    final scheme = Theme.of(context).colorScheme;
+    final muted = Theme.of(context).brightness == Brightness.light
+        ? AppTheme.lightMuted
+        : AppTheme.muted;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panel,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AppTheme.gold.withValues(alpha: 0.16),
-                  child: Text(
-                    avatarInitial,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profile.displayName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.text,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '@${profile.username}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                _LevelBadge(level: profile.level),
-                const SizedBox(width: 12),
-                Expanded(child: _ProgressBar(profile: profile)),
-              ],
-            ),
-            const SizedBox(height: 18),
-            _StatsGrid(
-              stats: ProfileStats(
-                posts: profile.stats.posts,
-                following: profile.stats.following,
-                followers: _followers,
-                likes: _likes,
-              ),
-              onFollowingTap: () =>
-                  _showFollowList(context, ProfileFollowListType.following),
-              onFollowersTap: () =>
-                  _showFollowList(context, ProfileFollowListType.followers),
-            ),
-            if (profile.bio.isNotEmpty) ...[
-              const SizedBox(height: 18),
-              Text(
-                profile.bio,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.text),
-              ),
-            ],
-            if (profile.socialLinks.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text(
-                profile.socialLinks.entries
-                    .map((entry) => '${entry.key}: ${entry.value}')
-                    .join('  ·  '),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _StatePill(
-                  icon: _isFollowing
-                      ? Icons.check_circle_outline
-                      : Icons.person_add_alt_1_outlined,
-                  label: _isFollowing ? 'Already following' : 'Not following',
-                ),
-                _StatePill(
-                  icon: _isLiked
-                      ? Icons.favorite
-                      : Icons.favorite_border_outlined,
-                  label: _isLiked ? 'Liked' : 'Not liked',
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _shareProfile(context),
-                  icon: const Icon(Icons.ios_share_outlined, size: 18),
-                  label: const Text('Share'),
-                ),
-              ],
-            ),
-            if (widget.canInteract) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 108,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                alignment: Alignment.center,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _followUpdating ? null : _toggleFollow,
-                    icon: Icon(
-                      _isFollowing
-                          ? Icons.check_circle_outline
-                          : Icons.person_add_alt_1_outlined,
-                      size: 18,
-                    ),
-                    label: Text(_isFollowing ? 'Following' : 'Follow'),
+                  ProfileAvatar(
+                    avatarUrl: profile.avatar,
+                    fallback: avatarInitial,
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _likeUpdating ? null : _toggleLike,
-                    icon: Icon(
-                      _isLiked
-                          ? Icons.favorite
-                          : Icons.favorite_border_outlined,
-                      size: 18,
-                    ),
-                    label: Text(_isLiked ? 'Liked' : 'Like'),
+                  Positioned(
+                    left: constraints.maxWidth / 2 + 58,
+                    top: 23,
+                    child: _PublicLikesCount(count: _likes),
                   ),
                 ],
-              ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          profile.displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: scheme.onSurface,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '@${profile.username}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          profile.bio.isEmpty ? 'No personal signature yet' : profile.bio,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: profile.bio.isEmpty ? muted : scheme.onSurface,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 14),
+        ProfileSocialLinksDropdown(links: profile.socialLinks),
+        const SizedBox(height: 18),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              ProfileLevelBadge(profile: profile),
+              const SizedBox(width: 12),
+              Expanded(child: ProfileProgressBar(profile: profile)),
             ],
+          ),
+        ),
+        const SizedBox(height: 22),
+        ProfileStatsRow(
+          stats: ProfileStats(
+            posts: profile.stats.posts,
+            following: profile.stats.following,
+            followers: _followers,
+            likes: _likes,
+          ),
+          onFollowingTap: () =>
+              _showFollowList(context, ProfileFollowListType.following),
+          onFollowersTap: () =>
+              _showFollowList(context, ProfileFollowListType.followers),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            if (widget.canInteract) ...[
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _followUpdating ? null : _toggleFollow,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  icon: Icon(
+                    _isFollowing
+                        ? Icons.check_circle_outline
+                        : Icons.person_add_alt_1_outlined,
+                    size: 18,
+                  ),
+                  label: Text(_isFollowing ? 'Following' : 'Follow'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _likeUpdating ? null : _toggleLike,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  icon: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border_outlined,
+                    size: 18,
+                  ),
+                  label: Text(_isLiked ? 'Liked' : 'Like'),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            OutlinedButton(
+              key: const ValueKey('public-profile-share-button'),
+              onPressed: () => _shareProfile(context),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 13),
+              ),
+              child: const Icon(Icons.ios_share_outlined, size: 19),
+            ),
           ],
         ),
-      ),
+      ],
     );
   }
 
@@ -356,6 +334,44 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => _FollowListSheet(type: type, userId: profile.id),
+    );
+  }
+}
+
+class _PublicLikesCount extends StatelessWidget {
+  const _PublicLikesCount({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final foreground = isLight ? AppTheme.lightText : Colors.white;
+    return Material(
+      color: Colors.white.withValues(alpha: isLight ? 0.72 : 0.12),
+      borderRadius: BorderRadius.circular(8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 56, maxWidth: 82),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.favorite_rounded, color: foreground, size: 19),
+              const SizedBox(height: 3),
+              Text(
+                _formatNumber(count),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -545,165 +561,6 @@ class _FollowUserTile extends StatelessWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _LevelBadge extends StatelessWidget {
-  const _LevelBadge({required this.level});
-
-  final int level;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.gold.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.35)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Text(
-          'LV.$level',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.gold,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.profile});
-
-  final UserProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = (profile.levelProgress / 100).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${_formatNumber(profile.points)} XP',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.text,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 8,
-            backgroundColor: Colors.white.withValues(alpha: 0.08),
-            valueColor: const AlwaysStoppedAnimation(AppTheme.gold),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({
-    required this.stats,
-    this.onFollowingTap,
-    this.onFollowersTap,
-  });
-
-  final ProfileStats stats;
-  final VoidCallback? onFollowingTap;
-  final VoidCallback? onFollowersTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 2.6,
-      ),
-      children: [
-        _StatTile(label: 'Posts', value: stats.posts),
-        _StatTile(
-          label: 'Following',
-          value: stats.following,
-          onTap: onFollowingTap,
-        ),
-        _StatTile(
-          label: 'Followers',
-          value: stats.followers,
-          onTap: onFollowersTap,
-        ),
-        _StatTile(label: 'Likes', value: stats.likes),
-      ],
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, this.onTap});
-
-  final String label;
-  final int value;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final content = DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: onTap == null
-            ? null
-            : Border.all(color: AppTheme.gold.withValues(alpha: 0.18)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _formatNumber(value),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (onTap == null) {
-      return content;
-    }
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: content,
       ),
     );
   }

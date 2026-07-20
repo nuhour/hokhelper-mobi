@@ -59,19 +59,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('View Core Stats'));
+    await tester.tap(find.text('Core Stats'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
-    expect(
-      router.routeInformationProvider.value.uri.queryParameters['entry'],
-      'home_core',
-    );
+    expect(router.routeInformationProvider.value.uri.path, '/stats-home');
+    expect(router.routeInformationProvider.value.uri.query, isEmpty);
 
     router.go('/');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Enter Tier List'));
+    await tester.tap(find.text('Tier List'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(router.routeInformationProvider.value.uri.path, '/tier-list');
@@ -89,7 +86,7 @@ void main() {
       routes: [
         GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
         GoRoute(
-          path: '/tools/stats',
+          path: '/stats-home',
           builder: (context, state) => const SizedBox.shrink(),
         ),
         GoRoute(
@@ -168,29 +165,34 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Hero Rankings'));
+    await tester.ensureVisible(find.text('Hero Rankings'));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
-    expect(
-      router.routeInformationProvider.value.uri.queryParameters['entry'],
-      'home_core',
-    );
+    await tester.tap(find.widgetWithText(TextButton, 'View More').first);
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/stats-home');
+    expect(router.routeInformationProvider.value.uri.query, isEmpty);
 
     router.go('/');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Tier List Preview'));
+    await tester.ensureVisible(find.text('Tier List Preview'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'View More').at(1));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/tier-list');
 
     router.go('/');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Leaderboard'));
+    await tester.ensureVisible(find.text('Leaderboard'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'View More').at(2));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/leaderboard');
 
     router.go('/');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Community Hot'));
+    await tester.ensureVisible(find.text('Community Hot'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'View More').at(3));
     await tester.pumpAndSettle();
     expect(
       router.routeInformationProvider.value.uri.path,
@@ -199,7 +201,9 @@ void main() {
 
     router.go('/');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Latest Updates'));
+    await tester.ensureVisible(find.text('Latest Updates'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'View More').at(4));
     await tester.pumpAndSettle();
     expect(
       router.routeInformationProvider.value.uri.path,
@@ -263,7 +267,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Draft talk'));
+    await tester.ensureVisible(find.text('Draft talk'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Draft talk').hitTestable());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(
@@ -273,7 +279,9 @@ void main() {
 
     router.go('/');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Patch 1.2'));
+    await tester.ensureVisible(find.text('Patch 1.2'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Patch 1.2').hitTestable());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(

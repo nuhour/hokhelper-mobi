@@ -21,7 +21,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('Players'), findsOneWidget);
     expect(find.text('Fly'), findsOneWidget);
     expect(find.text('Focused Player'), findsOneWidget);
     expect(find.text('Clash Lane'), findsWidgets);
@@ -41,7 +41,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Esports'), findsOneWidget);
+    expect(find.text('Teams'), findsOneWidget);
     expect(find.text('Chongqing Wolves'), findsOneWidget);
     expect(find.text('Focused Team'), findsOneWidget);
     expect(find.text('KPL Spring'), findsOneWidget);
@@ -124,11 +124,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Esports'), findsOneWidget);
-    expect(find.text('Esports Stats'), findsOneWidget);
-    expect(find.text('Hero rankings and player performance'), findsOneWidget);
-    expect(find.text('Luban No.7'), findsOneWidget);
-    expect(find.text('Wolves · Fly'), findsOneWidget);
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Team'), findsWidgets);
+    expect(find.text('Wolves'), findsWidgets);
     expect(find.text('Win Rate'), findsOneWidget);
     expect(find.text('66.2%'), findsOneWidget);
     expect(find.text('KPL Spring'), findsOneWidget);
@@ -151,9 +149,8 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/tools/esports/stats',
     );
-    expect(find.text('Esports'), findsOneWidget);
-    expect(find.text('Esports Stats'), findsOneWidget);
-    expect(find.text('Luban No.7'), findsOneWidget);
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Wolves'), findsWidgets);
     expect(find.text('4 - 3'), findsNothing);
   });
 
@@ -390,6 +387,9 @@ List<Override> _esportsOverrides() {
           subtitle: 'Wolves · Fly',
           imageUrl: '',
           leagueName: 'KPL Spring',
+          teamId: '1',
+          teamName: 'Wolves',
+          teamLogoUrl: '',
           metrics: [
             EsportsStatMetric(label: 'Win Rate', value: '66.2%'),
             EsportsStatMetric(label: 'KDA', value: '5.4'),

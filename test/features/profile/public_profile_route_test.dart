@@ -279,7 +279,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Share'));
+    await tester.tap(find.byKey(const ValueKey('public-profile-share-button')));
     await tester.pumpAndSettle();
     expect(find.text('Facebook'), findsOneWidget);
     await tester.tap(find.text('Copy'));
