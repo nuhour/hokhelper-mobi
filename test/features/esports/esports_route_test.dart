@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_detail.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_stat_summary.dart';
@@ -22,11 +23,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Players'), findsOneWidget);
-    expect(find.text('Fly'), findsOneWidget);
-    expect(find.text('Focused Player'), findsOneWidget);
+    expect(find.text('Fly'), findsWidgets);
     expect(find.text('Clash Lane'), findsWidgets);
-    expect(find.text('76.0%'), findsOneWidget);
-    expect(find.text('KPL Spring'), findsNothing);
   });
 
   testWidgets('esports team deep link opens the teams tab', (tester) async {
@@ -43,7 +41,6 @@ void main() {
 
     expect(find.text('Teams'), findsOneWidget);
     expect(find.text('Chongqing Wolves'), findsOneWidget);
-    expect(find.text('Focused Team'), findsOneWidget);
     expect(find.text('KPL Spring'), findsOneWidget);
     expect(find.text('12W / 3L'), findsWidgets);
     expect(find.text('4 - 3'), findsNothing);
@@ -67,7 +64,6 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/tools/esports/teams/1',
     );
-    expect(find.text('Focused Team'), findsOneWidget);
     expect(find.text('Chongqing Wolves'), findsOneWidget);
   });
 
@@ -84,7 +80,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/esports/teams/1');
-    expect(find.text('Focused Team'), findsOneWidget);
     expect(find.text('Chongqing Wolves'), findsOneWidget);
     expect(find.text('4 - 3'), findsNothing);
   });
@@ -107,9 +102,7 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/esports/players/8',
     );
-    expect(find.text('Focused Player'), findsOneWidget);
-    expect(find.text('Fly'), findsOneWidget);
-    expect(find.text('KPL Spring'), findsNothing);
+    expect(find.text('Fly'), findsWidgets);
   });
 
   testWidgets('esports stats route opens the stats tab', (tester) async {
@@ -172,7 +165,6 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/tools/esports/teams/1',
     );
-    expect(find.text('Focused Team'), findsOneWidget);
     expect(find.text('Chongqing Wolves'), findsOneWidget);
     expect(find.text('4 - 3'), findsNothing);
 
@@ -183,9 +175,7 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/tools/esports/players/8',
     );
-    expect(find.text('Focused Player'), findsOneWidget);
-    expect(find.text('Fly'), findsOneWidget);
-    expect(find.text('KPL Spring'), findsNothing);
+    expect(find.text('Fly'), findsWidgets);
   });
 
   testWidgets('legacy tools esports player query opens focused player route', (
@@ -205,8 +195,7 @@ void main() {
     final uri = router.routeInformationProvider.value.uri;
     expect(uri.path, '/tools/esports/players/8');
     expect(uri.queryParameters['league'], 'kpl');
-    expect(find.text('Focused Player'), findsOneWidget);
-    expect(find.text('Fly'), findsOneWidget);
+    expect(find.text('Fly'), findsWidgets);
     expect(find.text('KPL Spring'), findsNothing);
   });
 
@@ -299,7 +288,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/esports/teams/1');
-    expect(find.text('Focused Team'), findsOneWidget);
     expect(find.text('12W / 3L'), findsWidgets);
   });
 
@@ -324,8 +312,6 @@ void main() {
       router.routeInformationProvider.value.uri.path,
       '/esports/players/8',
     );
-    expect(find.text('Focused Player'), findsOneWidget);
-    expect(find.text('76.0%'), findsOneWidget);
   });
 }
 
@@ -377,6 +363,72 @@ List<Override> _esportsOverrides() {
           winRate: 0.76,
         ),
       ];
+    }),
+    esportsTeamDetailProvider.overrideWith((ref, teamId) async {
+      return EsportsTeamDetail.fromJson(const {
+        'id': 1,
+        'name': 'Wolves',
+        'short_name': 'WOL',
+        'league_name': 'KPL Spring',
+        'club': 'Chongqing Wolves',
+        'wins': 12,
+        'losses': 3,
+        'win_rate': 0.8,
+        'battle_count': 15,
+        'team_profile': {
+          'team_nation': 'China',
+          'team_desc': 'A championship team with a storied history.',
+          'honor_list': [
+            {'name': 'KPL Spring', 'title_name': 'Champion'},
+          ],
+        },
+        'event_stats': {
+          'team_rank_stat': {'avgKda': 6.8, 'avgKill': 12.4},
+        },
+        'members': [
+          {
+            'source_id': 8,
+            'name': 'Fly',
+            'role_key': 'clash',
+            'avatar_url': '',
+          },
+        ],
+        'recent_matches': [],
+      });
+    }),
+    esportsPlayerDetailProvider.overrideWith((ref, playerId) async {
+      return EsportsPlayerDetail.fromJson(const {
+        'id': 8,
+        'name': 'Fly',
+        'role': 'Clash Lane',
+        'team_name': 'Wolves',
+        'avatar_url': '',
+        'team_logo_url': '',
+        'stats_json': {
+          'kda': 6.8,
+          'participation_rate': 0.72,
+          'gold_per_min': 680,
+          'damage_per_min': 4200,
+          'taken_per_min': 3900,
+        },
+        'event_stats': [
+          {
+            'dimension': 'avgKill',
+            'dimension_desc': 'Avg Kills',
+            'display_value': '5.40',
+          },
+        ],
+        'common_heroes': [
+          {
+            'hero': {'id': 105, 'hero_name': 'Mulan', 'hero_icon': ''},
+            'battle_count': 10,
+            'win_rate': 0.7,
+            'avg_kda': 5.8,
+            'avg_participation_rate': 0.65,
+          },
+        ],
+        'recent_matches': [],
+      });
     }),
     esportsStatsProvider.overrideWith((ref) async {
       return const [

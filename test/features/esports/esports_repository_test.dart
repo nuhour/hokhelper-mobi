@@ -16,6 +16,91 @@ class _FakeApiClient extends ApiClient {
   final postBodies = <String, Object?>{};
 
   @override
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, Object?>? query,
+  }) async {
+    return switch (path) {
+      '/esports/teams/1' => const {
+        'success': true,
+        'data': {
+          'id': 1,
+          'name': 'DMT',
+          'short_name': 'DMT',
+          'wins': 11,
+          'losses': 7,
+          'win_rate': 0.611,
+          'battle_count': 18,
+          'team_profile': {
+            'team_nation': 'Indonesia',
+            'team_desc': 'A familiar name returns to the stage.',
+            'honor_list': [
+              {'name': 'Championship 2024', 'title_name': 'Runner-up'},
+            ],
+          },
+          'event_stats': {
+            'team_rank_stat': {'avgKda': 9.86, 'avgKill': 8.39},
+          },
+          'members': [
+            {
+              'source_id': 8,
+              'name': 'DMT.CC',
+              'role_key': 'farm',
+              'avatar_url': '/media/cc.png',
+            },
+          ],
+          'recent_matches': [
+            {
+              'id': 20,
+              'team_a': {'name': 'DMT'},
+              'team_b': {'name': 'NS'},
+              'score_a': 2,
+              'score_b': 4,
+              'status_key': 'finished',
+            },
+          ],
+        },
+      },
+      '/esports/players/8' => const {
+        'success': true,
+        'data': {
+          'id': 8,
+          'name': 'NS.Ratel',
+          'role_key': 'clash',
+          'team_name': 'NS',
+          'stats_json': {
+            'kda': 3.9,
+            'gold_per_min': 634.96,
+            'damage_per_min': 3563.72,
+          },
+          'event_stats': [
+            {
+              'dimension': 'avgKill',
+              'dimension_desc': 'Avg Kills',
+              'display_value': '0.88',
+            },
+          ],
+          'common_heroes': [
+            {
+              'hero': {
+                'id': 105,
+                'hero_name': 'Charlotte',
+                'hero_icon': '/media/charlotte.png',
+              },
+              'battle_count': 5,
+              'win_rate': 0.2,
+              'avg_kda': 2.06,
+              'avg_participation_rate': 0.4,
+            },
+          ],
+          'recent_matches': [],
+        },
+      },
+      _ => throw StateError('Unexpected path $path'),
+    };
+  }
+
+  @override
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postBodies[path] = body;
 
@@ -205,6 +290,40 @@ void main() {
     expect(players.single.kdaText, '6.8');
     expect(players.single.winRateText, '76.0%');
   });
+
+  test('loads the complete esports team detail contract', () async {
+    final repository = EsportsRepository(apiClient: _FakeApiClient());
+
+    final detail = await repository.loadTeamDetail('1');
+
+    expect(detail.team.name, 'DMT');
+    expect(detail.nation, 'Indonesia');
+    expect(detail.description, contains('returns to the stage'));
+    expect(detail.battleCount, 18);
+    expect(detail.stats['avgKda'], 9.86);
+    expect(detail.honors.single.title, 'Runner-up');
+    expect(detail.members.single.name, 'DMT.CC');
+    expect(detail.members.single.roleLabel, 'Farm');
+    expect(detail.recentMatches.single.scoreText, '2 - 4');
+  });
+
+  test(
+    'loads player stats and signature heroes for the detail panel',
+    () async {
+      final repository = EsportsRepository(apiClient: _FakeApiClient());
+
+      final detail = await repository.loadPlayerDetail('8');
+
+      expect(detail.player.name, 'NS.Ratel');
+      expect(detail.player.roleLabel, 'Clash');
+      expect(detail.player.metric('gold_per_min'), 634.96);
+      expect(detail.eventStats.single.label, 'Avg Kills');
+      expect(detail.eventStats.single.value, '0.88');
+      expect(detail.commonHeroes.single.name, 'Charlotte');
+      expect(detail.commonHeroes.single.matches, 5);
+      expect(detail.commonHeroes.single.winRate, 0.2);
+    },
+  );
 
   test('loads esports stats sorted by win rate', () async {
     final apiClient = _FakeApiClient();

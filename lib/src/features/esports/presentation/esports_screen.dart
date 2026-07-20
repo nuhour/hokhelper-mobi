@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/esports_repository.dart';
+import '../domain/esports_detail.dart';
 import '../domain/esports_match_summary.dart';
 import '../domain/esports_meta.dart';
 import '../domain/esports_player_summary.dart';
@@ -46,6 +49,16 @@ final esportsPlayersProvider = FutureProvider<List<EsportsPlayerSummary>>((
 final esportsPlayersByLeagueProvider =
     FutureProvider.family<List<EsportsPlayerSummary>, String>((ref, league) {
       return ref.watch(esportsRepositoryProvider).loadPlayers(league: league);
+    });
+
+final esportsTeamDetailProvider =
+    FutureProvider.family<EsportsTeamDetail, String>((ref, teamId) {
+      return ref.watch(esportsRepositoryProvider).loadTeamDetail(teamId);
+    });
+
+final esportsPlayerDetailProvider =
+    FutureProvider.family<EsportsPlayerDetail, String>((ref, playerId) {
+      return ref.watch(esportsRepositoryProvider).loadPlayerDetail(playerId);
     });
 
 final esportsStatsProvider = FutureProvider<List<EsportsStatSummary>>((ref) {
@@ -538,9 +551,11 @@ class _TeamsTab extends ConsumerStatefulWidget {
 class _TeamsTabState extends ConsumerState<_TeamsTab> {
   String _leagueFilter = 'all';
   bool _leagueSelectionTouched = false;
+  String? _presentedTeamId;
 
   @override
   Widget build(BuildContext context) {
+    _scheduleFocusedTeamDetail();
     final meta = ref.watch(esportsMetaProvider).valueOrNull;
     final leagueFilter = _effectiveLeagueFilter(
       meta,
@@ -584,7 +599,6 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
                   selectedLeague == 'all' || team.leagueName == selectedLeague,
             )
             .toList();
-        final focusedTeam = _findTeam(visibleTeams, widget.focusedTeamId);
         final cards = [
           _FilterCard(
             children: [
@@ -600,7 +614,6 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
               ),
             ],
           ),
-          if (focusedTeam != null) _FocusedTeamCard(team: focusedTeam),
           ...visibleTeams.map((team) => _TeamCard(team: team)),
         ];
         return RefreshIndicator(
@@ -616,6 +629,23 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
         );
       },
     );
+  }
+
+  void _scheduleFocusedTeamDetail() {
+    final teamId = widget.focusedTeamId?.trim();
+    if (teamId == null || teamId.isEmpty || _presentedTeamId == teamId) {
+      return;
+    }
+    _presentedTeamId = teamId;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+      await _showTeamDetailDialog(context, ref, teamId);
+      if (mounted && widget.focusedTeamId?.trim() == teamId) {
+        _returnToEsportsTab(context, 'teams');
+      }
+    });
   }
 }
 
@@ -634,9 +664,11 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
   bool _leagueSelectionTouched = false;
   String _teamFilter = 'all';
   String _roleFilter = 'all';
+  String? _presentedPlayerId;
 
   @override
   Widget build(BuildContext context) {
+    _scheduleFocusedPlayerDetail();
     final meta = ref.watch(esportsMetaProvider).valueOrNull;
     final leagueFilter = _effectiveLeagueFilter(
       meta,
@@ -689,10 +721,10 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
               selectedLeague == 'all' ||
               player.leagueName.trim() == selectedLeague;
           final matchesRole =
-              selectedRole == 'all' || player.role.trim() == selectedRole;
+              selectedRole == 'all' || player.roleLabel == selectedRole;
           return matchesLeague && matchesTeam && matchesRole;
         }).toList();
-        final focusedPlayer = _findPlayer(players, widget.focusedPlayerId);
+        final radarMax = _playerRadarMax(filteredPlayers);
         final cards = <Widget>[
           _FilterCard(
             children: [
@@ -732,7 +764,6 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
               ),
             ],
           ),
-          if (focusedPlayer != null) _FocusedPlayerCard(player: focusedPlayer),
           if (filteredPlayers.isEmpty)
             const AppEmptyState(
               icon: Icons.person_search_outlined,
@@ -740,9 +771,9 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
               message: 'Try another team filter.',
             )
           else
-            ...filteredPlayers
-                .where((player) => player.id != focusedPlayer?.id)
-                .map((player) => _PlayerCard(player: player)),
+            ...filteredPlayers.map(
+              (player) => _PlayerCard(player: player, radarMax: radarMax),
+            ),
         ];
         return RefreshIndicator(
           onRefresh: () => activeProvider == null
@@ -757,6 +788,25 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
         );
       },
     );
+  }
+
+  void _scheduleFocusedPlayerDetail() {
+    final playerId = widget.focusedPlayerId?.trim();
+    if (playerId == null ||
+        playerId.isEmpty ||
+        _presentedPlayerId == playerId) {
+      return;
+    }
+    _presentedPlayerId = playerId;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+      await _showPlayerDetailDialog(context, ref, playerId);
+      if (mounted && widget.focusedPlayerId?.trim() == playerId) {
+        _returnToEsportsTab(context, 'players');
+      }
+    });
   }
 }
 
@@ -785,15 +835,30 @@ class _FilterCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: children.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
-              itemBuilder: (context, index) => children[index],
+          if (children.length == 3)
+            Column(
+              children: [
+                SizedBox(width: double.infinity, child: children.first),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: children[1]),
+                    const SizedBox(width: 10),
+                    Expanded(child: children[2]),
+                  ],
+                ),
+              ],
+            )
+          else
+            SizedBox(
+              height: 48,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: children.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) => children[index],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1647,6 +1712,7 @@ String _statsObjectLabel(int rankType) => switch (rankType) {
   _ => 'Entry',
 };
 
+// ignore: unused_element
 class _FocusedTeamCard extends StatelessWidget {
   const _FocusedTeamCard({required this.team});
 
@@ -1722,6 +1788,7 @@ class _FocusedTeamCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _FocusedPlayerCard extends StatelessWidget {
   const _FocusedPlayerCard({required this.player});
 
@@ -1890,7 +1957,7 @@ class _TeamCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go('/esports/teams/${team.id}'),
+        onTap: () => _goToEsportsDetail(context, 'teams', team.id),
         child: _PanelCard(
           child: Row(
             children: [
@@ -1955,9 +2022,10 @@ class _TeamCard extends StatelessWidget {
 }
 
 class _PlayerCard extends StatelessWidget {
-  const _PlayerCard({required this.player});
+  const _PlayerCard({required this.player, required this.radarMax});
 
   final EsportsPlayerSummary player;
+  final Map<String, double> radarMax;
 
   @override
   Widget build(BuildContext context) {
@@ -1966,76 +2034,1088 @@ class _PlayerCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go('/esports/players/${player.id}'),
+        onTap: () => _goToEsportsDetail(context, 'players', player.id),
         child: _PanelCard(
-          child: Row(
+          child: Column(
             children: [
-              _EsportsAvatarLink(
-                route: '/esports/players/${player.id}',
-                label: 'Open ${player.name}',
-                child: AppImage(
-                  url: player.avatarUrl,
-                  width: 58,
-                  height: 58,
-                  borderRadius: 14,
-                  semanticLabel: player.name,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      player.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    if (player.teamName.isNotEmpty)
-                      Text(
-                        player.teamName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                      ),
-                    if (player.role.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        player.role,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.gold,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Wrap(
-                direction: Axis.vertical,
-                spacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.end,
+              Row(
                 children: [
-                  _Pill(label: player.gradeText),
-                  _Pill(label: '${player.kdaText} KDA'),
+                  AppImage(
+                    url: player.avatarUrl,
+                    width: 58,
+                    height: 58,
+                    borderRadius: 10,
+                    semanticLabel: player.name,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          player.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: AppTheme.text,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          [
+                            player.teamName,
+                            player.roleLabel,
+                          ].where((item) => item.isNotEmpty).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  AppImage(
+                    url: player.teamLogoUrl,
+                    width: 34,
+                    height: 34,
+                    borderRadius: 7,
+                    semanticLabel: player.teamName,
+                  ),
                 ],
               ),
+              const SizedBox(height: 8),
+              _PlayerRadarChart(player: player, radarMax: radarMax),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+const _radarMetricKeys = [
+  'avgKda',
+  'avgParticipationRate',
+  'avgGpm',
+  'avgPerMinHurtToHeroTotal',
+  'avgPerMinBeHurtByHeroTotal',
+];
+
+Map<String, double> _playerRadarMax(List<EsportsPlayerSummary> players) {
+  return {
+    for (final key in _radarMetricKeys)
+      key: players.fold<double>(
+        1,
+        (maximum, player) => math.max(maximum, player.metric(key)),
+      ),
+  };
+}
+
+class _PlayerRadarChart extends StatelessWidget {
+  const _PlayerRadarChart({required this.player, required this.radarMax});
+
+  final EsportsPlayerSummary player;
+  final Map<String, double> radarMax;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = [
+      for (final key in _radarMetricKeys)
+        (player.metric(key) / (radarMax[key] ?? 1)).clamp(0.0, 1.0),
+    ];
+    return SizedBox(
+      height: 190,
+      width: double.infinity,
+      child: CustomPaint(
+        painter: _RadarPainter(
+          values: values,
+          labels: const [
+            'KDA',
+            'Participation',
+            'Gold/Min',
+            'Damage/Min',
+            'Taken/Min',
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RadarPainter extends CustomPainter {
+  const _RadarPainter({required this.values, required this.labels});
+
+  final List<double> values;
+  final List<String> labels;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2 + 4);
+    final radius = math.min(size.width * 0.25, size.height * 0.31);
+    final gridPaint = Paint()
+      ..color = AppTheme.muted.withValues(alpha: 0.42)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final axisPaint = Paint()
+      ..color = AppTheme.muted.withValues(alpha: 0.28)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    for (var ring = 1; ring <= 4; ring++) {
+      canvas.drawPath(
+        _radarPath(center, radius * ring / 4, const [1, 1, 1, 1, 1]),
+        gridPaint,
+      );
+    }
+    for (var index = 0; index < 5; index++) {
+      canvas.drawLine(center, _radarPoint(center, radius, index), axisPaint);
+    }
+
+    final dataPath = _radarPath(center, radius, values);
+    canvas.drawPath(
+      dataPath,
+      Paint()
+        ..color = AppTheme.gold.withValues(alpha: 0.34)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(
+      dataPath,
+      Paint()
+        ..color = AppTheme.gold
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    for (var index = 0; index < labels.length; index++) {
+      final anchor = _radarPoint(center, radius + 25, index);
+      final painter = TextPainter(
+        text: TextSpan(
+          text: labels[index],
+          style: const TextStyle(
+            color: AppTheme.muted,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(
+        canvas,
+        Offset(anchor.dx - painter.width / 2, anchor.dy - painter.height / 2),
+      );
+    }
+  }
+
+  Path _radarPath(Offset center, double radius, List<num> factors) {
+    final path = Path();
+    for (var index = 0; index < 5; index++) {
+      final point = _radarPoint(
+        center,
+        radius * factors[index].toDouble(),
+        index,
+      );
+      index == 0
+          ? path.moveTo(point.dx, point.dy)
+          : path.lineTo(point.dx, point.dy);
+    }
+    return path..close();
+  }
+
+  Offset _radarPoint(Offset center, double radius, int index) {
+    final angle = -math.pi / 2 + index * math.pi * 2 / 5;
+    return Offset(
+      center.dx + math.cos(angle) * radius,
+      center.dy + math.sin(angle) * radius,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarPainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.labels != labels;
+  }
+}
+
+Future<void> _showTeamDetailDialog(
+  BuildContext context,
+  WidgetRef ref,
+  String teamId,
+) {
+  return showDialog<void>(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.78),
+    builder: (dialogContext) {
+      return Consumer(
+        builder: (context, dialogRef, child) {
+          final value = dialogRef.watch(esportsTeamDetailProvider(teamId));
+          return _EsportsDetailFrame(
+            title: value.valueOrNull?.team.name ?? 'Team Detail',
+            onClose: () => Navigator.of(dialogContext).pop(),
+            child: value.when(
+              data: (detail) => _TeamDetailContent(detail: detail),
+              loading: () => const _DetailLoadingState(),
+              error: (error, stackTrace) => _DetailErrorState(
+                message: '$error',
+                onRetry: () =>
+                    dialogRef.invalidate(esportsTeamDetailProvider(teamId)),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Future<void> _showPlayerDetailDialog(
+  BuildContext context,
+  WidgetRef ref,
+  String playerId,
+) {
+  return showDialog<void>(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.78),
+    builder: (dialogContext) {
+      return Consumer(
+        builder: (context, dialogRef, child) {
+          final value = dialogRef.watch(esportsPlayerDetailProvider(playerId));
+          return _EsportsDetailFrame(
+            title: value.valueOrNull?.player.name ?? 'Player Detail',
+            onClose: () => Navigator.of(dialogContext).pop(),
+            child: value.when(
+              data: (detail) => _PlayerDetailContent(detail: detail),
+              loading: () => const _DetailLoadingState(),
+              error: (error, stackTrace) => _DetailErrorState(
+                message: '$error',
+                onRetry: () =>
+                    dialogRef.invalidate(esportsPlayerDetailProvider(playerId)),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _EsportsDetailFrame extends StatelessWidget {
+  const _EsportsDetailFrame({
+    required this.title,
+    required this.onClose,
+    required this.child,
+  });
+
+  final String title;
+  final VoidCallback onClose;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.sizeOf(context).height * 0.88;
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
+      backgroundColor: AppTheme.panel,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppTheme.outline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        width: 560,
+        height: height,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 58,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 18, right: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onClose,
+                      tooltip: 'Close',
+                      icon: const Icon(Icons.close, color: AppTheme.muted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1, color: AppTheme.outline),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailLoadingState extends StatelessWidget {
+  const _DetailLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: CircularProgressIndicator());
+  }
+}
+
+class _DetailErrorState extends StatelessWidget {
+  const _DetailErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: AppTheme.error, size: 36),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppTheme.muted),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TeamDetailContent extends StatelessWidget {
+  const _TeamDetailContent({required this.detail});
+
+  final EsportsTeamDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final team = detail.team;
+    return Scrollbar(
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _DetailSurface(
+              child: Column(
+                children: [
+                  AppImage(
+                    url: team.logoUrl,
+                    width: 96,
+                    height: 96,
+                    borderRadius: 10,
+                    fit: BoxFit.contain,
+                    semanticLabel: team.name,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    team.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      team.leagueName,
+                      team.club.isEmpty ? '--' : team.club,
+                    ].join(' · '),
+                    style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                  ),
+                  if (detail.nation.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      detail.nation,
+                      style: const TextStyle(
+                        color: AppTheme.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _SummaryMetric(
+                    label: 'Wins',
+                    value: '${team.wins}',
+                    color: AppTheme.success,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: 'Losses',
+                    value: '${team.losses}',
+                    color: AppTheme.error,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: 'WR',
+                    value: team.winRateText,
+                    color: AppTheme.gold,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: 'Matches',
+                    value: '${detail.battleCount}',
+                  ),
+                ),
+              ],
+            ),
+            if (detail.description.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _DetailSection(
+                title: 'Intro',
+                child: Text(
+                  detail.description,
+                  style: const TextStyle(
+                    color: AppTheme.text,
+                    height: 1.55,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+            if (detail.honors.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _DetailSection(
+                title: 'Awards',
+                child: Column(
+                  children: [
+                    for (final honor in detail.honors)
+                      _DetailKeyValue(label: honor.name, value: honor.title),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            _DetailSection(
+              title: 'Stats',
+              child: Column(
+                children: [
+                  for (final key in _teamDetailMetricOrder)
+                    if (detail.stats.containsKey(key))
+                      _DetailKeyValue(
+                        label: _metricLabelForDetail(key),
+                        value: _formatDetailMetric(key, detail.stats[key]),
+                      ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _DetailTitle(title: 'Members', count: detail.members.length),
+            const SizedBox(height: 8),
+            for (final member in detail.members) ...[
+              _MemberTile(member: member),
+              const SizedBox(height: 7),
+            ],
+            const SizedBox(height: 9),
+            _DetailTitle(title: 'Matches', count: detail.recentMatches.length),
+            const SizedBox(height: 8),
+            for (final match in detail.recentMatches.take(12)) ...[
+              _RecentMatchTile(match: match),
+              const SizedBox(height: 7),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerDetailContent extends StatelessWidget {
+  const _PlayerDetailContent({required this.detail});
+
+  final EsportsPlayerDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final player = detail.player;
+    return Scrollbar(
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _DetailSurface(
+              child: Column(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AppImage(
+                        url: player.avatarUrl,
+                        width: 106,
+                        height: 106,
+                        borderRadius: 12,
+                        semanticLabel: player.name,
+                      ),
+                      if (player.teamLogoUrl.isNotEmpty)
+                        Positioned(
+                          right: -7,
+                          bottom: -7,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: AppTheme.panel,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.outline),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: AppImage(
+                                url: player.teamLogoUrl,
+                                width: 34,
+                                height: 34,
+                                borderRadius: 6,
+                                semanticLabel: player.teamName,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    player.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppTheme.text,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${player.teamName} · ${player.roleLabel}',
+                    style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  _PlayerRadarChart(
+                    player: player,
+                    radarMax: const {
+                      'avgKda': 8,
+                      'avgParticipationRate': 1,
+                      'avgGpm': 850,
+                      'avgPerMinHurtToHeroTotal': 7000,
+                      'avgPerMinBeHurtByHeroTotal': 6000,
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _DetailSection(
+              title: 'Basic',
+              child: Column(
+                children: [
+                  _DetailKeyValue(label: 'ID Name', value: player.name),
+                  _DetailKeyValue(label: 'Role', value: player.roleLabel),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _DetailSection(
+              title: 'Stats',
+              child: Column(
+                children: [
+                  for (final key in _playerDetailMetricOrder)
+                    if (player.stats.containsKey(key))
+                      _DetailKeyValue(
+                        label: _metricLabelForDetail(key),
+                        value: _formatDetailMetric(key, player.stats[key]),
+                      ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _DetailTitle(
+              title: 'Signature Heroes',
+              count: detail.commonHeroes.length,
+            ),
+            const SizedBox(height: 8),
+            for (final hero in detail.commonHeroes) ...[
+              _CommonHeroTile(hero: hero),
+              const SizedBox(height: 7),
+            ],
+            const SizedBox(height: 9),
+            _DetailTitle(title: 'Matches', count: detail.recentMatches.length),
+            const SizedBox(height: 8),
+            for (final match in detail.recentMatches.take(10)) ...[
+              _RecentMatchTile(match: match),
+              const SizedBox(height: 7),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSurface extends StatelessWidget {
+  const _DetailSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.bg.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.outline),
+      ),
+      child: Padding(padding: const EdgeInsets.all(14), child: child),
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({required this.label, required this.value, this.color});
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSurface(
+      child: Column(
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppTheme.muted, fontSize: 9),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color ?? AppTheme.text,
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DetailTitle(title: title),
+          const SizedBox(height: 9),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailTitle extends StatelessWidget {
+  const _DetailTitle({required this.title, this.count});
+
+  final String title;
+  final int? count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+              color: AppTheme.muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        if (count != null)
+          Text(
+            '$count',
+            style: const TextStyle(
+              color: AppTheme.muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DetailKeyValue extends StatelessWidget {
+  const _DetailKeyValue({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 34),
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.bg.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: AppTheme.outline),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                color: AppTheme.text,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberTile extends StatelessWidget {
+  const _MemberTile({required this.member});
+
+  final EsportsTeamMember member;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.bg.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: member.id.isEmpty
+            ? null
+            : () {
+                Navigator.of(context).pop();
+                _goToEsportsDetail(context, 'players', member.id);
+              },
+        child: Container(
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.outline),
+          ),
+          child: Row(
+            children: [
+              AppImage(
+                url: member.avatarUrl,
+                width: 38,
+                height: 38,
+                borderRadius: 7,
+                semanticLabel: member.name,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      member.roleLabel,
+                      style: const TextStyle(
+                        color: AppTheme.muted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppTheme.muted, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CommonHeroTile extends StatelessWidget {
+  const _CommonHeroTile({required this.hero});
+
+  final EsportsCommonHero hero;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSurface(
+      child: Row(
+        children: [
+          AppImage(
+            url: hero.imageUrl,
+            width: 38,
+            height: 38,
+            borderRadius: 7,
+            semanticLabel: hero.name,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hero.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'MP: ${hero.matches} · Win Rate: ${(hero.winRate * 100).toStringAsFixed(1)}% · KDA: ${hero.kda.toStringAsFixed(2)} · KP%: ${(hero.participationRate * 100).toStringAsFixed(1)}%',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentMatchTile extends StatelessWidget {
+  const _RecentMatchTile({required this.match});
+
+  final EsportsMatchSummary match;
+
+  @override
+  Widget build(BuildContext context) {
+    final winner = match.winnerSide;
+    return _DetailSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${_formatMatchShortTime(match.startTime)} · ${match.boText} · ${match.statusLabel}',
+            style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+          ),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  match.teamAName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: winner == 'a' ? AppTheme.success : AppTheme.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Text(
+                match.scoreText,
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  match.teamBName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    color: winner == 'b' ? AppTheme.success : AppTheme.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const _teamDetailMetricOrder = [
+  'avgKda',
+  'avgKillNum',
+  'avgDeathNum',
+  'avgAssistNum',
+  'avgGameDuration',
+  'avgHurtToHeroTotal',
+  'avgGold',
+  'avgPerMinHurtToHeroTotal',
+  'avgGpm',
+  'avgKillAllDragonNum',
+  'avgKillAllTyrantNum',
+  'avgPushTowerNum',
+  'avgOtherCampPushTowerNum',
+];
+
+const _playerDetailMetricOrder = [
+  'avgKillNum',
+  'avgDeathNum',
+  'avgAssistNum',
+  'generalKillNum',
+  'generalDeathNum',
+  'generalAssistNum',
+  'avgPerMinHurtToHeroTotal',
+  'avgGpm',
+  'avgPerMinBeHurtByHeroTotal',
+  'avgGoldRate',
+  'avgHurtToHeroTotalRate',
+  'avgBeHurtByHeroTotalRate',
+  'victoryBattleCount',
+  'defeatedBattleCount',
+];
+
+String _metricLabelForDetail(String key) {
+  return switch (key) {
+    'avgKda' => 'KDA',
+    'avgKillNum' => 'Avg Kills',
+    'avgDeathNum' => 'Avg Deaths',
+    'avgAssistNum' => 'Avg Assists',
+    'avgGameDuration' => 'Avg Duration',
+    'avgHurtToHeroTotal' => 'Avg Output',
+    'avgGold' => 'Avg Gold',
+    'avgPerMinHurtToHeroTotal' => 'Output/Min',
+    'avgGpm' => 'Gold/Min',
+    'avgPerMinBeHurtByHeroTotal' => 'Taken/Min',
+    'avgKillAllDragonNum' => 'Dragons/Game',
+    'avgKillAllTyrantNum' => 'Tyrants/Game',
+    'avgPushTowerNum' => 'Towers/Game',
+    'avgOtherCampPushTowerNum' => 'Towers Lost/Game',
+    'generalKillNum' => 'Total Kills',
+    'generalDeathNum' => 'Total Deaths',
+    'generalAssistNum' => 'Total Assists',
+    'avgGoldRate' => 'Gold Share',
+    'avgHurtToHeroTotalRate' => 'Damage Share',
+    'avgBeHurtByHeroTotalRate' => 'Taken Share',
+    'victoryBattleCount' => 'Wins',
+    'defeatedBattleCount' => 'Losses',
+    _ => key,
+  };
+}
+
+String _formatDetailMetric(String key, Object? value) {
+  final number = value is num
+      ? value.toDouble()
+      : double.tryParse(value?.toString() ?? '');
+  if (number == null) {
+    return value?.toString() ?? '--';
+  }
+  if (key == 'avgGameDuration') {
+    final seconds = (number / 1000).round();
+    return '${seconds ~/ 60}m ${seconds % 60}s';
+  }
+  if (key.endsWith('Rate')) {
+    final rate = number > 1 ? number : number * 100;
+    return '${rate.toStringAsFixed(2)}%';
+  }
+  if (number % 1 == 0) {
+    return number.toInt().toString();
+  }
+  return number.toStringAsFixed(2);
+}
+
+void _returnToEsportsTab(BuildContext context, String tab) {
+  final router = GoRouter.maybeOf(context);
+  if (router == null) {
+    return;
+  }
+  final currentPath = router.routeInformationProvider.value.uri.path;
+  final base = currentPath.startsWith('/tools/esports')
+      ? '/tools/esports'
+      : '/esports';
+  router.go('$base/$tab');
+}
+
+void _goToEsportsDetail(BuildContext context, String tab, String id) {
+  final router = GoRouter.maybeOf(context);
+  if (router == null) {
+    return;
+  }
+  final currentPath = router.routeInformationProvider.value.uri.path;
+  final base = currentPath.startsWith('/tools/esports')
+      ? '/tools/esports'
+      : '/esports';
+  router.go('$base/$tab/$id');
 }
 
 class _EsportsAvatarLink extends StatelessWidget {
@@ -2190,6 +3270,7 @@ class _PanelCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 EsportsTeamSummary? _findTeam(
   List<EsportsTeamSummary> teams,
   String? focusedTeamId,
@@ -2206,6 +3287,7 @@ EsportsTeamSummary? _findTeam(
   return null;
 }
 
+// ignore: unused_element
 EsportsPlayerSummary? _findPlayer(
   List<EsportsPlayerSummary> players,
   String? focusedPlayerId,
@@ -2374,7 +3456,7 @@ List<String> _playerTeamOptions(List<EsportsPlayerSummary> players) {
 List<String> _playerRoleOptions(List<EsportsPlayerSummary> players) {
   final roles = <String>{};
   for (final player in players) {
-    final role = player.role.trim();
+    final role = player.roleLabel;
     if (role.isNotEmpty) {
       roles.add(role);
     }

@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../domain/esports_detail.dart';
 import '../domain/esports_match_summary.dart';
 import '../domain/esports_meta.dart';
 import '../domain/esports_player_summary.dart';
@@ -56,6 +57,16 @@ class EsportsRepository {
       },
     );
     return _readRows(json).map(EsportsPlayerSummary.fromJson).toList();
+  }
+
+  Future<EsportsTeamDetail> loadTeamDetail(String teamId) async {
+    final json = await apiClient.getJson('/esports/teams/$teamId');
+    return EsportsTeamDetail.fromJson(json['data'] ?? json['result']);
+  }
+
+  Future<EsportsPlayerDetail> loadPlayerDetail(String playerId) async {
+    final json = await apiClient.getJson('/esports/players/$playerId');
+    return EsportsPlayerDetail.fromJson(json['data'] ?? json['result']);
   }
 
   Future<List<EsportsStatSummary>> loadStats({
