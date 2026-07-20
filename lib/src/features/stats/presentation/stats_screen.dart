@@ -103,6 +103,7 @@ class StatsScreen extends ConsumerWidget {
     this.initialEntry = StatsEntry.overview,
     this.initialEquipId,
     this.initialHeroId,
+    this.initialPortalTab,
     this.showPortalTabs = false,
     super.key,
   });
@@ -110,12 +111,16 @@ class StatsScreen extends ConsumerWidget {
   final StatsEntry initialEntry;
   final String? initialEquipId;
   final String? initialHeroId;
+  final String? initialPortalTab;
   final bool showPortalTabs;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (showPortalTabs) {
-      return const _StatsPortalTabs();
+      return _StatsPortalTabs(
+        key: ValueKey('stats-portal-${initialPortalTab ?? 'trends'}'),
+        initialTab: initialPortalTab,
+      );
     }
 
     final dashboardProvider = statsDashboardProvider(
@@ -288,7 +293,9 @@ class StatsScreen extends ConsumerWidget {
 }
 
 class _StatsPortalTabs extends StatefulWidget {
-  const _StatsPortalTabs();
+  const _StatsPortalTabs({this.initialTab, super.key});
+
+  final String? initialTab;
 
   @override
   State<_StatsPortalTabs> createState() => _StatsPortalTabsState();
@@ -301,6 +308,11 @@ class _StatsPortalTabsState extends State<_StatsPortalTabs> {
   @override
   void initState() {
     super.initState();
+    _selectedPage = switch (widget.initialTab) {
+      'rankings' || 'ranking' => 0,
+      'tier' => 2,
+      _ => 1,
+    };
     _pageController = PageController(initialPage: _selectedPage);
   }
 

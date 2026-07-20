@@ -529,10 +529,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/tier-list',
-        builder: (context, state) => _standalonePage(
-          fallbackRoute: '/tools/stats',
-          child: const HeroRankingScreen(initialTabIndex: 3),
-        ),
+        redirect: (context, state) => '/stats-home?tab=tier',
       ),
       GoRoute(
         path: '/builds',
@@ -856,7 +853,12 @@ GoRouter createAppRouter() {
               GoRoute(
                 path: '/stats-home',
                 builder: (context, state) => StatsScreen(
-                  showPortalTabs: state.uri.queryParameters.isEmpty,
+                  showPortalTabs:
+                      state.uri.queryParameters['entry'] == null &&
+                      state.uri.queryParameters['dimension'] == null &&
+                      state.uri.queryParameters['equip_id'] == null &&
+                      state.uri.queryParameters['hero_id'] == null,
+                  initialPortalTab: state.uri.queryParameters['tab'],
                   initialEntry: StatsEntry.fromRoute(
                     state.uri.queryParameters['entry'],
                     dimension: state.uri.queryParameters['dimension'],
@@ -1233,7 +1235,12 @@ GoRouter createAppRouter() {
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
                       child: StatsScreen(
-                        showPortalTabs: state.uri.queryParameters.isEmpty,
+                        showPortalTabs:
+                            state.uri.queryParameters['entry'] == null &&
+                            state.uri.queryParameters['dimension'] == null &&
+                            state.uri.queryParameters['equip_id'] == null &&
+                            state.uri.queryParameters['hero_id'] == null,
+                        initialPortalTab: state.uri.queryParameters['tab'],
                         initialEntry: StatsEntry.fromRoute(
                           state.uri.queryParameters['entry'],
                           dimension: state.uri.queryParameters['dimension'],

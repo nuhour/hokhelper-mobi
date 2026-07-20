@@ -136,6 +136,28 @@ void main() {
     expect(find.text('Heroes'), findsNothing);
   });
 
+  testWidgets('stats tier deep link opens the top-level tier page', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/stats-home?tab=tier');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [tierRankingProvider.overrideWith((ref) async => const [])],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('stats-top-tab-strip')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('stats-top-tab-indicator-2')),
+      findsOneWidget,
+    );
+    expect(find.text('No tier data found'), findsOneWidget);
+  });
+
   testWidgets('renders stats dashboard sections', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

@@ -305,9 +305,9 @@ void main() {
           result: {
             'hero_ranking_table': {
               'columns': [
-                {'id': 'hero', 'label': 'Hero', 'type': 'hero'},
-                {'id': 'wr', 'label': 'Win Rate', 'type': 'percent'},
-                {'id': 'pick_rate', 'label': 'Pick Rate', 'type': 'percent'},
+                {'id': 'hero', 'label': '英雄', 'type': 'hero'},
+                {'id': 'wr', 'label': '胜率', 'type': 'percent'},
+                {'id': 'pick_rate', 'label': '出场率', 'type': 'percent'},
               ],
               'rows': [
                 {
@@ -333,14 +333,23 @@ void main() {
                   'avatar_url': 'https://example.test/top-player.jpg',
                   'region': 840,
                   'peak_score': 2400,
+                  'avg_kda': 8.7,
                 },
               ],
             },
             'community_hot': [
-              {'title': 'Draft talk', 'content_preview': 'Ban pick ideas'},
+              {
+                'title': '7月16日版本更新公告',
+                'content_preview': '亲爱的玩家，本次版本即将更新。',
+                'created_at': '2026-07-15T10:00:52Z',
+              },
             ],
             'patch_notes': [
-              {'title': 'Patch 1.2', 'content_preview': 'Balance update'},
+              {
+                'title': '7月16日版本更新公告',
+                'content_preview': '英雄平衡性调整。',
+                'publish_time': '2026-07-15T10:00:52Z',
+              },
             ],
           },
         ),
@@ -370,6 +379,7 @@ void main() {
 
     await _scrollHomeUntilVisible(tester, find.text('Leaderboard'));
     expect(find.text('Leaderboard'), findsOneWidget);
+    expect(find.text('KDA'), findsNothing);
     expect(
       find.byKey(const ValueKey('home-player-avatar-top-player')),
       findsOneWidget,
@@ -381,11 +391,19 @@ void main() {
 
     await _scrollHomeUntilVisible(tester, find.text('Community Hot'));
     expect(find.text('Community Hot'), findsOneWidget);
-    expect(find.text('Draft talk'), findsOneWidget);
+    expect(
+      find.text('Honor of Kings Update · Jul 15, 2026'),
+      findsAtLeastNWidgets(1),
+    );
+    expect(find.textContaining('亲爱的玩家'), findsNothing);
 
     await _scrollHomeUntilVisible(tester, find.text('Latest Updates'));
     expect(find.text('Latest Updates'), findsOneWidget);
-    expect(find.text('Patch 1.2'), findsAtLeastNWidgets(1));
+    expect(
+      find.text('Honor of Kings Update · Jul 15, 2026'),
+      findsAtLeastNWidgets(1),
+    );
+    expect(find.textContaining('英雄平衡性调整'), findsNothing);
   });
 
   testWidgets('home screen exposes hokx portal tool and topic entry points', (

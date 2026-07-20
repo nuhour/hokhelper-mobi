@@ -415,7 +415,7 @@ class _PortalMenuSheet extends StatelessWidget {
       title: '英雄',
       links: [
         _PortalMenuLink('图鉴', '/heroes'),
-        _PortalMenuLink('梯度榜', '/tier-list'),
+        _PortalMenuLink('梯度榜', '/stats-home?tab=tier'),
         _PortalMenuLink('强度趋势', '/tools/stats?entry=hero_trend'),
       ],
     ),
@@ -705,9 +705,8 @@ class _HomeHeroBanner extends StatelessWidget {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
                     child: showWorld
-                        ? _HomeWorldHeroContent(
+                        ? const _HomeWorldHeroContent(
                             key: ValueKey('home-world-hero-content'),
-                            onBack: () => onWorldChanged(false),
                           )
                         : const _HomeMainHeroContent(
                             key: ValueKey('home-main-hero-content'),
@@ -847,7 +846,7 @@ class _HomeMainHeroContent extends StatelessWidget {
         _HomeHeroButton(
           label: 'Tier List',
           icon: Icons.leaderboard_rounded,
-          onTap: () => context.go('/tier-list'),
+          onTap: () => context.go('/stats-home?tab=tier'),
         ),
       ],
     );
@@ -855,22 +854,11 @@ class _HomeMainHeroContent extends StatelessWidget {
 }
 
 class _HomeWorldHeroContent extends StatelessWidget {
-  const _HomeWorldHeroContent({required this.onBack, super.key});
-
-  final VoidCallback onBack;
+  const _HomeWorldHeroContent({super.key});
 
   @override
   Widget build(BuildContext context) {
     return _HomeHeroContent(
-      leading: IconButton(
-        tooltip: 'Back to HOK',
-        onPressed: onBack,
-        icon: const Icon(Icons.arrow_back_rounded),
-        color: Colors.white,
-        style: IconButton.styleFrom(
-          backgroundColor: Colors.black.withValues(alpha: 0.28),
-        ),
-      ),
       title: 'HOK WORLD',
       description:
           'Explore the world, characters, and stories behind Honor of Kings.',
@@ -887,7 +875,6 @@ class _HomeWorldHeroContent extends StatelessWidget {
 
 class _HomeHeroContent extends StatelessWidget {
   const _HomeHeroContent({
-    this.leading,
     required this.title,
     required this.description,
     required this.buttons,
@@ -896,15 +883,12 @@ class _HomeHeroContent extends StatelessWidget {
   final String title;
   final String description;
   final List<_HomeHeroButton> buttons;
-  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (leading != null)
-          Align(alignment: Alignment.centerLeft, child: leading!),
         Text(
           title,
           textAlign: TextAlign.center,
@@ -992,7 +976,7 @@ class _HomeBentoGrid extends StatelessWidget {
             Expanded(
               child: _BentoShortcutCard(
                 title: 'Tier List',
-                route: '/tier-list',
+                route: '/stats-home?tab=tier',
                 icon: Icons.leaderboard_outlined,
               ),
             ),
@@ -1250,7 +1234,7 @@ class _HomePortalPreviews extends StatelessWidget {
       _HomeTierPreviewSection(
         icon: Icons.local_fire_department_outlined,
         title: 'Tier List Preview',
-        route: '/tier-list',
+        route: '/stats-home?tab=tier',
         groups: tierRows.take(4).toList(growable: false),
       ),
       _HomePlayerRankingTable(
@@ -1264,8 +1248,12 @@ class _HomePortalPreviews extends StatelessWidget {
         rows: [
           for (final row in communityPosts.take(3))
             _HomePreviewRow(
-              title: _readString(row['title'], fallback: 'Community post'),
-              detail: _readString(row['content_preview']),
+              title: _localizedHomePostTitle(
+                context,
+                row,
+                fallback: 'Community post',
+              ),
+              detail: _localizedHomePostDetail(context, row),
               route: _communityPostRoute(row['id']),
             ),
         ],
@@ -1298,7 +1286,7 @@ class _HomeHeroRankingTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns = _homeTableColumns(rawColumns, rows);
+    final columns = _homeTableColumns(context, rawColumns, rows);
     final dataRows = rows;
 
     return _HomeDataSection(
@@ -1391,7 +1379,6 @@ class _HomePlayerTable extends StatelessWidget {
         label: 'Win Rate',
         type: 'percent',
       ),
-      const _HomeTableColumn(id: 'avg_kda', label: 'KDA', type: 'number'),
     ];
     return _HomeDataTable(columns: columns, rows: rows.take(8).toList());
   }
@@ -1944,38 +1931,40 @@ class _HomeHeroAvatarCluster extends StatelessWidget {
     return SizedBox(
       width: 48,
       height: 42,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 7,
-            top: 0,
-            child: _HomeHeroAvatar(
-              heroId: _readMap(row['hero'])['id'] ?? row['id'],
-              name: heroName,
+      child: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned(
+              left: 7,
+              top: 0,
+              child: _HomeHeroAvatar(
+                heroId: _readMap(row['hero'])['id'] ?? row['id'],
+                name: heroName,
+              ),
             ),
-          ),
-          Positioned(
-            left: 0,
-            bottom: 0,
-            child: _HomeDataIcon(
-              row: row,
-              field: 'best_skill',
-              kind: 'summoner_skill',
-              size: 20,
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: _HomeDataIcon(
+                row: row,
+                field: 'best_skill',
+                kind: 'summoner_skill',
+                size: 20,
+              ),
             ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: _HomeDataIcon(
-              row: row,
-              field: 'best_equip',
-              kind: 'equip',
-              size: 20,
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: _HomeDataIcon(
+                row: row,
+                field: 'best_equip',
+                kind: 'equip',
+                size: 20,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2035,6 +2024,7 @@ class _HomeHeroAvatar extends StatelessWidget {
 }
 
 List<_HomeTableColumn> _homeTableColumns(
+  BuildContext context,
   Object? rawColumns,
   List<Map<String, dynamic>> rows,
 ) {
@@ -2047,7 +2037,11 @@ List<_HomeTableColumn> _homeTableColumns(
       columns.add(
         _HomeTableColumn(
           id: id,
-          label: _readString(value['label'], fallback: id),
+          label: _localizedHomeMetricLabel(
+            context,
+            id,
+            _readString(value['label'], fallback: id),
+          ),
           type: _readString(value['type']),
         ),
       );
@@ -2066,6 +2060,124 @@ List<_HomeTableColumn> _homeTableColumns(
       ),
   ];
 }
+
+String _localizedHomeMetricLabel(
+  BuildContext context,
+  String id,
+  String fallback,
+) {
+  if (Localizations.localeOf(context).languageCode == 'zh') return fallback;
+  const labels = <String, String>{
+    'hero': 'Hero',
+    'wr': 'Win Rate',
+    'win_rate': 'Win Rate',
+    'pick_rate': 'Pick Rate',
+    'ban_rate': 'Ban Rate',
+    'bp_rate': 'BP Rate',
+    'phase_early_wr': 'Early WR',
+    'phase_early_share': 'Early Share',
+    'phase_mid_wr': 'Mid WR',
+    'phase_mid_share': 'Mid Share',
+    'phase_late_wr': 'Late WR',
+    'phase_late_share': 'Late Share',
+    'avg_grade_all': 'Avg Rating',
+    'avg_grade_win': 'Win Rating',
+    'avg_grade_lose': 'Loss Rating',
+    'avg_kills': 'Kills',
+    'avg_deaths': 'Deaths',
+    'avg_assists': 'Assists',
+    'avg_total_hero_hurt_cnt': 'Hero Damage',
+    'avg_total_hurt_cnt': 'Total Damage',
+    'avg_hurt_trans_rate': 'Damage Efficiency',
+    'dmg_share': 'Damage Share',
+    'avg_total_behurt_cnt_per_min': 'Damage Taken/Min',
+    'avg_behurt_per_death': 'Damage Taken/Death',
+    'avg_total_behurt_cnt': 'Damage Taken',
+    'take_dmg_share': 'Damage Taken Share',
+    'avg_money_per_min': 'Gold/Min',
+    'avg_money': 'Total Gold',
+    'avg_monster_coin': 'Jungle Gold',
+    'money_share': 'Gold Share',
+    'avg_join_game_percent': 'Participation',
+    'avg_heal_cnt': 'Healing',
+    'avg_ctrl_time': 'Control Time',
+    'avg_kill_soldier': 'Minion Kills',
+    'mvp_rate': 'MVP Rate',
+    'mvp_rate_win': 'Win MVP Rate',
+    'mvp_rate_lose': 'Loss MVP Rate',
+    'trend_smoothed': 'Win Rate Trend',
+  };
+  return labels[id] ?? (_containsHan(fallback) ? _titleFromId(id) : fallback);
+}
+
+String _localizedHomePostTitle(
+  BuildContext context,
+  Map<String, dynamic> row, {
+  required String fallback,
+}) {
+  final title = _readString(
+    row['title_en'] ?? row['english_title'] ?? row['title'],
+    fallback: fallback,
+  );
+  if (Localizations.localeOf(context).languageCode == 'zh' ||
+      !_containsHan(title)) {
+    return title;
+  }
+  final date = _homePostDate(row);
+  return date == null
+      ? 'Honor of Kings Update'
+      : 'Honor of Kings Update · ${_formatEnglishDate(date)}';
+}
+
+String _localizedHomePostDetail(
+  BuildContext context,
+  Map<String, dynamic> row,
+) {
+  final detail = _readString(
+    row['content_preview_en'] ??
+        row['english_preview'] ??
+        row['content_preview'],
+  );
+  if (Localizations.localeOf(context).languageCode == 'zh' ||
+      !_containsHan(detail)) {
+    return detail;
+  }
+  final date = _homePostDate(row);
+  return date == null
+      ? 'Official news and balance changes'
+      : 'Official update published ${_formatEnglishDate(date)}';
+}
+
+DateTime? _homePostDate(Map<String, dynamic> row) {
+  final raw = row['publish_time'] ?? row['created_at'] ?? row['updated_at'];
+  return raw == null ? null : DateTime.tryParse(raw.toString())?.toLocal();
+}
+
+String _formatEnglishDate(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[date.month - 1]} ${date.day}, ${date.year}';
+}
+
+bool _containsHan(String value) => RegExp(r'[\u3400-\u9fff]').hasMatch(value);
+
+String _titleFromId(String id) => id
+    .split('_')
+    .where((part) => part.isNotEmpty)
+    .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+    .join(' ');
 
 String _homeTableValue(Map<String, dynamic> row, _HomeTableColumn column) {
   Object? value = row[column.id];
@@ -2119,15 +2231,24 @@ class _HomeTierPreviewSection extends StatelessWidget {
           if (groups.isEmpty)
             const _HomeEmptyPanelMessage()
           else
-            for (final group in groups)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 7),
+            for (var index = 0; index < groups.length; index++)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                decoration: BoxDecoration(
+                  border: index == groups.length - 1
+                      ? null
+                      : Border(
+                          bottom: BorderSide(
+                            color: AppTheme.outline.withValues(alpha: 0.38),
+                          ),
+                        ),
+                ),
                 child: Row(
                   children: [
                     SizedBox(
                       width: 28,
                       child: Text(
-                        _readString(group['tier'], fallback: 'Tier'),
+                        _readString(groups[index]['tier'], fallback: 'Tier'),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: AppTheme.muted,
@@ -2141,7 +2262,7 @@ class _HomeTierPreviewSection extends StatelessWidget {
                       height: 28,
                       decoration: BoxDecoration(
                         color: _homeTierColor(
-                          _readString(group['tier'], fallback: 'Tier'),
+                          _readString(groups[index]['tier'], fallback: 'Tier'),
                         ),
                         borderRadius: BorderRadius.circular(4),
                       ),
@@ -2152,7 +2273,7 @@ class _HomeTierPreviewSection extends StatelessWidget {
                         spacing: 7,
                         runSpacing: 7,
                         children: [
-                          for (final hero in _readList(group['heroes']))
+                          for (final hero in _readList(groups[index]['heroes']))
                             _HomeHeroAvatar(
                               heroId: hero['hero_id'] ?? hero['id'],
                               name: _readString(hero['name'], fallback: 'Hero'),
@@ -2260,7 +2381,11 @@ class _HomePatchNoteRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _readString(note['title'], fallback: 'Patch note'),
+                  _localizedHomePostTitle(
+                    context,
+                    note,
+                    fallback: 'Patch note',
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -2280,7 +2405,7 @@ class _HomePatchNoteRow extends StatelessWidget {
                   )
                 else
                   Text(
-                    _readString(note['content_preview']),
+                    _localizedHomePostDetail(context, note),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(
@@ -2490,7 +2615,7 @@ class _HomePrimaryActions extends StatelessWidget {
           child: _PrimaryActionCard(
             title: 'Enter Tier List',
             subtitle: 'Hero tiers',
-            route: '/tier-list',
+            route: '/stats-home?tab=tier',
             icon: Icons.leaderboard_outlined,
           ),
         ),

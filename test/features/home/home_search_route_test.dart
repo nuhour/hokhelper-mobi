@@ -71,7 +71,11 @@ void main() {
     await tester.tap(find.text('Tier List'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(router.routeInformationProvider.value.uri.path, '/tier-list');
+    expect(router.routeInformationProvider.value.uri.path, '/stats-home');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['tab'],
+      'tier',
+    );
   });
 
   testWidgets('home preview sections open matching portal routes', (
@@ -87,10 +91,6 @@ void main() {
         GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
         GoRoute(
           path: '/stats-home',
-          builder: (context, state) => const SizedBox.shrink(),
-        ),
-        GoRoute(
-          path: '/tier-list',
           builder: (context, state) => const SizedBox.shrink(),
         ),
         GoRoute(
@@ -178,7 +178,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'View More').at(1));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/tier-list');
+    expect(router.routeInformationProvider.value.uri.path, '/stats-home');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['tab'],
+      'tier',
+    );
 
     router.go('/');
     await tester.pumpAndSettle();
