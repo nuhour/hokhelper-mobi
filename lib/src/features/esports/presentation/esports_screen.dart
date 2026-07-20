@@ -317,13 +317,6 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
           ? ref.invalidate(esportsMatchesProvider)
           : ref.invalidate(activeProvider),
       data: (matches) {
-        if (matches.isEmpty) {
-          return const AppEmptyState(
-            icon: Icons.sports_esports_outlined,
-            title: 'No matches found',
-            message: 'Pull to refresh and try again.',
-          );
-        }
         final leagueOptions = _leagueNames(
           meta,
           matches.map((match) => match.leagueName),
@@ -342,7 +335,7 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
               match.leagueName.trim() == selectedLeague;
           final matchesStatus =
               selectedStatus == 'all' ||
-              match.statusKey.trim().toLowerCase() == selectedStatus;
+              _normalizedMatchStatus(match.statusKey) == selectedStatus;
           final matchesDate =
               _dateFilter.trim().isEmpty ||
               _matchDateValue(match.startTime) == _dateFilter.trim();
@@ -350,21 +343,27 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
         }).toList();
         final groupedMatches = _groupMatchesByStatus(filteredMatches);
         final championMatchId = _championMatchId(matches);
-        final matchSections = _matchStatusOptions(matches).map((status) {
-          return _MatchStatusSection(
-            status: status,
-            matches: groupedMatches[status.value] ?? const [],
-            championMatchId: championMatchId,
-          );
-        });
+        final matchSections = statusOptions
+            .where(
+              (status) =>
+                  selectedStatus == 'all' || status.value == selectedStatus,
+            )
+            .map((status) {
+              return _MatchStatusSection(
+                status: status,
+                matches: groupedMatches[status.value] ?? const [],
+                championMatchId: championMatchId,
+              );
+            });
         final cards = <Widget>[
           _FilterCard(
             children: [
               _FilterDropdown(
                 width: 180,
                 value: selectedLeague,
-                fallbackLabel: 'All Leagues',
+                fallbackLabel: 'Select League',
                 options: _textFilterOptions(leagueOptions),
+                includeAll: false,
                 onChanged: (value) {
                   setState(() {
                     _leagueFilter = value;
@@ -383,11 +382,9 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
                   });
                 },
               ),
-              _FilterTextField(
+              _DateFilterButton(
                 width: 150,
-                label: 'Match Date',
                 value: _dateFilter,
-                hintText: 'YYYY-MM-DD',
                 onChanged: (value) {
                   setState(() {
                     _dateFilter = value;
@@ -396,14 +393,7 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
               ),
             ],
           ),
-          if (filteredMatches.isEmpty)
-            const AppEmptyState(
-              icon: Icons.sports_esports_outlined,
-              title: 'No matches found',
-              message: 'Try another match filter.',
-            )
-          else
-            ...matchSections,
+          ...matchSections,
         ];
         return RefreshIndicator(
           onRefresh: () => activeProvider == null
@@ -502,8 +492,9 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
               _FilterDropdown(
                 width: 220,
                 value: selectedLeague,
-                fallbackLabel: 'All Leagues',
+                fallbackLabel: 'Select League',
                 options: _textFilterOptions(leagueNames),
+                includeAll: false,
                 onChanged: (league) => setState(() {
                   _leagueFilter = league;
                   _leagueSelectionTouched = true;
@@ -517,7 +508,17 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
           ],
           const SizedBox(height: 12),
           if (visibleStats.isNotEmpty)
-            _EsportsStatsTable(stats: visibleStats, rankType: selectedRank)
+            _EsportsStatsTable(
+              stats: visibleStats,
+              rankType: selectedRank,
+              onOpenDetail: (type, id) {
+                if (type == 1) {
+                  _showTeamDetailDialog(context, ref, id);
+                } else {
+                  _showPlayerDetailDialog(context, ref, id);
+                }
+              },
+            )
           else if (value.hasError)
             AppEmptyState(
               icon: Icons.cloud_off_outlined,
@@ -605,8 +606,9 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
               _FilterDropdown(
                 width: 220,
                 value: selectedLeague,
-                fallbackLabel: 'All Leagues',
+                fallbackLabel: 'Select League',
                 options: _textFilterOptions(leagues),
+                includeAll: false,
                 onChanged: (league) => setState(() {
                   _leagueFilter = league;
                   _leagueSelectionTouched = true;
@@ -614,7 +616,12 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
               ),
             ],
           ),
-          ...visibleTeams.map((team) => _TeamCard(team: team)),
+          ...visibleTeams.map(
+            (team) => _TeamCard(
+              team: team,
+              onTap: () => _showTeamDetailDialog(context, ref, team.id),
+            ),
+          ),
         ];
         return RefreshIndicator(
           onRefresh: () => activeProvider == null
@@ -731,8 +738,9 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
               _FilterDropdown(
                 width: 180,
                 value: selectedLeague,
-                fallbackLabel: 'All Leagues',
+                fallbackLabel: 'Select League',
                 options: _textFilterOptions(leagueOptions),
+                includeAll: false,
                 onChanged: (value) {
                   setState(() {
                     _leagueFilter = value;
@@ -772,7 +780,11 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
             )
           else
             ...filteredPlayers.map(
-              (player) => _PlayerCard(player: player, radarMax: radarMax),
+              (player) => _PlayerCard(
+                player: player,
+                radarMax: radarMax,
+                onTap: () => _showPlayerDetailDialog(context, ref, player.id),
+              ),
             ),
         ];
         return RefreshIndicator(
@@ -872,6 +884,7 @@ class _FilterDropdown extends StatelessWidget {
     required this.fallbackLabel,
     required this.options,
     required this.onChanged,
+    this.includeAll = true,
   });
 
   final double width;
@@ -879,6 +892,7 @@ class _FilterDropdown extends StatelessWidget {
   final String fallbackLabel;
   final List<_FilterOption> options;
   final ValueChanged<String> onChanged;
+  final bool includeAll;
 
   @override
   Widget build(BuildContext context) {
@@ -903,7 +917,8 @@ class _FilterDropdown extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
               items: [
-                DropdownMenuItem(value: 'all', child: Text(fallbackLabel)),
+                if (includeAll || value == 'all')
+                  DropdownMenuItem(value: 'all', child: Text(fallbackLabel)),
                 ...options.map(
                   (option) => DropdownMenuItem(
                     value: option.value,
@@ -928,59 +943,91 @@ class _FilterDropdown extends StatelessWidget {
   }
 }
 
-class _FilterTextField extends StatelessWidget {
-  const _FilterTextField({
+class _DateFilterButton extends StatelessWidget {
+  const _DateFilterButton({
     required this.width,
-    required this.label,
     required this.value,
-    required this.hintText,
     required this.onChanged,
   });
 
   final double width;
-  final String label;
   final String value;
-  final String hintText;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: width,
-      child: TextFormField(
-        initialValue: value,
-        keyboardType: TextInputType.datetime,
-        textInputAction: TextInputAction.done,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: AppTheme.text,
-          fontWeight: FontWeight.w800,
+      height: 48,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hintText,
-          isDense: true,
-          filled: true,
-          fillColor: Colors.black.withValues(alpha: 0.18),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppTheme.gold),
-          ),
-          labelStyle: const TextStyle(color: AppTheme.muted),
-          hintStyle: const TextStyle(color: AppTheme.muted),
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () async {
+                  final initialDate =
+                      DateTime.tryParse(value) ?? DateTime.now();
+                  final selected = await showDatePicker(
+                    context: context,
+                    initialDate: initialDate,
+                    firstDate: DateTime(2023),
+                    lastDate: DateTime.now().add(const Duration(days: 730)),
+                  );
+                  if (selected == null) {
+                    return;
+                  }
+                  onChanged(
+                    '${selected.year.toString().padLeft(4, '0')}-'
+                    '${selected.month.toString().padLeft(2, '0')}-'
+                    '${selected.day.toString().padLeft(2, '0')}',
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 11),
+                  child: Row(
+                    children: [
+                      Icon(
+                        value.isEmpty
+                            ? Icons.calendar_month_outlined
+                            : Icons.event_available,
+                        color: value.isEmpty ? AppTheme.muted : AppTheme.gold,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          value.isEmpty ? 'Match Date' : value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: value.isEmpty
+                                    ? AppTheme.muted
+                                    : AppTheme.text,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (value.isNotEmpty)
+              IconButton(
+                tooltip: 'Clear date',
+                onPressed: () => onChanged(''),
+                icon: const Icon(Icons.close, size: 17),
+                color: AppTheme.muted,
+              ),
+          ],
         ),
-        onChanged: onChanged,
       ),
     );
   }
@@ -1330,74 +1377,47 @@ class _StatsIntroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (var index = 0; index < rankTypes.length; index++) ...[
-            _UnderlineSelectButton(
-              label: rankTypes[index].label,
-              selected: rankTypes[index].value == selectedRank,
-              onTap: () => onRankChanged(rankTypes[index].value),
-            ),
-            if (index != rankTypes.length - 1) const SizedBox(width: 22),
-          ],
-        ],
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: rankTypes.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          final rankType = rankTypes[index];
+          return ChoiceChip(
+            selected: rankType.value == selectedRank,
+            showCheckmark: false,
+            avatar: Icon(_rankTypeIcon(rankType.value), size: 17),
+            label: Text(rankType.label),
+            onSelected: (_) => onRankChanged(rankType.value),
+          );
+        },
       ),
     );
   }
 }
 
-class _UnderlineSelectButton extends StatelessWidget {
-  const _UnderlineSelectButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: selected ? AppTheme.text : AppTheme.muted,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 5),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: selected ? 20 : 0,
-              height: 3,
-              decoration: BoxDecoration(
-                color: AppTheme.gold,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+IconData _rankTypeIcon(int rankType) {
+  return switch (rankType) {
+    1 => Icons.groups_2_outlined,
+    2 => Icons.person_outline,
+    3 => Icons.sports_esports_outlined,
+    4 => Icons.shield_outlined,
+    _ => Icons.analytics_outlined,
+  };
 }
 
 class _EsportsStatsTable extends StatelessWidget {
-  const _EsportsStatsTable({required this.stats, required this.rankType});
+  const _EsportsStatsTable({
+    required this.stats,
+    required this.rankType,
+    required this.onOpenDetail,
+  });
 
   final List<EsportsStatSummary> stats;
   final int rankType;
+  final void Function(int rankType, String id) onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -1410,7 +1430,10 @@ class _EsportsStatsTable extends StatelessWidget {
       }
     }
     final columns = metricLabels.toList(growable: false);
-    final tableWidth = 206.0 + columns.length * 106;
+    final rankWidth = 30.0;
+    final identityWidth = rankType == 4 ? 56.0 : 126.0;
+    final metricWidth = 88.0;
+    final tableWidth = rankWidth + identityWidth + columns.length * metricWidth;
     final leagueName = stats
         .map((stat) => stat.leagueName)
         .firstWhere((name) => name.isNotEmpty, orElse: () => '');
@@ -1459,12 +1482,22 @@ class _EsportsStatsTable extends StatelessWidget {
               width: tableWidth,
               child: Column(
                 children: [
-                  _StatsTableHeader(columns: columns, rankType: rankType),
+                  _StatsTableHeader(
+                    columns: columns,
+                    rankType: rankType,
+                    rankWidth: rankWidth,
+                    identityWidth: identityWidth,
+                    metricWidth: metricWidth,
+                  ),
                   for (final stat in stats)
                     _StatsTableRow(
                       stat: stat,
                       columns: columns,
                       rankType: rankType,
+                      rankWidth: rankWidth,
+                      identityWidth: identityWidth,
+                      metricWidth: metricWidth,
+                      onOpenDetail: onOpenDetail,
                     ),
                 ],
               ),
@@ -1523,10 +1556,19 @@ class _StatsLoadingTable extends StatelessWidget {
 }
 
 class _StatsTableHeader extends StatelessWidget {
-  const _StatsTableHeader({required this.columns, required this.rankType});
+  const _StatsTableHeader({
+    required this.columns,
+    required this.rankType,
+    required this.rankWidth,
+    required this.identityWidth,
+    required this.metricWidth,
+  });
 
   final List<String> columns;
   final int rankType;
+  final double rankWidth;
+  final double identityWidth;
+  final double metricWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -1545,15 +1587,23 @@ class _StatsTableHeader extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 38,
+            width: rankWidth,
             child: Center(child: Text('#', style: labelStyle)),
           ),
           SizedBox(
-            width: 168,
+            width: identityWidth,
             child: Text(_statsObjectLabel(rankType), style: labelStyle),
           ),
           for (final column in columns)
-            SizedBox(width: 106, child: Text(column, style: labelStyle)),
+            SizedBox(
+              width: metricWidth,
+              child: Text(
+                column,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
+              ),
+            ),
         ],
       ),
     );
@@ -1565,11 +1615,19 @@ class _StatsTableRow extends StatelessWidget {
     required this.stat,
     required this.columns,
     required this.rankType,
+    required this.rankWidth,
+    required this.identityWidth,
+    required this.metricWidth,
+    required this.onOpenDetail,
   });
 
   final EsportsStatSummary stat;
   final List<String> columns;
   final int rankType;
+  final double rankWidth;
+  final double identityWidth;
+  final double metricWidth;
+  final void Function(int rankType, String id) onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -1577,7 +1635,7 @@ class _StatsTableRow extends StatelessWidget {
       for (final metric in stat.metrics) metric.label: metric.value,
     };
     return Container(
-      height: 68,
+      height: 58,
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
@@ -1586,7 +1644,7 @@ class _StatsTableRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 38,
+            width: rankWidth,
             child: Center(
               child: Text(
                 '${stat.rank}',
@@ -1598,12 +1656,16 @@ class _StatsTableRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 168,
-            child: _StatsIdentityCell(stat: stat, rankType: rankType),
+            width: identityWidth,
+            child: _StatsIdentityCell(
+              stat: stat,
+              rankType: rankType,
+              onOpenDetail: onOpenDetail,
+            ),
           ),
           for (final column in columns)
             SizedBox(
-              width: 106,
+              width: metricWidth,
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1624,20 +1686,25 @@ class _StatsTableRow extends StatelessWidget {
 }
 
 class _StatsIdentityCell extends StatelessWidget {
-  const _StatsIdentityCell({required this.stat, required this.rankType});
+  const _StatsIdentityCell({
+    required this.stat,
+    required this.rankType,
+    required this.onOpenDetail,
+  });
 
   final EsportsStatSummary stat;
   final int rankType;
+  final void Function(int rankType, String id) onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
     final isTeam = rankType == 1;
     final isPlayer = rankType == 2 || rankType == 3;
-    final route = isTeam && stat.teamId.isNotEmpty
-        ? '/esports/teams/${stat.teamId}'
-        : isPlayer && stat.playerId.isNotEmpty
-        ? '/esports/players/${stat.playerId}'
-        : null;
+    final detailId = isTeam
+        ? stat.teamId
+        : isPlayer
+        ? stat.playerId
+        : '';
     final imageUrl = switch (rankType) {
       1 => stat.teamLogoUrl,
       2 => stat.playerAvatarUrl,
@@ -1647,56 +1714,59 @@ class _StatsIdentityCell extends StatelessWidget {
     final title = switch (rankType) {
       1 => stat.teamName.isEmpty ? stat.objectName : stat.teamName,
       2 || 3 => stat.playerName.isEmpty ? stat.objectName : stat.playerName,
-      4 => stat.heroName.isEmpty ? stat.objectName : stat.heroName,
+      4 => '',
       _ => stat.objectName,
     };
-    final subtitle = rankType == 3
-        ? stat.heroName
-        : rankType == 2
+    final subtitle = rankType == 2
         ? stat.subtitle.replaceFirst(stat.teamName, '').replaceAll(' · ', '')
         : '';
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: route == null ? null : () => context.go(route),
+      onTap: detailId.isEmpty ? null : () => onOpenDetail(rankType, detailId),
       child: Padding(
-        padding: const EdgeInsets.only(right: 8),
+        padding: EdgeInsets.only(right: rankType == 4 ? 0 : 6),
         child: Row(
+          mainAxisAlignment: rankType == 4
+              ? MainAxisAlignment.center
+              : MainAxisAlignment.start,
           children: [
             AppImage(
               url: imageUrl,
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              semanticLabel: title,
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              semanticLabel: title.isEmpty ? 'Hero' : title,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppTheme.text,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  if (subtitle.isNotEmpty)
+            if (rankType != 4) ...[
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      subtitle,
+                      title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.muted,
-                        fontWeight: FontWeight.w700,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppTheme.text,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                ],
+                    if (subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.muted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -1946,9 +2016,10 @@ class _FocusMetric extends StatelessWidget {
 }
 
 class _TeamCard extends StatelessWidget {
-  const _TeamCard({required this.team});
+  const _TeamCard({required this.team, required this.onTap});
 
   final EsportsTeamSummary team;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1957,20 +2028,16 @@ class _TeamCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _goToEsportsDetail(context, 'teams', team.id),
+        onTap: onTap,
         child: _PanelCard(
           child: Row(
             children: [
-              _EsportsAvatarLink(
-                route: '/esports/teams/${team.id}',
-                label: 'Open ${team.displayName}',
-                child: AppImage(
-                  url: team.logoUrl,
-                  width: 58,
-                  height: 58,
-                  borderRadius: 14,
-                  semanticLabel: team.name,
-                ),
+              AppImage(
+                url: team.logoUrl,
+                width: 58,
+                height: 58,
+                borderRadius: 14,
+                semanticLabel: team.name,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -2022,10 +2089,15 @@ class _TeamCard extends StatelessWidget {
 }
 
 class _PlayerCard extends StatelessWidget {
-  const _PlayerCard({required this.player, required this.radarMax});
+  const _PlayerCard({
+    required this.player,
+    required this.radarMax,
+    required this.onTap,
+  });
 
   final EsportsPlayerSummary player;
   final Map<String, double> radarMax;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2034,7 +2106,7 @@ class _PlayerCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _goToEsportsDetail(context, 'players', player.id),
+        onTap: onTap,
         child: _PanelCard(
           child: Column(
             children: [
@@ -2254,7 +2326,16 @@ Future<void> _showTeamDetailDialog(
             title: value.valueOrNull?.team.name ?? 'Team Detail',
             onClose: () => Navigator.of(dialogContext).pop(),
             child: value.when(
-              data: (detail) => _TeamDetailContent(detail: detail),
+              data: (detail) => _TeamDetailContent(
+                detail: detail,
+                onPlayerTap: (playerId) async {
+                  Navigator.of(dialogContext).pop();
+                  await Future<void>.delayed(Duration.zero);
+                  if (context.mounted) {
+                    _showPlayerDetailDialog(context, ref, playerId);
+                  }
+                },
+              ),
               loading: () => const _DetailLoadingState(),
               error: (error, stackTrace) => _DetailErrorState(
                 message: '$error',
@@ -2409,9 +2490,10 @@ class _DetailErrorState extends StatelessWidget {
 }
 
 class _TeamDetailContent extends StatelessWidget {
-  const _TeamDetailContent({required this.detail});
+  const _TeamDetailContent({required this.detail, required this.onPlayerTap});
 
   final EsportsTeamDetail detail;
+  final ValueChanged<String> onPlayerTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2542,7 +2624,7 @@ class _TeamDetailContent extends StatelessWidget {
             _DetailTitle(title: 'Members', count: detail.members.length),
             const SizedBox(height: 8),
             for (final member in detail.members) ...[
-              _MemberTile(member: member),
+              _MemberTile(member: member, onTap: onPlayerTap),
               const SizedBox(height: 7),
             ],
             const SizedBox(height: 9),
@@ -2838,9 +2920,10 @@ class _DetailKeyValue extends StatelessWidget {
 }
 
 class _MemberTile extends StatelessWidget {
-  const _MemberTile({required this.member});
+  const _MemberTile({required this.member, required this.onTap});
 
   final EsportsTeamMember member;
+  final ValueChanged<String> onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2849,12 +2932,7 @@ class _MemberTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: member.id.isEmpty
-            ? null
-            : () {
-                Navigator.of(context).pop();
-                _goToEsportsDetail(context, 'players', member.id);
-              },
+        onTap: member.id.isEmpty ? null : () => onTap(member.id),
         child: Container(
           padding: const EdgeInsets.all(9),
           decoration: BoxDecoration(
@@ -2919,30 +2997,15 @@ class _CommonHeroTile extends StatelessWidget {
             width: 38,
             height: 38,
             borderRadius: 7,
-            semanticLabel: hero.name,
+            semanticLabel: 'Hero',
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hero.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppTheme.text,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'MP: ${hero.matches} · Win Rate: ${(hero.winRate * 100).toStringAsFixed(1)}% · KDA: ${hero.kda.toStringAsFixed(2)} · KP%: ${(hero.participationRate * 100).toStringAsFixed(1)}%',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppTheme.muted, fontSize: 10),
-                ),
-              ],
+            child: Text(
+              'MP: ${hero.matches} · Win Rate: ${(hero.winRate * 100).toStringAsFixed(1)}% · KDA: ${hero.kda.toStringAsFixed(2)} · KP%: ${(hero.participationRate * 100).toStringAsFixed(1)}%',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppTheme.muted, fontSize: 10),
             ),
           ),
         ],
@@ -3104,18 +3167,6 @@ void _returnToEsportsTab(BuildContext context, String tab) {
       ? '/tools/esports'
       : '/esports';
   router.go('$base/$tab');
-}
-
-void _goToEsportsDetail(BuildContext context, String tab, String id) {
-  final router = GoRouter.maybeOf(context);
-  if (router == null) {
-    return;
-  }
-  final currentPath = router.routeInformationProvider.value.uri.path;
-  final base = currentPath.startsWith('/tools/esports')
-      ? '/tools/esports'
-      : '/esports';
-  router.go('$base/$tab/$id');
 }
 
 class _EsportsAvatarLink extends StatelessWidget {
@@ -3305,11 +3356,26 @@ EsportsPlayerSummary? _findPlayer(
 }
 
 List<String> _leagueNames(EsportsMeta? meta, Iterable<String> fallback) {
-  final names = <String>{
-    ...?meta?.leagues.map((league) => league.name.trim()),
-    ...fallback.map((name) => name.trim()),
-  }..removeWhere((name) => name.isEmpty);
-  return names.toList()..sort();
+  final leagues = [...?meta?.leagues]
+    ..sort((a, b) {
+      final aTime = DateTime.tryParse(a.startTime)?.millisecondsSinceEpoch ?? 0;
+      final bTime = DateTime.tryParse(b.startTime)?.millisecondsSinceEpoch ?? 0;
+      return bTime.compareTo(aTime);
+    });
+  final names = <String>[];
+  for (final league in leagues) {
+    final name = league.name.trim();
+    if (name.isNotEmpty && !names.contains(name)) {
+      names.add(name);
+    }
+  }
+  for (final rawName in fallback) {
+    final name = rawName.trim();
+    if (name.isNotEmpty && !names.contains(name)) {
+      names.add(name);
+    }
+  }
+  return names;
 }
 
 String _effectiveLeagueFilter(
@@ -3349,14 +3415,18 @@ String _leagueRequestValue(EsportsMeta? meta, String leagueName) {
 }
 
 List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
-  final statusByValue = <String, String>{};
+  final statusByValue = <String, String>{
+    'upcoming': 'Upcoming',
+    'live': 'Ongoing',
+    'finished': 'Finished',
+  };
   for (final match in matches) {
-    final value = match.statusKey.trim().toLowerCase();
+    final value = _normalizedMatchStatus(match.statusKey);
     if (value.isNotEmpty) {
-      statusByValue[value] = match.statusLabel;
+      statusByValue.putIfAbsent(value, () => match.statusLabel);
     }
   }
-  const preferredOrder = ['live', 'upcoming', 'finished'];
+  const preferredOrder = ['upcoming', 'live', 'finished'];
   final extraValues =
       statusByValue.keys
           .where((value) => !preferredOrder.contains(value))
@@ -3376,10 +3446,19 @@ Map<String, List<EsportsMatchSummary>> _groupMatchesByStatus(
 ) {
   final grouped = <String, List<EsportsMatchSummary>>{};
   for (final match in matches) {
-    final status = match.statusKey.trim().toLowerCase();
+    final status = _normalizedMatchStatus(match.statusKey);
     grouped.putIfAbsent(status, () => []).add(match);
   }
   return grouped;
+}
+
+String _normalizedMatchStatus(String value) {
+  return switch (value.trim().toLowerCase()) {
+    'ongoing' || 'live' => 'live',
+    'scheduled' || 'pending' => 'upcoming',
+    'completed' || 'ended' => 'finished',
+    final status => status,
+  };
 }
 
 String? _championMatchId(List<EsportsMatchSummary> matches) {

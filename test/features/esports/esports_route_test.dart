@@ -272,7 +272,9 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/esports/schedule');
   });
 
-  testWidgets('esports team cards open focused team routes', (tester) async {
+  testWidgets('esports team cards open a panel without changing route', (
+    tester,
+  ) async {
     final router = createAppRouter();
     router.go('/esports/teams');
 
@@ -287,11 +289,12 @@ void main() {
     await tester.tap(find.text('Chongqing Wolves'));
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/esports/teams/1');
+    expect(router.routeInformationProvider.value.uri.path, '/esports/teams');
+    expect(find.byTooltip('Close'), findsOneWidget);
     expect(find.text('12W / 3L'), findsWidgets);
   });
 
-  testWidgets('esports player cards open focused player routes', (
+  testWidgets('esports player cards open a panel without changing route', (
     tester,
   ) async {
     final router = createAppRouter();
@@ -308,10 +311,8 @@ void main() {
     await tester.tap(find.text('Fly'));
     await tester.pumpAndSettle();
 
-    expect(
-      router.routeInformationProvider.value.uri.path,
-      '/esports/players/8',
-    );
+    expect(router.routeInformationProvider.value.uri.path, '/esports/players');
+    expect(find.byTooltip('Close'), findsOneWidget);
   });
 }
 

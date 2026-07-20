@@ -378,7 +378,7 @@ void main() {
     expect(find.text('KIC'), findsOneWidget);
     expect(find.text('Nova'), findsOneWidget);
 
-    await tester.tap(find.text('All Leagues'));
+    await tester.tap(find.text('Select League'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('KIC').last);
     await tester.pumpAndSettle();
@@ -486,7 +486,10 @@ void main() {
     expect(find.text('Wolves'), findsOneWidget);
     expect(find.text('Nova'), findsOneWidget);
 
-    await tester.enterText(find.bySemanticsLabel('Match Date'), '2026-07-12');
+    await tester.tap(find.text('Match Date'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('12'));
+    await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
     expect(find.text('Wolves'), findsNothing);
@@ -685,5 +688,50 @@ void main() {
 
     expect(find.text('Fly'), findsNothing);
     expect(find.text('Cat'), findsOneWidget);
+  });
+
+  testWidgets('keeps upcoming and ongoing sections when they are empty', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('match-status-heading-upcoming')),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('match-status-heading-live')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.byKey(const ValueKey('match-status-heading-live')),
+      findsOneWidget,
+    );
+    expect(find.text('No matches'), findsWidgets);
   });
 }
