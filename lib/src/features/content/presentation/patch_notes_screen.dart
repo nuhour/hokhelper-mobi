@@ -564,17 +564,20 @@ class _HeroChangeRail extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 46,
+      height: 54,
       child: Scrollbar(
         thumbVisibility: changes.length > 6,
         thickness: 3,
         radius: const Radius.circular(99),
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: changes.length,
-          separatorBuilder: (context, index) => const SizedBox(width: 8),
-          itemBuilder: (context, index) =>
-              _HeroChangeAvatar(change: changes[index]),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: changes.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 8),
+            itemBuilder: (context, index) =>
+                _HeroChangeAvatar(change: changes[index]),
+          ),
         ),
       ),
     );
@@ -614,9 +617,10 @@ class _HeroChangeAvatar extends StatelessWidget {
     if (route == null) {
       return child;
     }
-    return InkWell(
-      customBorder: const CircleBorder(),
-      onTap: () => context.go(route),
+    return GestureDetector(
+      key: ValueKey('patch-hero-${change.heroId}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => GoRouter.of(context).push(route),
       child: child,
     );
   }
@@ -705,7 +709,13 @@ class _HeroChangeRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => context.go(route),
+        onTap: () {
+          final router = GoRouter.of(context);
+          Navigator.of(context).pop();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            router.push(route);
+          });
+        },
         child: row,
       ),
     );

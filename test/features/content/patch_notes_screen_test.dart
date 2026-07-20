@@ -216,6 +216,7 @@ void main() {
     expect(find.text('Version 1.2.4 Patch Notes'), findsOneWidget);
     expect(find.byTooltip('Lam (buff)'), findsOneWidget);
     expect(find.byTooltip('Angela (nerf)'), findsOneWidget);
+    expect(tester.getSize(find.byType(Scrollbar).first).height, 54);
 
     await tester.enterText(find.byType(TextField), 'Arthur');
     await tester.pumpAndSettle();
@@ -299,7 +300,10 @@ void main() {
         ),
         GoRoute(
           path: '/heroes/:heroId',
-          builder: (context, state) => const SizedBox.shrink(),
+          builder: (context, state) => Text(
+            'Hero ${state.pathParameters['heroId']} '
+            '${state.uri.queryParameters['tab']}',
+          ),
         ),
       ],
       initialLocation: '/content/patch-notes',
@@ -338,13 +342,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Arthur (adjust)'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const ValueKey('patch-hero-10')));
+    await tester.pumpAndSettle();
 
-    final uri = router.routeInformationProvider.value.uri;
-    expect(uri.path, '/heroes/10');
-    expect(uri.queryParameters['tab'], 'history');
+    expect(router.canPop(), isTrue);
+    expect(find.text('Hero 10 history'), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/content/patch-notes',
+    );
   });
 
   testWidgets('patch detail hero adjustments open hero history routes', (
@@ -358,7 +367,10 @@ void main() {
         ),
         GoRoute(
           path: '/heroes/:heroId',
-          builder: (context, state) => const SizedBox.shrink(),
+          builder: (context, state) => Text(
+            'Hero ${state.pathParameters['heroId']} '
+            '${state.uri.queryParameters['tab']}',
+          ),
         ),
       ],
       initialLocation: '/content/patch-notes',
@@ -400,12 +412,17 @@ void main() {
     await tester.tap(find.text('Version 1.2.4 Patch Notes'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Arthur').last);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
 
-    final uri = router.routeInformationProvider.value.uri;
-    expect(uri.path, '/heroes/10');
-    expect(uri.queryParameters['tab'], 'history');
+    expect(router.canPop(), isTrue);
+    expect(find.text('Hero 10 history'), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/content/patch-notes',
+    );
   });
 
   testWidgets('patch detail markdown links open through the mobile link route', (

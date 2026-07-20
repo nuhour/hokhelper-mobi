@@ -361,7 +361,7 @@ void main() {
     expect(find.text('Hero Rankings'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('home-hero-ranking-fixed-header')),
-      findsAtLeastNWidgets(2),
+      findsOneWidget,
     );
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
     expect(
@@ -388,6 +388,9 @@ void main() {
       find.byKey(const ValueKey('home-player-flag-top-player')),
       findsOneWidget,
     );
+    expect(find.text('United States'), findsOneWidget);
+    expect(find.text('PEAK SCORE'), findsOneWidget);
+    expect(find.text('2400'), findsOneWidget);
 
     await _scrollHomeUntilVisible(tester, find.text('Community Hot'));
     expect(find.text('Community Hot'), findsOneWidget);

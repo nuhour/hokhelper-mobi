@@ -1323,7 +1323,7 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
       title: 'Leaderboard',
       route: '/leaderboard',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SegmentedButton<String>(
             key: const ValueKey('home-player-ranking-mode'),
@@ -1332,6 +1332,7 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
               ButtonSegment(value: 'rank', label: Text('Rank')),
             ],
             selected: {_selected},
+            expandedInsets: EdgeInsets.zero,
             onSelectionChanged: (selection) {
               setState(() {
                 _selected = selection.first;
@@ -1340,6 +1341,17 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
             showSelectedIcon: false,
             style: ButtonStyle(
               visualDensity: VisualDensity.compact,
+              minimumSize: const WidgetStatePropertyAll(Size(0, 38)),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                return states.contains(WidgetState.selected)
+                    ? AppTheme.panelAlt
+                    : AppTheme.bg;
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                return states.contains(WidgetState.selected)
+                    ? AppTheme.gold
+                    : AppTheme.muted;
+              }),
               padding: const WidgetStatePropertyAll(
                 EdgeInsets.symmetric(horizontal: 8),
               ),
@@ -1362,25 +1374,201 @@ class _HomePlayerTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns = [
-      const _HomeTableColumn(
-        id: 'player_name',
-        label: 'Player',
-        type: 'player',
+    final visibleRows = rows.take(8).toList(growable: false);
+    if (visibleRows.isEmpty) return const _HomeEmptyPanelMessage();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppTheme.outline.withValues(alpha: 0.72)),
+        borderRadius: BorderRadius.circular(8),
       ),
-      const _HomeTableColumn(id: 'rank', label: '#', type: 'number'),
-      _HomeTableColumn(
-        id: mode == 'peak' ? 'peak_score' : 'rank_stars',
-        label: mode == 'peak' ? 'Peak' : 'Stars',
-        type: 'number',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Column(
+          children: [
+            Container(
+              height: 38,
+              color: AppTheme.bg,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32, child: _HomeLeaderboardHeader('#')),
+                  const Expanded(child: _HomeLeaderboardHeader('Player')),
+                  SizedBox(
+                    width: 86,
+                    child: _HomeLeaderboardHeader(
+                      mode == 'peak' ? 'Peak Score' : 'Stars',
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            for (var index = 0; index < visibleRows.length; index++)
+              _HomeLeaderboardRow(
+                row: visibleRows[index],
+                fallbackRank: index + 1,
+                mode: mode,
+                showDivider: index != visibleRows.length - 1,
+              ),
+          ],
+        ),
       ),
-      const _HomeTableColumn(
-        id: 'win_rate',
-        label: 'Win Rate',
-        type: 'percent',
+    );
+  }
+}
+
+class _HomeLeaderboardHeader extends StatelessWidget {
+  const _HomeLeaderboardHeader(this.label, {this.textAlign = TextAlign.start});
+
+  final String label;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      textAlign: textAlign,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: AppTheme.muted,
+        fontWeight: FontWeight.w900,
       ),
-    ];
-    return _HomeDataTable(columns: columns, rows: rows.take(8).toList());
+    );
+  }
+}
+
+class _HomeLeaderboardRow extends StatelessWidget {
+  const _HomeLeaderboardRow({
+    required this.row,
+    required this.fallbackRank,
+    required this.mode,
+    required this.showDivider,
+  });
+
+  final Map<String, dynamic> row;
+  final int fallbackRank;
+  final String mode;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final player = _readMap(row['player']);
+    final playerId = _readString(row['player_id'] ?? player['id']);
+    final playerName = _readString(
+      row['player_name'] ?? player['name'] ?? player['player_name'],
+      fallback: 'Player',
+    );
+    final avatarUrl = _readString(row['avatar_url'] ?? player['avatar_url']);
+    final region = row['region'] ?? player['region'];
+    final rank = int.tryParse(row['rank']?.toString() ?? '') ?? fallbackRank;
+    final score = mode == 'peak' ? row['peak_score'] : row['rank_stars'];
+
+    return Container(
+      key: ValueKey('home-leaderboard-row-$playerId'),
+      height: 62,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.panel,
+        border: showDivider
+            ? Border(
+                bottom: BorderSide(
+                  color: AppTheme.outline.withValues(alpha: 0.62),
+                ),
+              )
+            : null,
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 32,
+            child: Text(
+              '$rank',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.muted,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          AppImage(
+            key: ValueKey('home-player-avatar-$playerId'),
+            url: avatarUrl,
+            width: 30,
+            height: 30,
+            borderRadius: 999,
+            semanticLabel: playerName,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  playerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      _homeRegionFlag(region),
+                      key: ValueKey('home-player-flag-$playerId'),
+                      style: const TextStyle(fontSize: 11, height: 1),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _homeRegionName(region),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: AppTheme.muted),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 86,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (mode != 'peak') ...[
+                  const Icon(
+                    Icons.star_rounded,
+                    size: 14,
+                    color: AppTheme.gold,
+                  ),
+                  const SizedBox(width: 3),
+                ],
+                Flexible(
+                  child: Text(
+                    _homeCompactNumber(score),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.gold,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1885,6 +2073,15 @@ class _HomeFixedTableIdentity extends StatelessWidget {
 }
 
 String _homeRegionFlag(Object? rawRegion) {
+  final iso = _homeRegionIso(rawRegion);
+  if (iso == null) return '🌐';
+  return String.fromCharCodes([
+    0x1F1E6 + iso.codeUnitAt(0) - 0x41,
+    0x1F1E6 + iso.codeUnitAt(1) - 0x41,
+  ]);
+}
+
+String? _homeRegionIso(Object? rawRegion) {
   const isoByRegion = <int, String>{
     36: 'AU',
     76: 'BR',
@@ -1910,14 +2107,43 @@ String _homeRegionFlag(Object? rawRegion) {
     840: 'US',
   };
   final region = int.tryParse(rawRegion?.toString() ?? '');
-  final iso = region == null ? null : isoByRegion[region];
-  if (iso == null) {
-    return '🌐';
-  }
-  return String.fromCharCodes([
-    0x1F1E6 + iso.codeUnitAt(0) - 0x41,
-    0x1F1E6 + iso.codeUnitAt(1) - 0x41,
-  ]);
+  return region == null ? null : isoByRegion[region];
+}
+
+String _homeRegionName(Object? rawRegion) {
+  const names = <String, String>{
+    'AU': 'Australia',
+    'BR': 'Brazil',
+    'CA': 'Canada',
+    'CN': 'China',
+    'FI': 'Finland',
+    'FR': 'France',
+    'DE': 'Germany',
+    'HK': 'Hong Kong',
+    'IN': 'India',
+    'ID': 'Indonesia',
+    'JP': 'Japan',
+    'KR': 'South Korea',
+    'MY': 'Malaysia',
+    'MX': 'Mexico',
+    'PH': 'Philippines',
+    'RO': 'Romania',
+    'RU': 'Russia',
+    'SG': 'Singapore',
+    'TH': 'Thailand',
+    'AE': 'United Arab Emirates',
+    'GB': 'United Kingdom',
+    'US': 'United States',
+  };
+  return names[_homeRegionIso(rawRegion)] ?? 'International';
+}
+
+String _homeCompactNumber(Object? rawValue) {
+  final number = num.tryParse(rawValue?.toString() ?? '');
+  if (number == null) return '-';
+  return number % 1 == 0
+      ? number.toInt().toString()
+      : number.toStringAsFixed(1);
 }
 
 class _HomeHeroAvatarCluster extends StatelessWidget {
@@ -2239,7 +2465,8 @@ class _HomeTierPreviewSection extends StatelessWidget {
                       ? null
                       : Border(
                           bottom: BorderSide(
-                            color: AppTheme.outline.withValues(alpha: 0.38),
+                            color: AppTheme.outline.withValues(alpha: 0.68),
+                            width: 1,
                           ),
                         ),
                 ),
