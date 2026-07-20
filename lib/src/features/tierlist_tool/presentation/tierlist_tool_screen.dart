@@ -61,9 +61,9 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
               const SizedBox(height: 8),
               Text(
                 'Review saved custom tier lists and hero placement rows.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
               const SizedBox(height: 18),
               if (visibleSchemes.isEmpty)
@@ -97,7 +97,7 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
     final name = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -235,7 +235,7 @@ class _TierListCreateSheetState extends State<_TierListCreateSheet> {
               Text(
                 'Create tier list',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -294,9 +294,9 @@ class _TierListSchemeCard extends StatelessWidget {
         onTap: () => context.go('/tools/tier-list/${scheme.id}'),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -317,7 +317,7 @@ class _TierListSchemeCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
-                              color: AppTheme.text,
+                              color: context.hokTheme.onSurfaceStrong,
                               fontWeight: FontWeight.w900,
                             ),
                       ),
@@ -329,9 +329,9 @@ class _TierListSchemeCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Updated ${scheme.updatedDateText}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
@@ -385,7 +385,7 @@ class _RowPreview extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppTheme.muted,
+                    color: context.hokTheme.onSurfaceMuted,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -419,7 +419,7 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPrimary ? AppTheme.gold : AppTheme.muted;
+    final color = isPrimary ? AppTheme.gold : context.hokTheme.onSurfaceMuted;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: (isPrimary ? AppTheme.gold : Colors.white).withValues(

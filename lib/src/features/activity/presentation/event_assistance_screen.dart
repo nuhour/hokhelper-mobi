@@ -72,9 +72,9 @@ class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Share event codes, teammate requests, and activity help.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 if (records.isEmpty)
@@ -118,7 +118,7 @@ class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -176,7 +176,7 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
             Text(
               'Share Assistance Text',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -184,7 +184,7 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
             Text(
               'Paste your event-assistance text. It will be parsed and published to the shared board.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 height: 1.35,
               ),
             ),
@@ -330,8 +330,8 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
     final record = widget.record;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -352,7 +352,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -365,7 +365,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
             Text(
               record.content,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 height: 1.4,
                 fontWeight: FontWeight.w600,
               ),
@@ -376,9 +376,9 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                 _formatEventTime(record.eventTime),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
             ],
             const SizedBox(height: 12),

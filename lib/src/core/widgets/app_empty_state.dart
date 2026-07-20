@@ -24,13 +24,13 @@ class AppEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: AppTheme.muted),
+            Icon(icon, size: 48, color: context.hokTheme.onSurfaceMuted),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -39,7 +39,9 @@ class AppEmptyState extends StatelessWidget {
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
             ],
           ],

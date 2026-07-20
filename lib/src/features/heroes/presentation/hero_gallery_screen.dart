@@ -124,7 +124,7 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
     }
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: AppAsyncView<List<HeroSummary>>(
         value: heroesValue,
         retry: () => ref.invalidate(heroGalleryQueryProvider(galleryQuery)),
@@ -167,12 +167,14 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                         TextField(
                           controller: _searchController,
                           onChanged: (value) => setState(() => _query = value),
-                          style: const TextStyle(color: AppTheme.text),
+                          style: TextStyle(
+                            color: context.hokTheme.onSurfaceStrong,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Search hero or title',
-                            prefixIcon: const Icon(
+                            prefixIcon: Icon(
                               Icons.search,
-                              color: AppTheme.muted,
+                              color: context.hokTheme.onSurfaceMuted,
                             ),
                             suffixIcon: _query.isEmpty
                                 ? null
@@ -182,9 +184,9 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                                       _searchController.clear();
                                       setState(() => _query = '');
                                     },
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.close,
-                                      color: AppTheme.muted,
+                                      color: context.hokTheme.onSurfaceMuted,
                                     ),
                                   ),
                           ),
@@ -322,12 +324,12 @@ class _LaneFilterBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: lanePosition == option.value
                         ? AppTheme.gold
-                        : AppTheme.panel,
+                        : context.hokTheme.surfaceSlate,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: lanePosition == option.value
                           ? AppTheme.gold
-                          : Colors.white.withValues(alpha: 0.08),
+                          : context.hokTheme.outlineSoft,
                     ),
                   ),
                   child: option.assetName == null
@@ -375,7 +377,7 @@ class _HeroCard extends StatelessWidget {
 
     return Material(
       key: ValueKey('hero-card-${hero.id}'),
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -523,10 +525,10 @@ class _HeroLaneBadge extends StatelessWidget {
       child: SizedBox.square(
         dimension: 18,
         child: assetName == null
-            ? const Icon(
+            ? Icon(
                 Icons.grid_view_rounded,
                 size: 16,
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
               )
             : Image.asset('assets/lane-icons/$assetName.png'),
       ),
@@ -546,7 +548,7 @@ class _HeroTierBadge extends StatelessWidget {
       'T1' => const Color(0xFFF97316),
       'T2' => const Color(0xFFEAB308),
       'T3' => const Color(0xFF22C55E),
-      _ => AppTheme.muted,
+      _ => context.hokTheme.onSurfaceMuted,
     };
     return DecoratedBox(
       decoration: BoxDecoration(

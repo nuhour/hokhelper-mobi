@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_error_state.dart';
+import '../i18n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class AppAsyncView<T> extends StatelessWidget {
@@ -40,14 +41,14 @@ class AppAsyncView<T> extends StatelessWidget {
         );
       },
       error: (error, stackTrace) =>
-          AppErrorState(message: _errorMessage(error), retry: retry),
+          AppErrorState(message: _errorMessage(context, error), retry: retry),
     );
   }
 
-  String _errorMessage(Object error) {
+  String _errorMessage(BuildContext context, Object error) {
     final message = error.toString();
     if (message.contains('TimeoutException') || message.contains('timed out')) {
-      return 'The service is taking longer than usual. Please try again.';
+      return AppLocalizations.of(context).serviceSlow;
     }
     return message;
   }
@@ -64,7 +65,7 @@ class _AppAsyncLoadingSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       key: const ValueKey('app-async-loading-surface'),
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: switch (style) {
@@ -184,7 +185,7 @@ class _LoadingListCard extends StatelessWidget {
     height: height,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(12),
     ),
     child: const Column(
@@ -207,7 +208,7 @@ class _LoadingMetricCard extends StatelessWidget {
     height: 96,
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(12),
     ),
     child: const Column(
@@ -228,10 +229,10 @@ class _LoadingGalleryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(12),
     ),
-    child: const Padding(
+    child: Padding(
       padding: EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +240,7 @@ class _LoadingGalleryCard extends StatelessWidget {
           Expanded(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: AppTheme.panelAlt,
+                color: context.hokTheme.surfaceRaised,
                 borderRadius: BorderRadius.all(Radius.circular(9)),
               ),
             ),
@@ -265,7 +266,7 @@ class _AppAsyncLoadingBar extends StatelessWidget {
     width: width,
     height: height,
     decoration: BoxDecoration(
-      color: AppTheme.panelAlt,
+      color: context.hokTheme.surfaceRaised,
       borderRadius: BorderRadius.circular(999),
     ),
   );

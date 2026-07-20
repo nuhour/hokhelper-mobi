@@ -59,9 +59,9 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
               const SizedBox(height: 8),
               Text(
                 'Review saved pick/ban schemes and continue draft preparation.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
               const SizedBox(height: 18),
               if (visibleSchemes.isEmpty)
@@ -95,7 +95,7 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
     final draft = await showModalBottomSheet<_BpCreateDraft>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -264,7 +264,7 @@ class _BpCreateSheetState extends State<_BpCreateSheet> {
                 Text(
                   'Create BP scheme',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -386,7 +386,7 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
         : history[selectedHistoryIndex];
     final openGameIndex = selectedHistoryIndex ?? history.length;
     return Material(
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -412,7 +412,7 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
-                              color: AppTheme.text,
+                              color: context.hokTheme.onSurfaceStrong,
                               fontSize: 25,
                               fontWeight: FontWeight.w900,
                             ),
@@ -422,7 +422,7 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                       tooltip: 'Delete BP scheme',
                       onPressed: widget.onDelete,
                       icon: const Icon(Icons.delete_outline, size: 17),
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       style: IconButton.styleFrom(
                         minimumSize: const Size(32, 32),
                         padding: EdgeInsets.zero,
@@ -587,7 +587,7 @@ class _BpPreviewSide extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: alignEnd ? TextAlign.right : TextAlign.left,
                 style: TextStyle(
-                  color: winner ? color : AppTheme.muted,
+                  color: winner ? color : context.hokTheme.onSurfaceMuted,
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                 ),
@@ -680,21 +680,22 @@ class _BpPreviewSlot extends StatelessWidget {
                   Colors.grey,
                   BlendMode.saturation,
                 ),
-                child: _heroImage(id),
+                child: _heroImage(context, id),
               )
-            : _heroImage(id),
+            : _heroImage(context, id),
       ),
     );
   }
 
-  Widget _heroImage(int? id) {
+  Widget _heroImage(BuildContext context, int? id) {
     if (id == null) {
       return const SizedBox.expand();
     }
     return Image.network(
       'https://hokhelper.com/static/game/hero/$id.png',
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => const ColoredBox(color: AppTheme.panelAlt),
+      errorBuilder: (_, _, _) =>
+          ColoredBox(color: context.hokTheme.surfaceRaised),
     );
   }
 }
@@ -721,10 +722,10 @@ class _BpGameSelector extends StatelessWidget {
         ? AppTheme.success.withValues(alpha: 0.72)
         : Colors.white.withValues(alpha: 0.18);
     final textColor = selected
-        ? AppTheme.text
+        ? context.hokTheme.onSurfaceStrong
         : current
         ? AppTheme.success
-        : AppTheme.muted;
+        : context.hokTheme.onSurfaceMuted;
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -763,9 +764,7 @@ class _BpScoreFooter extends StatelessWidget {
     }
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
+        border: Border(top: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Padding(
         padding: const EdgeInsets.only(top: 14),
@@ -781,10 +780,10 @@ class _BpScoreFooter extends StatelessWidget {
                 ),
               ),
             ),
-            const Text(
+            Text(
               'VS',
               style: TextStyle(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -822,7 +821,9 @@ class _MetricBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPrimary ? const Color(0xFF4B8BFF) : AppTheme.muted;
+    final color = isPrimary
+        ? const Color(0xFF4B8BFF)
+        : context.hokTheme.onSurfaceMuted;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: (isPrimary ? const Color(0xFF246BFF) : Colors.white).withValues(

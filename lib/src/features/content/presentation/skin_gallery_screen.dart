@@ -164,7 +164,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     }
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: RefreshIndicator(
         onRefresh: () async {
           _resetLoadedPages();
@@ -192,10 +192,13 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                 _query = value;
                 _resetLoadedPages();
               }),
-              style: const TextStyle(color: AppTheme.text),
+              style: TextStyle(color: context.hokTheme.onSurfaceStrong),
               decoration: InputDecoration(
                 hintText: 'Search skin or hero',
-                prefixIcon: const Icon(Icons.search, color: AppTheme.muted),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
@@ -207,7 +210,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                             _resetLoadedPages();
                           });
                         },
-                        icon: const Icon(Icons.close, color: AppTheme.muted),
+                        icon: Icon(
+                          Icons.close,
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
               ),
             ),
@@ -392,7 +398,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppTheme.bg,
+      backgroundColor: context.hokTheme.backgroundDeep,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -536,12 +542,12 @@ class _LaneFilterBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: lanePosition == option.value
                         ? AppTheme.gold
-                        : AppTheme.panel,
+                        : context.hokTheme.surfaceSlate,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: lanePosition == option.value
                           ? AppTheme.gold
-                          : Colors.white.withValues(alpha: 0.08),
+                          : context.hokTheme.outlineSoft,
                     ),
                   ),
                   child: option.assetName == null
@@ -599,7 +605,7 @@ class _FocusedSkinFilterBanner extends StatelessWidget {
               child: Text(
                 'Focused skin filters',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -610,7 +616,7 @@ class _FocusedSkinFilterBanner extends StatelessWidget {
                   labels.join(' · '),
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppTheme.muted,
+                    color: context.hokTheme.onSurfaceMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -656,8 +662,8 @@ class _SkinCard extends StatelessWidget {
         : skin.imageUrl;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Material(
@@ -758,7 +764,7 @@ class _SkinCard extends StatelessWidget {
   void _showRatingSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -832,7 +838,7 @@ class _SkinCardRatingSheet extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -900,7 +906,7 @@ class _SkinDetailScreenState extends ConsumerState<SkinDetailScreen> {
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.muted.withValues(alpha: 0.5),
+                color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -947,7 +953,7 @@ class _SkinDetailScreenState extends ConsumerState<SkinDetailScreen> {
             top: 10,
             left: 12,
             child: Material(
-              color: AppTheme.bg.withValues(alpha: 0.86),
+              color: context.hokTheme.backgroundDeep.withValues(alpha: 0.86),
               shape: const CircleBorder(),
               child: IconButton(
                 tooltip: 'Back to skins',
@@ -1041,15 +1047,15 @@ class _SkinDetailContent extends StatelessWidget {
           detail.heroName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           detail.title,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -1080,9 +1086,9 @@ class _SkinDetailContent extends StatelessWidget {
             detail.linkUrl,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
           ),
         ],
       ],
@@ -1132,8 +1138,8 @@ class _SkinRatingControl extends StatelessWidget {
     final roundedRating = rating.round();
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -1144,7 +1150,7 @@ class _SkinRatingControl extends StatelessWidget {
               child: Text(
                 'Rate this skin',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),

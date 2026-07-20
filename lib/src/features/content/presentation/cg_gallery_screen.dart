@@ -178,7 +178,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
     }
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: RefreshIndicator(
         onRefresh: () async {
           _resetLoadedPages();
@@ -197,10 +197,13 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                 _query = value;
                 _resetLoadedPages();
               }),
-              style: const TextStyle(color: AppTheme.text),
+              style: TextStyle(color: context.hokTheme.onSurfaceStrong),
               decoration: InputDecoration(
                 hintText: 'Search CG or hero',
-                prefixIcon: const Icon(Icons.search, color: AppTheme.muted),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
@@ -212,7 +215,10 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                             _resetLoadedPages();
                           });
                         },
-                        icon: const Icon(Icons.close, color: AppTheme.muted),
+                        icon: Icon(
+                          Icons.close,
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
               ),
             ),
@@ -392,7 +398,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppTheme.bg,
+      backgroundColor: context.hokTheme.backgroundDeep,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -539,7 +545,7 @@ class _FocusedHeroBanner extends StatelessWidget {
               child: Text(
                 'Focused hero CGs',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -547,7 +553,7 @@ class _FocusedHeroBanner extends StatelessWidget {
             Text(
               '#$heroId',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -604,8 +610,8 @@ class _CgCard extends StatelessWidget {
         : 'https://hokhelper.com/static/game/hero/${cg.heroId}.png';
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Material(
@@ -686,7 +692,7 @@ class _CgCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(
-                                  color: AppTheme.text,
+                                  color: context.hokTheme.onSurfaceStrong,
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
@@ -696,7 +702,9 @@ class _CgCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppTheme.muted),
+                                ?.copyWith(
+                                  color: context.hokTheme.onSurfaceMuted,
+                                ),
                           ),
                         ],
                       ),
@@ -716,7 +724,7 @@ class _CgCard extends StatelessWidget {
                 child: Text(
                   '${_compact(cg.viewCount)} views · ${cg.ratingCount} ratings',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppTheme.muted,
+                    color: context.hokTheme.onSurfaceMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -780,7 +788,7 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
                 width: 42,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.muted.withValues(alpha: 0.5),
+                  color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -804,7 +812,7 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
             Text(
               'Comments',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -939,8 +947,8 @@ class _CgCommentComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -1080,15 +1088,15 @@ class _CgDetailContent extends StatelessWidget {
           detail.heroName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           detail.title,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -1128,8 +1136,8 @@ class _CgCommentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -1153,7 +1161,7 @@ class _CgCommentCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1164,7 +1172,7 @@ class _CgCommentCard extends StatelessWidget {
             Text(
               comment.content,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 height: 1.35,
               ),
             ),
@@ -1172,9 +1180,9 @@ class _CgCommentCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 _formatCgCommentTime(comment.createdAt),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
             ],
           ],
@@ -1210,8 +1218,8 @@ class _CgRatingControl extends StatelessWidget {
     final roundedRating = rating.round();
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -1222,7 +1230,7 @@ class _CgRatingControl extends StatelessWidget {
               child: Text(
                 'Rate this CG',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),

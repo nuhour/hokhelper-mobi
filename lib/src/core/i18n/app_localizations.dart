@@ -101,6 +101,28 @@ class AppLocalizations {
   String get themeLight => _t('themeLight');
   String get retry => _t('retry');
   String get back => _t('back');
+  String get noData => _t('noData');
+  String get loading => _t('loading');
+  String get serviceSlow => _t('serviceSlow');
+  String get viewMore => _t('viewMore');
+  String get search => _t('search');
+  String get close => _t('close');
+  String get homeHeroDescription => _t('homeHeroDescription');
+  String get homeCoreStats => _t('homeCoreStats');
+  String get homeTierList => _t('homeTierList');
+  String get homeWorldDescription => _t('homeWorldDescription');
+  String get homeEnterWorld => _t('homeEnterWorld');
+  String get homeHeroRankings => _t('homeHeroRankings');
+  String get homeLeaderboard => _t('homeLeaderboard');
+  String get homeTierPreview => _t('homeTierPreview');
+  String get homeCommunityHot => _t('homeCommunityHot');
+  String get homeLatestUpdates => _t('homeLatestUpdates');
+  String get homePeak => _t('homePeak');
+  String get homeRank => _t('homeRank');
+  String get homePlayer => _t('homePlayer');
+  String get homePeakScore => _t('homePeakScore');
+  String get homeStars => _t('homeStars');
+  String get homeReadNotes => _t('homeReadNotes');
   String get homeTabEsports => _t('homeTabEsports');
   String get homeTabSkins => _t('homeTabSkins');
   String get homeTabHeroes => _t('homeTabHeroes');
@@ -116,6 +138,8 @@ class AppLocalizations {
 
   String toolTitle(String route) => _t('toolTitle:$route');
   String toolSubtitle(String route) => _t('toolSubtitle:$route');
+
+  String translate(String key) => _t(key);
 
   String _t(String key) {
     final languageCode = locale.languageCode;

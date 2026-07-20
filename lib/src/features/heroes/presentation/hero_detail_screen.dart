@@ -96,7 +96,7 @@ class HeroDetailScreen extends ConsumerWidget {
             top: 10,
             left: 12,
             child: Material(
-              color: AppTheme.bg.withValues(alpha: 0.86),
+              color: context.hokTheme.backgroundDeep.withValues(alpha: 0.86),
               shape: const CircleBorder(),
               child: IconButton(
                 tooltip: 'Back to heroes',
@@ -248,7 +248,7 @@ class _HeroDetailContent extends StatelessWidget {
               Text(
                 _cleanMarkup(lore),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   height: 1.5,
                 ),
               ),
@@ -294,7 +294,7 @@ class _LoreFocusPanel extends StatelessWidget {
                   Text(
                     'Lore focus',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -302,7 +302,7 @@ class _LoreFocusPanel extends StatelessWidget {
                   Text(
                     'Opened from a hero lore link. Story and background details are included below.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       height: 1.4,
                     ),
                   ),
@@ -341,7 +341,7 @@ class _HistoryFocusPanel extends StatelessWidget {
                   Text(
                     'Patch history focus',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -349,7 +349,7 @@ class _HistoryFocusPanel extends StatelessWidget {
                   Text(
                     'Opened from a patch note link. Balance changes are highlighted below.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       height: 1.4,
                     ),
                   ),
@@ -388,9 +388,11 @@ class _HeroHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.18),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,7 +417,7 @@ class _HeroHeader extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.headlineSmall?.copyWith(
-                          color: AppTheme.text,
+                          color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -435,7 +437,7 @@ class _HeroHeader extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                     ),
                   ),
                 ],
@@ -469,7 +471,7 @@ class _InfoPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -480,7 +482,7 @@ class _InfoPill extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppTheme.text,
+              color: context.hokTheme.onSurfaceStrong,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -525,9 +527,11 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.18),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,9 +540,9 @@ class _MetricCard extends StatelessWidget {
             item.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: AppTheme.muted),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -546,7 +550,7 @@ class _MetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.text,
+              color: context.hokTheme.onSurfaceStrong,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -602,9 +606,11 @@ class _ProfileCard extends StatelessWidget {
     final value = item.value.isEmpty ? 'Unknown' : item.value;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.15)),
+        border: Border.all(
+          color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.15),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -631,7 +637,7 @@ class _ProfileCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -641,7 +647,7 @@ class _ProfileCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -673,9 +679,11 @@ class _DetailSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.muted.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.18),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -687,7 +695,7 @@ class _DetailSection extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -697,9 +705,9 @@ class _DetailSection extends StatelessWidget {
           if (children.isEmpty)
             Text(
               emptyMessage,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             )
           else
             ...children,
@@ -754,7 +762,7 @@ class _SkillTile extends StatelessWidget {
                     Text(
                       name.isEmpty ? 'Skill' : name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -772,7 +780,7 @@ class _SkillTile extends StatelessWidget {
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       height: 1.45,
                     ),
                   ),
@@ -811,7 +819,7 @@ class _HistoryTile extends StatelessWidget {
               Text(
                 title.isEmpty ? 'Update' : title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -824,7 +832,7 @@ class _HistoryTile extends StatelessWidget {
             Text(
               content,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 height: 1.45,
               ),
             ),
@@ -845,7 +853,7 @@ class _TinyLabel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -871,7 +879,7 @@ class _HistoryTypeLabel extends StatelessWidget {
       'buff' => const Color(0xFF22C55E),
       'nerf' => const Color(0xFFEF4444),
       'adjust' || 'adjustment' => AppTheme.cyan,
-      _ => AppTheme.muted,
+      _ => context.hokTheme.onSurfaceMuted,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -913,12 +921,14 @@ class _VideoPlayButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         backgroundColor: prominent
             ? Colors.white.withValues(alpha: 0.14)
-            : AppTheme.panelAlt,
-        foregroundColor: prominent ? Colors.white : AppTheme.muted,
+            : context.hokTheme.surfaceRaised,
+        foregroundColor: prominent
+            ? Colors.white
+            : context.hokTheme.onSurfaceMuted,
         side: BorderSide(
           color: prominent
               ? Colors.white.withValues(alpha: 0.24)
-              : AppTheme.muted.withValues(alpha: 0.22),
+              : context.hokTheme.onSurfaceMuted.withValues(alpha: 0.22),
         ),
       ),
       icon: Icon(

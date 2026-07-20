@@ -339,7 +339,9 @@ class _CommunityTabButton extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: selected ? AppTheme.text : AppTheme.muted,
+                color: selected
+                    ? context.hokTheme.onSurfaceStrong
+                    : context.hokTheme.onSurfaceMuted,
                 fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
@@ -957,8 +959,8 @@ class _CompactSegment<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: AppTheme.outline),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -1011,8 +1013,8 @@ class _SquareControl extends StatelessWidget {
       width: 42,
       height: 42,
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: AppTheme.outline),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(10),
       ),
       alignment: Alignment.center,
@@ -1080,7 +1082,7 @@ class _ModePill extends StatelessWidget {
                     message,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppTheme.muted),
+                    style: TextStyle(color: context.hokTheme.onSurfaceMuted),
                   ),
                 ],
               ),
@@ -1123,8 +1125,8 @@ class _CreatePostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -1138,7 +1140,7 @@ class _CreatePostCard extends StatelessWidget {
                   child: Text(
                     'Create Post',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -1181,7 +1183,7 @@ class _CreatePostCard extends StatelessWidget {
               Text(
                 'Tags',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1691,15 +1693,17 @@ class _PostCardState extends ConsumerState<_PostCard> {
                         Text(
                           AppTimeFormatter.relative(context, post.createdAt),
                           style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                   size: 20,
                 ),
               ],
@@ -1710,7 +1714,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1721,7 +1725,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                   height: 1.35,
                 ),
               ),
@@ -1850,7 +1854,7 @@ class _PostAuthorName extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
-      color: AppTheme.text,
+      color: context.hokTheme.onSurfaceStrong,
       fontWeight: FontWeight.w800,
     );
 
@@ -1868,7 +1872,7 @@ class _PostAuthorName extends StatelessWidget {
       child: TextButton(
         onPressed: () => context.go('/profile/$authorId'),
         style: TextButton.styleFrom(
-          foregroundColor: AppTheme.text,
+          foregroundColor: context.hokTheme.onSurfaceStrong,
           minimumSize: Size.zero,
           padding: EdgeInsets.zero,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1907,11 +1911,11 @@ class _LeakCardState extends State<_LeakCard> {
   Widget build(BuildContext context) {
     final leak = widget.leak;
     return Material(
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: AppTheme.outline),
+        side: BorderSide(color: context.hokTheme.outlineSoft),
       ),
       child: InkWell(
         onTap: () => _showLeakDetail(context, leak),
@@ -1940,7 +1944,7 @@ class _LeakCardState extends State<_LeakCard> {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                         ),
@@ -1952,14 +1956,18 @@ class _LeakCardState extends State<_LeakCard> {
                             Text(
                               _platformLabel(leak.platform),
                               style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: AppTheme.muted),
+                                  ?.copyWith(
+                                    color: context.hokTheme.onSurfaceMuted,
+                                  ),
                             ),
                             if (leak.publishedAt.isNotEmpty) ...[
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 5),
                                 child: Text(
                                   '•',
-                                  style: TextStyle(color: AppTheme.muted),
+                                  style: TextStyle(
+                                    color: context.hokTheme.onSurfaceMuted,
+                                  ),
                                 ),
                               ),
                               Text(
@@ -1968,7 +1976,9 @@ class _LeakCardState extends State<_LeakCard> {
                                   leak.publishedAt,
                                 ),
                                 style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(color: AppTheme.muted),
+                                    ?.copyWith(
+                                      color: context.hokTheme.onSurfaceMuted,
+                                    ),
                               ),
                             ],
                           ],
@@ -1976,10 +1986,10 @@ class _LeakCardState extends State<_LeakCard> {
                       ],
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.open_in_full_rounded,
                     size: 17,
-                    color: AppTheme.muted,
+                    color: context.hokTheme.onSurfaceMuted,
                   ),
                 ],
               ),
@@ -1994,7 +2004,7 @@ class _LeakCardState extends State<_LeakCard> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -2006,7 +2016,7 @@ class _LeakCardState extends State<_LeakCard> {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.muted,
+                        color: context.hokTheme.onSurfaceMuted,
                         height: 1.35,
                       ),
                     ),
@@ -2112,7 +2122,7 @@ IconData _platformFallbackIcon(String platform) {
   };
 }
 
-Color _platformColor(String platform) {
+Color _platformColor(BuildContext context, String platform) {
   return switch (platform.toLowerCase()) {
     'youtube' => const Color(0xFFEF4444),
     'instagram' => const Color(0xFFEC4899),
@@ -2120,7 +2130,7 @@ Color _platformColor(String platform) {
     'telegram' => const Color(0xFF38BDF8),
     'tiktok' => const Color(0xFFD946EF),
     'reddit' => const Color(0xFFF97316),
-    _ => AppTheme.muted,
+    _ => context.hokTheme.onSurfaceMuted,
   };
 }
 
@@ -2135,7 +2145,7 @@ class _PlatformIcon extends StatelessWidget {
     return Icon(
       _platformFallbackIcon(platform),
       size: size,
-      color: _platformColor(platform),
+      color: _platformColor(context, platform),
     );
   }
 }
@@ -2157,11 +2167,11 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
         maxChildSize: 0.95,
         builder: (context, controller) {
           return Material(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             clipBehavior: Clip.antiAlias,
-            shape: const RoundedRectangleBorder(
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-              side: BorderSide(color: AppTheme.outline),
+              side: BorderSide(color: context.hokTheme.outlineSoft),
             ),
             child: ListView(
               controller: controller,
@@ -2173,7 +2183,9 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
                     height: 4,
                     margin: const EdgeInsets.only(top: 9, bottom: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.muted.withValues(alpha: 0.45),
+                      color: context.hokTheme.onSurfaceMuted.withValues(
+                        alpha: 0.45,
+                      ),
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
@@ -2198,8 +2210,8 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
                               leak.authorLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppTheme.text,
+                              style: TextStyle(
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -2213,7 +2225,9 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
                                 Text(
                                   '${_platformLabel(leak.platform)} · ${AppTimeFormatter.relative(context, leak.publishedAt)}',
                                   style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(color: AppTheme.muted),
+                                      ?.copyWith(
+                                        color: context.hokTheme.onSurfaceMuted,
+                                      ),
                                 ),
                               ],
                             ),
@@ -2277,7 +2291,7 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
                       Text(
                         leak.title,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.text,
+                          color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -2287,7 +2301,10 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
                         Text(
                           leak.content,
                           style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(color: AppTheme.muted, height: 1.5),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                                height: 1.5,
+                              ),
                         ),
                       ],
                       if (leak.keywords.isNotEmpty) ...[
@@ -2378,8 +2395,8 @@ class _PanelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
@@ -2397,7 +2414,7 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -2408,7 +2425,7 @@ class _Pill extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -2432,7 +2449,9 @@ class _MetricAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? const Color(0xFFF43F5E) : AppTheme.muted;
+    final color = active
+        ? const Color(0xFFF43F5E)
+        : context.hokTheme.onSurfaceMuted;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: onTap,

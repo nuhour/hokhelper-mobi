@@ -143,9 +143,9 @@ class StatsScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 'Hero, equipment, and combo trends from the HOK stats service.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
               const SizedBox(height: 18),
               if (dashboard.isEmpty)
@@ -432,7 +432,9 @@ class _StatsTabButton extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: selected ? AppTheme.text : AppTheme.muted,
+                color: selected
+                    ? context.hokTheme.onSurfaceStrong
+                    : context.hokTheme.onSurfaceMuted,
                 fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
@@ -541,7 +543,7 @@ class _StatsSection extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -595,7 +597,7 @@ class _HeroEquipUsageCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -653,7 +655,7 @@ class _EquipHeroUsageCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -711,7 +713,7 @@ class _HeroStatsCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -763,7 +765,7 @@ class _PlayerStatsCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -823,7 +825,7 @@ class _EquipStatsCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -869,7 +871,7 @@ class _ComboStatsCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -938,9 +940,7 @@ class _MetricPill extends StatelessWidget {
             Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color:
-              tint?.withValues(alpha: 0.28) ??
-              Colors.white.withValues(alpha: 0.08),
+          color: tint?.withValues(alpha: 0.28) ?? context.hokTheme.outlineSoft,
         ),
       ),
       child: Padding(
@@ -950,7 +950,7 @@ class _MetricPill extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: tint ?? AppTheme.muted,
+            color: tint ?? context.hokTheme.onSurfaceMuted,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -969,9 +969,9 @@ class _PanelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );

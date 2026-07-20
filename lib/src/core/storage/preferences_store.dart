@@ -34,7 +34,7 @@ class PreferencesStore {
   }
 
   String get selectedTheme {
-    return _preferences.getString(selectedThemeKey) ?? 'classic';
+    return _preferences.getString(selectedThemeKey) ?? 'versus';
   }
 
   Future<void> setSelectedTheme(String theme) {

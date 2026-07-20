@@ -15,7 +15,13 @@ void main() {
   testWidgets('shows app shell destinations in English by default', (
     WidgetTester tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      PreferencesStore.selectedLanguageCodeKey: 'en',
+    });
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -47,6 +53,10 @@ void main() {
     SharedPreferences.setMockInitialValues({
       PreferencesStore.selectedLanguageCodeKey: 'zh',
     });
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -72,12 +82,17 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
-  testWidgets('uses Material light theme mode for the hokx versus palette', (
+  testWidgets('uses Material light theme mode for the hokx classic palette', (
     WidgetTester tester,
   ) async {
     SharedPreferences.setMockInitialValues({
-      PreferencesStore.selectedThemeKey: AppThemeMode.versus.storageValue,
+      PreferencesStore.selectedLanguageCodeKey: 'en',
+      PreferencesStore.selectedThemeKey: AppThemeMode.classic.storageValue,
     });
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       ProviderScope(

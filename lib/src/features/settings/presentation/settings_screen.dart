@@ -40,6 +40,7 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: l10n.settingsLanguageSubtitle,
                   selected: settings.languageCode,
                   values: AppLocalizations.supportedLanguageCodes,
+                  scrollable: true,
                   labelBuilder: _languageLabel,
                   onChanged: (languageCode) {
                     ref
@@ -112,8 +113,8 @@ class SettingsScreen extends ConsumerWidget {
 
   static String _themeLabel(AppThemeMode mode, AppLocalizations l10n) {
     return switch (mode) {
-      AppThemeMode.classic => l10n.themeDark,
-      AppThemeMode.versus => l10n.themeLight,
+      AppThemeMode.classic => l10n.themeLight,
+      AppThemeMode.versus => l10n.themeDark,
     };
   }
 
@@ -159,6 +160,7 @@ class _SettingsSegment<T> extends StatelessWidget {
     required this.values,
     required this.labelBuilder,
     required this.onChanged,
+    this.scrollable = false,
   });
 
   final IconData icon;
@@ -168,6 +170,7 @@ class _SettingsSegment<T> extends StatelessWidget {
   final List<T> values;
   final String Function(T value) labelBuilder;
   final ValueChanged<T> onChanged;
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -213,49 +216,57 @@ class _SettingsSegment<T> extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<T>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final value in values)
-                    ButtonSegment<T>(
-                      value: value,
-                      label: Text(
-                        labelBuilder(value),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                selected: {selected},
-                onSelectionChanged: (selection) {
-                  final value = selection.singleOrNull;
-                  if (value != null) {
-                    onChanged(value);
-                  }
-                },
-                style: ButtonStyle(
-                  minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    return states.contains(WidgetState.selected)
-                        ? colors.onPrimary
-                        : colors.text;
-                  }),
-                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    return states.contains(WidgetState.selected)
-                        ? colors.primary
-                        : Colors.transparent;
-                  }),
-                  side: WidgetStatePropertyAll(
-                    BorderSide(color: colors.border),
-                  ),
-                ),
-              ),
-            ),
+            _segmentControl(colors),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _segmentControl(_SettingsColors colors) {
+    final control = SegmentedButton<T>(
+      showSelectedIcon: false,
+      segments: [
+        for (final value in values)
+          ButtonSegment<T>(
+            value: value,
+            label: Text(
+              labelBuilder(value),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      selected: {selected},
+      onSelectionChanged: (selection) {
+        final value = selection.singleOrNull;
+        if (value != null) {
+          onChanged(value);
+        }
+      },
+      style: ButtonStyle(
+        minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? colors.onPrimary
+              : colors.text;
+        }),
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? colors.primary
+              : Colors.transparent;
+        }),
+        side: WidgetStatePropertyAll(BorderSide(color: colors.border)),
+      ),
+    );
+
+    if (!scrollable) {
+      return SizedBox(width: double.infinity, child: control);
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(width: values.length * 76, child: control),
     );
   }
 }
@@ -335,7 +346,7 @@ class _SettingsColors {
       primary: colorScheme.primary,
       onPrimary: colorScheme.onPrimary,
       text: colorScheme.onSurface,
-      muted: isLight ? AppTheme.lightMuted : AppTheme.muted,
+      muted: isLight ? AppTheme.lightMuted : context.hokTheme.onSurfaceMuted,
     );
   }
 }

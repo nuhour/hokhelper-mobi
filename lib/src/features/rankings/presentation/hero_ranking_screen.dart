@@ -180,9 +180,9 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
               const SizedBox(height: 8),
               Text(
                 'Compare heroes, players, equipment, and tier data.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
               const SizedBox(height: 16),
               TabBar(
@@ -490,8 +490,10 @@ class _TierGroup extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors?.surfaceSlate ?? AppTheme.panel,
-        border: Border.all(color: colors?.outlineSoft ?? AppTheme.outline),
+        color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
+        border: Border.all(
+          color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: ClipRRect(
@@ -572,7 +574,7 @@ class _CompactTierHero extends StatelessWidget {
     );
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors?.surfaceMuted ?? AppTheme.panelAlt,
+        color: colors?.surfaceMuted ?? context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Padding(
@@ -776,7 +778,7 @@ class _TierHistoryChart extends StatelessWidget {
             decoration: BoxDecoration(
               color:
                   Theme.of(context).extension<HokThemeColors>()?.surfaceMuted ??
-                  AppTheme.panelAlt,
+                  context.hokTheme.surfaceRaised,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Padding(
@@ -975,8 +977,8 @@ class _HeroRankingCard extends StatelessWidget {
             : () => context.go('/heroes/$heroRouteId'),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            color: context.hokTheme.surfaceSlate,
+            border: Border.all(color: context.hokTheme.outlineSoft),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Padding(
@@ -1000,7 +1002,7 @@ class _HeroRankingCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
-                                  color: AppTheme.text,
+                                  color: context.hokTheme.onSurfaceStrong,
                                   fontWeight: FontWeight.w800,
                                 ),
                           ),
@@ -1010,7 +1012,9 @@ class _HeroRankingCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppTheme.muted),
+                                ?.copyWith(
+                                  color: context.hokTheme.onSurfaceMuted,
+                                ),
                           ),
                         ],
                       ),
@@ -1068,8 +1072,8 @@ class _PlayerRankingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -1096,7 +1100,7 @@ class _PlayerRankingCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
-                                    color: AppTheme.text,
+                                    color: context.hokTheme.onSurfaceStrong,
                                     fontWeight: FontWeight.w800,
                                   ),
                             ),
@@ -1112,9 +1116,9 @@ class _PlayerRankingCard extends StatelessWidget {
                         'Region ${entry.region}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -1161,8 +1165,8 @@ class _EquipRankingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -1177,7 +1181,7 @@ class _EquipRankingCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1222,9 +1226,9 @@ class _PrimaryScore extends StatelessWidget {
         ),
         Text(
           'Peak',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
         ),
       ],
     );
@@ -1298,9 +1302,9 @@ class _PrimaryRate extends StatelessWidget {
         ),
         Text(
           'Win rate',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
         ),
       ],
     );
@@ -1317,7 +1321,7 @@ class _MetricChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -1325,7 +1329,7 @@ class _MetricChip extends StatelessWidget {
         child: Text(
           '$label $value',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w700,
           ),
         ),

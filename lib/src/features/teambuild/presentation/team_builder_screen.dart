@@ -251,7 +251,7 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
     }
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: SafeArea(
         child: Column(
           children: [
@@ -368,9 +368,7 @@ class _BuilderToolbar extends StatelessWidget {
     height: 52,
     padding: const EdgeInsets.symmetric(horizontal: 12),
     decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-      ),
+      border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
     ),
     child: Row(
       children: [
@@ -384,7 +382,7 @@ class _BuilderToolbar extends StatelessWidget {
           child: Text(
             'Smart Team Builder',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppTheme.text,
+              color: context.hokTheme.onSurfaceStrong,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -891,10 +889,13 @@ class _RecommendationPanel extends StatelessWidget {
                     ),
                   )
                 : items.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No recommendations',
-                      style: TextStyle(color: AppTheme.muted, fontSize: 12),
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
+                        fontSize: 12,
+                      ),
                     ),
                   )
                 : ListView.separated(
@@ -933,7 +934,9 @@ class _RecTab extends StatelessWidget {
       minimumSize: const Size(0, 34),
       padding: const EdgeInsets.symmetric(horizontal: 6),
       backgroundColor: selected ? AppTheme.gold : Colors.transparent,
-      foregroundColor: selected ? AppTheme.text : AppTheme.muted,
+      foregroundColor: selected
+          ? context.hokTheme.onSurfaceStrong
+          : context.hokTheme.onSurfaceMuted,
       side: BorderSide(
         color: selected ? AppTheme.gold : Colors.white.withValues(alpha: .17),
       ),
@@ -973,13 +976,13 @@ class _RecommendationTile extends StatelessWidget {
                 dimension: 34,
                 child: hero == null
                     ? CircleAvatar(
-                        backgroundColor: AppTheme.panelAlt,
+                        backgroundColor: context.hokTheme.surfaceRaised,
                         child: Text(
                           item.name.isEmpty
                               ? '?'
                               : item.name.characters.first.toUpperCase(),
-                          style: const TextStyle(
-                            color: AppTheme.text,
+                          style: TextStyle(
+                            color: context.hokTheme.onSurfaceStrong,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -999,8 +1002,8 @@ class _RecommendationTile extends StatelessWidget {
                       item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.text,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1009,8 +1012,8 @@ class _RecommendationTile extends StatelessWidget {
                       'Pick ${(item.pickRate * 100).toStringAsFixed(1)}% · Synergy ${(item.synergy * 100).toStringAsFixed(1)}%',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.muted,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
                         fontSize: 10,
                       ),
                     ),
@@ -1107,7 +1110,7 @@ class _HeroPool extends StatelessWidget {
                     borderRadius: BorderRadius.circular(9),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: AppTheme.panel,
+                        color: context.hokTheme.surfaceSlate,
                         borderRadius: BorderRadius.circular(9),
                         border: Border.all(
                           color: Colors.white.withValues(alpha: .05),
@@ -1216,9 +1219,9 @@ class _PoolMessage extends StatelessWidget {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppTheme.muted),
+        Icon(icon, color: context.hokTheme.onSurfaceMuted),
         const SizedBox(height: 8),
-        Text(message, style: const TextStyle(color: AppTheme.muted)),
+        Text(message, style: TextStyle(color: context.hokTheme.onSurfaceMuted)),
         if (onRetry != null)
           TextButton(onPressed: onRetry, child: const Text('Retry')),
       ],

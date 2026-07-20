@@ -67,9 +67,9 @@ class ContentScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             'Skins, videos, and official media foundations.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
           ),
           const SizedBox(height: 24),
           _CommunityEntryCard(onTap: () => context.go('/content/community')),
@@ -173,8 +173,8 @@ class _ContentActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Material(
@@ -183,13 +183,16 @@ class _ContentActionCard extends StatelessWidget {
         child: ListTile(
           onTap: onTap,
           leading: Icon(icon, color: AppTheme.gold),
-          trailing: const Icon(Icons.chevron_right, color: AppTheme.muted),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: context.hokTheme.onSurfaceMuted,
+          ),
           title: Text(
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppTheme.text,
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceStrong,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -197,7 +200,7 @@ class _ContentActionCard extends StatelessWidget {
             subtitle,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppTheme.muted),
+            style: TextStyle(color: context.hokTheme.onSurfaceMuted),
           ),
         ),
       ),
@@ -230,16 +233,16 @@ class _PatchNotesRail extends StatelessWidget {
             Text(
               'Patch Notes',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(width: 8),
             Text(
               items.length.toString(),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
           ],
         ),
@@ -272,8 +275,8 @@ class _PatchNoteCard extends StatelessWidget {
         onTap: () => context.go('/content/patch-notes?note_id=${note.id}'),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            color: context.hokTheme.surfaceSlate,
+            border: Border.all(color: context.hokTheme.outlineSoft),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Padding(
@@ -297,7 +300,7 @@ class _PatchNoteCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(
-                                  color: AppTheme.text,
+                                  color: context.hokTheme.onSurfaceStrong,
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
@@ -307,15 +310,17 @@ class _PatchNoteCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppTheme.muted),
+                                ?.copyWith(
+                                  color: context.hokTheme.onSurfaceMuted,
+                                ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right,
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       size: 20,
                     ),
                   ],
@@ -326,9 +331,9 @@ class _PatchNoteCard extends StatelessWidget {
                     note.preview,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -399,7 +404,7 @@ class _PatchMetaChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -412,7 +417,7 @@ class _PatchMetaChip extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -454,16 +459,16 @@ class _ContentRail extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(width: 8),
             Text(
               items.length.toString(),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
           ],
         ),
@@ -507,8 +512,8 @@ class _ContentCard extends StatelessWidget {
           onTap: () => context.go(route),
           child: Ink(
             decoration: BoxDecoration(
-              color: AppTheme.panel,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              color: context.hokTheme.surfaceSlate,
+              border: Border.all(color: context.hokTheme.outlineSoft),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
@@ -529,7 +534,7 @@ class _ContentCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -538,9 +543,9 @@ class _ContentCard extends StatelessWidget {
                     item.heroName.isEmpty ? item.subtitle : item.heroName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                   const Spacer(),
                   Row(
@@ -559,7 +564,9 @@ class _ContentCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                       ),
                     ],

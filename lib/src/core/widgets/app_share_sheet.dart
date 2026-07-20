@@ -28,10 +28,10 @@ class _AppShareSheet extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Material(
-        color: AppTheme.panel,
-        shape: const RoundedRectangleBorder(
+        color: context.hokTheme.surfaceSlate,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-          side: BorderSide(color: AppTheme.outline),
+          side: BorderSide(color: context.hokTheme.outlineSoft),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 10, 18, 20),
@@ -44,7 +44,9 @@ class _AppShareSheet extends StatelessWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.muted.withValues(alpha: 0.45),
+                    color: context.hokTheme.onSurfaceMuted.withValues(
+                      alpha: 0.45,
+                    ),
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
@@ -53,7 +55,7 @@ class _AppShareSheet extends StatelessWidget {
               Text(
                 'Share',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -64,7 +66,7 @@ class _AppShareSheet extends StatelessWidget {
                   _ShareTarget(
                     label: 'X',
                     icon: Icons.alternate_email_rounded,
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     onTap: () => _open(
                       context,
                       'https://x.com/intent/tweet?text=${Uri.encodeComponent(title)}&url=${Uri.encodeComponent(url)}',
@@ -169,7 +171,7 @@ class _ShareTarget extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                   fontWeight: FontWeight.w700,
                 ),
               ),

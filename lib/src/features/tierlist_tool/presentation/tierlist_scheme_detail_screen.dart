@@ -111,7 +111,7 @@ class _TierListSchemeDetailScreenState
 
         if (widget.initialEditMode) {
           return Scaffold(
-            backgroundColor: AppTheme.bg,
+            backgroundColor: context.hokTheme.backgroundDeep,
             body: SafeArea(
               key: const ValueKey('tier-editor-fullscreen'),
               child: Column(
@@ -187,9 +187,9 @@ class _TierListSchemeDetailScreenState
                   const SizedBox(height: 8),
                   Text(
                     'Inspect a shared portal tier list in a mobile-friendly layout.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   if (widget.initialEditMode) ...[
@@ -583,10 +583,8 @@ class _TierListEditorToolbar extends StatelessWidget {
     return DecoratedBox(
       key: const ValueKey('tier-editor-toolbar'),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
+        color: context.hokTheme.surfaceSlate,
+        border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: SafeArea(
         bottom: false,
@@ -613,7 +611,7 @@ class _TierListEditorToolbar extends StatelessWidget {
                   maxLines: 1,
                   textInputAction: TextInputAction.done,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                   decoration: InputDecoration(
@@ -625,7 +623,7 @@ class _TierListEditorToolbar extends StatelessWidget {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: context.hokTheme.outlineSoft,
                       ),
                     ),
                   ),
@@ -695,7 +693,7 @@ class _ToolbarButton extends StatelessWidget {
         backgroundColor: isSelected
             ? AppTheme.gold
             : Colors.white.withValues(alpha: 0.05),
-        foregroundColor: AppTheme.text,
+        foregroundColor: context.hokTheme.onSurfaceStrong,
         minimumSize: const Size(32, 32),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: EdgeInsets.zero,
@@ -802,7 +800,7 @@ class _TierBoardPanel extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.24),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: context.hokTheme.outlineSoft),
         ),
         child: Padding(
           padding: const EdgeInsets.all(7),
@@ -875,9 +873,9 @@ class _HeroPoolPanelState extends State<_HeroPoolPanel> {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Column(
         children: [
@@ -897,7 +895,7 @@ class _HeroPoolPanelState extends State<_HeroPoolPanel> {
                     Text(
                       'Hero Pool',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -932,17 +930,17 @@ class _HeroPoolPanelState extends State<_HeroPoolPanel> {
               loading: () => Center(
                 child: Text(
                   'Loading heroes...',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
               ),
               error: (_, _) => Center(
                 child: Text(
                   'Failed to load heroes',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
               ),
             ),
@@ -953,7 +951,7 @@ class _HeroPoolPanelState extends State<_HeroPoolPanel> {
               'DRAG FROM HERE',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.0,
               ),
@@ -1015,7 +1013,7 @@ class _LaneIconFilterBar extends StatelessWidget {
                   border: Border.all(
                     color: lanePosition == option.value
                         ? AppTheme.gold
-                        : Colors.white.withValues(alpha: 0.08),
+                        : context.hokTheme.outlineSoft,
                   ),
                 ),
                 child: option.assetName == null
@@ -1094,7 +1092,7 @@ class _EditorModeBanner extends StatelessWidget {
               child: Text(
                 'Editor mode',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1153,9 +1151,9 @@ class _TierListDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1186,13 +1184,13 @@ class _TierListDetailCard extends StatelessWidget {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.08),
+                                color: context.hokTheme.outlineSoft,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.08),
+                                color: context.hokTheme.outlineSoft,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
@@ -1204,7 +1202,7 @@ class _TierListDetailCard extends StatelessWidget {
                           ),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                         )
@@ -1213,16 +1211,16 @@ class _TierListDetailCard extends StatelessWidget {
                           scheme.name,
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                         ),
                       const SizedBox(height: 6),
                       Text(
                         'Updated ${scheme.updatedDateText}',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -1367,13 +1365,13 @@ class _TierRowEditor extends StatelessWidget {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.08),
+                          color: context.hokTheme.outlineSoft,
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.08),
+                          color: context.hokTheme.outlineSoft,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -1382,7 +1380,7 @@ class _TierRowEditor extends StatelessWidget {
                       ),
                     ),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1439,9 +1437,9 @@ class _TierHeroIdEditor extends StatelessWidget {
         ? <Widget>[
             Text(
               'No heroes assigned',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
           ]
         : [
@@ -1476,22 +1474,18 @@ class _TierHeroIdEditor extends StatelessWidget {
                   fillColor: Colors.white.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
+                    borderSide: BorderSide(color: context.hokTheme.outlineSoft),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
+                    borderSide: BorderSide(color: context.hokTheme.outlineSoft),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: AppTheme.gold),
                   ),
                 ),
-                style: const TextStyle(color: AppTheme.text),
+                style: TextStyle(color: context.hokTheme.onSurfaceStrong),
               ),
             ),
             const SizedBox(width: 8),
@@ -1588,7 +1582,7 @@ class _TierRowDetail extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF071027),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: SizedBox(
         height: isEditMode ? double.infinity : 92,
@@ -1677,7 +1671,7 @@ class _TierRowDetail extends StatelessWidget {
                             ? '1 hero'
                             : '${row.heroCount} heroes',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppTheme.text,
+                          color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1687,7 +1681,7 @@ class _TierRowDetail extends StatelessWidget {
                       Text(
                         isEditMode ? 'Drag heroes here' : 'No heroes assigned',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.muted,
+                          color: context.hokTheme.onSurfaceMuted,
                           fontWeight: FontWeight.w700,
                         ),
                       )
@@ -1775,7 +1769,7 @@ class _TierRowColorMenu extends StatelessWidget {
       context: context,
       builder: (context) {
         return Dialog(
-          backgroundColor: AppTheme.panel,
+          backgroundColor: context.hokTheme.surfaceSlate,
           insetPadding: const EdgeInsets.all(18),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -1881,7 +1875,7 @@ class _DetailBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPrimary ? AppTheme.gold : AppTheme.muted;
+    final color = isPrimary ? AppTheme.gold : context.hokTheme.onSurfaceMuted;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: (isPrimary ? AppTheme.gold : Colors.white).withValues(

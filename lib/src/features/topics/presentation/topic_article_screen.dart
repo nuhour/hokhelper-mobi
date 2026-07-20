@@ -38,7 +38,7 @@ class TopicArticleScreen extends ConsumerWidget {
     final title = formatTopicTitle(topicKey);
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(topicArticleProvider(slug));
@@ -79,9 +79,9 @@ class _ArticleBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -107,9 +107,9 @@ class _ArticleBody extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 article.excerpt,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
             ],
             if (article.coverImageUrl.isNotEmpty) ...[
@@ -162,9 +162,9 @@ class _ArticleBody extends StatelessWidget {
       return [
         Text(
           'No article content available.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
         ),
       ];
     }
@@ -177,7 +177,7 @@ class _ArticleBody extends StatelessWidget {
             child: Text(
               line.replaceFirst(RegExp(r'^#+\s*'), ''),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -188,7 +188,7 @@ class _ArticleBody extends StatelessWidget {
             child: Text(
               line.replaceAll(RegExp(r'[*_`#]'), ''),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 height: 1.55,
               ),
             ),

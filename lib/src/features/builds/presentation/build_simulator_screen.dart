@@ -226,7 +226,7 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
     final selected = await showModalBottomSheet<HeroSummary>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -414,7 +414,9 @@ class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.muted.withValues(alpha: 0.55),
+                  color: context.hokTheme.onSurfaceMuted.withValues(
+                    alpha: 0.55,
+                  ),
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -425,7 +427,7 @@ class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
                     child: Text(
                       'Hero Pool',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -484,12 +486,12 @@ class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
                                 decoration: BoxDecoration(
                                   color: selected
                                       ? AppTheme.gold.withValues(alpha: 0.16)
-                                      : AppTheme.panelAlt,
+                                      : context.hokTheme.surfaceRaised,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: selected
                                         ? AppTheme.gold
-                                        : Colors.white.withValues(alpha: 0.08),
+                                        : context.hokTheme.outlineSoft,
                                   ),
                                 ),
                                 child: Column(
@@ -506,8 +508,8 @@ class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
                                       hero.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: AppTheme.text,
+                                      style: TextStyle(
+                                        color: context.hokTheme.onSurfaceStrong,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -564,12 +566,14 @@ class _BuildLaneFilterBar extends StatelessWidget {
                   height: 38,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: selected ? AppTheme.gold : AppTheme.panelAlt,
+                    color: selected
+                        ? AppTheme.gold
+                        : context.hokTheme.surfaceRaised,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: selected
                           ? AppTheme.gold
-                          : Colors.white.withValues(alpha: 0.08),
+                          : context.hokTheme.outlineSoft,
                     ),
                   ),
                   child: option.assetName == null
@@ -622,7 +626,7 @@ class _SlotsPanel extends StatelessWidget {
             Text(
               'My Builds',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -688,11 +692,11 @@ class _SlotCard extends StatelessWidget {
           height: scheme == null ? 260 : 194,
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: scheme == null
-                  ? AppTheme.muted.withValues(alpha: 0.28)
+                  ? context.hokTheme.onSurfaceMuted.withValues(alpha: 0.28)
                   : Colors.white.withValues(alpha: 0.12),
               style: BorderStyle.solid,
             ),
@@ -705,8 +709,8 @@ class _SlotCard extends StatelessWidget {
                   children: [
                     Text(
                       'BUILD $index',
-                      style: const TextStyle(
-                        color: AppTheme.muted,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
@@ -735,20 +739,22 @@ class _SlotCard extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(
                             width: 2,
-                            color: AppTheme.muted.withValues(alpha: 0.4),
+                            color: context.hokTheme.onSurfaceMuted.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.add,
-                          color: AppTheme.muted,
+                          color: context.hokTheme.onSurfaceMuted,
                           size: 46,
                         ),
                       ),
                       const SizedBox(height: 22),
                       Text(
                         title,
-                        style: const TextStyle(
-                          color: AppTheme.muted,
+                        style: TextStyle(
+                          color: context.hokTheme.onSurfaceMuted,
                           fontSize: 19,
                           fontWeight: FontWeight.w800,
                         ),
@@ -779,8 +785,8 @@ class _SlotCard extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppTheme.text,
+                  style: TextStyle(
+                    color: context.hokTheme.onSurfaceStrong,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -802,7 +808,7 @@ class _BuildCollectionTabs extends StatelessWidget {
       height: 74,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
@@ -849,7 +855,11 @@ class _BuildCollectionTab extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: selected ? Colors.white : AppTheme.muted, size: 22),
+          Icon(
+            icon,
+            color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
+            size: 22,
+          ),
           const SizedBox(width: 7),
           Flexible(
             child: Text(
@@ -857,7 +867,9 @@ class _BuildCollectionTab extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: selected ? Colors.white : AppTheme.muted,
+                color: selected
+                    ? Colors.white
+                    : context.hokTheme.onSurfaceMuted,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -930,7 +942,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) => Material(
-        color: AppTheme.bg,
+        color: context.hokTheme.backgroundDeep,
         child: SafeArea(
           child: SizedBox(
             height: constraints.maxHeight,
@@ -1111,10 +1123,8 @@ class _BuildEditorToolbar extends StatelessWidget {
       height: 108,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
+        color: context.hokTheme.surfaceSlate,
+        border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Row(
         children: [
@@ -1138,15 +1148,15 @@ class _BuildEditorToolbar extends StatelessWidget {
               controller: titleController,
               maxLines: 1,
               textInputAction: TextInputAction.done,
-              style: const TextStyle(
-                color: AppTheme.text,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceStrong,
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
               ),
               decoration: InputDecoration(
                 isDense: true,
                 hintText: heroName.isEmpty ? 'Build name' : '$heroName build',
-                hintStyle: const TextStyle(color: AppTheme.muted),
+                hintStyle: TextStyle(color: context.hokTheme.onSurfaceMuted),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
@@ -1156,7 +1166,9 @@ class _BuildEditorToolbar extends StatelessWidget {
             onPressed: onToggleVisibility,
             tooltip: isPublic ? 'Public build' : 'Private build',
             icon: Icon(isPublic ? Icons.public : Icons.lock_outline),
-            color: isPublic ? AppTheme.success : AppTheme.muted,
+            color: isPublic
+                ? AppTheme.success
+                : context.hokTheme.onSurfaceMuted,
           ),
           IconButton(
             onPressed: onClear,
@@ -1209,7 +1221,7 @@ class _BuildEditorTabs extends StatelessWidget {
     return Container(
       height: 84,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       child: Row(
         children: tabs
             .map(
@@ -1225,7 +1237,7 @@ class _BuildEditorTabs extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: selected == entry.tab
                             ? AppTheme.gold
-                            : AppTheme.bg,
+                            : context.hokTheme.backgroundDeep,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: selected == entry.tab
@@ -1241,7 +1253,7 @@ class _BuildEditorTabs extends StatelessWidget {
                             size: 18,
                             color: selected == entry.tab
                                 ? Colors.white
-                                : AppTheme.muted,
+                                : context.hokTheme.onSurfaceMuted,
                           ),
                           const SizedBox(width: 7),
                           Flexible(
@@ -1252,7 +1264,7 @@ class _BuildEditorTabs extends StatelessWidget {
                               style: TextStyle(
                                 color: selected == entry.tab
                                     ? Colors.white
-                                    : AppTheme.muted,
+                                    : context.hokTheme.onSurfaceMuted,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 13,
                               ),
@@ -1298,10 +1310,10 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
           margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(22),
             border: Border(
-              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+              bottom: BorderSide(color: context.hokTheme.outlineSoft),
             ),
           ),
           child: Column(
@@ -1315,10 +1327,10 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                     size: 20,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'EQUIPMENT',
                     style: TextStyle(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.1,
                     ),
@@ -1327,7 +1339,9 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                   Text(
                     '+ Slot',
                     style: TextStyle(
-                      color: AppTheme.muted.withValues(alpha: 0.8),
+                      color: context.hokTheme.onSurfaceMuted.withValues(
+                        alpha: 0.8,
+                      ),
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1461,9 +1475,9 @@ class _BuildEmptyEquipmentSlot extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-        color: AppTheme.bg,
+        color: context.hokTheme.backgroundDeep,
       ),
-      child: const Icon(Icons.add, size: 18, color: AppTheme.muted),
+      child: Icon(Icons.add, size: 18, color: context.hokTheme.onSurfaceMuted),
     );
   }
 }
@@ -1507,7 +1521,7 @@ class _CatalogTab extends StatelessWidget {
     child: Text(
       label,
       style: TextStyle(
-        color: selected ? AppTheme.gold : AppTheme.muted,
+        color: selected ? AppTheme.gold : context.hokTheme.onSurfaceMuted,
         fontWeight: FontWeight.w900,
         letterSpacing: 1.1,
       ),
@@ -1544,7 +1558,7 @@ class _EquipmentFilter extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
     decoration: BoxDecoration(
-      color: selected ? AppTheme.gold : AppTheme.bg,
+      color: selected ? AppTheme.gold : context.hokTheme.backgroundDeep,
       borderRadius: BorderRadius.circular(999),
       border: Border.all(
         color: selected ? AppTheme.gold : Colors.white.withValues(alpha: 0.14),
@@ -1553,7 +1567,7 @@ class _EquipmentFilter extends StatelessWidget {
     child: Text(
       label,
       style: TextStyle(
-        color: selected ? Colors.white : AppTheme.muted,
+        color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
         fontWeight: FontWeight.w800,
       ),
     ),
@@ -1601,13 +1615,16 @@ class _BuildArcanaWorkspace extends StatelessWidget {
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'Choose up to 10 arcana of each color.',
-              style: TextStyle(color: AppTheme.muted, fontSize: 12),
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceMuted,
+                fontSize: 12,
+              ),
             ),
           ),
         ),
@@ -1681,10 +1698,12 @@ class _ArcanaColorButton extends StatelessWidget {
         height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.16) : AppTheme.panel,
+          color: selected
+              ? accent.withValues(alpha: 0.16)
+              : context.hokTheme.surfaceSlate,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? accent : Colors.white.withValues(alpha: 0.08),
+            color: selected ? accent : context.hokTheme.outlineSoft,
           ),
         ),
         child: Column(
@@ -1692,8 +1711,8 @@ class _ArcanaColorButton extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
-                color: AppTheme.text,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1789,7 +1808,7 @@ class _BuildCatalogAsset extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: selected
                       ? accent.withValues(alpha: 0.14)
-                      : AppTheme.panel,
+                      : context.hokTheme.surfaceSlate,
                   border: Border.all(
                     width: selected ? 2 : 1,
                     color: selected
@@ -1811,8 +1830,8 @@ class _BuildCatalogAsset extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTheme.text,
+                style: TextStyle(
+                  color: context.hokTheme.onSurfaceStrong,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1876,7 +1895,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1895,7 +1914,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
                   onTap: () => setState(() => _latestFirst = true),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: _ExploreSortButton(
                   label: 'Popular',
@@ -1909,15 +1928,18 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.filter_alt_outlined, color: AppTheme.muted),
+                      Icon(
+                        Icons.filter_alt_outlined,
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Sort',
                         style: TextStyle(
-                          color: AppTheme.muted,
+                          color: context.hokTheme.onSurfaceMuted,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1931,12 +1953,15 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
             }
             return Row(
               children: [
-                const Icon(Icons.filter_alt_outlined, color: AppTheme.muted),
+                Icon(
+                  Icons.filter_alt_outlined,
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'Sort',
                   style: TextStyle(
-                    color: AppTheme.muted,
+                    color: context.hokTheme.onSurfaceMuted,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -2054,7 +2079,7 @@ class _ExploreSortButton extends StatelessWidget {
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: selected ? AppTheme.gold : AppTheme.bg,
+        color: selected ? AppTheme.gold : context.hokTheme.backgroundDeep,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: selected
@@ -2065,7 +2090,10 @@ class _ExploreSortButton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: selected ? Colors.white : AppTheme.muted),
+          Icon(
+            icon,
+            color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
+          ),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -2073,7 +2101,9 @@ class _ExploreSortButton extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: selected ? Colors.white : AppTheme.muted,
+                color: selected
+                    ? Colors.white
+                    : context.hokTheme.onSurfaceMuted,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -2105,7 +2135,7 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.12),
@@ -2122,12 +2152,12 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                 height: 74,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppTheme.panelAlt,
+                  color: context.hokTheme.surfaceRaised,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.shield_outlined,
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                   size: 34,
                 ),
               ),
@@ -2140,8 +2170,8 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                       scheme.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.text,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceStrong,
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                       ),
@@ -2151,8 +2181,8 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                       'by ${scheme.authorName}  ·  ${scheme.heroName.isEmpty ? 'Any hero' : scheme.heroName}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.muted,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -2256,20 +2286,20 @@ class _ExploreAction extends StatelessWidget {
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: AppTheme.bg,
+              color: context.hokTheme.backgroundDeep,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: AppTheme.muted),
+                Icon(icon, color: context.hokTheme.onSurfaceMuted),
                 if (value != null) ...[
                   const SizedBox(width: 8),
                   Text(
                     '$value',
-                    style: const TextStyle(
-                      color: AppTheme.muted,
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceMuted,
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),

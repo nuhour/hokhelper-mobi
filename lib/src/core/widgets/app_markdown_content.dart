@@ -15,33 +15,34 @@ class AppMarkdownContent extends StatelessWidget {
     return MarkdownBody(
       data: _normalizeContent(content),
       styleSheet: MarkdownStyleSheet(
-        p: Theme.of(
-          context,
-        ).textTheme.bodyLarge?.copyWith(color: AppTheme.text, height: 1.5),
+        p: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: context.hokTheme.onSurfaceStrong,
+          height: 1.5,
+        ),
         h1: Theme.of(context).textTheme.headlineSmall?.copyWith(
-          color: AppTheme.text,
+          color: context.hokTheme.onSurfaceStrong,
           fontWeight: FontWeight.w900,
         ),
         h2: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: AppTheme.text,
+          color: context.hokTheme.onSurfaceStrong,
           fontWeight: FontWeight.w900,
         ),
         h3: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: AppTheme.text,
+          color: context.hokTheme.onSurfaceStrong,
           fontWeight: FontWeight.w800,
         ),
         a: const TextStyle(
           color: AppTheme.gold,
           decoration: TextDecoration.underline,
         ),
-        code: const TextStyle(color: AppTheme.text),
+        code: TextStyle(color: context.hokTheme.onSurfaceStrong),
         codeblockDecoration: BoxDecoration(
-          color: AppTheme.panelAlt,
+          color: context.hokTheme.surfaceRaised,
           borderRadius: BorderRadius.circular(10),
         ),
         blockquoteDecoration: BoxDecoration(
           border: Border(left: BorderSide(color: AppTheme.gold, width: 3)),
-          color: AppTheme.panel,
+          color: context.hokTheme.surfaceSlate,
         ),
         blockquotePadding: const EdgeInsets.all(12),
       ),

@@ -119,8 +119,8 @@ class _CommunityComposerAssetsState extends State<CommunityComposerAssets> {
                     constraints: const BoxConstraints(maxHeight: 190),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppTheme.bg,
-                      border: Border.all(color: AppTheme.outline),
+                      color: context.hokTheme.backgroundDeep,
+                      border: Border.all(color: context.hokTheme.outlineSoft),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: _buildPanel(),
@@ -222,7 +222,9 @@ class _AssetButton extends StatelessWidget {
         backgroundColor: selected
             ? AppTheme.gold.withValues(alpha: 0.18)
             : Colors.transparent,
-        foregroundColor: selected ? AppTheme.gold : AppTheme.muted,
+        foregroundColor: selected
+            ? AppTheme.gold
+            : context.hokTheme.onSurfaceMuted,
       ),
       icon: Icon(icon, size: 19),
     );
@@ -250,10 +252,10 @@ class _MediaGrid<T> extends StatelessWidget {
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
     if (values.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No media available',
-          style: TextStyle(color: AppTheme.muted),
+          style: TextStyle(color: context.hokTheme.onSurfaceMuted),
         ),
       );
     }

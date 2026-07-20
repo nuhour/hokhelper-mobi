@@ -29,9 +29,12 @@ class GameAssistantScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'A lightweight match companion for timers, economy reads, cooldown tracking, and tactical prompts.',
-            style: TextStyle(color: AppTheme.muted, height: 1.45),
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceMuted,
+              height: 1.45,
+            ),
           ),
           const SizedBox(height: 18),
           const _PhonePreview(),
@@ -76,7 +79,7 @@ class _PhonePreview extends StatelessWidget {
               width: 92,
               height: 8,
               decoration: BoxDecoration(
-                color: AppTheme.panelAlt,
+                color: context.hokTheme.surfaceRaised,
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -120,10 +123,10 @@ class _ScoreStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Padding(
+      child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -136,7 +139,10 @@ class _ScoreStrip extends StatelessWidget {
                 fontSize: 18,
               ),
             ),
-            Text('12:30', style: TextStyle(color: AppTheme.muted)),
+            Text(
+              '12:30',
+              style: TextStyle(color: context.hokTheme.onSurfaceMuted),
+            ),
             Text(
               '2/3/1',
               style: TextStyle(
@@ -216,7 +222,7 @@ class _TimerChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
@@ -241,8 +247,8 @@ class _TimerChip extends StatelessWidget {
               ),
               child: Text(
                 value,
-                style: const TextStyle(
-                  color: AppTheme.text,
+                style: TextStyle(
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -296,7 +302,7 @@ class _CooldownRow extends StatelessWidget {
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppTheme.text),
+                style: TextStyle(color: context.hokTheme.onSurfaceStrong),
               ),
             ),
             Text(
@@ -330,9 +336,9 @@ class _PreviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -369,11 +375,11 @@ class _DownloadSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
-      child: const Padding(
+      child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,7 +392,7 @@ class _DownloadSection extends StatelessWidget {
                   child: Text(
                     'Ready on this device',
                     style: TextStyle(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0,
                     ),
@@ -437,7 +443,7 @@ class _InstalledCompanionBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppTheme.gold.withValues(alpha: 0.32)),
       ),
-      child: const SizedBox(
+      child: SizedBox(
         width: 112,
         height: 112,
         child: Padding(
@@ -451,7 +457,7 @@ class _InstalledCompanionBadge extends StatelessWidget {
                 'Installed companion',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontSize: 12,
                   height: 1.2,
                   fontWeight: FontWeight.w900,
@@ -498,8 +504,8 @@ class _AccessButton extends StatelessWidget {
                     eyebrow,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppTheme.muted,
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceMuted,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),
@@ -578,9 +584,9 @@ class _FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -594,8 +600,8 @@ class _FeatureCard extends StatelessWidget {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.text,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -642,9 +648,9 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -665,7 +671,7 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -722,7 +728,7 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
                   color: AppTheme.gold.withValues(alpha: 0.16),
                 ),
               ),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.all(12),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -736,7 +742,10 @@ class _LiveMatchConsoleState extends State<_LiveMatchConsole> {
                     Expanded(
                       child: Text(
                         'Tip: sync jungle timers before river fights and ping cooldown windows when the enemy mid has no flash.',
-                        style: TextStyle(color: AppTheme.muted, height: 1.35),
+                        style: TextStyle(
+                          color: context.hokTheme.onSurfaceMuted,
+                          height: 1.35,
+                        ),
                       ),
                     ),
                   ],
@@ -894,7 +903,7 @@ class _CooldownTracker extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -920,9 +929,9 @@ class _CooldownTracker extends StatelessWidget {
             ),
             if (cooldowns.isEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Tap a skill when the enemy spends it.',
-                style: TextStyle(color: AppTheme.muted),
+                style: TextStyle(color: context.hokTheme.onSurfaceMuted),
               ),
             ] else ...[
               const SizedBox(height: 10),
@@ -951,7 +960,7 @@ class _TrackedCooldownRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Padding(
@@ -963,8 +972,8 @@ class _TrackedCooldownRow extends StatelessWidget {
                 '${cooldown.label} ${cooldown.remainingSeconds}s',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppTheme.text,
+                style: TextStyle(
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -972,7 +981,7 @@ class _TrackedCooldownRow extends StatelessWidget {
             IconButton(
               onPressed: onRemove,
               icon: const Icon(Icons.close, size: 18),
-              color: AppTheme.muted,
+              color: context.hokTheme.onSurfaceMuted,
               tooltip: 'Remove cooldown',
               visualDensity: VisualDensity.compact,
             ),
@@ -1032,8 +1041,8 @@ class _LiveTimerTile extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.text,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceStrong,
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
               ),

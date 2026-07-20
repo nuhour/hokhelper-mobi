@@ -126,7 +126,7 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
     final scheme = Theme.of(context).colorScheme;
     final muted = Theme.of(context).brightness == Brightness.light
         ? AppTheme.lightMuted
-        : AppTheme.muted;
+        : context.hokTheme.onSurfaceMuted;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -329,7 +329,7 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -431,7 +431,7 @@ class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
                     child: Text(
                       title,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -456,7 +456,9 @@ class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
                         child: Text(
                           'Failed to load users',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                       );
                     }
@@ -468,7 +470,9 @@ class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
                               ? 'No following yet'
                               : 'No followers yet',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                       );
                     }
@@ -503,9 +507,9 @@ class _FollowUserTile extends StatelessWidget {
         : '?';
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -534,7 +538,7 @@ class _FollowUserTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -544,9 +548,9 @@ class _FollowUserTile extends StatelessWidget {
                       user.bio,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                     ),
                   ],
                 ],

@@ -129,8 +129,8 @@ class _ToolGridCard extends StatelessWidget {
         onTap: () => context.go(tool.route),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            color: context.hokTheme.surfaceSlate,
+            border: Border.all(color: context.hokTheme.outlineSoft),
             borderRadius: BorderRadius.circular(16),
           ),
           child: LayoutBuilder(
@@ -148,8 +148,8 @@ class _ToolGridCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppTheme.text,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
                         height: 1.12,
@@ -161,8 +161,8 @@ class _ToolGridCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppTheme.muted,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
                         fontSize: 11,
                         height: 1.1,
                       ),

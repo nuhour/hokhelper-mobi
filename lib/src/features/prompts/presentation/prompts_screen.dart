@@ -142,7 +142,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     }
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: AppAsyncView<List<PromptSummary>>(
         value: promptsValue,
         previousData: _lastResolvedPrompts,
@@ -174,7 +174,9 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                         Text(
                           'Explore public AI prompt templates from the community.',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                         const SizedBox(height: 14),
                         SingleChildScrollView(
@@ -336,7 +338,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     final created = await showModalBottomSheet<PromptSummary>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -360,7 +362,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     final updated = await showModalBottomSheet<PromptSummary>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -467,7 +469,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     final updated = await showModalBottomSheet<PromptSummary>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -552,7 +554,7 @@ class _PromptGenerationSheetState
                     child: Text(
                       'Image generation',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -649,9 +651,9 @@ class _PromptGenerationSheetState
                           label: const Text('Generate image'),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      SizedBox(height: 14),
                       if (_images.isEmpty)
-                        const SizedBox(
+                        SizedBox(
                           height: 180,
                           child: Center(
                             child: Column(
@@ -659,7 +661,7 @@ class _PromptGenerationSheetState
                               children: [
                                 Icon(
                                   Icons.image_outlined,
-                                  color: AppTheme.muted,
+                                  color: context.hokTheme.onSurfaceMuted,
                                   size: 28,
                                 ),
                                 SizedBox(height: 6),
@@ -667,7 +669,7 @@ class _PromptGenerationSheetState
                                   'No generated images yet',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: AppTheme.muted,
+                                    color: context.hokTheme.onSurfaceMuted,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -706,11 +708,14 @@ class _PromptGenerationSheetState
                                         ? () => _setCover(imageUrl)
                                         : null,
                                     style: OutlinedButton.styleFrom(
-                                      backgroundColor: AppTheme.panel
+                                      backgroundColor: context
+                                          .hokTheme
+                                          .surfaceSlate
                                           .withValues(alpha: 0.92),
-                                      foregroundColor: AppTheme.text,
-                                      side: const BorderSide(
-                                        color: AppTheme.muted,
+                                      foregroundColor:
+                                          context.hokTheme.onSurfaceStrong,
+                                      side: BorderSide(
+                                        color: context.hokTheme.onSurfaceMuted,
                                       ),
                                       minimumSize: const Size.fromHeight(34),
                                       visualDensity: VisualDensity.compact,
@@ -807,7 +812,7 @@ class _PromptGenerationSheetState
     final result = await showModalBottomSheet<PromptRechargeResult>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -840,7 +845,7 @@ class _QuotaPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -853,7 +858,7 @@ class _QuotaPanel extends StatelessWidget {
               child: Text(
                 '${quota.remaining} / ${quota.total} left',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -911,7 +916,7 @@ class _PromptRechargeSheetState extends ConsumerState<_PromptRechargeSheet> {
                   child: Text(
                     'Recharge quota',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -927,7 +932,7 @@ class _PromptRechargeSheetState extends ConsumerState<_PromptRechargeSheet> {
             Text(
               'Plan',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -953,7 +958,7 @@ class _PromptRechargeSheetState extends ConsumerState<_PromptRechargeSheet> {
             Text(
               'Payment',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1053,10 +1058,10 @@ class _OptionTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? AppTheme.gold.withValues(alpha: 0.14)
-              : AppTheme.panelAlt,
+              : context.hokTheme.surfaceRaised,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppTheme.gold : AppTheme.panelAlt,
+            color: selected ? AppTheme.gold : context.hokTheme.surfaceRaised,
           ),
         ),
         child: Padding(
@@ -1067,8 +1072,8 @@ class _OptionTile extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppTheme.text,
+                style: TextStyle(
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1106,15 +1111,15 @@ class _PaymentTile extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       tileColor: selected
           ? AppTheme.gold.withValues(alpha: 0.12)
-          : AppTheme.panelAlt,
+          : context.hokTheme.surfaceRaised,
       leading: Icon(
         method.icon,
-        color: selected ? AppTheme.gold : AppTheme.muted,
+        color: selected ? AppTheme.gold : context.hokTheme.onSurfaceMuted,
       ),
       title: Text(
         method.label,
-        style: const TextStyle(
-          color: AppTheme.text,
+        style: TextStyle(
+          color: context.hokTheme.onSurfaceStrong,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -1192,7 +1197,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                       child: Text(
                         isEditing ? 'Edit prompt' : 'Create prompt',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.text,
+                          color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -1264,7 +1269,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                 Text(
                   'Images (optional)',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1452,7 +1457,7 @@ class _PromptTagsEditor extends StatelessWidget {
         Text(
           'Tags (optional)',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1564,7 +1569,7 @@ class _PromptImagePicker extends StatelessWidget {
         Text(
           '$label (optional)',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.muted,
+            color: context.hokTheme.onSurfaceMuted,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1578,7 +1583,7 @@ class _PromptImagePicker extends StatelessWidget {
             child: Ink(
               height: 132,
               decoration: BoxDecoration(
-                color: AppTheme.panelAlt,
+                color: context.hokTheme.surfaceRaised,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: hasImage
@@ -1613,22 +1618,27 @@ class _PromptImagePicker extends StatelessWidget {
                           right: 4,
                           child: IconButton.filled(
                             onPressed: enabled ? onRemove : null,
-                            icon: const Icon(Icons.close, size: 16),
+                            icon: Icon(Icons.close, size: 16),
                             tooltip: 'Remove $label',
                             visualDensity: VisualDensity.compact,
                           ),
                         ),
                       ],
                     )
-                  : const Center(
+                  : Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.upload_outlined, color: AppTheme.muted),
+                          Icon(
+                            Icons.upload_outlined,
+                            color: context.hokTheme.onSurfaceMuted,
+                          ),
                           SizedBox(height: 6),
                           Text(
                             'Upload image',
-                            style: TextStyle(color: AppTheme.muted),
+                            style: TextStyle(
+                              color: context.hokTheme.onSurfaceMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -1749,8 +1759,8 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -1783,7 +1793,7 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.titleMedium?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -1810,7 +1820,7 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                   height: 1.35,
                 ),
               ),
@@ -1995,7 +2005,7 @@ class _PromptViewerDialog extends StatelessWidget {
 
     return Dialog(
       insetPadding: const EdgeInsets.all(12),
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 760),
@@ -2013,7 +2023,7 @@ class _PromptViewerDialog extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.text,
+                          color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -2042,7 +2052,7 @@ class _PromptViewerDialog extends StatelessWidget {
                       if (prompt.content.isNotEmpty)
                         DecoratedBox(
                           decoration: BoxDecoration(
-                            color: AppTheme.bg,
+                            color: context.hokTheme.backgroundDeep,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: Theme.of(
@@ -2056,7 +2066,7 @@ class _PromptViewerDialog extends StatelessWidget {
                               prompt.content,
                               style: Theme.of(context).textTheme.bodyLarge
                                   ?.copyWith(
-                                    color: AppTheme.muted,
+                                    color: context.hokTheme.onSurfaceMuted,
                                     height: 1.55,
                                   ),
                             ),
@@ -2144,7 +2154,7 @@ class _PromptComparisonImage extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: AppTheme.muted,
+            color: context.hokTheme.onSurfaceMuted,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -2154,13 +2164,13 @@ class _PromptComparisonImage extends StatelessWidget {
             aspectRatio: 16 / 9,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: AppTheme.bg,
+                color: context.hokTheme.backgroundDeep,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(
                   Icons.image_not_supported_outlined,
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                 ),
               ),
             ),
@@ -2210,7 +2220,7 @@ class _PromptFullscreenImage extends StatelessWidget {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        foregroundColor: AppTheme.text,
+        foregroundColor: context.hokTheme.onSurfaceStrong,
         title: Text(label),
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -2225,9 +2235,9 @@ class _PromptFullscreenImage extends StatelessWidget {
           child: Image.network(
             imageUrl,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(
+            errorBuilder: (context, error, stackTrace) => Icon(
               Icons.broken_image_outlined,
-              color: AppTheme.muted,
+              color: context.hokTheme.onSurfaceMuted,
               size: 48,
             ),
             loadingBuilder: (context, child, progress) {
@@ -2261,7 +2271,7 @@ class _PromptAuthorButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final textStyle = Theme.of(
       context,
-    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted);
+    ).textTheme.bodySmall?.copyWith(color: context.hokTheme.onSurfaceMuted);
 
     final content = Row(
       mainAxisSize: MainAxisSize.min,
@@ -2292,7 +2302,7 @@ class _PromptAuthorButton extends StatelessWidget {
           : TextButton(
               onPressed: () => context.go('/profile/$authorId'),
               style: TextButton.styleFrom(
-                foregroundColor: AppTheme.muted,
+                foregroundColor: context.hokTheme.onSurfaceMuted,
                 minimumSize: Size.zero,
                 padding: EdgeInsets.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -2339,7 +2349,7 @@ class _TagChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -2347,7 +2357,7 @@ class _TagChip extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w700,
           ),
         ),

@@ -70,7 +70,7 @@ class _HeroRelationshipsScreenState
         const <HeroSummary>[];
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: AppAsyncView<List<HeroRelationship>>(
         value: relationshipsValue,
         retry: () => ref.invalidate(heroRelationshipsProvider),
@@ -671,7 +671,9 @@ class _RelationshipAvatarNode extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: node.highlighted ? AppTheme.cyan : AppTheme.muted,
+                      color: node.highlighted
+                          ? AppTheme.cyan
+                          : context.hokTheme.onSurfaceMuted,
                       width: node.highlighted ? 3 : 1.5,
                     ),
                     boxShadow: [
@@ -686,7 +688,7 @@ class _RelationshipAvatarNode extends StatelessWidget {
                   child: ClipOval(
                     child: node.avatar.isEmpty
                         ? ColoredBox(
-                            color: AppTheme.bg,
+                            color: context.hokTheme.backgroundDeep,
                             child: Center(
                               child: Text(
                                 node.name.isEmpty ? '?' : node.name[0],

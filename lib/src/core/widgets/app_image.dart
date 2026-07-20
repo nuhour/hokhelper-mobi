@@ -115,16 +115,19 @@ class _ImagePlaceholder extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       alignment: Alignment.center,
       child: isError
-          ? const Icon(Icons.broken_image_outlined, color: AppTheme.muted)
+          ? Icon(
+              Icons.broken_image_outlined,
+              color: context.hokTheme.onSurfaceMuted,
+            )
           : progress == null
-          ? const Icon(
+          ? Icon(
               Icons.image_not_supported_outlined,
-              color: AppTheme.muted,
+              color: context.hokTheme.onSurfaceMuted,
             )
           : CircularProgressIndicator(
               value: progress,

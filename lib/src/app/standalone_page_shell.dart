@@ -42,7 +42,7 @@ class StandalonePageShell extends StatelessWidget {
                   onPressed: () => _goBack(context),
                 ),
                 title: title == null ? null : Text(title!),
-                backgroundColor: AppTheme.bg,
+                backgroundColor: context.hokTheme.backgroundDeep,
                 surfaceTintColor: Colors.transparent,
               ),
         body: child,

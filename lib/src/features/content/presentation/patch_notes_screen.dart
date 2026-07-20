@@ -64,7 +64,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
     final patchNotesValue = ref.watch(patchNotesProvider);
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: RefreshIndicator(
         onRefresh: () async {
           _resetLoadedPages();
@@ -79,18 +79,21 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
             const SizedBox(height: 12),
             Text(
               'Version timelines and hero balance adjustments from the HOK portal.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: _heroFilterController,
               onChanged: (value) => setState(() => _heroFilter = value),
-              style: const TextStyle(color: AppTheme.text),
+              style: TextStyle(color: context.hokTheme.onSurfaceStrong),
               decoration: InputDecoration(
                 hintText: 'Filter by hero',
-                prefixIcon: const Icon(Icons.search, color: AppTheme.muted),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
                 suffixIcon: _heroFilter.isEmpty
                     ? null
                     : IconButton(
@@ -99,7 +102,10 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
                           _heroFilterController.clear();
                           setState(() => _heroFilter = '');
                         },
-                        icon: const Icon(Icons.close, color: AppTheme.muted),
+                        icon: Icon(
+                          Icons.close,
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
               ),
             ),
@@ -201,7 +207,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.bg,
+      backgroundColor: context.hokTheme.backgroundDeep,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -309,8 +315,8 @@ class _PatchTimelineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Material(
@@ -341,7 +347,7 @@ class _PatchTimelineCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
-                                  color: AppTheme.text,
+                                  color: context.hokTheme.onSurfaceStrong,
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
@@ -351,12 +357,17 @@ class _PatchTimelineCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppTheme.muted),
+                                ?.copyWith(
+                                  color: context.hokTheme.onSurfaceMuted,
+                                ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right, color: AppTheme.muted),
+                    Icon(
+                      Icons.chevron_right,
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ],
                 ),
                 if (note.preview.isNotEmpty) ...[
@@ -365,9 +376,9 @@ class _PatchTimelineCard extends StatelessWidget {
                     note.preview,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 14),
@@ -465,7 +476,9 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
                     width: 42,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.muted.withValues(alpha: 0.5),
+                      color: context.hokTheme.onSurfaceMuted.withValues(
+                        alpha: 0.5,
+                      ),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -480,9 +493,9 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
                         note.date,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ),
                   ],
@@ -491,7 +504,7 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
                 Text(
                   note.title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -501,7 +514,7 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
                 ],
                 if (_isLoadingDetail) ...[
                   const SizedBox(height: 12),
-                  const Row(
+                  Row(
                     children: [
                       SizedBox.square(
                         dimension: 16,
@@ -510,31 +523,33 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
                       SizedBox(width: 10),
                       Text(
                         'Loading full patch details...',
-                        style: TextStyle(color: AppTheme.muted),
+                        style: TextStyle(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                   ),
                 ],
                 if (_detailFailed) ...[
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Failed to load full patch details.',
-                    style: TextStyle(color: AppTheme.muted),
+                    style: TextStyle(color: context.hokTheme.onSurfaceMuted),
                   ),
                 ],
                 const SizedBox(height: 24),
                 Text(
                   'Hero Adjustments',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 12),
                 if (note.heroChanges.isEmpty)
-                  const Text(
+                  Text(
                     'No hero-specific adjustments attached.',
-                    style: TextStyle(color: AppTheme.muted),
+                    style: TextStyle(color: context.hokTheme.onSurfaceMuted),
                   )
                 else
                   ...note.heroChanges.map(
@@ -636,11 +651,11 @@ class _ChangeDirectionBadge extends StatelessWidget {
     final (icon, color) = switch (changeType) {
       'buff' => (Icons.arrow_upward_rounded, AppTheme.success),
       'nerf' => (Icons.arrow_downward_rounded, AppTheme.error),
-      _ => (Icons.remove_rounded, AppTheme.muted),
+      _ => (Icons.remove_rounded, context.hokTheme.onSurfaceMuted),
     };
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         shape: BoxShape.circle,
         border: Border.all(color: color, width: 1.5),
       ),
@@ -664,8 +679,8 @@ class _HeroChangeRow extends StatelessWidget {
         : null;
     final row = DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -686,7 +701,7 @@ class _HeroChangeRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),

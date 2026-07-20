@@ -36,9 +36,9 @@ class InfoCenterScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               'HOK Helper platform information, support policies, and partner links.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
             const SizedBox(height: 18),
             const _AboutCard(onTapRoute: '/about'),
@@ -318,7 +318,7 @@ class _FriendLinkApplySheetState extends ConsumerState<_FriendLinkApplySheet> {
                     child: Text(
                       'Link exchange',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -442,9 +442,9 @@ class _FriendLinkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -467,7 +467,7 @@ class _FriendLinkCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -477,9 +477,9 @@ class _FriendLinkCard extends StatelessWidget {
                       link.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 5),
@@ -561,9 +561,9 @@ class _PortalDirectorySection extends StatelessWidget {
         children: [
           Text(
             'Mobile map of the same discovery, community, tool, and support links available in the hokx portal footer.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
           ),
           const SizedBox(height: 14),
           for (final group in _groups) ...[
@@ -603,7 +603,7 @@ class _PortalDirectoryGroupView extends StatelessWidget {
         Text(
           group.title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -631,10 +631,10 @@ class _PortalDirectoryChip extends StatelessWidget {
       avatar: const Icon(Icons.chevron_right, size: 16),
       label: Text(link.label, overflow: TextOverflow.ellipsis),
       onPressed: () => context.go(link.route),
-      side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-      backgroundColor: AppTheme.panelAlt,
+      side: BorderSide(color: context.hokTheme.outlineSoft),
+      backgroundColor: context.hokTheme.surfaceRaised,
       labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: AppTheme.text,
+        color: context.hokTheme.onSurfaceStrong,
         fontWeight: FontWeight.w800,
       ),
       visualDensity: VisualDensity.compact,
@@ -684,9 +684,9 @@ class _InfoPanel extends StatelessWidget {
     final route = onTapRoute;
     final panel = DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -703,16 +703,16 @@ class _InfoPanel extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
                 if (route != null) ...[
                   const SizedBox(width: 8),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
-                    color: AppTheme.muted,
+                    color: context.hokTheme.onSurfaceMuted,
                     size: 20,
                   ),
                 ],
@@ -849,9 +849,9 @@ class _AboutStatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -863,7 +863,7 @@ class _AboutStatTile extends StatelessWidget {
             Text(
               stat.value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -874,7 +874,7 @@ class _AboutStatTile extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.4,
               ),
@@ -996,7 +996,7 @@ class _AboutFeatureTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -1020,7 +1020,7 @@ class _AboutFeatureTile extends StatelessWidget {
                   Text(
                     feature.title,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1135,7 +1135,7 @@ class _AboutPipelineTile extends StatelessWidget {
                 Text(
                   step.title,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1434,7 +1434,7 @@ class _PrivacyMiniCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -1444,7 +1444,7 @@ class _PrivacyMiniCard extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1469,7 +1469,7 @@ class _PrivacyPartnerRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1479,7 +1479,7 @@ class _PrivacyPartnerRow extends StatelessWidget {
               child: Text(
                 partner,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1574,7 +1574,7 @@ class _QuestionAnswer extends StatelessWidget {
         Text(
           question,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1618,9 +1618,10 @@ class _BodyText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(
-        context,
-      ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted, height: 1.45),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: context.hokTheme.onSurfaceMuted,
+        height: 1.45,
+      ),
     );
   }
 }

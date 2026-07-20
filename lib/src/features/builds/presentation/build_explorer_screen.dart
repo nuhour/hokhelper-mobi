@@ -92,9 +92,9 @@ class BuildExplorerScreen extends ConsumerWidget {
                         focusedHeroId == null
                             ? 'Browse public hero builds from the community.'
                             : 'Browse public builds filtered by hero #$focusedHeroId.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                       if (focusedHeroId != null) ...[
                         const SizedBox(height: 10),
@@ -210,14 +210,14 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
     final heroName = scheme.heroName.isEmpty ? 'Any hero' : scheme.heroName;
 
     return Material(
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.go('/tools/build-sim?scheme=${scheme.id}'),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -238,7 +238,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: AppTheme.text,
+                              color: context.hokTheme.onSurfaceStrong,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -371,7 +371,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   Future<void> _showCloneSheet(BuildContext context) async {
     final slotIndex = await showModalBottomSheet<int>(
       context: context,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       showDragHandle: true,
       builder: (context) {
         return Padding(
@@ -383,7 +383,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
               Text(
                 'Clone build to slot',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -459,9 +459,9 @@ class _BuildAuthorLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = Theme.of(
       context,
-    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted);
+    ).textTheme.bodySmall?.copyWith(color: context.hokTheme.onSurfaceMuted);
     final authorStyle = style?.copyWith(
-      color: authorId > 0 ? AppTheme.gold : AppTheme.muted,
+      color: authorId > 0 ? AppTheme.gold : context.hokTheme.onSurfaceMuted,
       fontWeight: authorId > 0 ? FontWeight.w800 : FontWeight.w400,
     );
 
@@ -520,7 +520,7 @@ class _EquipmentStrip extends StatelessWidget {
         'No equipment preview',
         style: Theme.of(
           context,
-        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+        ).textTheme.bodySmall?.copyWith(color: context.hokTheme.onSurfaceMuted),
       );
     }
 
@@ -564,7 +564,7 @@ class _PublicBadge extends StatelessWidget {
         child: Text(
           isPublic ? 'Public' : 'Private',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: isPublic ? AppTheme.gold : AppTheme.muted,
+            color: isPublic ? AppTheme.gold : context.hokTheme.onSurfaceMuted,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -583,7 +583,7 @@ class _MetricChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -591,12 +591,12 @@ class _MetricChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: AppTheme.muted),
+            Icon(icon, size: 16, color: context.hokTheme.onSurfaceMuted),
             const SizedBox(width: 5),
             Text(
               value.toString(),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w700,
               ),
             ),

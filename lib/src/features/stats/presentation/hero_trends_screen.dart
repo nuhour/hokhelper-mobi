@@ -434,8 +434,10 @@ class _FilterSummaryBar extends StatelessWidget {
       height: 42,
       padding: const EdgeInsets.only(left: 10, right: 2),
       decoration: BoxDecoration(
-        color: colors?.surfaceSlate ?? AppTheme.panel,
-        border: Border.all(color: colors?.outlineSoft ?? AppTheme.outline),
+        color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
+        border: Border.all(
+          color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -683,7 +685,7 @@ class _TrendLoadoutIcon extends StatelessWidget {
           border: Border.all(
             color:
                 Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                AppTheme.outline,
+                context.hokTheme.outlineSoft,
           ),
         ),
         child: AppImage(
@@ -796,7 +798,7 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
         maxHeight: MediaQuery.sizeOf(context).height * 0.84,
       ),
       decoration: BoxDecoration(
-        color: colors?.surfaceSlate ?? AppTheme.panel,
+        color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       ),
       child: SafeArea(
@@ -1099,7 +1101,7 @@ class _HeroPreparationSheetState extends ConsumerState<_HeroPreparationSheet> {
     return Container(
       height: MediaQuery.sizeOf(context).height * 0.92,
       decoration: BoxDecoration(
-        color: colors?.surfaceSlate ?? AppTheme.panel,
+        color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       ),
       child: Column(
@@ -1357,7 +1359,7 @@ class _PreparationEntityRow extends StatelessWidget {
           bottom: BorderSide(
             color:
                 Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                AppTheme.outline,
+                context.hokTheme.outlineSoft,
           ),
         ),
       ),
@@ -1490,7 +1492,7 @@ class _BuildPreparationRow extends StatelessWidget {
           bottom: BorderSide(
             color:
                 Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                AppTheme.outline,
+                context.hokTheme.outlineSoft,
           ),
         ),
       ),
@@ -1694,7 +1696,7 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
     return Container(
       height: MediaQuery.sizeOf(context).height * 0.92,
       decoration: BoxDecoration(
-        color: colors?.surfaceSlate ?? AppTheme.panel,
+        color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       ),
       child: Column(
@@ -2201,8 +2203,10 @@ class _DetailSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors?.surfaceMuted ?? AppTheme.panelAlt,
-        border: Border.all(color: colors?.outlineSoft ?? AppTheme.outline),
+        color: colors?.surfaceMuted ?? context.hokTheme.surfaceRaised,
+        border: Border.all(
+          color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -2305,7 +2309,7 @@ class _TrendChart extends StatelessWidget {
               series: visible,
               gridColor:
                   Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                  AppTheme.outline,
+                  context.hokTheme.outlineSoft,
             ),
           ),
         ),
@@ -2437,7 +2441,7 @@ class _MiniSparkline extends StatelessWidget {
                       Theme.of(
                         context,
                       ).extension<HokThemeColors>()?.onSurfaceMuted ??
-                      AppTheme.muted,
+                      context.hokTheme.onSurfaceMuted,
                 ),
                 size: const Size(double.infinity, double.infinity),
               ),

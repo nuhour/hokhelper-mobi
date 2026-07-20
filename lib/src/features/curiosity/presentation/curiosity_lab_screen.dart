@@ -219,9 +219,9 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Build interaction questions and query experiment results with replay evidence.',
-          style: TextStyle(color: AppTheme.muted, height: 1.4),
+          style: TextStyle(color: context.hokTheme.onSurfaceMuted, height: 1.4),
         ),
       ],
     );
@@ -242,7 +242,7 @@ class _QuestionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: _panelDecoration(),
+      decoration: _panelDecoration(context),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
@@ -278,7 +278,7 @@ class _AskAnswerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: _panelDecoration(),
+      decoration: _panelDecoration(context),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -290,7 +290,7 @@ class _AskAnswerCard extends StatelessWidget {
               children: [
                 Icon(
                   _resultIcon(answer.result),
-                  color: _resultColor(answer.result),
+                  color: _resultColor(context, answer.result),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -299,7 +299,7 @@ class _AskAnswerCard extends StatelessWidget {
                         ? answer.result
                         : answer.resultLabel.en,
                     style: TextStyle(
-                      color: _resultColor(answer.result),
+                      color: _resultColor(context, answer.result),
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                     ),
@@ -312,7 +312,10 @@ class _AskAnswerCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Text(answer.answer, style: const TextStyle(color: AppTheme.text)),
+            Text(
+              answer.answer,
+              style: TextStyle(color: context.hokTheme.onSurfaceStrong),
+            ),
             if (answer.conditions.isNotEmpty) ...[
               const SizedBox(height: 14),
               const _SmallLabel('Conditions'),
@@ -375,7 +378,7 @@ class _AdvancedPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: _panelDecoration(),
+      decoration: _panelDecoration(context),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -477,7 +480,7 @@ class _CaseResultCard extends StatelessWidget {
         ? primaryVideos.first
         : (result.videos.isEmpty ? null : result.videos.first);
     return DecoratedBox(
-      decoration: _panelDecoration(),
+      decoration: _panelDecoration(context),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -487,7 +490,7 @@ class _CaseResultCard extends StatelessWidget {
               children: [
                 Icon(
                   _resultIcon(result.result),
-                  color: _resultColor(result.result),
+                  color: _resultColor(context, result.result),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -496,7 +499,7 @@ class _CaseResultCard extends StatelessWidget {
                         ? result.result
                         : result.resultLabel.en,
                     style: TextStyle(
-                      color: _resultColor(result.result),
+                      color: _resultColor(context, result.result),
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                     ),
@@ -508,7 +511,7 @@ class _CaseResultCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               result.reasoning,
-              style: const TextStyle(color: AppTheme.text),
+              style: TextStyle(color: context.hokTheme.onSurfaceStrong),
             ),
             const SizedBox(height: 14),
             const _SmallLabel('Reproduction Videos'),
@@ -546,20 +549,20 @@ class _DashedHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel.withValues(alpha: 0.52),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate.withValues(alpha: 0.52),
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           children: [
-            Icon(icon, color: AppTheme.muted, size: 32),
+            Icon(icon, color: context.hokTheme.onSurfaceMuted, size: 32),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTheme.muted),
+              style: TextStyle(color: context.hokTheme.onSurfaceMuted),
             ),
           ],
         ),
@@ -578,7 +581,7 @@ class _ConfidenceChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -604,8 +607,8 @@ class _SmallLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
-        color: AppTheme.muted,
+      style: TextStyle(
+        color: context.hokTheme.onSurfaceMuted,
         fontWeight: FontWeight.w900,
         fontSize: 12,
       ),
@@ -624,12 +627,15 @@ class _InfoLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppTheme.panelAlt,
+          color: context.hokTheme.surfaceRaised,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Padding(
           padding: const EdgeInsets.all(10),
-          child: Text(text, style: const TextStyle(color: AppTheme.text)),
+          child: Text(
+            text,
+            style: TextStyle(color: context.hokTheme.onSurfaceStrong),
+          ),
         ),
       ),
     );
@@ -647,7 +653,7 @@ class _EvidenceLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppTheme.panelAlt,
+          color: context.hokTheme.surfaceRaised,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Padding(
@@ -657,13 +663,16 @@ class _EvidenceLine extends StatelessWidget {
             children: [
               Text(
                 evidence.title,
-                style: const TextStyle(color: AppTheme.text),
+                style: TextStyle(color: context.hokTheme.onSurfaceStrong),
               ),
               if (evidence.sourceLabel.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   evidence.sourceLabel,
-                  style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                  style: TextStyle(
+                    color: context.hokTheme.onSurfaceMuted,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ],
@@ -685,7 +694,7 @@ class _VideoLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppTheme.panelAlt,
+          color: context.hokTheme.surfaceRaised,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Padding(
@@ -694,12 +703,18 @@ class _VideoLine extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if ((video.note ?? '').isNotEmpty)
-                Text(video.note!, style: const TextStyle(color: AppTheme.text)),
+                Text(
+                  video.note!,
+                  style: TextStyle(color: context.hokTheme.onSurfaceStrong),
+                ),
               if ((video.experimenterName ?? '').isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   'Experimenter: ${video.experimenterName}',
-                  style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                  style: TextStyle(
+                    color: context.hokTheme.onSurfaceMuted,
+                    fontSize: 12,
+                  ),
                 ),
               ],
               if (video.videoUrl.isNotEmpty) ...[
@@ -717,10 +732,10 @@ class _VideoLine extends StatelessWidget {
   }
 }
 
-BoxDecoration _panelDecoration() {
+BoxDecoration _panelDecoration(BuildContext context) {
   return BoxDecoration(
-    color: AppTheme.panel,
-    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    color: context.hokTheme.surfaceSlate,
+    border: Border.all(color: context.hokTheme.outlineSoft),
     borderRadius: BorderRadius.circular(16),
   );
 }
@@ -735,12 +750,12 @@ IconData _resultIcon(String result) {
   };
 }
 
-Color _resultColor(String result) {
+Color _resultColor(BuildContext context, String result) {
   return switch (result) {
     'yes' => const Color(0xFF34D399),
     'no' => AppTheme.error,
     'conditional' => AppTheme.gold,
     'partial' => AppTheme.cyan,
-    _ => AppTheme.muted,
+    _ => context.hokTheme.onSurfaceMuted,
   };
 }

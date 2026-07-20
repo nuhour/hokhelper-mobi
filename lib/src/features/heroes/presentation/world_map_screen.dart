@@ -66,7 +66,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
     final heroesValue = ref.watch(worldMapHeroesProvider);
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: AppAsyncView<List<HeroSummary>>(
         value: heroesValue,
         retry: () => ref.invalidate(worldMapHeroesProvider),
@@ -148,7 +148,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
   void _openRegionDetail(BuildContext context, WorldMapRegion region) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       showDragHandle: true,
       builder: (context) {
         return SafeArea(
@@ -168,22 +168,22 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
                 Text(
                   region.name,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   region.description,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   'Representative Heroes',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -313,7 +313,9 @@ class _WorldAtlasState extends State<_WorldAtlas>
             : BorderRadius.circular(18),
         border: widget.immersive
             ? null
-            : Border.all(color: AppTheme.muted.withValues(alpha: 0.22)),
+            : Border.all(
+                color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.22),
+              ),
       ),
       child: SizedBox.expand(
         child: ClipRRect(
@@ -546,7 +548,7 @@ class _HeroDetailRow extends StatelessWidget {
     final detailRouteId = hero.detailRouteId;
 
     return Material(
-      color: AppTheme.panelAlt,
+      color: context.hokTheme.surfaceRaised,
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: ListTile(

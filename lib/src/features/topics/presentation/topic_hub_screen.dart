@@ -45,7 +45,7 @@ class TopicHubScreen extends ConsumerWidget {
     final title = formatTopicTitle(normalizedTopicKey);
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(topicArticlesProvider((normalizedTopicKey, 12)));
@@ -61,9 +61,9 @@ class TopicHubScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             Text(
               'Browse $title topic content from the HOK portal.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
             const SizedBox(height: 20),
             AppAsyncView<List<TopicArticleSummary>>(
@@ -112,9 +112,9 @@ class _TopicArticleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Material(
         color: Colors.transparent,
@@ -152,7 +152,7 @@ class _TopicArticleCard extends StatelessWidget {
                 Text(
                   article.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -165,9 +165,9 @@ class _TopicArticleCard extends StatelessWidget {
                         : article.seoDescription,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 14),

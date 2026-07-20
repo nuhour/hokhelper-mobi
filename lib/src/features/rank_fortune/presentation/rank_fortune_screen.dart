@@ -71,9 +71,9 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
               const SizedBox(height: 8),
               Text(
                 "Draw your fortune for today's ranked matches.",
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
               const SizedBox(height: 18),
               _FortunePanel(
@@ -144,8 +144,8 @@ class _FortunePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Padding(
@@ -236,7 +236,7 @@ class _FortuneJar extends StatelessWidget {
           width: 118,
           height: 160,
           decoration: BoxDecoration(
-            color: AppTheme.panelAlt,
+            color: context.hokTheme.surfaceRaised,
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(48),
               bottom: Radius.circular(24),
@@ -261,11 +261,11 @@ class _FortuneJar extends StatelessWidget {
                     ),
                   ),
                 ),
-              const Text(
+              Text(
                 'Fortune Jar',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -273,10 +273,10 @@ class _FortuneJar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Shake once per day before entering ranked queue.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.muted),
+          style: TextStyle(color: context.hokTheme.onSurfaceMuted),
         ),
       ],
     );
@@ -321,7 +321,7 @@ class _FortuneResult extends StatelessWidget {
           copy.title,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: _scoreColor(record.score),
+            color: _scoreColor(context, record.score),
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -329,18 +329,24 @@ class _FortuneResult extends StatelessWidget {
         Text(
           copy.description,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppTheme.muted, height: 1.35),
+          style: TextStyle(
+            color: context.hokTheme.onSurfaceMuted,
+            height: 1.35,
+          ),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Fortune Value',
-          style: TextStyle(color: AppTheme.muted, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: context.hokTheme.onSurfaceMuted,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           '${record.score}',
-          style: const TextStyle(
-            color: AppTheme.text,
+          style: TextStyle(
+            color: context.hokTheme.onSurfaceStrong,
             fontSize: 34,
             fontWeight: FontWeight.w900,
           ),
@@ -397,8 +403,8 @@ class _HistoryPanel extends StatelessWidget {
         .toList(growable: false);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Padding(
@@ -411,8 +417,8 @@ class _HistoryPanel extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '$days-day History',
-                    style: const TextStyle(
-                      color: AppTheme.text,
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
                     ),
@@ -420,7 +426,7 @@ class _HistoryPanel extends StatelessWidget {
                 ),
                 Text(
                   '${catalog.length} tiers',
-                  style: const TextStyle(color: AppTheme.muted),
+                  style: TextStyle(color: context.hokTheme.onSurfaceMuted),
                 ),
               ],
             ),
@@ -464,7 +470,7 @@ class _HistorySummary extends StatelessWidget {
           child: _SummaryMetric(
             label: '30d Average',
             value: '$average',
-            color: _scoreColor(average),
+            color: _scoreColor(context, average),
           ),
         ),
         const SizedBox(width: 8),
@@ -472,7 +478,7 @@ class _HistorySummary extends StatelessWidget {
           child: _SummaryMetric(
             label: 'Best',
             value: '$best',
-            color: _scoreColor(best),
+            color: _scoreColor(context, best),
           ),
         ),
         const SizedBox(width: 8),
@@ -480,7 +486,7 @@ class _HistorySummary extends StatelessWidget {
           child: _SummaryMetric(
             label: 'Lowest',
             value: '$lowest',
-            color: _scoreColor(lowest),
+            color: _scoreColor(context, lowest),
           ),
         ),
         const SizedBox(width: 8),
@@ -524,8 +530,8 @@ class _SummaryMetric extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.muted,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
@@ -569,7 +575,10 @@ class _HistoryBars extends StatelessWidget {
                     alignment: Alignment.bottomCenter,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: _scoreColor(row.score).withValues(alpha: 0.7),
+                        color: _scoreColor(
+                          context,
+                          row.score,
+                        ).withValues(alpha: 0.7),
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(6),
                         ),
@@ -606,7 +615,7 @@ class _HistoryRow extends StatelessWidget {
               row.date,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppTheme.muted),
+              style: TextStyle(color: context.hokTheme.onSurfaceMuted),
             ),
           ),
           const SizedBox(width: 8),
@@ -616,8 +625,8 @@ class _HistoryRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: AppTheme.text,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -626,7 +635,7 @@ class _HistoryRow extends StatelessWidget {
           Text(
             '${row.score}',
             style: TextStyle(
-              color: _scoreColor(row.score),
+              color: _scoreColor(context, row.score),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -696,10 +705,10 @@ int _currentStreak(List<RankFortuneRecord> rows) {
   };
 }
 
-Color _scoreColor(int score) {
+Color _scoreColor(BuildContext context, int score) {
   if (score >= 90) return AppTheme.error;
   if (score >= 75) return AppTheme.gold;
   if (score >= 60) return AppTheme.cyan;
-  if (score >= 45) return AppTheme.muted;
+  if (score >= 45) return context.hokTheme.onSurfaceMuted;
   return const Color(0xFFA78BFA);
 }

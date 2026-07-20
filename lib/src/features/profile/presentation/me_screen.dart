@@ -862,7 +862,7 @@ void _showFollowListSheet(
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.panel,
+    backgroundColor: context.hokTheme.surfaceSlate,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -963,7 +963,7 @@ class _MeFollowListSheetState extends ConsumerState<_MeFollowListSheet> {
                     child: Text(
                       title,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -988,7 +988,9 @@ class _MeFollowListSheetState extends ConsumerState<_MeFollowListSheet> {
                         child: Text(
                           'Failed to load users',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                       );
                     }
@@ -1000,7 +1002,9 @@ class _MeFollowListSheetState extends ConsumerState<_MeFollowListSheet> {
                               ? 'No following yet'
                               : 'No followers yet',
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                       );
                     }
@@ -1033,9 +1037,9 @@ class _MeFollowUserTile extends StatelessWidget {
     final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
     final tile = DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -1062,7 +1066,7 @@ class _MeFollowUserTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -1072,9 +1076,9 @@ class _MeFollowUserTile extends StatelessWidget {
                       user.bio,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                     ),
                   ],
                 ],
@@ -1611,7 +1615,7 @@ class _SheetHandle extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1650,9 +1654,9 @@ class _PointsRulesSheet extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               profile.levelCap ? 'MAX' : '$current/$next XP',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
             const SizedBox(height: 16),
             ..._rules.map(
@@ -1664,7 +1668,7 @@ class _PointsRulesSheet extends StatelessWidget {
                       child: Text(
                         rule.action,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.text,
+                          color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1901,7 +1905,7 @@ class _ProfileColors {
       text: scheme.onSurface,
       muted: Theme.of(context).brightness == Brightness.light
           ? AppTheme.lightMuted
-          : AppTheme.muted,
+          : context.hokTheme.onSurfaceMuted,
     );
   }
 }

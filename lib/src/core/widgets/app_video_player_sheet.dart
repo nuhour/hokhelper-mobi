@@ -94,7 +94,7 @@ class _AppVideoPlayerSheetState extends State<AppVideoPlayerSheet> {
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 760),
@@ -113,7 +113,7 @@ class _AppVideoPlayerSheetState extends State<AppVideoPlayerSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -200,7 +200,7 @@ class _AppVideoPlayerSheetState extends State<AppVideoPlayerSheet> {
                     Text(
                       '${_formatDuration(value.position)} / ${_formatDuration(value.duration)}',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppTheme.muted,
+                        color: context.hokTheme.onSurfaceMuted,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -223,16 +223,16 @@ class _VideoUnavailable extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.video_file_outlined,
             size: 34,
-            color: AppTheme.muted,
+            color: context.hokTheme.onSurfaceMuted,
           ),
           const SizedBox(height: 10),
           Text(
             'Video is unavailable',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.muted,
+              color: context.hokTheme.onSurfaceMuted,
               fontWeight: FontWeight.w700,
             ),
           ),

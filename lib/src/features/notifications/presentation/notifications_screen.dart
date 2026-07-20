@@ -35,7 +35,7 @@ class NotificationsScreen extends ConsumerWidget {
     final authValue = ref.watch(authControllerProvider);
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: AppAsyncView<AuthUser?>(
         value: authValue,
         data: (user) {
@@ -137,7 +137,9 @@ class _SignedInNotificationsState
                   Text(
                     '$unreadCount unread',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: unreadCount == 0 ? AppTheme.muted : AppTheme.gold,
+                      color: unreadCount == 0
+                          ? context.hokTheme.onSurfaceMuted
+                          : AppTheme.gold,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -190,9 +192,9 @@ class _SignedInNotificationsState
                     const SizedBox(height: 14),
                     Text(
                       '${page.total} notifications',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                     ),
                   ],
                 ],
@@ -324,10 +326,12 @@ class _NotificationCard extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: notification.isRead ? AppTheme.panel : AppTheme.panelAlt,
+        color: notification.isRead
+            ? context.hokTheme.surfaceSlate
+            : context.hokTheme.surfaceRaised,
         border: Border.all(
           color: notification.isRead
-              ? Colors.white.withValues(alpha: 0.08)
+              ? context.hokTheme.outlineSoft
               : AppTheme.gold.withValues(alpha: 0.24),
         ),
         borderRadius: BorderRadius.circular(16),
@@ -357,7 +361,7 @@ class _NotificationCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                         ),
@@ -373,9 +377,9 @@ class _NotificationCard extends StatelessWidget {
                     displayText.content,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -388,9 +392,9 @@ class _NotificationCard extends StatelessWidget {
                           context,
                           notification.createdAt,
                         ),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                       if (notification.link.isNotEmpty)
                         TextButton(

@@ -17,7 +17,7 @@ class HokHelperApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsControllerProvider).valueOrNull;
-    final themeMode = settings?.theme == AppThemeMode.versus
+    final themeMode = settings?.theme == AppThemeMode.classic
         ? ThemeMode.light
         : ThemeMode.dark;
 

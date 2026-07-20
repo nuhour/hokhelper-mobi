@@ -262,8 +262,8 @@ class _EsportsTabStrip extends StatelessWidget {
         ),
         indicatorSize: TabBarIndicatorSize.label,
         labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-        labelColor: AppTheme.text,
-        unselectedLabelColor: AppTheme.muted,
+        labelColor: context.hokTheme.onSurfaceStrong,
+        unselectedLabelColor: context.hokTheme.onSurfaceMuted,
         labelStyle: Theme.of(
           context,
         ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -840,7 +840,7 @@ class _FilterCard extends StatelessWidget {
               Text(
                 'Filters',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -902,7 +902,7 @@ class _FilterDropdown extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: context.hokTheme.outlineSoft),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -910,10 +910,10 @@ class _FilterDropdown extends StatelessWidget {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              dropdownColor: AppTheme.panel,
+              dropdownColor: context.hokTheme.surfaceSlate,
               iconEnabledColor: AppTheme.gold,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w800,
               ),
               items: [
@@ -963,7 +963,7 @@ class _DateFilterButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: context.hokTheme.outlineSoft),
         ),
         child: Row(
           children: [
@@ -996,7 +996,9 @@ class _DateFilterButton extends StatelessWidget {
                         value.isEmpty
                             ? Icons.calendar_month_outlined
                             : Icons.event_available,
-                        color: value.isEmpty ? AppTheme.muted : AppTheme.gold,
+                        color: value.isEmpty
+                            ? context.hokTheme.onSurfaceMuted
+                            : AppTheme.gold,
                         size: 18,
                       ),
                       const SizedBox(width: 7),
@@ -1008,8 +1010,8 @@ class _DateFilterButton extends StatelessWidget {
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
                                 color: value.isEmpty
-                                    ? AppTheme.muted
-                                    : AppTheme.text,
+                                    ? context.hokTheme.onSurfaceMuted
+                                    : context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
@@ -1024,7 +1026,7 @@ class _DateFilterButton extends StatelessWidget {
                 tooltip: 'Clear date',
                 onPressed: () => onChanged(''),
                 icon: const Icon(Icons.close, size: 17),
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
               ),
           ],
         ),
@@ -1068,7 +1070,7 @@ class _MatchStatusSection extends StatelessWidget {
             Text(
               status.label,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1112,16 +1114,16 @@ class _InlineEmptyState extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.event_busy_outlined,
-              color: AppTheme.muted,
+              color: context.hokTheme.onSurfaceMuted,
               size: 18,
             ),
             const SizedBox(width: 8),
             Text(
               message,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1156,7 +1158,7 @@ class _MatchCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1166,9 +1168,9 @@ class _MatchCard extends StatelessWidget {
                         _matchMetaText(match),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                   ],
@@ -1214,9 +1216,9 @@ class _MatchCard extends StatelessWidget {
               _formatMatchShortTime(match.startTime),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
           ],
         ],
@@ -1232,7 +1234,7 @@ void _showMatchDetailSheet(
 ) {
   showModalBottomSheet<void>(
     context: context,
-    backgroundColor: AppTheme.panel,
+    backgroundColor: context.hokTheme.surfaceSlate,
     showDragHandle: true,
     builder: (context) {
       return SafeArea(
@@ -1248,7 +1250,7 @@ void _showMatchDetailSheet(
                     child: Text(
                       'Match Detail',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1256,7 +1258,10 @@ void _showMatchDetailSheet(
                   IconButton(
                     tooltip: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: AppTheme.muted),
+                    icon: Icon(
+                      Icons.close,
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                 ],
               ),
@@ -1266,18 +1271,16 @@ void _showMatchDetailSheet(
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 16),
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppTheme.panel,
+                  color: context.hokTheme.surfaceSlate,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
+                  border: Border.all(color: context.hokTheme.outlineSoft),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -1343,7 +1346,7 @@ class _MatchDetailRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1353,7 +1356,7 @@ class _MatchDetailRow extends StatelessWidget {
               value,
               textAlign: TextAlign.end,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1449,7 +1452,7 @@ class _EsportsStatsTable extends StatelessWidget {
               Text(
                 'Rankings',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1457,7 +1460,7 @@ class _EsportsStatsTable extends StatelessWidget {
               Text(
                 '${stats.length} entries',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppTheme.muted,
+                  color: context.hokTheme.onSurfaceMuted,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1470,7 +1473,7 @@ class _EsportsStatsTable extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1514,7 +1517,7 @@ class _StatsLoadingTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final placeholder = AppTheme.muted.withValues(alpha: 0.18);
+    final placeholder = context.hokTheme.onSurfaceMuted.withValues(alpha: 0.18);
     return _PanelCard(
       child: Column(
         children: [
@@ -1573,16 +1576,14 @@ class _StatsTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: AppTheme.muted,
+      color: context.hokTheme.onSurfaceMuted,
       fontWeight: FontWeight.w900,
     );
     return Container(
       height: 36,
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.16),
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
+        border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Row(
         children: [
@@ -1673,7 +1674,7 @@ class _StatsTableRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1749,7 +1750,7 @@ class _StatsIdentityCell extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1759,7 +1760,7 @@ class _StatsIdentityCell extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.muted,
+                          color: context.hokTheme.onSurfaceMuted,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1820,7 +1821,7 @@ class _FocusedTeamCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1831,9 +1832,9 @@ class _FocusedTeamCard extends StatelessWidget {
                           : team.leagueName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -1896,7 +1897,7 @@ class _FocusedPlayerCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1906,9 +1907,9 @@ class _FocusedPlayerCard extends StatelessWidget {
                         player.teamName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                     if (player.role.isNotEmpty) ...[
@@ -1992,8 +1993,8 @@ class _FocusMetric extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.muted,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
@@ -2003,8 +2004,8 @@ class _FocusMetric extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.text,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2049,7 +2050,7 @@ class _TeamCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -2058,9 +2059,9 @@ class _TeamCard extends StatelessWidget {
                       team.club.isEmpty ? team.leagueName : team.club,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -2072,7 +2073,7 @@ class _TeamCard extends StatelessWidget {
                   Text(
                     team.recordText,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -2130,7 +2131,7 @@ class _PlayerCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                         ),
@@ -2143,7 +2144,9 @@ class _PlayerCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                       ],
                     ),
@@ -2204,6 +2207,7 @@ class _PlayerRadarChart extends StatelessWidget {
       child: CustomPaint(
         painter: _RadarPainter(
           values: values,
+          mutedColor: context.hokTheme.onSurfaceMuted,
           labels: const [
             'KDA',
             'Participation',
@@ -2218,21 +2222,26 @@ class _PlayerRadarChart extends StatelessWidget {
 }
 
 class _RadarPainter extends CustomPainter {
-  const _RadarPainter({required this.values, required this.labels});
+  const _RadarPainter({
+    required this.values,
+    required this.labels,
+    required this.mutedColor,
+  });
 
   final List<double> values;
   final List<String> labels;
+  final Color mutedColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2 + 4);
     final radius = math.min(size.width * 0.25, size.height * 0.31);
     final gridPaint = Paint()
-      ..color = AppTheme.muted.withValues(alpha: 0.42)
+      ..color = mutedColor.withValues(alpha: 0.42)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     final axisPaint = Paint()
-      ..color = AppTheme.muted.withValues(alpha: 0.28)
+      ..color = mutedColor.withValues(alpha: 0.28)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -2266,8 +2275,8 @@ class _RadarPainter extends CustomPainter {
       final painter = TextPainter(
         text: TextSpan(
           text: labels[index],
-          style: const TextStyle(
-            color: AppTheme.muted,
+          style: TextStyle(
+            color: mutedColor,
             fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
@@ -2397,10 +2406,10 @@ class _EsportsDetailFrame extends StatelessWidget {
     final height = MediaQuery.sizeOf(context).height * 0.88;
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppTheme.outline),
+        side: BorderSide(color: context.hokTheme.outlineSoft),
       ),
       clipBehavior: Clip.antiAlias,
       child: SizedBox(
@@ -2421,7 +2430,7 @@ class _EsportsDetailFrame extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
-                              color: AppTheme.text,
+                              color: context.hokTheme.onSurfaceStrong,
                               fontWeight: FontWeight.w900,
                             ),
                       ),
@@ -2429,13 +2438,16 @@ class _EsportsDetailFrame extends StatelessWidget {
                     IconButton(
                       onPressed: onClose,
                       tooltip: 'Close',
-                      icon: const Icon(Icons.close, color: AppTheme.muted),
+                      icon: Icon(
+                        Icons.close,
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            const Divider(height: 1, color: AppTheme.outline),
+            Divider(height: 1, color: context.hokTheme.outlineSoft),
             Expanded(child: child),
           ],
         ),
@@ -2474,7 +2486,7 @@ class _DetailErrorState extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppTheme.muted),
+              style: TextStyle(color: context.hokTheme.onSurfaceMuted),
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
@@ -2520,7 +2532,7 @@ class _TeamDetailContent extends StatelessWidget {
                   Text(
                     team.name,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -2530,14 +2542,17 @@ class _TeamDetailContent extends StatelessWidget {
                       team.leagueName,
                       team.club.isEmpty ? '--' : team.club,
                     ].join(' · '),
-                    style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceMuted,
+                      fontSize: 12,
+                    ),
                   ),
                   if (detail.nation.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(
                       detail.nation,
-                      style: const TextStyle(
-                        color: AppTheme.muted,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
                         fontSize: 12,
                       ),
                     ),
@@ -2586,8 +2601,8 @@ class _TeamDetailContent extends StatelessWidget {
                 title: 'Intro',
                 child: Text(
                   detail.description,
-                  style: const TextStyle(
-                    color: AppTheme.text,
+                  style: TextStyle(
+                    color: context.hokTheme.onSurfaceStrong,
                     height: 1.55,
                     fontSize: 13,
                   ),
@@ -2675,9 +2690,11 @@ class _PlayerDetailContent extends StatelessWidget {
                           bottom: -7,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              color: AppTheme.panel,
+                              color: context.hokTheme.surfaceSlate,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppTheme.outline),
+                              border: Border.all(
+                                color: context.hokTheme.outlineSoft,
+                              ),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(2),
@@ -2697,14 +2714,17 @@ class _PlayerDetailContent extends StatelessWidget {
                   Text(
                     player.name,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${player.teamName} · ${player.roleLabel}',
-                    style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceMuted,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   _PlayerRadarChart(
@@ -2777,9 +2797,9 @@ class _DetailSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.bg.withValues(alpha: 0.78),
+        color: context.hokTheme.backgroundDeep.withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.outline),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: child),
     );
@@ -2802,7 +2822,10 @@ class _SummaryMetric extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppTheme.muted, fontSize: 9),
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceMuted,
+              fontSize: 9,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -2810,7 +2833,7 @@ class _SummaryMetric extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: color ?? AppTheme.text,
+              color: color ?? context.hokTheme.onSurfaceStrong,
               fontWeight: FontWeight.w900,
               fontSize: 13,
             ),
@@ -2855,8 +2878,8 @@ class _DetailTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title.toUpperCase(),
-            style: const TextStyle(
-              color: AppTheme.muted,
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceMuted,
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
@@ -2865,8 +2888,8 @@ class _DetailTitle extends StatelessWidget {
         if (count != null)
           Text(
             '$count',
-            style: const TextStyle(
-              color: AppTheme.muted,
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceMuted,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -2889,16 +2912,19 @@ class _DetailKeyValue extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 7),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.bg.withValues(alpha: 0.68),
+        color: context.hokTheme.backgroundDeep.withValues(alpha: 0.68),
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: AppTheme.outline),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: AppTheme.muted, fontSize: 12),
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceMuted,
+                fontSize: 12,
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -2906,8 +2932,8 @@ class _DetailKeyValue extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: const TextStyle(
-                color: AppTheme.text,
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceStrong,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
               ),
@@ -2928,7 +2954,7 @@ class _MemberTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTheme.bg.withValues(alpha: 0.6),
+      color: context.hokTheme.backgroundDeep.withValues(alpha: 0.6),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -2937,7 +2963,7 @@ class _MemberTile extends StatelessWidget {
           padding: const EdgeInsets.all(9),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppTheme.outline),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Row(
             children: [
@@ -2957,23 +2983,27 @@ class _MemberTile extends StatelessWidget {
                       member.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.text,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       member.roleLabel,
-                      style: const TextStyle(
-                        color: AppTheme.muted,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
                         fontSize: 11,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppTheme.muted, size: 18),
+              Icon(
+                Icons.chevron_right,
+                color: context.hokTheme.onSurfaceMuted,
+                size: 18,
+              ),
             ],
           ),
         ),
@@ -3005,7 +3035,10 @@ class _CommonHeroTile extends StatelessWidget {
               'MP: ${hero.matches} · Win Rate: ${(hero.winRate * 100).toStringAsFixed(1)}% · KDA: ${hero.kda.toStringAsFixed(2)} · KP%: ${(hero.participationRate * 100).toStringAsFixed(1)}%',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+              style: TextStyle(
+                color: context.hokTheme.onSurfaceMuted,
+                fontSize: 10,
+              ),
             ),
           ),
         ],
@@ -3028,7 +3061,10 @@ class _RecentMatchTile extends StatelessWidget {
         children: [
           Text(
             '${_formatMatchShortTime(match.startTime)} · ${match.boText} · ${match.statusLabel}',
-            style: const TextStyle(color: AppTheme.muted, fontSize: 10),
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceMuted,
+              fontSize: 10,
+            ),
           ),
           const SizedBox(height: 5),
           Row(
@@ -3039,7 +3075,9 @@ class _RecentMatchTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: winner == 'a' ? AppTheme.success : AppTheme.text,
+                    color: winner == 'a'
+                        ? AppTheme.success
+                        : context.hokTheme.onSurfaceStrong,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -3047,8 +3085,8 @@ class _RecentMatchTile extends StatelessWidget {
               ),
               Text(
                 match.scoreText,
-                style: const TextStyle(
-                  color: AppTheme.text,
+                style: TextStyle(
+                  color: context.hokTheme.onSurfaceStrong,
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                 ),
@@ -3061,7 +3099,9 @@ class _RecentMatchTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
                   style: TextStyle(
-                    color: winner == 'b' ? AppTheme.success : AppTheme.text,
+                    color: winner == 'b'
+                        ? AppTheme.success
+                        : context.hokTheme.onSurfaceStrong,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -3227,7 +3267,7 @@ class _TeamIdentity extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: alignEnd ? TextAlign.end : TextAlign.start,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: highlightColor ?? AppTheme.text,
+            color: highlightColor ?? context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -3300,7 +3340,7 @@ class _PanelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final card = DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         border: Border.all(
           color: (accentColor ?? Colors.white).withValues(
             alpha: accentColor == null ? 0.08 : 0.28,

@@ -317,7 +317,7 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
                           borderRadius: 0,
                           semanticLabel: 'Honor of Kings season background',
                         )
-                      : const ColoredBox(color: AppTheme.bg),
+                      : ColoredBox(color: context.hokTheme.backgroundDeep),
                 ),
                 const Positioned.fill(
                   child: DecoratedBox(
@@ -378,7 +378,7 @@ void _showPortalMenu(BuildContext context) {
             constraints: const BoxConstraints(maxWidth: 360),
             child: Material(
               key: const ValueKey('home-portal-menu-drawer'),
-              color: AppTheme.panel,
+              color: context.hokTheme.surfaceSlate,
               borderRadius: const BorderRadius.horizontal(
                 right: Radius.circular(22),
               ),
@@ -472,14 +472,14 @@ class _PortalMenuSheet extends StatelessWidget {
                 tooltip: 'Close menu',
                 onPressed: () =>
                     Navigator.of(context, rootNavigator: true).pop(),
-                icon: const Icon(Icons.close, color: AppTheme.muted),
+                icon: Icon(Icons.close, color: context.hokTheme.onSurfaceMuted),
               ),
             ),
             Expanded(
               child: ListView.separated(
                 itemCount: _groups.length,
                 separatorBuilder: (context, index) => Divider(
-                  color: AppTheme.outline.withValues(alpha: 0.75),
+                  color: context.hokTheme.outlineSoft.withValues(alpha: 0.75),
                   height: 22,
                 ),
                 itemBuilder: (context, index) {
@@ -521,7 +521,7 @@ class _PortalMenuGroupView extends StatelessWidget {
         Text(
           group.title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -556,15 +556,15 @@ class _PortalMenuChip extends StatelessWidget {
         },
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panelAlt,
+            color: context.hokTheme.surfaceRaised,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppTheme.outline),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Text(
             link.label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppTheme.muted,
+              color: context.hokTheme.onSurfaceMuted,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -608,7 +608,9 @@ class _PortalNavPill extends StatelessWidget {
               Text(
                 entry.label,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: selected ? AppTheme.text : AppTheme.muted,
+                  color: selected
+                      ? context.hokTheme.onSurfaceStrong
+                      : context.hokTheme.onSurfaceMuted,
                   fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
                 ),
               ),
@@ -622,7 +624,9 @@ class _PortalNavPill extends StatelessWidget {
                 width: selected ? 20 : 0,
                 height: 3,
                 decoration: BoxDecoration(
-                  color: selected ? AppTheme.text : Colors.transparent,
+                  color: selected
+                      ? context.hokTheme.onSurfaceStrong
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -651,11 +655,11 @@ class _RoundIconButton extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
-          child: Icon(icon, color: AppTheme.text, size: 22),
+          child: Icon(icon, color: context.hokTheme.onSurfaceStrong, size: 22),
         ),
       ),
     );
@@ -833,18 +837,18 @@ class _HomeMainHeroContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _HomeHeroContent(
       title: 'HOK HELPER',
-      description:
-          'Live rankings, hero data, and practical decisions for every match.',
+      description: l10n.homeHeroDescription,
       buttons: [
         _HomeHeroButton(
-          label: 'Core Stats',
+          label: l10n.homeCoreStats,
           icon: Icons.bar_chart_rounded,
           onTap: () => context.go('/stats-home'),
         ),
         _HomeHeroButton(
-          label: 'Tier List',
+          label: l10n.homeTierList,
           icon: Icons.leaderboard_rounded,
           onTap: () => context.go('/stats-home?tab=tier'),
         ),
@@ -858,13 +862,13 @@ class _HomeWorldHeroContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _HomeHeroContent(
       title: 'HOK WORLD',
-      description:
-          'Explore the world, characters, and stories behind Honor of Kings.',
+      description: l10n.homeWorldDescription,
       buttons: [
         _HomeHeroButton(
-          label: 'Enter HOK World',
+          label: l10n.homeEnterWorld,
           icon: Icons.public_rounded,
           onTap: () => context.go('/hok-world'),
         ),
@@ -1007,17 +1011,17 @@ class _TrendingHeroCard extends StatelessWidget {
         onTap: () => context.go('/stats-home'),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppTheme.panelAlt,
+                  backgroundColor: context.hokTheme.surfaceRaised,
                   child: Icon(
                     Icons.shield_outlined,
                     color: AppTheme.gold,
@@ -1042,7 +1046,7 @@ class _TrendingHeroCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.text,
+                          color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -1056,7 +1060,9 @@ class _TrendingHeroCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.muted),
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
                         ),
                       ],
                     ],
@@ -1099,9 +1105,9 @@ class _BentoShortcutCard extends StatelessWidget {
         onTap: () => context.go(route),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -1114,7 +1120,7 @@ class _BentoShortcutCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1149,9 +1155,9 @@ class _LatestPatchCard extends StatelessWidget {
         },
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -1173,7 +1179,7 @@ class _LatestPatchCard extends StatelessWidget {
                         version,
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(
-                              color: AppTheme.muted,
+                              color: context.hokTheme.onSurfaceMuted,
                               fontWeight: FontWeight.w800,
                             ),
                       ),
@@ -1185,7 +1191,7 @@ class _LatestPatchCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1194,13 +1200,13 @@ class _LatestPatchCard extends StatelessWidget {
                   summary,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Read Notes',
+                  AppLocalizations.of(context).homeReadNotes,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: AppTheme.gold,
                     fontWeight: FontWeight.w900,
@@ -1222,6 +1228,7 @@ class _HomePortalPreviews extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final heroRows = _readList(_readMap(result['hero_ranking_table'])['rows']);
     final heroColumns = _readMap(result['hero_ranking_table'])['columns'];
     final tierRows = _readList(result['tier_list']);
@@ -1233,7 +1240,7 @@ class _HomePortalPreviews extends StatelessWidget {
       _HomeHeroRankingTable(rows: heroRows, rawColumns: heroColumns),
       _HomeTierPreviewSection(
         icon: Icons.local_fire_department_outlined,
-        title: 'Tier List Preview',
+        title: l10n.homeTierPreview,
         route: '/stats-home?tab=tier',
         groups: tierRows.take(4).toList(growable: false),
       ),
@@ -1243,7 +1250,7 @@ class _HomePortalPreviews extends StatelessWidget {
       ),
       _HomeCommunitySection(
         icon: Icons.forum_outlined,
-        title: 'Community Hot',
+        title: l10n.homeCommunityHot,
         route: '/content/community',
         rows: [
           for (final row in communityPosts.take(3))
@@ -1260,7 +1267,7 @@ class _HomePortalPreviews extends StatelessWidget {
       ),
       _HomePatchNotesSection(
         icon: Icons.newspaper_outlined,
-        title: 'Latest Updates',
+        title: l10n.homeLatestUpdates,
         route: '/content/patch-notes',
         notes: patchNotes.take(6).toList(growable: false),
       ),
@@ -1291,7 +1298,7 @@ class _HomeHeroRankingTable extends StatelessWidget {
 
     return _HomeDataSection(
       icon: Icons.bar_chart_outlined,
-      title: 'Hero Rankings',
+      title: AppLocalizations.of(context).homeHeroRankings,
       route: '/stats-home',
       child: _HomeDataTable(columns: columns, rows: dataRows, maxRows: 116),
     );
@@ -1317,19 +1324,20 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final rows = _selected == 'peak' ? widget.peakRows : widget.rankRows;
     return _HomeDataSection(
       icon: Icons.emoji_events_outlined,
-      title: 'Leaderboard',
+      title: l10n.homeLeaderboard,
       route: '/leaderboard',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SegmentedButton<String>(
             key: const ValueKey('home-player-ranking-mode'),
-            segments: const [
-              ButtonSegment(value: 'peak', label: Text('Peak')),
-              ButtonSegment(value: 'rank', label: Text('Rank')),
+            segments: [
+              ButtonSegment(value: 'peak', label: Text(l10n.homePeak)),
+              ButtonSegment(value: 'rank', label: Text(l10n.homeRank)),
             ],
             selected: {_selected},
             expandedInsets: EdgeInsets.zero,
@@ -1344,13 +1352,13 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
               minimumSize: const WidgetStatePropertyAll(Size(0, 38)),
               backgroundColor: WidgetStateProperty.resolveWith((states) {
                 return states.contains(WidgetState.selected)
-                    ? AppTheme.panelAlt
-                    : AppTheme.bg;
+                    ? context.hokTheme.surfaceRaised
+                    : context.hokTheme.backgroundDeep;
               }),
               foregroundColor: WidgetStateProperty.resolveWith((states) {
                 return states.contains(WidgetState.selected)
                     ? AppTheme.gold
-                    : AppTheme.muted;
+                    : context.hokTheme.onSurfaceMuted;
               }),
               padding: const WidgetStatePropertyAll(
                 EdgeInsets.symmetric(horizontal: 8),
@@ -1374,12 +1382,15 @@ class _HomePlayerTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final visibleRows = rows.take(8).toList(growable: false);
     if (visibleRows.isEmpty) return const _HomeEmptyPanelMessage();
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.outline.withValues(alpha: 0.72)),
+        border: Border.all(
+          color: context.hokTheme.outlineSoft.withValues(alpha: 0.72),
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: ClipRRect(
@@ -1388,16 +1399,16 @@ class _HomePlayerTable extends StatelessWidget {
           children: [
             Container(
               height: 38,
-              color: AppTheme.bg,
+              color: context.hokTheme.backgroundDeep,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
                   const SizedBox(width: 32, child: _HomeLeaderboardHeader('#')),
-                  const Expanded(child: _HomeLeaderboardHeader('Player')),
+                  Expanded(child: _HomeLeaderboardHeader(l10n.homePlayer)),
                   SizedBox(
                     width: 86,
                     child: _HomeLeaderboardHeader(
-                      mode == 'peak' ? 'Peak Score' : 'Stars',
+                      mode == 'peak' ? l10n.homePeakScore : l10n.homeStars,
                       textAlign: TextAlign.end,
                     ),
                   ),
@@ -1432,7 +1443,7 @@ class _HomeLeaderboardHeader extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: AppTheme.muted,
+        color: context.hokTheme.onSurfaceMuted,
         fontWeight: FontWeight.w900,
       ),
     );
@@ -1470,11 +1481,11 @@ class _HomeLeaderboardRow extends StatelessWidget {
       height: 62,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         border: showDivider
             ? Border(
                 bottom: BorderSide(
-                  color: AppTheme.outline.withValues(alpha: 0.62),
+                  color: context.hokTheme.outlineSoft.withValues(alpha: 0.62),
                 ),
               )
             : null,
@@ -1486,7 +1497,7 @@ class _HomeLeaderboardRow extends StatelessWidget {
             child: Text(
               '$rank',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.muted,
+                color: context.hokTheme.onSurfaceMuted,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1510,7 +1521,7 @@ class _HomeLeaderboardRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1528,9 +1539,9 @@ class _HomeLeaderboardRow extends StatelessWidget {
                         _homeRegionName(region),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelSmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ),
                   ],
@@ -1591,9 +1602,9 @@ class _HomeDataSection extends StatelessWidget {
       color: Colors.transparent,
       child: Ink(
         decoration: BoxDecoration(
-          color: AppTheme.panel,
+          color: context.hokTheme.surfaceSlate,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: context.hokTheme.outlineSoft),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
@@ -1608,7 +1619,7 @@ class _HomeDataSection extends StatelessWidget {
                     child: Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1620,7 +1631,7 @@ class _HomeDataSection extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 5),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('View More'),
+                    child: Text(AppLocalizations.of(context).viewMore),
                   ),
                 ],
               ),
@@ -1716,7 +1727,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
         'No data',
         style: Theme.of(
           context,
-        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+        ).textTheme.bodySmall?.copyWith(color: context.hokTheme.onSurfaceMuted),
       );
     }
     final heroColumn = widget.columns.first;
@@ -1731,13 +1742,13 @@ class _HomeDataTableState extends State<_HomeDataTable> {
       height: _headerHeight,
       padding: const EdgeInsets.symmetric(horizontal: 4),
       alignment: Alignment.center,
-      color: AppTheme.panel,
+      color: context.hokTheme.surfaceSlate,
       child: Text(
         heroColumn.label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppTheme.muted,
+          color: context.hokTheme.onSurfaceMuted,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -1761,7 +1772,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -1799,7 +1810,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
             width: _firstColumnWidth,
             height: _rowHeight,
             child: ColoredBox(
-              color: AppTheme.panel,
+              color: context.hokTheme.surfaceSlate,
               child: Center(
                 child: _HomeFixedTableIdentity(row: row, column: heroColumn),
               ),
@@ -1813,7 +1824,9 @@ class _HomeDataTableState extends State<_HomeDataTable> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
-            top: BorderSide(color: AppTheme.outline.withValues(alpha: 0.7)),
+            top: BorderSide(
+              color: context.hokTheme.outlineSoft.withValues(alpha: 0.7),
+            ),
           ),
         ),
         child: Stack(
@@ -1842,7 +1855,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
               right: 0,
               height: _headerHeight,
               child: ColoredBox(
-                color: AppTheme.panel,
+                color: context.hokTheme.surfaceSlate,
                 child: Row(
                   children: [
                     fixedHeader,
@@ -1902,7 +1915,7 @@ class _HomeDataCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cellStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: AppTheme.text,
+      color: context.hokTheme.onSurfaceStrong,
       fontWeight: FontWeight.w700,
     );
     final isHero = column.id == 'hero' || column.type == 'hero';
@@ -2052,7 +2065,7 @@ class _HomeFixedTableIdentity extends StatelessWidget {
             top: 12,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: AppTheme.panel,
+                color: context.hokTheme.surfaceSlate,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
               ),
@@ -2465,7 +2478,9 @@ class _HomeTierPreviewSection extends StatelessWidget {
                       ? null
                       : Border(
                           bottom: BorderSide(
-                            color: AppTheme.outline.withValues(alpha: 0.68),
+                            color: context.hokTheme.outlineSoft.withValues(
+                              alpha: 0.68,
+                            ),
                             width: 1,
                           ),
                         ),
@@ -2478,7 +2493,7 @@ class _HomeTierPreviewSection extends StatelessWidget {
                         _readString(groups[index]['tier'], fallback: 'Tier'),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.muted,
+                          color: context.hokTheme.onSurfaceMuted,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -2616,7 +2631,7 @@ class _HomePatchNoteRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -2635,9 +2650,9 @@ class _HomePatchNoteRow extends StatelessWidget {
                     _localizedHomePostDetail(context, note),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
               ],
             ),
@@ -2673,7 +2688,7 @@ class _HomePatchChangeIcon extends StatelessWidget {
     );
     final (icon, color) = switch (_homeChangeDirection(changeType)) {
       'down' => (Icons.arrow_downward_rounded, AppTheme.error),
-      'flat' => (Icons.remove_rounded, AppTheme.muted),
+      'flat' => (Icons.remove_rounded, context.hokTheme.onSurfaceMuted),
       _ => (Icons.arrow_upward_rounded, AppTheme.success),
     };
     return Tooltip(
@@ -2741,7 +2756,7 @@ class _HomeInfoListRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -2751,9 +2766,9 @@ class _HomeInfoListRow extends StatelessWidget {
                     detail,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
                 ],
               ],
@@ -2790,9 +2805,9 @@ class _HomeEmptyPanelMessage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Text(
           'No data yet',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
         ),
       ),
     );
@@ -2873,9 +2888,9 @@ class _PrimaryActionCard extends StatelessWidget {
         onTap: () => context.go(route),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -2889,7 +2904,7 @@ class _PrimaryActionCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -2898,9 +2913,9 @@ class _PrimaryActionCard extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
               ],
             ),
@@ -2961,7 +2976,7 @@ class _HomeToolGrid extends StatelessWidget {
         Text(
           'Quick Tools',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.text,
+            color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -3013,9 +3028,9 @@ class _HomeToolCard extends StatelessWidget {
         onTap: () => context.go(tool.route),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -3029,7 +3044,7 @@ class _HomeToolCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -3055,23 +3070,23 @@ class _HokWorldEntryCard extends StatelessWidget {
         onTap: () => context.go('/hok-world'),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppTheme.panel,
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(Icons.public_outlined, color: AppTheme.gold),
                     SizedBox(width: 10),
                     Text(
                       'HOK World',
                       style: TextStyle(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -3080,9 +3095,9 @@ class _HokWorldEntryCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Move from HOK World character hype to practical ranked decisions with a dedicated topic page, live tier context, and direct routes into stats and hero details.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(

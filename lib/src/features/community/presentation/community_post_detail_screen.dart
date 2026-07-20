@@ -49,7 +49,7 @@ class _CommunityPostDetailScreenState
   Widget build(BuildContext context) {
     final detailValue = ref.watch(postDetailProvider(widget.postId));
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(postDetailProvider(widget.postId));
@@ -140,7 +140,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
               child: Text(
                 'Post',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -170,7 +170,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                   Text(
                     'Comments',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -178,7 +178,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                   Text(
                     '$_commentCount',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.muted,
+                      color: context.hokTheme.onSurfaceMuted,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -370,8 +370,8 @@ class _ArticleCard extends StatelessWidget {
     final post = detail.post;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: AppTheme.outline),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
@@ -398,15 +398,15 @@ class _ArticleCard extends StatelessWidget {
                         authorName: post.authorName,
                         textStyle: Theme.of(context).textTheme.titleSmall
                             ?.copyWith(
-                              color: AppTheme.text,
+                              color: context.hokTheme.onSurfaceStrong,
                               fontWeight: FontWeight.w900,
                             ),
                       ),
                       Text(
                         AppTimeFormatter.relative(context, post.createdAt),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelSmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -417,7 +417,7 @@ class _ArticleCard extends StatelessWidget {
             Text(
               post.title,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -458,7 +458,9 @@ class _ArticleCard extends StatelessWidget {
                   onPressed: likeSubmitting ? null : onLike,
                   icon: Icon(
                     isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: isLiked ? const Color(0xFFF43F5E) : AppTheme.muted,
+                    color: isLiked
+                        ? const Color(0xFFF43F5E)
+                        : context.hokTheme.onSurfaceMuted,
                     size: 19,
                   ),
                   label: Text('$likeCount likes'),
@@ -554,8 +556,10 @@ class _CommentThread extends StatelessWidget {
       padding: EdgeInsets.only(left: clampedDepth * 18, bottom: 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: depth == 0 ? AppTheme.panel : AppTheme.panelAlt,
-          border: Border.all(color: AppTheme.outline),
+          color: depth == 0
+              ? context.hokTheme.surfaceSlate
+              : context.hokTheme.surfaceRaised,
+          border: Border.all(color: context.hokTheme.outlineSoft),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Stack(
@@ -594,16 +598,16 @@ class _CommentThread extends StatelessWidget {
                           authorName: comment.authorName,
                           textStyle: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
                       ),
                       Text(
                         AppTimeFormatter.relative(context, comment.createdAt),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelSmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -700,8 +704,8 @@ class _CommentComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
-        border: Border.all(color: AppTheme.outline),
+        color: context.hokTheme.surfaceSlate,
+        border: Border.all(color: context.hokTheme.outlineSoft),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -784,16 +788,16 @@ class _TagChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.outline),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppTheme.muted,
+            color: context.hokTheme.onSurfaceMuted,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -818,12 +822,12 @@ class _ArticleMetric extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppTheme.muted, size: 18),
+        Icon(icon, color: context.hokTheme.onSurfaceMuted, size: 18),
         const SizedBox(width: 5),
         Text(
           '$value $label',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: AppTheme.muted,
+            color: context.hokTheme.onSurfaceMuted,
             fontWeight: FontWeight.w800,
           ),
         ),

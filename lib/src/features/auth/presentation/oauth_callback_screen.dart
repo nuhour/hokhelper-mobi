@@ -75,10 +75,8 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
               padding: const EdgeInsets.all(24),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppTheme.panel,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
+                  color: context.hokTheme.surfaceSlate,
+                  border: Border.all(color: context.hokTheme.outlineSoft),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Padding(
@@ -103,7 +101,7 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
-                              color: AppTheme.text,
+                              color: context.hokTheme.onSurfaceStrong,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
@@ -113,9 +111,9 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
                             ? _errorMessage!
                             : 'Completing ${widget.provider} authorization...',
                         textAlign: TextAlign.center,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                       if (hasError) ...[
                         const SizedBox(height: 20),

@@ -23,16 +23,16 @@ class ExternalLinkScreen extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             'This notification points outside HOK Helper. Review the URL before opening it in your browser.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
           ),
           const SizedBox(height: 18),
           DecoratedBox(
             decoration: BoxDecoration(
-              color: AppTheme.panel,
+              color: context.hokTheme.surfaceSlate,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: context.hokTheme.outlineSoft),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),

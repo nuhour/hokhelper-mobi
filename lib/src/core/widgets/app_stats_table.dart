@@ -91,9 +91,9 @@ class _AppStatsTableState extends State<AppStatsTable> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<HokThemeColors>();
-    final panel = colors?.surfaceSlate ?? AppTheme.panel;
-    final panelAlt = colors?.surfaceMuted ?? AppTheme.panelAlt;
-    final outline = colors?.outlineSoft ?? AppTheme.outline;
+    final panel = colors?.surfaceSlate ?? context.hokTheme.surfaceSlate;
+    final panelAlt = colors?.surfaceMuted ?? context.hokTheme.surfaceRaised;
+    final outline = colors?.outlineSoft ?? context.hokTheme.outlineSoft;
     final hasGroupedHeader = widget.columns.any(
       (column) => column.groupLabel.isNotEmpty,
     );
@@ -325,7 +325,7 @@ class _HeaderCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final muted =
         Theme.of(context).extension<HokThemeColors>()?.onSurfaceMuted ??
-        AppTheme.muted;
+        context.hokTheme.onSurfaceMuted;
     final color = column.selected
         ? Theme.of(context).colorScheme.primary
         : muted;
@@ -414,7 +414,7 @@ class _GroupHeaderCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final muted =
         Theme.of(context).extension<HokThemeColors>()?.onSurfaceMuted ??
-        AppTheme.muted;
+        context.hokTheme.onSurfaceMuted;
     return Container(
       width: span.width,
       height: 24,

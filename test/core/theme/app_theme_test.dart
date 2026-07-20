@@ -21,7 +21,10 @@ void main() {
     expect(tokens?.surfaceSlate, AppTheme.panel);
     expect(tokens?.surfaceRaised, AppTheme.panelAlt);
     expect(tokens?.onSurfaceMuted, AppTheme.muted);
-    expect(theme.filledButtonTheme.style?.shape?.resolve({}), isA<OutlinedBorder>());
+    expect(
+      theme.filledButtonTheme.style?.shape?.resolve({}),
+      isA<OutlinedBorder>(),
+    );
     expect(theme.cardTheme.color, AppTheme.panel);
   });
 
@@ -29,11 +32,11 @@ void main() {
     final theme = AppTheme.light();
     final tokens = theme.extension<HokThemeColors>();
 
-    expect(AppTheme.lightBg, const Color(0xFFF6F8FC));
+    expect(AppTheme.lightBg, const Color(0xFFF8FAFC));
     expect(AppTheme.lightPanel, Colors.white);
-    expect(AppTheme.lightPanelAlt, const Color(0xFFEAF0F8));
+    expect(AppTheme.lightPanelAlt, const Color(0xFFF1F5F9));
     expect(AppTheme.lightText, const Color(0xFF0F172A));
-    expect(AppTheme.lightMuted, const Color(0xFF5F6F86));
+    expect(AppTheme.lightMuted, const Color(0xFF64748B));
     expect(theme.scaffoldBackgroundColor, AppTheme.lightBg);
     expect(theme.colorScheme.primary, AppTheme.gold);
     expect(theme.navigationBarTheme.backgroundColor, AppTheme.lightPanel);

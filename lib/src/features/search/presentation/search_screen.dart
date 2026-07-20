@@ -36,7 +36,7 @@ class SearchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: _SearchContent(initialQuery: initialQuery),
     );
   }
@@ -54,8 +54,8 @@ class _PortalSearchSheet extends StatelessWidget {
       expand: false,
       builder: (context, scrollController) {
         return DecoratedBox(
-          decoration: const BoxDecoration(
-            color: AppTheme.panel,
+          decoration: BoxDecoration(
+            color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
           ),
           child: SafeArea(
@@ -67,7 +67,9 @@ class _PortalSearchSheet extends StatelessWidget {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.muted.withValues(alpha: 0.48),
+                    color: context.hokTheme.onSurfaceMuted.withValues(
+                      alpha: 0.48,
+                    ),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -82,7 +84,7 @@ class _PortalSearchSheet extends StatelessWidget {
                           'Global Search',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(
-                                color: AppTheme.text,
+                                color: context.hokTheme.onSurfaceStrong,
                                 fontWeight: FontWeight.w900,
                               ),
                         ),
@@ -91,12 +93,12 @@ class _PortalSearchSheet extends StatelessWidget {
                         tooltip: 'Close search',
                         onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.close_rounded),
-                        color: AppTheme.muted,
+                        color: context.hokTheme.onSurfaceMuted,
                       ),
                     ],
                   ),
                 ),
-                Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                Divider(height: 1, color: context.hokTheme.outlineSoft),
                 Expanded(
                   child: _SearchContent(
                     scrollController: scrollController,
@@ -195,16 +197,16 @@ class _SearchContentState extends ConsumerState<_SearchContent> {
           const SizedBox(height: 8),
           Text(
             'Search heroes, builds, guides, and community content from the HOK portal.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
           ),
         ] else
           Text(
             'Search heroes, builds, guides, and community content.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
           ),
         const SizedBox(height: 16),
         TextField(
@@ -212,10 +214,13 @@ class _SearchContentState extends ConsumerState<_SearchContent> {
           autofocus: widget.autofocus,
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => _submit(),
-          style: const TextStyle(color: AppTheme.text),
+          style: TextStyle(color: context.hokTheme.onSurfaceStrong),
           decoration: InputDecoration(
             hintText: 'Search HOK Helper',
-            prefixIcon: const Icon(Icons.search, color: AppTheme.muted),
+            prefixIcon: Icon(
+              Icons.search,
+              color: context.hokTheme.onSurfaceMuted,
+            ),
             suffixIcon: IconButton(
               icon: const Icon(Icons.arrow_forward, color: AppTheme.gold),
               onPressed: _submit,
@@ -289,9 +294,9 @@ class _SearchGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -301,7 +306,7 @@ class _SearchGroupCard extends StatelessWidget {
             Text(
               '${group.title} (${group.items.length})',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -371,7 +376,7 @@ class _SearchResultTile extends StatelessWidget {
                     Text(
                       item.title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppTheme.text,
+                        color: context.hokTheme.onSurfaceStrong,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -381,9 +386,9 @@ class _SearchResultTile extends StatelessWidget {
                         item.subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
                       ),
                     ],
                     if (item.actions.isNotEmpty) ...[
@@ -421,7 +426,11 @@ class _SearchResultTile extends StatelessWidget {
               ),
               if (canOpen) ...[
                 const SizedBox(width: 8),
-                const Icon(Icons.open_in_new, color: AppTheme.muted, size: 16),
+                Icon(
+                  Icons.open_in_new,
+                  color: context.hokTheme.onSurfaceMuted,
+                  size: 16,
+                ),
               ],
             ],
           ),

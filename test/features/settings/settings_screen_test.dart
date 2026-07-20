@@ -14,7 +14,9 @@ void main() {
   testWidgets('settings screen persists language-derived region and theme', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      PreferencesStore.selectedLanguageCodeKey: 'en',
+    });
 
     await tester.pumpWidget(
       const ProviderScope(child: _LocalizedSettingsHost()),
@@ -25,6 +27,7 @@ void main() {
     expect(find.text('Language'), findsOneWidget);
     expect(find.text('Region'), findsNothing);
     await tester.tap(find.text('中文'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();
 
@@ -39,12 +42,14 @@ void main() {
     );
     expect(
       preferences.getString(PreferencesStore.selectedThemeKey),
-      AppThemeMode.versus.storageValue,
+      AppThemeMode.classic.storageValue,
     );
   });
 
   testWidgets('settings screen exposes common app actions', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      PreferencesStore.selectedLanguageCodeKey: 'en',
+    });
 
     await tester.pumpWidget(
       const ProviderScope(child: _LocalizedSettingsHost()),
@@ -65,6 +70,10 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('settings-check-updates-tile')),
       500,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
     );
     await tester.ensureVisible(
       find.byKey(const ValueKey('settings-check-updates-tile')),
@@ -84,6 +93,10 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('settings-about-tile')),
       500,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
     );
     await tester.ensureVisible(
       find.byKey(const ValueKey('settings-about-tile')),
@@ -95,11 +108,12 @@ void main() {
     expect(find.text('HOK Helper Mobile'), findsOneWidget);
   });
 
-  testWidgets('settings screen action panels follow hokx light palette', (
+  testWidgets('settings screen action panels follow hokx classic palette', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
-      PreferencesStore.selectedThemeKey: AppThemeMode.versus.storageValue,
+      PreferencesStore.selectedLanguageCodeKey: 'en',
+      PreferencesStore.selectedThemeKey: AppThemeMode.classic.storageValue,
     });
 
     await tester.pumpWidget(

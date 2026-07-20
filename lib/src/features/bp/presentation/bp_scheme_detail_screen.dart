@@ -70,7 +70,7 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
     final value = ref.watch(bpSchemeDetailProvider(widget.schemeId));
 
     return Material(
-      color: AppTheme.bg,
+      color: context.hokTheme.backgroundDeep,
       child: AppAsyncView<BpSchemeSummary>(
         value: value,
         retry: () => ref.invalidate(bpSchemeDetailProvider(widget.schemeId)),
@@ -97,9 +97,9 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Review this pick/ban scheme from a shared portal link.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 _BpSchemeDetailCard(
@@ -121,7 +121,7 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
     final draft = await showModalBottomSheet<_BpEditDraft>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -172,7 +172,7 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
     final draft = await showModalBottomSheet<_BpDraftProgressDraft>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.panel,
+      backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -240,9 +240,9 @@ class _BpSchemeDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panel,
+        color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -259,7 +259,7 @@ class _BpSchemeDetailCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.text,
+                      color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -270,7 +270,7 @@ class _BpSchemeDetailCard extends StatelessWidget {
             Text(
               scheme.matchupText,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -388,7 +388,7 @@ class _BpEditSheetState extends State<_BpEditSheet> {
                 Text(
                   'Edit BP scheme',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -544,7 +544,7 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
               Text(
                 'Draft progress',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.text,
+                  color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1775,7 +1775,7 @@ class _BpLaneBar extends StatelessWidget {
                           border: Border.all(
                             color: selectedLane == lane.value
                                 ? AppTheme.gold
-                                : Colors.white.withValues(alpha: 0.08),
+                                : context.hokTheme.outlineSoft,
                           ),
                         ),
                         child: lane.assetName == null
@@ -1784,7 +1784,7 @@ class _BpLaneBar extends StatelessWidget {
                                 size: 16,
                                 color: selectedLane == lane.value
                                     ? Colors.black
-                                    : AppTheme.muted,
+                                    : context.hokTheme.onSurfaceMuted,
                               )
                             : Image.asset(
                                 'assets/lane-icons/${lane.assetName}.png',
@@ -1807,7 +1807,9 @@ class _BpLaneBar extends StatelessWidget {
                   onPressed: onToggleBanned,
                   icon: Icon(
                     showBanned ? Icons.block_rounded : Icons.block_outlined,
-                    color: showBanned ? AppTheme.error : AppTheme.muted,
+                    color: showBanned
+                        ? AppTheme.error
+                        : context.hokTheme.onSurfaceMuted,
                     size: 20,
                   ),
                 ),
@@ -1818,7 +1820,9 @@ class _BpLaneBar extends StatelessWidget {
                     showPicked
                         ? Icons.check_circle_rounded
                         : Icons.check_circle_outline,
-                    color: showPicked ? AppTheme.success : AppTheme.muted,
+                    color: showPicked
+                        ? AppTheme.success
+                        : context.hokTheme.onSurfaceMuted,
                     size: 20,
                   ),
                 ),
@@ -2226,11 +2230,14 @@ class _BpHeroPoolTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
                   shape: BoxShape.circle,
-                  border: Border.all(color: _statusColor(status), width: 2),
+                  border: Border.all(
+                    color: _statusColor(context, status),
+                    width: 2,
+                  ),
                 ),
                 child: Icon(
                   _statusIcon(status),
-                  color: _statusColor(status),
+                  color: _statusColor(context, status),
                   size: 20,
                 ),
               ),
@@ -2241,11 +2248,12 @@ class _BpHeroPoolTile extends StatelessWidget {
   }
 }
 
-Color _statusColor(_BpHeroStatus status) => switch (status) {
-  _BpHeroStatus.banned || _BpHeroStatus.usedByOpponent => AppTheme.error,
-  _BpHeroStatus.picked || _BpHeroStatus.usedByActiveTeam => AppTheme.gold,
-  _BpHeroStatus.available => AppTheme.muted,
-};
+Color _statusColor(BuildContext context, _BpHeroStatus status) =>
+    switch (status) {
+      _BpHeroStatus.banned || _BpHeroStatus.usedByOpponent => AppTheme.error,
+      _BpHeroStatus.picked || _BpHeroStatus.usedByActiveTeam => AppTheme.gold,
+      _BpHeroStatus.available => context.hokTheme.onSurfaceMuted,
+    };
 
 IconData _statusIcon(_BpHeroStatus status) => switch (status) {
   _BpHeroStatus.banned => Icons.block_rounded,
@@ -2264,9 +2272,9 @@ class _CurrentBpBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -2276,7 +2284,7 @@ class _CurrentBpBoard extends StatelessWidget {
             Text(
               'Current BP Board',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2332,7 +2340,7 @@ class _BpHeroSlotGroup extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppTheme.muted,
+              color: context.hokTheme.onSurfaceMuted,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -2384,9 +2392,9 @@ class _ProgressStepper extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppTheme.panelAlt,
+          color: context.hokTheme.surfaceRaised,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: context.hokTheme.outlineSoft),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2396,7 +2404,7 @@ class _ProgressStepper extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -2412,7 +2420,7 @@ class _ProgressStepper extends StatelessWidget {
                   '$value',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.text,
+                    color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -2466,7 +2474,7 @@ class _DraftCountTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.panelAlt,
+        color: context.hokTheme.surfaceRaised,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -2478,7 +2486,7 @@ class _DraftCountTile extends StatelessWidget {
             Text(
               '$value',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.text,
+                color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2486,9 +2494,9 @@ class _DraftCountTile extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
             ),
           ],
         ),
@@ -2505,7 +2513,7 @@ class _MetricBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPrimary ? AppTheme.gold : AppTheme.muted;
+    final color = isPrimary ? AppTheme.gold : context.hokTheme.onSurfaceMuted;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: (isPrimary ? AppTheme.gold : Colors.white).withValues(
