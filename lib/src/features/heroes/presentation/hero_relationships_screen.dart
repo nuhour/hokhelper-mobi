@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -204,22 +205,27 @@ class _HeroRelationshipsScreenState
   }
 
   String _randomFocusHero(List<HeroRelationship> relationships) {
-    final heroes = <String>{
-      for (final relationship in relationships) ...[
-        if (relationship.sourceHeroName.isNotEmpty)
-          relationship.sourceHeroName
-        else
-          relationship.sourceHeroId,
-        if (relationship.targetHeroName.isNotEmpty)
-          relationship.targetHeroName
-        else
-          relationship.targetHeroId,
-      ],
-    }.where((hero) => hero.isNotEmpty).toList(growable: false);
-    if (heroes.isEmpty) {
+    final degrees = <String, int>{};
+    for (final relationship in relationships) {
+      final source = relationship.sourceHeroName.isNotEmpty
+          ? relationship.sourceHeroName
+          : relationship.sourceHeroId;
+      final target = relationship.targetHeroName.isNotEmpty
+          ? relationship.targetHeroName
+          : relationship.targetHeroId;
+      if (source.isNotEmpty) degrees[source] = (degrees[source] ?? 0) + 1;
+      if (target.isNotEmpty) degrees[target] = (degrees[target] ?? 0) + 1;
+    }
+    if (degrees.isEmpty) {
       return '';
     }
-    return heroes[math.Random().nextInt(heroes.length)];
+    final connectedHeroes = degrees.entries.toList()
+      ..sort((left, right) => right.value.compareTo(left.value));
+    final candidates = connectedHeroes
+        .take(math.min(12, math.max(1, connectedHeroes.length ~/ 4)))
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    return candidates[math.Random().nextInt(candidates.length)];
   }
 }
 
@@ -289,26 +295,38 @@ class _HeroRelationshipNetwork extends StatefulWidget {
 }
 
 class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _viewerKey = GlobalKey();
   final _controller = TransformationController();
   late final AnimationController _fitController;
+  late final Ticker _physicsTicker;
   Animation<Matrix4>? _fitAnimation;
+  late _RelationshipNetworkLayout _targetLayout;
+  final Map<String, _AnimatedChainNode> _animatedNodes = {};
+  List<_NetworkEdge> _activeEdges = const [];
+  Duration? _lastPhysicsTick;
   var _canvasSize = 720.0;
 
   @override
   void initState() {
     super.initState();
+    _targetLayout = _createTargetLayout();
+    _canvasSize = _targetLayout.canvasSize;
+    _activeEdges = _targetLayout.edges;
+    for (final node in _targetLayout.nodes) {
+      _animatedNodes[node.key] = _AnimatedChainNode.fromNode(node);
+    }
     _fitController =
         AnimationController(
           vsync: this,
-          duration: const Duration(milliseconds: 420),
+          duration: const Duration(milliseconds: 560),
         )..addListener(() {
           final value = _fitAnimation?.value;
           if (value != null) {
             _controller.value = value;
           }
         });
+    _physicsTicker = createTicker(_tickPhysics);
     _scheduleFit();
   }
 
@@ -317,16 +335,116 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.viewMode != widget.viewMode ||
         oldWidget.focusedHero != widget.focusedHero ||
-        oldWidget.relationships.length != widget.relationships.length) {
+        oldWidget.relationships.length != widget.relationships.length ||
+        oldWidget.heroes.length != widget.heroes.length) {
+      _retarget(_createTargetLayout());
       _scheduleFit();
     }
   }
 
   @override
   void dispose() {
+    _physicsTicker.dispose();
     _fitController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  _RelationshipNetworkLayout _createTargetLayout() {
+    return _RelationshipNetworkLayout.create(
+      relationships: widget.relationships,
+      heroes: widget.heroes,
+      focusedHero: widget.focusedHero,
+      viewMode: widget.viewMode,
+    );
+  }
+
+  void _retarget(_RelationshipNetworkLayout nextLayout) {
+    final previousLayout = _targetLayout;
+    _targetLayout = nextLayout;
+    _canvasSize = nextLayout.canvasSize;
+    final nextNodes = {for (final node in nextLayout.nodes) node.key: node};
+    final nextEdgesByNode = <String, List<String>>{};
+    for (final edge in nextLayout.edges) {
+      nextEdgesByNode.putIfAbsent(edge.sourceKey, () => []).add(edge.targetKey);
+      nextEdgesByNode.putIfAbsent(edge.targetKey, () => []).add(edge.sourceKey);
+    }
+
+    for (final node in nextLayout.nodes) {
+      final current = _animatedNodes[node.key];
+      if (current != null) {
+        current.retarget(node);
+        continue;
+      }
+      Offset? entryPosition;
+      for (final neighborKey in nextEdgesByNode[node.key] ?? const <String>[]) {
+        final neighbor = _animatedNodes[neighborKey];
+        if (neighbor != null) {
+          entryPosition = neighbor.position;
+          break;
+        }
+      }
+      final center = Offset(
+        nextLayout.canvasSize / 2,
+        nextLayout.canvasSize / 2,
+      );
+      _animatedNodes[node.key] = _AnimatedChainNode.entering(
+        node,
+        entryPosition ?? center + (node.position - center) * 0.18,
+      );
+    }
+
+    final exitCenter = Offset(
+      previousLayout.canvasSize / 2,
+      previousLayout.canvasSize / 2,
+    );
+    for (final entry in _animatedNodes.entries) {
+      if (nextNodes.containsKey(entry.key)) continue;
+      final node = entry.value;
+      var direction = node.position - exitCenter;
+      if (direction.distanceSquared < 1) {
+        final angle = entry.key.hashCode % 360 * math.pi / 180;
+        direction = Offset.fromDirection(angle);
+      }
+      node.exitToward(
+        exitCenter + direction / direction.distance * nextLayout.canvasSize,
+      );
+    }
+
+    final edgeKeys = <String>{};
+    _activeEdges = [
+      for (final edge in [..._activeEdges, ...nextLayout.edges])
+        if (edgeKeys.add(_edgeKey(edge))) edge,
+    ];
+    _lastPhysicsTick = null;
+    if (!_physicsTicker.isActive) _physicsTicker.start();
+  }
+
+  void _tickPhysics(Duration elapsed) {
+    final previousTick = _lastPhysicsTick;
+    _lastPhysicsTick = elapsed;
+    if (previousTick == null) return;
+    final dt = ((elapsed - previousTick).inMicroseconds / 1000000)
+        .clamp(0.001, 0.032)
+        .toDouble();
+    var moving = false;
+    final removable = <String>[];
+    for (final entry in _animatedNodes.entries) {
+      final node = entry.value;
+      node.step(dt);
+      moving = moving || !node.isSettled;
+      if (node.canRemove) removable.add(entry.key);
+    }
+    for (final key in removable) {
+      _animatedNodes.remove(key);
+    }
+    if (!mounted) return;
+    setState(() {});
+    if (!moving) {
+      _physicsTicker.stop();
+      _lastPhysicsTick = null;
+      _activeEdges = _targetLayout.edges;
+    }
   }
 
   void _scheduleFit() {
@@ -336,21 +454,24 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
           _viewerKey.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox == null || !renderBox.hasSize) return;
       final viewport = renderBox.size;
+      final fitExtent = widget.viewMode == _RelationshipViewMode.focus
+          ? math.min(760.0, _canvasSize)
+          : _canvasSize;
       final scale = math
           .min(
-            (viewport.width - 18) / _canvasSize,
-            (viewport.height - 18) / _canvasSize,
+            (viewport.width - 18) / fitExtent,
+            (viewport.height - 18) / fitExtent,
           )
           .clamp(0.3, 1.0);
-      final dx = (viewport.width - _canvasSize * scale) / 2;
-      final dy = (viewport.height - _canvasSize * scale) / 2;
+      final dx = viewport.width / 2 - _canvasSize * scale / 2;
+      final dy = viewport.height / 2 - _canvasSize * scale / 2;
       final target = Matrix4.identity()
         ..translateByDouble(dx, dy, 0, 1)
         ..scaleByDouble(scale, scale, 1, 1);
       _fitController.stop();
       _fitAnimation =
           Matrix4Tween(begin: _controller.value.clone(), end: target).animate(
-            CurvedAnimation(parent: _fitController, curve: Curves.easeOutBack),
+            CurvedAnimation(parent: _fitController, curve: Curves.easeOutCubic),
           );
       _fitController.forward(from: 0);
     });
@@ -358,15 +479,14 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
 
   @override
   Widget build(BuildContext context) {
-    final layout = _RelationshipNetworkLayout.create(
-      relationships: widget.relationships,
-      heroes: widget.heroes,
-      focusedHero: widget.focusedHero,
-      viewMode: widget.viewMode,
+    final layout = _RelationshipNetworkLayout(
+      canvasSize: _canvasSize,
+      nodes: _animatedNodes.values
+          .where((node) => node.opacity > 0.01)
+          .map((node) => node.toNode())
+          .toList(growable: false),
+      edges: _activeEdges,
     );
-    _canvasSize = layout.canvasSize;
-    final animationKey =
-        'relationship-network-${widget.viewMode.name}-${widget.focusedHero}';
     final content = SizedBox(
       key: _viewerKey,
       child: ClipRRect(
@@ -389,6 +509,9 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
                 children: [
                   Positioned.fill(
                     child: CustomPaint(
+                      key: ValueKey(
+                        'relationship-network-${widget.viewMode.name}',
+                      ),
                       painter: _RelationshipNetworkPainter(layout: layout),
                     ),
                   ),
@@ -397,9 +520,15 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
                       left: node.position.dx - 38,
                       top: node.position.dy - node.size / 2,
                       width: 76,
-                      child: _RelationshipAvatarNode(
-                        node: node,
-                        onTap: () => widget.onHeroSelected(node.name),
+                      child: IgnorePointer(
+                        ignoring: node.opacity < 0.45,
+                        child: Opacity(
+                          opacity: node.opacity.clamp(0, 1),
+                          child: _RelationshipAvatarNode(
+                            node: node,
+                            onTap: () => widget.onHeroSelected(node.name),
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -409,28 +538,12 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
         ),
       ),
     );
-    final animatedContent = TweenAnimationBuilder<double>(
-      key: ValueKey('$animationKey-transition'),
-      tween: Tween(begin: 0.94, end: 1),
-      duration: const Duration(milliseconds: 360),
-      curve: Curves.easeOutBack,
-      builder: (context, value, child) => Transform.scale(
-        scale: value,
-        alignment: Alignment.center,
-        child: child,
-      ),
-      child: content,
-    );
-    final keyedContent = KeyedSubtree(
-      key: ValueKey('relationship-network-${widget.viewMode.name}'),
-      child: animatedContent,
-    );
     if (widget.expand) {
-      return SizedBox.expand(child: keyedContent);
+      return SizedBox.expand(child: content);
     }
     return SizedBox(
       height: widget.viewMode == _RelationshipViewMode.global ? 340 : 360,
-      child: keyedContent,
+      child: content,
     );
   }
 }
@@ -503,10 +616,10 @@ class _RelationshipNetworkLayout {
       (key) => metadata[key]!.name.toLowerCase() == focusedHero.toLowerCase(),
       orElse: () => allKeys.first,
     );
+    final canvasSize = math
+        .max(760, (math.sqrt(allKeys.length) * 120 + 250).ceil())
+        .toDouble();
     if (viewMode == _RelationshipViewMode.global) {
-      final canvasSize = math
-          .max(720, (math.sqrt(allKeys.length) * 120 + 250).ceil())
-          .toDouble();
       final center = Offset(canvasSize / 2, canvasSize / 2);
       final goldenAngle = math.pi * (3 - math.sqrt(5));
       final maxRadius = canvasSize * 0.43;
@@ -556,8 +669,7 @@ class _RelationshipNetworkLayout {
       ..remove(focusKey);
     final directKeys = direct.toList()..sort();
     final secondaryKeys = secondary.take(14).toList()..sort();
-    const canvasSize = 760.0;
-    const center = Offset(380, 380);
+    final center = Offset(canvasSize / 2, canvasSize / 2);
     final nodes = <_ChainNode>[
       _ChainNode(
         key: focusKey,
@@ -637,6 +749,8 @@ class _ChainNode {
     required this.size,
     required this.showLabel,
     required this.highlighted,
+    this.opacity = 1,
+    this.velocity = Offset.zero,
   });
 
   final String key;
@@ -646,6 +760,133 @@ class _ChainNode {
   final double size;
   final bool showLabel;
   final bool highlighted;
+  final double opacity;
+  final Offset velocity;
+}
+
+class _AnimatedChainNode {
+  _AnimatedChainNode({
+    required this.key,
+    required this.name,
+    required this.avatar,
+    required this.position,
+    required this.targetPosition,
+    required this.size,
+    required this.targetSize,
+    required this.opacity,
+    required this.targetOpacity,
+    required this.showLabel,
+    required this.highlighted,
+  });
+
+  factory _AnimatedChainNode.fromNode(_ChainNode node) {
+    return _AnimatedChainNode(
+      key: node.key,
+      name: node.name,
+      avatar: node.avatar,
+      position: node.position,
+      targetPosition: node.position,
+      size: node.size,
+      targetSize: node.size,
+      opacity: node.opacity,
+      targetOpacity: node.opacity,
+      showLabel: node.showLabel,
+      highlighted: node.highlighted,
+    );
+  }
+
+  factory _AnimatedChainNode.entering(_ChainNode node, Offset position) {
+    return _AnimatedChainNode(
+      key: node.key,
+      name: node.name,
+      avatar: node.avatar,
+      position: position,
+      targetPosition: node.position,
+      size: math.max(8, node.size * 0.24),
+      targetSize: node.size,
+      opacity: 0,
+      targetOpacity: node.opacity,
+      showLabel: node.showLabel,
+      highlighted: node.highlighted,
+    );
+  }
+
+  final String key;
+  String name;
+  String avatar;
+  Offset position;
+  Offset targetPosition;
+  Offset velocity = Offset.zero;
+  double size;
+  double targetSize;
+  double sizeVelocity = 0;
+  double opacity;
+  double targetOpacity;
+  bool showLabel;
+  bool highlighted;
+
+  bool get isSettled {
+    return (targetPosition - position).distanceSquared < 0.2 &&
+        velocity.distanceSquared < 0.4 &&
+        (targetSize - size).abs() < 0.08 &&
+        sizeVelocity.abs() < 0.08 &&
+        (targetOpacity - opacity).abs() < 0.01;
+  }
+
+  bool get canRemove => targetOpacity == 0 && opacity < 0.012 && isSettled;
+
+  void retarget(_ChainNode node) {
+    name = node.name;
+    avatar = node.avatar;
+    targetPosition = node.position;
+    targetSize = node.size;
+    targetOpacity = node.opacity;
+    showLabel = node.showLabel;
+    highlighted = node.highlighted;
+  }
+
+  void exitToward(Offset position) {
+    targetPosition = position;
+    targetSize = 8;
+    targetOpacity = 0;
+    showLabel = false;
+    highlighted = false;
+  }
+
+  void step(double dt) {
+    const stiffness = 76.0;
+    const damping = 9.5;
+    final drag = math.exp(-damping * dt);
+    velocity = (velocity + (targetPosition - position) * stiffness * dt) * drag;
+    position += velocity * dt;
+
+    sizeVelocity = (sizeVelocity + (targetSize - size) * stiffness * dt) * drag;
+    size += sizeVelocity * dt;
+    final opacityEase = 1 - math.exp(-8.5 * dt);
+    opacity += (targetOpacity - opacity) * opacityEase;
+
+    if (isSettled) {
+      position = targetPosition;
+      velocity = Offset.zero;
+      size = targetSize;
+      sizeVelocity = 0;
+      opacity = targetOpacity;
+    }
+  }
+
+  _ChainNode toNode() {
+    return _ChainNode(
+      key: key,
+      name: name,
+      avatar: avatar,
+      position: position,
+      size: math.max(1, size),
+      showLabel: showLabel,
+      highlighted: highlighted,
+      opacity: opacity,
+      velocity: velocity,
+    );
+  }
 }
 
 class _NetworkEdge {
@@ -658,6 +899,11 @@ class _NetworkEdge {
   final String sourceKey;
   final String targetKey;
   final Color color;
+}
+
+String _edgeKey(_NetworkEdge edge) {
+  final nodes = [edge.sourceKey, edge.targetKey]..sort();
+  return '${nodes[0]}|${nodes[1]}';
 }
 
 String _relationshipKey(String heroId, String heroName) {
@@ -791,13 +1037,43 @@ class _RelationshipNetworkPainter extends CustomPainter {
       if (source == null || target == null) continue;
       final sourceNode = nodeLookup[edge.sourceKey];
       final targetNode = nodeLookup[edge.targetKey];
-      final connectedToFocus =
-          sourceNode?.highlighted == true || targetNode?.highlighted == true;
+      if (sourceNode == null || targetNode == null) continue;
+      final edgeOpacity = math.min(sourceNode.opacity, targetNode.opacity);
+      if (edgeOpacity < 0.02) continue;
+      final connectedToFocus = sourceNode.highlighted || targetNode.highlighted;
       final paint = Paint()
-        ..color = edge.color.withValues(alpha: connectedToFocus ? 0.84 : 0.34)
+        ..color = edge.color.withValues(
+          alpha: (connectedToFocus ? 0.84 : 0.34) * edgeOpacity,
+        )
         ..strokeWidth = connectedToFocus ? 2.3 : 1.1
-        ..style = PaintingStyle.stroke;
-      canvas.drawLine(source, target, paint);
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      final delta = target - source;
+      final distance = delta.distance;
+      final normal = distance <= 0.01
+          ? Offset.zero
+          : Offset(-delta.dy / distance, delta.dx / distance);
+      final direction = edge.sourceKey.compareTo(edge.targetKey) <= 0 ? 1 : -1;
+      final gravitySag = math.min(18.0, distance * 0.042) * direction;
+      final velocityTrail = (sourceNode.velocity + targetNode.velocity) * 0.018;
+      final control =
+          Offset.lerp(source, target, 0.5)! +
+          normal * gravitySag +
+          velocityTrail;
+      final path = Path()
+        ..moveTo(source.dx, source.dy)
+        ..quadraticBezierTo(control.dx, control.dy, target.dx, target.dy);
+      if (connectedToFocus) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = edge.color.withValues(alpha: 0.12 * edgeOpacity)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 8
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+        );
+      }
+      canvas.drawPath(path, paint);
     }
   }
 

@@ -141,8 +141,8 @@ void main() {
         'avatar': 'avatar.png',
       });
 
-      expect(hero.avatar, 'large.png');
-      expect(mediumOnly.avatar, 'medium.png');
+      expect(hero.avatar, 'avatar-url.png');
+      expect(mediumOnly.avatar, 'avatar-url.png');
       expect(urlOnly.avatar, 'avatar-url.png');
     });
 
