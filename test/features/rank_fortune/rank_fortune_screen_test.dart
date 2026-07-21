@@ -118,7 +118,7 @@ void main() {
 
     expect(find.text('Rank Fortune'), findsOneWidget);
     expect(
-      find.text("Draw your fortune for today's ranked matches."),
+      find.text('A daily ritual before your ranked queue'),
       findsOneWidget,
     );
     expect(find.text('Great Luck'), findsWidgets);
@@ -149,13 +149,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Fortune Jar'), findsOneWidget);
-    await tester.tap(find.text("Draw Today's Fortune"));
+    expect(find.text('Your daily sign is waiting'), findsOneWidget);
+    expect(find.byIcon(Icons.vibration_rounded), findsOneWidget);
+    await tester.tap(find.text('Tap to draw instead'));
     await tester.pumpAndSettle();
 
     expect(find.text('Legendary Luck'), findsWidgets);
     expect(find.text('99'), findsWidgets);
-    expect(find.text('Already drawn today'), findsOneWidget);
+    expect(find.text('Come back tomorrow'), findsOneWidget);
   });
 
   testWidgets('shows fortune drawing feedback while draw is pending', (
@@ -184,7 +185,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text("Draw Today's Fortune"));
+    await tester.tap(find.text('Tap to draw instead'));
     await tester.pump();
 
     expect(find.text('Shaking the fortune jar...'), findsOneWidget);
