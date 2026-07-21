@@ -295,8 +295,7 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
   @override
   Widget build(BuildContext context) {
     final backgroundUrl = _readString(
-      _readMap(widget.result['season'])['mobile_background_pic'] ??
-          _readMap(widget.result['season'])['background_pic'],
+      _readMap(widget.result['season'])['background_pic'],
     );
     final seasonName = _readString(_readMap(widget.result['season'])['name']);
     final bottomNavigationGap = MediaQuery.viewPaddingOf(context).bottom + 104;
@@ -307,51 +306,22 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: bottomNavigationGap),
           children: [
-            Stack(
-              children: [
-                Positioned.fill(
-                  child: backgroundUrl.isNotEmpty
-                      ? AppImage(
-                          url: backgroundUrl,
-                          fit: BoxFit.cover,
-                          borderRadius: 0,
-                          semanticLabel: 'Honor of Kings season background',
-                        )
-                      : ColoredBox(color: context.hokTheme.backgroundDeep),
-                ),
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0x66020617),
-                          Color(0xCC020617),
-                          Color(0xF7020617),
-                        ],
-                        stops: [0, 0.36, 1],
-                      ),
-                    ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+              child: Column(
+                children: [
+                  _HomeHeroBanner(
+                    backgroundUrl: backgroundUrl,
+                    seasonName: seasonName,
+                    showWorld: _showWorld,
+                    onWorldChanged: (value) {
+                      setState(() => _showWorld = value);
+                    },
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
-                  child: Column(
-                    children: [
-                      _HomeHeroBanner(
-                        seasonName: seasonName,
-                        showWorld: _showWorld,
-                        onWorldChanged: (value) {
-                          setState(() => _showWorld = value);
-                        },
-                      ),
-                      const SizedBox(height: 18),
-                      _HomePortalPreviews(result: widget.result),
-                    ],
-                  ),
-                ),
-              ],
+                  const SizedBox(height: 18),
+                  _HomePortalPreviews(result: widget.result),
+                ],
+              ),
             ),
             const SizedBox(height: 28),
           ],
@@ -668,11 +638,13 @@ class _RoundIconButton extends StatelessWidget {
 
 class _HomeHeroBanner extends StatelessWidget {
   const _HomeHeroBanner({
+    required this.backgroundUrl,
     required this.seasonName,
     required this.showWorld,
     required this.onWorldChanged,
   });
 
+  final String backgroundUrl;
   final String seasonName;
   final bool showWorld;
   final ValueChanged<bool> onWorldChanged;
@@ -686,7 +658,21 @@ class _HomeHeroBanner extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const ColoredBox(color: Color(0x33020617)),
+            _HomeBackgroundImage(url: backgroundUrl),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x66020617),
+                    Color(0xCC020617),
+                    Color(0xF7020617),
+                  ],
+                  stops: [0, 0.36, 1],
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
               child: Column(
@@ -722,6 +708,32 @@ class _HomeHeroBanner extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _HomeBackgroundImage extends StatelessWidget {
+  const _HomeBackgroundImage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Image.asset(
+      'assets/home/season_pc_background.jpg',
+      fit: BoxFit.cover,
+      semanticLabel: 'Honor of Kings season background',
+    );
+
+    if (url.isEmpty) {
+      return fallback;
+    }
+
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      semanticLabel: 'Honor of Kings season background',
+      errorBuilder: (context, error, stackTrace) => fallback,
     );
   }
 }
