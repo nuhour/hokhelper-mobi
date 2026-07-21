@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_share_sheet.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../heroes/domain/hero_summary.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -125,9 +128,14 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated =
+        ref.watch(authControllerProvider).valueOrNull != null;
+    final communityFilter = isAuthenticated
+        ? widget.initialCommunityFilter
+        : BuildSimCommunityFilter.explore;
     final heroesValue = ref.watch(buildSimHeroesProvider);
     final communitySchemesValue =
-        widget.initialCommunityFilter == BuildSimCommunityFilter.favorites
+        communityFilter == BuildSimCommunityFilter.favorites
         ? ref.watch(buildSimFavoriteSchemesProvider)
         : ref.watch(buildSimPublicSchemesProvider);
 
@@ -140,7 +148,7 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
             ? null
             : heroes[_selectedHeroIndex.clamp(0, heroes.length - 1)];
         final heroId = int.tryParse(selectedHero?.heroId ?? '');
-        final slotsValue = heroId == null
+        final slotsValue = !isAuthenticated || heroId == null
             ? const AsyncValue<List<BuildSchemeSummary?>>.data([])
             : ref.watch(buildSimUserSlotsProvider(heroId));
 
@@ -168,25 +176,27 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
                   selectedIndex: _selectedHeroIndex,
                   onOpenPicker: () => _openHeroPicker(context, heroes),
                 ),
-                const SizedBox(height: 28),
-                _SlotsPanel(
-                  slotsValue: slotsValue,
-                  onEdit: (slotIndex, scheme) {
-                    _openBuildEditor(
-                      context: context,
-                      heroId: heroId!,
-                      heroName: selectedHero?.name ?? '',
-                      heroAvatar: selectedHero?.avatar ?? '',
-                      slotIndex: slotIndex,
-                      scheme: scheme,
-                    );
-                  },
-                ),
+                if (isAuthenticated) ...[
+                  const SizedBox(height: 28),
+                  _SlotsPanel(
+                    slotsValue: slotsValue,
+                    onEdit: (slotIndex, scheme) {
+                      _openBuildEditor(
+                        context: context,
+                        heroId: heroId!,
+                        heroName: selectedHero?.name ?? '',
+                        heroAvatar: selectedHero?.avatar ?? '',
+                        slotIndex: slotIndex,
+                        scheme: scheme,
+                      );
+                    },
+                  ),
+                ],
               ],
               const SizedBox(height: 32),
               _CommunityBuilds(
                 value: communitySchemesValue,
-                filter: widget.initialCommunityFilter,
+                filter: communityFilter,
                 focusedSchemeId: widget.initialSchemeId,
                 onActionDone: heroId == null
                     ? null
@@ -689,8 +699,8 @@ class _SlotCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          height: scheme == null ? 260 : 194,
-          padding: const EdgeInsets.all(22),
+          height: scheme == null ? 132 : 154,
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(20),
@@ -732,8 +742,8 @@ class _SlotCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 92,
-                        height: 92,
+                        width: 48,
+                        height: 48,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -747,15 +757,15 @@ class _SlotCard extends StatelessWidget {
                         child: Icon(
                           Icons.add,
                           color: context.hokTheme.onSurfaceMuted,
-                          size: 46,
+                          size: 28,
                         ),
                       ),
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 10),
                       Text(
                         title,
                         style: TextStyle(
                           color: context.hokTheme.onSurfaceMuted,
-                          fontSize: 19,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -771,8 +781,8 @@ class _SlotCard extends StatelessWidget {
                       .map(
                         (icon) => AppImage(
                           url: icon,
-                          width: 42,
-                          height: 42,
+                          width: 36,
+                          height: 36,
                           borderRadius: 999,
                           excludeFromSemantics: true,
                         ),
@@ -1998,20 +2008,30 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
                   _SimulatorExploreBuildCard(
                     scheme: scheme,
                     busyAction: _busyAction,
-                    onLike: () => _runAction(
+                    onLike: () => _runProtectedAction(
+                      context,
                       'like-${scheme.id}',
                       () => ref.read(buildSimLikeSchemeProvider)(scheme),
                     ),
-                    onFavorite: () => _runAction(
+                    onFavorite: () => _runProtectedAction(
+                      context,
                       'favorite-${scheme.id}',
                       () => ref.read(buildSimFavoriteSchemeProvider)(scheme),
                     ),
-                    onClone: (slotIndex) => _runAction(
+                    onClone: (slotIndex) => _runProtectedAction(
+                      context,
                       'clone-${scheme.id}-$slotIndex',
                       () => ref.read(buildSimCloneSchemeProvider)(
                         scheme,
                         slotIndex,
                       ),
+                    ),
+                    onView: () => _showBuildDetails(context, scheme),
+                    onShare: () => showAppShareSheet(
+                      context,
+                      title: scheme.title,
+                      url:
+                          'https://hokhelper.com/tools/build-sim?scheme=${scheme.id}',
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -2058,6 +2078,55 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
       }
     }
   }
+
+  Future<void> _runProtectedAction(
+    BuildContext context,
+    String key,
+    Future<void> Function() action,
+  ) async {
+    if (ref.read(authControllerProvider).valueOrNull == null) {
+      _showBuildLoginPrompt(context);
+      return;
+    }
+    try {
+      await _runAction(key, action);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Unable to update this build')),
+        );
+    }
+  }
+
+  Future<void> _showBuildDetails(
+    BuildContext context,
+    BuildSchemeSummary scheme,
+  ) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: context.hokTheme.surfaceSlate,
+      builder: (_) => _BuildSchemeDetailsSheet(scheme: scheme),
+    );
+  }
+}
+
+void _showBuildLoginPrompt(BuildContext context) {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: const Text('Sign in to save or interact with builds'),
+        action: SnackBarAction(
+          label: 'Sign in',
+          onPressed: () => context.push('/login'),
+        ),
+      ),
+    );
 }
 
 class _ExploreSortButton extends StatelessWidget {
@@ -2122,12 +2191,16 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
     required this.onLike,
     required this.onFavorite,
     required this.onClone,
+    required this.onView,
+    required this.onShare,
   });
   final BuildSchemeSummary scheme;
   final String? busyAction;
   final VoidCallback onLike;
   final VoidCallback onFavorite;
   final ValueChanged<int> onClone;
+  final VoidCallback onView;
+  final VoidCallback onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -2194,13 +2267,13 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           SizedBox(
-            height: 82,
+            height: 54,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: scheme.equipmentIcons.length.clamp(0, 6),
-              separatorBuilder: (_, index) => const SizedBox(width: 12),
+              separatorBuilder: (_, index) => const SizedBox(width: 8),
               itemBuilder: (context, index) => Container(
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
@@ -2209,54 +2282,178 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                 ),
                 child: AppImage(
                   url: scheme.equipmentIcons[index],
-                  width: 68,
-                  height: 68,
+                  width: 48,
+                  height: 48,
                   borderRadius: 999,
                   excludeFromSemantics: true,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 22),
-          Row(
-            children: [
-              _ExploreAction(
-                icon: scheme.isLiked ? Icons.favorite : Icons.favorite_border,
-                value: scheme.likeCount,
-                onTap: disabled ? null : onLike,
-                tooltip: scheme.isLiked ? 'Unlike build' : 'Like build',
-              ),
-              const SizedBox(width: 10),
-              _ExploreAction(
-                icon: scheme.isFavorited ? Icons.star : Icons.star_border,
-                value: scheme.favoriteCount,
-                onTap: disabled ? null : onFavorite,
-                tooltip: scheme.isFavorited
-                    ? 'Unfavorite build'
-                    : 'Favorite build',
-              ),
-              const SizedBox(width: 10),
-              _ExploreAction(
-                icon: Icons.copy_outlined,
-                value: scheme.cloneCount,
-                onTap: disabled ? null : () => onClone(1),
-                tooltip: 'Clone to slot 1',
-              ),
-              const Spacer(),
-              _ExploreAction(
-                icon: Icons.visibility_outlined,
-                onTap: () {},
-                tooltip: 'View build',
-              ),
-              const SizedBox(width: 10),
-              _ExploreAction(
-                icon: Icons.share_outlined,
-                onTap: () {},
-                tooltip: 'Share build',
-              ),
-            ],
+          if (scheme.summonerSkillIcon.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _BuildAssetStrip(
+              leadingIcon: Icons.flash_on_outlined,
+              tooltip: 'Summoner skill',
+              imageUrls: [scheme.summonerSkillIcon],
+            ),
+          ],
+          if (scheme.runeIcons.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _BuildAssetStrip(
+              leadingIcon: Icons.blur_circular_outlined,
+              tooltip: 'Arcana',
+              imageUrls: scheme.runeIcons,
+            ),
+          ],
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _ExploreAction(
+                  icon: scheme.isLiked ? Icons.favorite : Icons.favorite_border,
+                  value: scheme.likeCount,
+                  onTap: disabled ? null : onLike,
+                  tooltip: scheme.isLiked ? 'Unlike build' : 'Like build',
+                ),
+                const SizedBox(width: 8),
+                _ExploreAction(
+                  icon: scheme.isFavorited ? Icons.star : Icons.star_border,
+                  value: scheme.favoriteCount,
+                  onTap: disabled ? null : onFavorite,
+                  tooltip: scheme.isFavorited
+                      ? 'Unfavorite build'
+                      : 'Favorite build',
+                ),
+                const SizedBox(width: 8),
+                _ExploreAction(
+                  icon: Icons.copy_outlined,
+                  value: scheme.cloneCount,
+                  onTap: disabled ? null : () => onClone(1),
+                  tooltip: 'Clone to slot 1',
+                ),
+                const SizedBox(width: 8),
+                _ExploreAction(
+                  icon: Icons.visibility_outlined,
+                  onTap: onView,
+                  tooltip: 'View build',
+                ),
+                const SizedBox(width: 8),
+                _ExploreAction(
+                  icon: Icons.share_outlined,
+                  onTap: onShare,
+                  tooltip: 'Share build',
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BuildAssetStrip extends StatelessWidget {
+  const _BuildAssetStrip({
+    required this.leadingIcon,
+    required this.tooltip,
+    required this.imageUrls,
+  });
+
+  final IconData leadingIcon;
+  final String tooltip;
+  final List<String> imageUrls;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      child: Row(
+        children: [
+          Tooltip(
+            message: tooltip,
+            child: Icon(
+              leadingIcon,
+              size: 18,
+              color: context.hokTheme.onSurfaceMuted,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: imageUrls.length,
+              separatorBuilder: (_, index) => const SizedBox(width: 5),
+              itemBuilder: (context, index) => AppImage(
+                url: imageUrls[index],
+                width: 30,
+                height: 30,
+                borderRadius: 999,
+                excludeFromSemantics: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BuildSchemeDetailsSheet extends StatelessWidget {
+  const _BuildSchemeDetailsSheet({required this.scheme});
+
+  final BuildSchemeSummary scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              scheme.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: context.hokTheme.onSurfaceStrong,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'by ${scheme.authorName} · ${scheme.heroName}',
+              style: TextStyle(color: context.hokTheme.onSurfaceMuted),
+            ),
+            if (scheme.equipmentIcons.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _BuildAssetStrip(
+                leadingIcon: Icons.shield_outlined,
+                tooltip: 'Equipment',
+                imageUrls: scheme.equipmentIcons,
+              ),
+            ],
+            if (scheme.summonerSkillIcon.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _BuildAssetStrip(
+                leadingIcon: Icons.flash_on_outlined,
+                tooltip: 'Summoner skill',
+                imageUrls: [scheme.summonerSkillIcon],
+              ),
+            ],
+            if (scheme.runeIcons.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _BuildAssetStrip(
+                leadingIcon: Icons.blur_circular_outlined,
+                tooltip: 'Arcana',
+                imageUrls: scheme.runeIcons,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

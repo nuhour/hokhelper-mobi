@@ -288,14 +288,27 @@ class _HeroRelationshipNetwork extends StatefulWidget {
       _HeroRelationshipNetworkState();
 }
 
-class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork> {
+class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
+    with SingleTickerProviderStateMixin {
   final _viewerKey = GlobalKey();
   final _controller = TransformationController();
+  late final AnimationController _fitController;
+  Animation<Matrix4>? _fitAnimation;
   var _canvasSize = 720.0;
 
   @override
   void initState() {
     super.initState();
+    _fitController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 420),
+        )..addListener(() {
+          final value = _fitAnimation?.value;
+          if (value != null) {
+            _controller.value = value;
+          }
+        });
     _scheduleFit();
   }
 
@@ -311,6 +324,7 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork> {
 
   @override
   void dispose() {
+    _fitController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -330,9 +344,15 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork> {
           .clamp(0.3, 1.0);
       final dx = (viewport.width - _canvasSize * scale) / 2;
       final dy = (viewport.height - _canvasSize * scale) / 2;
-      _controller.value = Matrix4.identity()
+      final target = Matrix4.identity()
         ..translateByDouble(dx, dy, 0, 1)
         ..scaleByDouble(scale, scale, 1, 1);
+      _fitController.stop();
+      _fitAnimation =
+          Matrix4Tween(begin: _controller.value.clone(), end: target).animate(
+            CurvedAnimation(parent: _fitController, curve: Curves.easeOutBack),
+          );
+      _fitController.forward(from: 0);
     });
   }
 
@@ -345,57 +365,72 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork> {
       viewMode: widget.viewMode,
     );
     _canvasSize = layout.canvasSize;
-    final content = KeyedSubtree(
-      key: ValueKey('relationship-network-${widget.viewMode.name}'),
-      child: SizedBox(
-        key: _viewerKey,
-        child: ClipRRect(
-          borderRadius: widget.expand
-              ? BorderRadius.zero
-              : BorderRadius.circular(12),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(color: Color(0xFF030712)),
-            child: InteractiveViewer(
-              transformationController: _controller,
-              constrained: false,
-              minScale: 0.25,
-              maxScale: 3.0,
-              boundaryMargin: const EdgeInsets.all(160),
-              child: SizedBox(
-                width: layout.canvasSize,
-                height: layout.canvasSize,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _RelationshipNetworkPainter(layout: layout),
+    final animationKey =
+        'relationship-network-${widget.viewMode.name}-${widget.focusedHero}';
+    final content = SizedBox(
+      key: _viewerKey,
+      child: ClipRRect(
+        borderRadius: widget.expand
+            ? BorderRadius.zero
+            : BorderRadius.circular(12),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(color: Color(0xFF030712)),
+          child: InteractiveViewer(
+            transformationController: _controller,
+            constrained: false,
+            minScale: 0.25,
+            maxScale: 3.0,
+            boundaryMargin: const EdgeInsets.all(160),
+            child: SizedBox(
+              width: layout.canvasSize,
+              height: layout.canvasSize,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _RelationshipNetworkPainter(layout: layout),
+                    ),
+                  ),
+                  for (final node in layout.nodes)
+                    Positioned(
+                      left: node.position.dx - 38,
+                      top: node.position.dy - node.size / 2,
+                      width: 76,
+                      child: _RelationshipAvatarNode(
+                        node: node,
+                        onTap: () => widget.onHeroSelected(node.name),
                       ),
                     ),
-                    for (final node in layout.nodes)
-                      Positioned(
-                        left: node.position.dx - 38,
-                        top: node.position.dy - node.size / 2,
-                        width: 76,
-                        child: _RelationshipAvatarNode(
-                          node: node,
-                          onTap: () => widget.onHeroSelected(node.name),
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
+    final animatedContent = TweenAnimationBuilder<double>(
+      key: ValueKey('$animationKey-transition'),
+      tween: Tween(begin: 0.94, end: 1),
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) => Transform.scale(
+        scale: value,
+        alignment: Alignment.center,
+        child: child,
+      ),
+      child: content,
+    );
+    final keyedContent = KeyedSubtree(
+      key: ValueKey('relationship-network-${widget.viewMode.name}'),
+      child: animatedContent,
+    );
     if (widget.expand) {
-      return SizedBox.expand(child: content);
+      return SizedBox.expand(child: keyedContent);
     }
     return SizedBox(
       height: widget.viewMode == _RelationshipViewMode.global ? 340 : 360,
-      child: content,
+      child: keyedContent,
     );
   }
 }

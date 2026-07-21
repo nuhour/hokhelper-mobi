@@ -35,6 +35,15 @@ class BuildSchemeSummary {
   final List<int> runeIds;
   final int? summonerSkillId;
 
+  List<String> get runeIcons => runeIds
+      .where((id) => id > 0)
+      .map((id) => '/static/game/rune/$id.png')
+      .toList(growable: false);
+
+  String get summonerSkillIcon => summonerSkillId == null
+      ? ''
+      : '/static/game/summoner_skill/$summonerSkillId.png';
+
   factory BuildSchemeSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     final author = map['author'] is Map ? map['author'] as Map : map['user'];
@@ -68,9 +77,15 @@ class BuildSchemeSummary {
             (author is Map ? author['id'] : null),
       ),
       equipmentIcons: _readEquipmentIcons(rawEquipment),
-      likeCount: _readInt(map['like_count'] ?? map['likes']),
-      favoriteCount: _readInt(map['favorite_count'] ?? map['favorites']),
-      cloneCount: _readInt(map['clone_count'] ?? map['clones']),
+      likeCount: _readInt(
+        map['like_count'] ?? map['likes_count'] ?? map['likes'],
+      ),
+      favoriteCount: _readInt(
+        map['favorite_count'] ?? map['favorites_count'] ?? map['favorites'],
+      ),
+      cloneCount: _readInt(
+        map['clone_count'] ?? map['clones_count'] ?? map['clones'],
+      ),
       isPublic: map['is_public'] != false && map['public'] != false,
       isLiked: _readBool(map['is_liked'] ?? map['isLiked'] ?? map['liked']),
       isFavorited: _readBool(
@@ -110,9 +125,21 @@ List<String> _readEquipmentIcons(Object? value) {
   return value
       .map((item) {
         if (item is Map) {
-          return _readString(item['icon'] ?? item['image'] ?? item['avatar']);
+          final icon = _readString(
+            item['icon'] ??
+                item['icon_url'] ??
+                item['iconUrl'] ??
+                item['image'] ??
+                item['avatar'],
+          );
+          if (icon.isNotEmpty) {
+            return icon;
+          }
+          final id = _readInt(item['equip_id'] ?? item['id']);
+          return id > 0 ? '/static/game/equip/$id.png' : '';
         }
-        return '';
+        final id = _readInt(item);
+        return id > 0 ? '/static/game/equip/$id.png' : '';
       })
       .where((icon) => icon.isNotEmpty)
       .toList(growable: false);

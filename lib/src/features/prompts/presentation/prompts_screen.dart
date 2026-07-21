@@ -13,6 +13,7 @@ import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../../core/widgets/app_share_sheet.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../data/prompts_repository.dart';
 import '../domain/prompt_summary.dart';
 
@@ -130,8 +131,11 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated =
+        ref.watch(authControllerProvider).valueOrNull != null;
+    final activeAction = isAuthenticated ? _action : PromptListAction.explore;
     final query = PromptListQuery(
-      action: _action,
+      action: activeAction,
       search: _search,
       sort: _sort,
     );
@@ -164,11 +168,13 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                       children: [
                         AppSectionHeader(
                           title: 'Prompts',
-                          action: FilledButton.icon(
-                            onPressed: () => _openCreateSheet(context),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Create'),
-                          ),
+                          action: isAuthenticated
+                              ? FilledButton.icon(
+                                  onPressed: () => _openCreateSheet(context),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Create'),
+                                )
+                              : null,
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -179,24 +185,26 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                               ),
                         ),
                         const SizedBox(height: 14),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SegmentedButton<PromptListAction>(
-                            segments: PromptListAction.values
-                                .map(
-                                  (action) => ButtonSegment(
-                                    value: action,
-                                    label: Text(action.label),
-                                  ),
-                                )
-                                .toList(growable: false),
-                            selected: {_action},
-                            onSelectionChanged: (selection) {
-                              setState(() => _action = selection.single);
-                            },
+                        if (isAuthenticated) ...[
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SegmentedButton<PromptListAction>(
+                              segments: PromptListAction.values
+                                  .map(
+                                    (action) => ButtonSegment(
+                                      value: action,
+                                      label: Text(action.label),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                              selected: {activeAction},
+                              onSelectionChanged: (selection) {
+                                setState(() => _action = selection.single);
+                              },
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
+                          const SizedBox(height: 12),
+                        ],
                         TextField(
                           controller: _searchController,
                           textInputAction: TextInputAction.search,
@@ -270,7 +278,10 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                             ],
                             _PromptCard(
                               prompt: prompt,
-                              canManage: _action == PromptListAction.myPrompts,
+                              canManage:
+                                  activeAction == PromptListAction.myPrompts,
+                              showVisibility:
+                                  activeAction != PromptListAction.explore,
                               onView: () => _openPromptViewer(context, prompt),
                               onEdit: () => _openEditSheet(context, prompt),
                               onDelete: () => _confirmDelete(context, prompt),
@@ -1710,6 +1721,7 @@ class _PromptCard extends ConsumerStatefulWidget {
   const _PromptCard({
     required this.prompt,
     this.canManage = false,
+    this.showVisibility = false,
     this.onView,
     this.onEdit,
     this.onDelete,
@@ -1718,6 +1730,7 @@ class _PromptCard extends ConsumerStatefulWidget {
 
   final PromptSummary prompt;
   final bool canManage;
+  final bool showVisibility;
   final VoidCallback? onView;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -1798,8 +1811,10 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          _PublicBadge(isPublic: prompt.isPublic),
+                          if (widget.showVisibility) ...[
+                            const SizedBox(width: 8),
+                            _PublicBadge(isPublic: prompt.isPublic),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -1871,11 +1886,6 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                     tooltip: 'Share',
                     onPressed: () => _sharePrompt(context),
                   ),
-                  _PromptIconAction(
-                    icon: Icons.auto_awesome,
-                    tooltip: 'Generate',
-                    onPressed: widget.onGenerate,
-                  ),
                   if (widget.canManage) ...[
                     _PromptIconAction(
                       icon: Icons.edit_outlined,
@@ -1917,6 +1927,7 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
   }
 
   Future<void> _likePrompt(BuildContext context) async {
+    if (!_requirePromptLogin(context)) return;
     setState(() => _likeSubmitting = true);
     try {
       final result = await ref
@@ -1951,6 +1962,7 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
   }
 
   Future<void> _favoritePrompt(BuildContext context) async {
+    if (!_requirePromptLogin(context)) return;
     setState(() => _favoriteSubmitting = true);
     try {
       final result = await ref
@@ -1987,6 +1999,25 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
         const SnackBar(content: Text('Failed to favorite prompt')),
       );
     }
+  }
+
+  bool _requirePromptLogin(BuildContext context) {
+    if (ref.read(authControllerProvider).valueOrNull != null) {
+      return true;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Sign in to interact with prompts'),
+          action: SnackBarAction(
+            label: 'Sign in',
+            onPressed: () => context.push('/login'),
+          ),
+        ),
+      );
+    return false;
   }
 }
 

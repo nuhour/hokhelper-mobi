@@ -23,10 +23,16 @@ class BuildEquipSummary {
 
   factory BuildEquipSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
+    final id = _readInt(map['equip_id'] ?? map['id']);
     return BuildEquipSummary(
-      id: _readInt(map['equip_id'] ?? map['id']),
+      id: id,
       name: _readString(map['name'] ?? map['equip_name']),
-      iconUrl: _readString(map['icon'] ?? map['image'] ?? map['avatar']),
+      iconUrl: _assetUrl(
+        explicit:
+            map['icon'] ?? map['icon_url'] ?? map['image'] ?? map['avatar'],
+        kind: 'equip',
+        id: id,
+      ),
     );
   }
 }
@@ -44,10 +50,16 @@ class BuildSummonerSkillSummary {
 
   factory BuildSummonerSkillSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
+    final id = _readInt(map['skill_id'] ?? map['id']);
     return BuildSummonerSkillSummary(
-      id: _readInt(map['skill_id'] ?? map['id']),
+      id: id,
       name: _readString(map['name'] ?? map['skill_name']),
-      iconUrl: _readString(map['icon'] ?? map['image'] ?? map['avatar']),
+      iconUrl: _assetUrl(
+        explicit:
+            map['icon'] ?? map['icon_url'] ?? map['image'] ?? map['avatar'],
+        kind: 'summoner_skill',
+        id: id,
+      ),
     );
   }
 }
@@ -76,11 +88,17 @@ class BuildRuneSummary {
 
   factory BuildRuneSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
+    final id = _readInt(map['rune_id'] ?? map['id']);
     return BuildRuneSummary(
-      id: _readInt(map['rune_id'] ?? map['id']),
+      id: id,
       name: _readString(map['name'] ?? map['rune_name']),
       color: _readInt(map['color']),
-      iconUrl: _readString(map['icon'] ?? map['image'] ?? map['avatar']),
+      iconUrl: _assetUrl(
+        explicit:
+            map['icon'] ?? map['icon_url'] ?? map['image'] ?? map['avatar'],
+        kind: 'rune',
+        id: id,
+      ),
     );
   }
 }
@@ -132,4 +150,16 @@ int _readInt(Object? value) {
 
 String _readString(Object? value) {
   return value?.toString().trim() ?? '';
+}
+
+String _assetUrl({
+  required Object? explicit,
+  required String kind,
+  required int id,
+}) {
+  final value = _readString(explicit);
+  if (value.isNotEmpty) {
+    return value;
+  }
+  return id > 0 ? '/static/game/$kind/$id.png' : '';
 }

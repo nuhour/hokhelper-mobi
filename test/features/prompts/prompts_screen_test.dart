@@ -225,6 +225,8 @@ void main() {
     expect(find.text('skin'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
+    expect(find.text('Public'), findsNothing);
+    expect(find.byTooltip('Generate'), findsNothing);
   });
 
   testWidgets('opens a prompt viewer with its image comparison', (
