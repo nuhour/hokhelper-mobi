@@ -2718,53 +2718,56 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                SizedBox(
-                  height: compact ? 34 : 36,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _CompactBuildAction(
-                          icon: scheme.isLiked
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          value: scheme.likeCount,
-                          tooltip: scheme.isLiked
-                              ? 'Unlike build'
-                              : 'Like build',
-                          onTap: disabled ? null : onLike,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: SizedBox(
+                    height: compact ? 34 : 36,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _CompactBuildAction(
+                            icon: scheme.isLiked
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            value: scheme.likeCount,
+                            tooltip: scheme.isLiked
+                                ? 'Unlike build'
+                                : 'Like build',
+                            onTap: disabled ? null : onLike,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: _CompactBuildAction(
-                          icon: scheme.isFavorited
-                              ? Icons.star
-                              : Icons.star_border,
-                          value: scheme.favoriteCount,
-                          tooltip: scheme.isFavorited
-                              ? 'Unfavorite build'
-                              : 'Favorite build',
-                          onTap: disabled ? null : onFavorite,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _CompactBuildAction(
+                            icon: scheme.isFavorited
+                                ? Icons.star
+                                : Icons.star_border,
+                            value: scheme.favoriteCount,
+                            tooltip: scheme.isFavorited
+                                ? 'Unfavorite build'
+                                : 'Favorite build',
+                            onTap: disabled ? null : onFavorite,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: _CompactBuildAction(
-                          icon: Icons.copy_outlined,
-                          value: scheme.cloneCount,
-                          tooltip: 'Choose clone slot',
-                          onTap: disabled ? null : onClone,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _CompactBuildAction(
+                            icon: Icons.copy_outlined,
+                            value: scheme.cloneCount,
+                            tooltip: 'Choose clone slot',
+                            onTap: disabled ? null : onClone,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: _CompactBuildAction(
-                          icon: Icons.visibility_outlined,
-                          tooltip: 'Temporarily edit build',
-                          onTap: onView,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _CompactBuildAction(
+                            icon: Icons.visibility_outlined,
+                            tooltip: 'Temporarily edit build',
+                            onTap: onView,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -2828,7 +2831,15 @@ class _CompactBuildLoadout extends StatelessWidget {
               color: context.hokTheme.onSurfaceMuted,
             ),
           const SizedBox(width: 8),
-          Container(width: 1, height: 20, color: context.hokTheme.outlineSoft),
+          Container(
+            width: 1,
+            height: 20,
+            color: context.hokTheme.onSurfaceMuted.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.62
+                  : 0.42,
+            ),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: ListView.separated(
