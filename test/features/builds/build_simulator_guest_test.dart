@@ -9,6 +9,10 @@ void main() {
   testWidgets('guest explores builds without loading private slots', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(432, 860);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     var requestedPrivateSlots = false;
     var cloned = false;
 
@@ -58,10 +62,13 @@ void main() {
     expect(find.text('Public build'), findsOneWidget);
     expect(requestedPrivateSlots, isFalse);
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -140));
+    final cloneButton = find.byTooltip('Choose clone slot');
+    await tester.ensureVisible(cloneButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Clone to slot 1'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -80));
     await tester.pumpAndSettle();
+    await tester.tap(cloneButton);
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(
       find.text('Sign in to save or interact with builds'),

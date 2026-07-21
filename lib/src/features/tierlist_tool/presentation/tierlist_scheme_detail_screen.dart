@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_lane_icon.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../../core/widgets/app_share_sheet.dart';
 import '../../heroes/domain/hero_summary.dart';
@@ -1018,10 +1019,12 @@ class _LaneIconFilterBar extends StatelessWidget {
                 ),
                 child: option.assetName == null
                     ? const Icon(Icons.grid_view_rounded, size: 15)
-                    : Image.asset(
-                        'assets/lane-icons/${option.assetName}.png',
-                        width: 17,
-                        height: 17,
+                    : AppLaneIcon(
+                        assetName: option.assetName!,
+                        size: 17,
+                        color: lanePosition == option.value
+                            ? Colors.white
+                            : context.hokTheme.onSurfaceMuted,
                       ),
               ),
             ),

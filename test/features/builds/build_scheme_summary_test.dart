@@ -6,6 +6,8 @@ void main() {
     final scheme = BuildSchemeSummary.fromJson({
       'id': 7,
       'name': 'Anti-Tank',
+      'hero_id': 199,
+      'hero_name': 'Lam',
       'equips': [101, 102],
       'runes': [201, 202],
       'summoner_skill_id': 80115,
@@ -18,6 +20,8 @@ void main() {
       '/static/game/equip/101.png',
       '/static/game/equip/102.png',
     ]);
+    expect(scheme.heroId, 199);
+    expect(scheme.heroName, 'Lam');
     expect(scheme.runeIcons, [
       '/static/game/rune/201.png',
       '/static/game/rune/202.png',

@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_lane_icon.dart';
 import '../../../core/widgets/app_stats_table.dart';
 import '../../../core/widgets/region_country_picker.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -1053,10 +1054,12 @@ class _LaneFilter extends StatelessWidget {
                 alignment: Alignment.center,
                 child: lane.$3 == null
                     ? const Icon(Icons.grid_view_rounded, size: 19)
-                    : Image.asset(
-                        'assets/lane-icons/${lane.$3}.png',
-                        width: 22,
-                        height: 22,
+                    : AppLaneIcon(
+                        assetName: lane.$3!,
+                        size: 22,
+                        color: selected == lane.$1
+                            ? Colors.white
+                            : context.hokTheme.onSurfaceMuted,
                       ),
               ),
             ),

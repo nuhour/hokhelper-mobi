@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_lane_icon.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/team_builder_repository.dart';
 import '../domain/team_build_hero.dart';
@@ -1055,7 +1056,13 @@ class _JobFilter extends StatelessWidget {
           tooltip: job == null ? 'All roles' : _jobLabel(job),
           icon: job == null
               ? const Icon(Icons.grid_view_rounded, size: 16)
-              : Image.asset(_jobAsset(job), width: 18, height: 18),
+              : AppLaneIcon(
+                  assetName: _jobAssetName(job),
+                  size: 18,
+                  color: selected == job
+                      ? Colors.white
+                      : context.hokTheme.onSurfaceMuted,
+                ),
           onTap: () => onChanged(job),
         );
       },
@@ -1163,7 +1170,13 @@ class _LaneFilter extends StatelessWidget {
               tooltip: lane == null ? 'All lanes' : _laneLabel(lane),
               icon: lane == null
                   ? const Icon(Icons.grid_view_rounded, size: 17)
-                  : Image.asset(_laneAsset(lane), width: 19, height: 19),
+                  : AppLaneIcon(
+                      assetName: _laneAssetName(lane),
+                      size: 19,
+                      color: selected == lane
+                          ? Colors.white
+                          : context.hokTheme.onSurfaceMuted,
+                    ),
               onTap: () => onChanged(lane),
             ),
           ),
@@ -1229,12 +1242,12 @@ class _PoolMessage extends StatelessWidget {
   );
 }
 
-String _laneAsset(int lane) => switch (lane) {
-  0 => 'assets/lane-icons/clash.png',
-  1 => 'assets/lane-icons/mid.png',
-  2 => 'assets/lane-icons/adc.png',
-  3 => 'assets/lane-icons/jungle.png',
-  _ => 'assets/lane-icons/support.png',
+String _laneAssetName(int lane) => switch (lane) {
+  0 => 'clash',
+  1 => 'mid',
+  2 => 'adc',
+  3 => 'jungle',
+  _ => 'support',
 };
 String _laneLabel(int lane) => switch (lane) {
   0 => 'Clash lane',
@@ -1243,13 +1256,13 @@ String _laneLabel(int lane) => switch (lane) {
   3 => 'Jungle',
   _ => 'Support',
 };
-String _jobAsset(int job) => switch (job) {
-  1 => 'assets/lane-icons/tank.png',
-  2 => 'assets/lane-icons/clash.png',
-  3 => 'assets/lane-icons/jungle.png',
-  4 => 'assets/lane-icons/mid.png',
-  5 => 'assets/lane-icons/adc.png',
-  _ => 'assets/lane-icons/support.png',
+String _jobAssetName(int job) => switch (job) {
+  1 => 'tank',
+  2 => 'clash',
+  3 => 'jungle',
+  4 => 'mid',
+  5 => 'adc',
+  _ => 'support',
 };
 String _jobLabel(int job) => switch (job) {
   1 => 'Tank',

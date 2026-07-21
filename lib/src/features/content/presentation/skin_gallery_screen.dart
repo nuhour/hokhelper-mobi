@@ -7,6 +7,7 @@ import '../../../core/routing/portal_link.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_lane_icon.dart';
 import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -552,10 +553,12 @@ class _LaneFilterBar extends StatelessWidget {
                   ),
                   child: option.assetName == null
                       ? const Icon(Icons.grid_view_rounded, size: 18)
-                      : Image.asset(
-                          'assets/lane-icons/${option.assetName}.png',
-                          width: 20,
-                          height: 20,
+                      : AppLaneIcon(
+                          assetName: option.assetName!,
+                          size: 20,
+                          color: lanePosition == option.value
+                              ? Colors.white
+                              : context.hokTheme.onSurfaceMuted,
                         ),
                 ),
               ),

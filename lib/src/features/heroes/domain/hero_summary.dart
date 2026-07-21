@@ -31,9 +31,9 @@ class HeroSummary {
       heroId: _readHeroId(json, const ['heroId', 'hero_id', 'id']),
       name: _readString(json, const ['heroName', 'name', 'hero_name']),
       avatar: _readString(json, const [
-        'avatar_url_large',
-        'avatar_url_medium',
         'avatar_url',
+        'avatar_url_medium',
+        'avatar_url_large',
         'avatar',
         'icon',
         'image',

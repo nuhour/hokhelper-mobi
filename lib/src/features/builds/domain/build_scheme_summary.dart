@@ -16,6 +16,8 @@ class BuildSchemeSummary {
     this.runeIds = const [],
     this.summonerSkillId,
     this.authorId = 0,
+    this.heroId = 0,
+    this.heroAvatar = '',
   });
 
   final int id;
@@ -23,6 +25,8 @@ class BuildSchemeSummary {
   final String heroName;
   final String authorName;
   final int authorId;
+  final int heroId;
+  final String heroAvatar;
   final List<String> equipmentIcons;
   final int likeCount;
   final int favoriteCount;
@@ -60,8 +64,21 @@ class BuildSchemeSummary {
       heroName: _readString(
         map['hero_name'] ??
             map['heroName'] ??
-            map['hero'] ??
             (hero is Map ? hero['name'] ?? hero['heroName'] : null),
+      ),
+      heroId: _readInt(
+        map['hero_id'] ??
+            map['heroId'] ??
+            (hero is Map
+                ? hero['heroId'] ?? hero['hero_id'] ?? hero['id']
+                : null),
+      ),
+      heroAvatar: _readString(
+        map['hero_avatar'] ??
+            map['heroAvatar'] ??
+            (hero is Map
+                ? hero['avatar_url'] ?? hero['avatarUrl'] ?? hero['avatar']
+                : null),
       ),
       authorName: _readString(
         map['author_name'] ??

@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_lane_icon.dart';
 import '../../heroes/domain/hero_summary.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -1786,10 +1787,12 @@ class _BpLaneBar extends StatelessWidget {
                                     ? Colors.black
                                     : context.hokTheme.onSurfaceMuted,
                               )
-                            : Image.asset(
-                                'assets/lane-icons/${lane.assetName}.png',
-                                width: 19,
-                                height: 19,
+                            : AppLaneIcon(
+                                assetName: lane.assetName!,
+                                size: 19,
+                                color: selectedLane == lane.value
+                                    ? Colors.black
+                                    : context.hokTheme.onSurfaceMuted,
                               ),
                       ),
                     ),
