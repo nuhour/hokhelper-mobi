@@ -79,6 +79,29 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postPath = path;
     postBody = body;
+    if (path == '/build/schemes/user-slots') {
+      return const {
+        'success': true,
+        'result': {
+          'slots': [
+            {
+              'id': 8,
+              'name': 'Slot one burst',
+              'hero_id': 199,
+              'hero_name': 'Lam',
+              'author_name': 'me',
+              'slot_index': 1,
+              'equips': [
+                {'icon': 'https://example.test/sword.png'},
+              ],
+              'is_public': false,
+            },
+            null,
+            null,
+          ],
+        },
+      };
+    }
     if (path == '/build/schemes/my-favorites') {
       return const {
         'success': true,
@@ -212,32 +235,20 @@ void main() {
     ]);
   });
 
-  test(
-    'loads my build slots for a hero with region and hero filters',
-    () async {
-      final apiClient = _FakeApiClient();
-      final repository = BuildsRepository(apiClient: apiClient);
+  test('loads my build slots with the hokx user-slots endpoint', () async {
+    final apiClient = _FakeApiClient();
+    final repository = BuildsRepository(apiClient: apiClient);
 
-      final slots = await repository.loadUserHeroSlots(
-        heroId: 199,
-        regionId: 2,
-      );
+    final slots = await repository.loadUserHeroSlots(heroId: 199, regionId: 2);
 
-      expect(apiClient.getPath, '/build/schemes');
-      expect(apiClient.getQuery?['action'], 'mySchemes');
-      expect(apiClient.getQuery?['page'], 1);
-      expect(apiClient.getQuery?['pageSize'], 3);
-      expect(jsonDecode(apiClient.getQuery?['filterRules'] as String), [
-        {'field': 'hero__heroId', 'op': 'eq', 'value': 199},
-        {'field': 'region_id', 'op': 'eq', 'value': 2},
-      ]);
-      expect(slots, hasLength(3));
-      expect(slots[0]?.title, 'Slot one burst');
-      expect(slots[0]?.slotIndex, 1);
-      expect(slots[1], isNull);
-      expect(slots[2], isNull);
-    },
-  );
+    expect(apiClient.postPath, '/build/schemes/user-slots');
+    expect(apiClient.postBody, {'hero_id': '199'});
+    expect(slots, hasLength(3));
+    expect(slots[0]?.title, 'Slot one burst');
+    expect(slots[0]?.slotIndex, 1);
+    expect(slots[1], isNull);
+    expect(slots[2], isNull);
+  });
 
   test('loads favorite build schemes with hokx favorites endpoint', () async {
     final apiClient = _FakeApiClient();

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -126,12 +128,22 @@ class BuildSimulatorScreen extends ConsumerStatefulWidget {
 class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
   int _selectedHeroIndex = 0;
   bool _didResolveInitialHero = false;
+  late BuildSimCommunityFilter _communityFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _communityFilter = widget.initialCommunityFilter;
+  }
 
   @override
   void didUpdateWidget(covariant BuildSimulatorScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialHeroId != widget.initialHeroId) {
       _didResolveInitialHero = false;
+    }
+    if (oldWidget.initialCommunityFilter != widget.initialCommunityFilter) {
+      _communityFilter = widget.initialCommunityFilter;
     }
   }
 
@@ -140,7 +152,7 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
     final isAuthenticated =
         ref.watch(authControllerProvider).valueOrNull != null;
     final communityFilter = isAuthenticated
-        ? widget.initialCommunityFilter
+        ? _communityFilter
         : BuildSimCommunityFilter.explore;
     final heroesValue = ref.watch(buildSimHeroesProvider);
     final communitySchemesValue =
@@ -193,6 +205,15 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
                   const SizedBox(height: 28),
                   _SlotsPanel(
                     slotsValue: slotsValue,
+                    selectedCollection: communityFilter,
+                    showSlots:
+                        communityFilter == BuildSimCommunityFilter.explore,
+                    onCollectionChanged: (filter) {
+                      if (filter == BuildSimCommunityFilter.favorites) {
+                        ref.invalidate(buildSimFavoriteSchemesProvider);
+                      }
+                      setState(() => _communityFilter = filter);
+                    },
                     onEdit: (slotIndex, scheme) {
                       _openBuildEditor(
                         context: context,
@@ -213,6 +234,15 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
                 focusedSchemeId: widget.initialSchemeId,
                 heroes: heroes,
                 topEquips: topEquips,
+                onHeroRequested: (requestedHeroId) {
+                  final index = heroes.indexWhere((hero) {
+                    return int.tryParse(hero.heroId) == requestedHeroId ||
+                        int.tryParse(hero.id) == requestedHeroId;
+                  });
+                  if (index >= 0 && index != _selectedHeroIndex) {
+                    setState(() => _selectedHeroIndex = index);
+                  }
+                },
                 onActionDone: heroId == null
                     ? null
                     : () {
@@ -632,9 +662,18 @@ class _BuildLaneOption {
 }
 
 class _SlotsPanel extends StatelessWidget {
-  const _SlotsPanel({required this.slotsValue, required this.onEdit});
+  const _SlotsPanel({
+    required this.slotsValue,
+    required this.selectedCollection,
+    required this.showSlots,
+    required this.onCollectionChanged,
+    required this.onEdit,
+  });
 
   final AsyncValue<List<BuildSchemeSummary?>> slotsValue;
+  final BuildSimCommunityFilter selectedCollection;
+  final bool showSlots;
+  final ValueChanged<BuildSimCommunityFilter> onCollectionChanged;
   final void Function(int slotIndex, BuildSchemeSummary? scheme) onEdit;
 
   @override
@@ -660,36 +699,40 @@ class _SlotsPanel extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        const _BuildCollectionTabs(),
-        const SizedBox(height: 24),
-        slotsValue.when(
-          data: (slots) {
-            final normalized = List<BuildSchemeSummary?>.generate(
-              3,
-              (index) => index < slots.length ? slots[index] : null,
-            );
-            return Column(
-              children: List.generate(
-                normalized.length,
-                (index) => Padding(
-                  padding: EdgeInsets.only(
-                    bottom: index == normalized.length - 1 ? 0 : 18,
-                  ),
-                  child: _SlotCard(
-                    index: index + 1,
-                    scheme: normalized[index],
-                    onTap: () => onEdit(index + 1, normalized[index]),
+        _BuildCollectionTabs(
+          selected: selectedCollection,
+          onSelected: onCollectionChanged,
+        ),
+        if (showSlots) const SizedBox(height: 24),
+        if (showSlots)
+          slotsValue.when(
+            data: (slots) {
+              final normalized = List<BuildSchemeSummary?>.generate(
+                3,
+                (index) => index < slots.length ? slots[index] : null,
+              );
+              return Column(
+                children: List.generate(
+                  normalized.length,
+                  (index) => Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == normalized.length - 1 ? 0 : 18,
+                    ),
+                    child: _SlotCard(
+                      index: index + 1,
+                      scheme: normalized[index],
+                      onTap: () => onEdit(index + 1, normalized[index]),
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stackTrace) => Text(
-            error.toString(),
-            style: const TextStyle(color: AppTheme.error),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stackTrace) => Text(
+              error.toString(),
+              style: const TextStyle(color: AppTheme.error),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -827,7 +870,13 @@ class _SlotCard extends StatelessWidget {
 }
 
 class _BuildCollectionTabs extends StatelessWidget {
-  const _BuildCollectionTabs();
+  const _BuildCollectionTabs({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final BuildSimCommunityFilter selected;
+  final ValueChanged<BuildSimCommunityFilter> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -840,18 +889,21 @@ class _BuildCollectionTabs extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
-        children: const [
+        children: [
           Expanded(
             child: _BuildCollectionTab(
               icon: Icons.person_outline,
               label: 'My Builds',
-              selected: true,
+              selected: selected == BuildSimCommunityFilter.explore,
+              onTap: () => onSelected(BuildSimCommunityFilter.explore),
             ),
           ),
           Expanded(
             child: _BuildCollectionTab(
               icon: Icons.star_border_rounded,
               label: 'My Favorites',
+              selected: selected == BuildSimCommunityFilter.favorites,
+              onTap: () => onSelected(BuildSimCommunityFilter.favorites),
             ),
           ),
         ],
@@ -864,45 +916,48 @@ class _BuildCollectionTab extends StatelessWidget {
   const _BuildCollectionTab({
     required this.icon,
     required this.label,
+    required this.onTap,
     this.selected = false,
   });
   final IconData icon;
   final String label;
+  final VoidCallback onTap;
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: selected ? AppTheme.gold : Colors.transparent,
+    return Material(
+      color: selected ? AppTheme.gold : Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
-            size: 22,
-          ),
-          const SizedBox(width: 7),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected
-                    ? Colors.white
-                    : context.hokTheme.onSurfaceMuted,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
+              size: 22,
+            ),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected
+                      ? Colors.white
+                      : context.hokTheme.onSurfaceMuted,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1908,6 +1963,7 @@ class _CommunityBuilds extends ConsumerStatefulWidget {
     required this.focusedSchemeId,
     required this.heroes,
     required this.topEquips,
+    required this.onHeroRequested,
     required this.onActionDone,
   });
 
@@ -1916,6 +1972,7 @@ class _CommunityBuilds extends ConsumerStatefulWidget {
   final int? focusedSchemeId;
   final List<HeroSummary> heroes;
   final List<BuildEquipSummary> topEquips;
+  final ValueChanged<int> onHeroRequested;
   final VoidCallback? onActionDone;
 
   @override
@@ -2186,6 +2243,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
       );
       return;
     }
+    widget.onHeroRequested(heroId);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -2210,7 +2268,12 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
         key,
         () => ref.read(buildSimCloneSchemeProvider)(scheme, slotIndex),
       );
-      ref.invalidate(buildSimUserSlotsProvider(heroId));
+      final refreshedSlots = await ref.refresh(
+        buildSimUserSlotsProvider(heroId).future,
+      );
+      if (refreshedSlots.length < slotIndex) {
+        ref.invalidate(buildSimUserSlotsProvider(heroId));
+      }
       return true;
     } catch (_) {
       return false;
@@ -2392,7 +2455,7 @@ class _BuildCloneSheetState extends ConsumerState<_BuildCloneSheet> {
                             : null,
                         borderRadius: BorderRadius.circular(12),
                         child: Ink(
-                          height: 64,
+                          height: slot == null ? 68 : 86,
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: BoxDecoration(
                             color: context.hokTheme.backgroundDeep,
@@ -2433,15 +2496,44 @@ class _BuildCloneSheetState extends ConsumerState<_BuildCloneSheet> {
                                         fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                    Text(
-                                      slot == null
-                                          ? 'Save to Slot $slotIndex'
-                                          : 'Replace Slot $slotIndex',
-                                      style: TextStyle(
-                                        color: context.hokTheme.onSurfaceMuted,
-                                        fontSize: 12,
+                                    if (slot == null)
+                                      Text(
+                                        'Save to Slot $slotIndex',
+                                        style: TextStyle(
+                                          color:
+                                              context.hokTheme.onSurfaceMuted,
+                                          fontSize: 12,
+                                        ),
+                                      )
+                                    else ...[
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          for (final icon
+                                              in slot.equipmentIcons.take(
+                                                4,
+                                              )) ...[
+                                            AppImage(
+                                              url: icon,
+                                              width: 23,
+                                              height: 23,
+                                              borderRadius: 12,
+                                              excludeFromSemantics: true,
+                                            ),
+                                            const SizedBox(width: 4),
+                                          ],
+                                          Text(
+                                            'Replace Slot $slotIndex',
+                                            style: TextStyle(
+                                              color: context
+                                                  .hokTheme
+                                                  .onSurfaceMuted,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -2536,137 +2628,148 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: context.hokTheme.outlineSoft),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 44,
-              child: Row(
-                children: [
-                  AppImage(
-                    url: heroAvatar,
-                    width: 38,
-                    height: 38,
-                    borderRadius: 9,
-                    semanticLabel: scheme.heroName,
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          scheme.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.hokTheme.onSurfaceStrong,
-                            fontSize: 15,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        Text(
-                          'by ${scheme.authorName} · ${scheme.heroName}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: context.hokTheme.onSurfaceMuted,
-                            fontSize: 11,
-                            height: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _CompactBuildIconButton(
-                    icon: Icons.ios_share_outlined,
-                    tooltip: 'Share build',
-                    onTap: onShare,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            SizedBox(
-              height: 32,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final icons = equipmentIcons.take(6).toList();
-                  final size = ((constraints.maxWidth - 25) / 6).clamp(
-                    24.0,
-                    32.0,
-                  );
-                  return Row(
+        child: LayoutBuilder(
+          builder: (context, cardConstraints) {
+            final compact = cardConstraints.maxHeight < 176;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: compact ? 40 : 44,
+                  child: Row(
                     children: [
-                      for (var index = 0; index < icons.length; index++) ...[
-                        if (index > 0) const SizedBox(width: 5),
-                        AppImage(
-                          url: icons[index],
-                          width: size,
-                          height: size,
-                          borderRadius: 999,
-                          excludeFromSemantics: true,
+                      AppImage(
+                        url: heroAvatar,
+                        width: 38,
+                        height: 38,
+                        borderRadius: 9,
+                        semanticLabel: scheme.heroName,
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              scheme.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: context.hokTheme.onSurfaceStrong,
+                                fontSize: 15,
+                                height: 1,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              'by ${scheme.authorName} · ${scheme.heroName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: context.hokTheme.onSurfaceMuted,
+                                fontSize: 11,
+                                height: 1,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                      _CompactBuildIconButton(
+                        icon: Icons.ios_share_outlined,
+                        tooltip: 'Share build',
+                        onTap: onShare,
+                      ),
                     ],
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 6),
-            _CompactBuildLoadout(
-              summonerSkillIcon: scheme.summonerSkillIcon,
-              runes: runes,
-            ),
-            const Spacer(),
-            SizedBox(
-              height: 36,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _CompactBuildAction(
-                      icon: scheme.isLiked
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      value: scheme.likeCount,
-                      tooltip: scheme.isLiked ? 'Unlike build' : 'Like build',
-                      onTap: disabled ? null : onLike,
-                    ),
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _CompactBuildAction(
-                      icon: scheme.isFavorited ? Icons.star : Icons.star_border,
-                      value: scheme.favoriteCount,
-                      tooltip: scheme.isFavorited
-                          ? 'Unfavorite build'
-                          : 'Favorite build',
-                      onTap: disabled ? null : onFavorite,
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Expanded(
+                  flex: 5,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final icons = equipmentIcons.take(6).toList();
+                      final size = math.min(
+                        constraints.maxHeight,
+                        ((constraints.maxWidth - 25) / 6).clamp(24.0, 42.0),
+                      );
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          for (final icon in icons)
+                            AppImage(
+                              url: icon,
+                              width: size,
+                              height: size,
+                              borderRadius: 999,
+                              excludeFromSemantics: true,
+                            ),
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _CompactBuildAction(
-                      icon: Icons.copy_outlined,
-                      value: scheme.cloneCount,
-                      tooltip: 'Choose clone slot',
-                      onTap: disabled ? null : onClone,
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Expanded(
+                  flex: 4,
+                  child: _CompactBuildLoadout(
+                    summonerSkillIcon: scheme.summonerSkillIcon,
+                    runes: runes,
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _CompactBuildAction(
-                      icon: Icons.visibility_outlined,
-                      tooltip: 'Temporarily edit build',
-                      onTap: onView,
-                    ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: compact ? 34 : 36,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _CompactBuildAction(
+                          icon: scheme.isLiked
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          value: scheme.likeCount,
+                          tooltip: scheme.isLiked
+                              ? 'Unlike build'
+                              : 'Like build',
+                          onTap: disabled ? null : onLike,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _CompactBuildAction(
+                          icon: scheme.isFavorited
+                              ? Icons.star
+                              : Icons.star_border,
+                          value: scheme.favoriteCount,
+                          tooltip: scheme.isFavorited
+                              ? 'Unfavorite build'
+                              : 'Favorite build',
+                          onTap: disabled ? null : onFavorite,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _CompactBuildAction(
+                          icon: Icons.copy_outlined,
+                          value: scheme.cloneCount,
+                          tooltip: 'Choose clone slot',
+                          onTap: disabled ? null : onClone,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _CompactBuildAction(
+                          icon: Icons.visibility_outlined,
+                          tooltip: 'Temporarily edit build',
+                          onTap: onView,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -2700,8 +2803,14 @@ class _CompactBuildLoadout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 26,
+    return Container(
+      height: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      decoration: BoxDecoration(
+        color: context.hokTheme.backgroundDeep.withValues(alpha: 0.66),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: context.hokTheme.outlineSoft),
+      ),
       child: Row(
         children: [
           if (summonerSkillIcon.isNotEmpty)

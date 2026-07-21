@@ -11,6 +11,7 @@ import '../../../core/widgets/app_image.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/hero_relationship.dart';
 import '../domain/hero_summary.dart';
+import 'hero_detail_screen.dart';
 import 'hero_gallery_screen.dart';
 
 final heroRelationshipsProvider = FutureProvider<List<HeroRelationship>>((
@@ -53,6 +54,7 @@ class _HeroRelationshipsScreenState
   String _focusedHero = '';
   _RelationshipViewMode _viewMode = _RelationshipViewMode.global;
   bool _didResolveInitialFocus = false;
+  int _resetVersion = 0;
 
   @override
   void didUpdateWidget(covariant HeroRelationshipsScreen oldWidget) {
@@ -95,6 +97,7 @@ class _HeroRelationshipsScreenState
                   heroes: graphHeroes,
                   focusedHero: _focusedHero,
                   viewMode: _viewMode,
+                  resetVersion: _resetVersion,
                   expand: true,
                   onHeroSelected: (heroName) {
                     setState(() {
@@ -102,6 +105,13 @@ class _HeroRelationshipsScreenState
                       _viewMode = _RelationshipViewMode.focus;
                     });
                   },
+                  onFocusedHeroRetapped: (heroName) =>
+                      _showHeroRelationshipDetails(
+                        context,
+                        heroName,
+                        relationships,
+                        graphHeroes,
+                      ),
                 ),
               ),
               SafeArea(
@@ -124,6 +134,18 @@ class _HeroRelationshipsScreenState
                   ),
                 ),
               ),
+              if (_viewMode == _RelationshipViewMode.global)
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 16, 16, 0),
+                      child: _NetworkResetButton(
+                        onPressed: () => setState(() => _resetVersion += 1),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           );
         },
@@ -227,6 +249,378 @@ class _HeroRelationshipsScreenState
         .toList(growable: false);
     return candidates[math.Random().nextInt(candidates.length)];
   }
+
+  Future<void> _showHeroRelationshipDetails(
+    BuildContext context,
+    String heroName,
+    List<HeroRelationship> relationships,
+    List<HeroSummary> heroes,
+  ) async {
+    final normalizedName = heroName.trim().toLowerCase();
+    HeroSummary? selectedHero;
+    for (final hero in heroes) {
+      if (hero.name.trim().toLowerCase() == normalizedName) {
+        selectedHero = hero;
+        break;
+      }
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: context.hokTheme.surfaceSlate,
+      builder: (_) => _RelationshipHeroSheet(
+        heroName: heroName,
+        hero: selectedHero,
+        relationships: relationships,
+        heroes: heroes,
+      ),
+    );
+  }
+}
+
+class _NetworkResetButton extends StatelessWidget {
+  const _NetworkResetButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.58),
+      shape: CircleBorder(
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: IconButton(
+        tooltip: 'Reset view',
+        onPressed: onPressed,
+        icon: const Icon(Icons.center_focus_weak_rounded, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _RelationshipHeroSheet extends ConsumerWidget {
+  const _RelationshipHeroSheet({
+    required this.heroName,
+    required this.hero,
+    required this.relationships,
+    required this.heroes,
+  });
+
+  final String heroName;
+  final HeroSummary? hero;
+  final List<HeroRelationship> relationships;
+  final List<HeroSummary> heroes;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailId = hero?.detailRouteId;
+    final detailValue = detailId == null
+        ? const AsyncValue<Map<String, dynamic>>.data({})
+        : ref.watch(selectedRegionHeroDetailProvider(detailId));
+    final outgoing = relationships
+        .where((relationship) {
+          return _matchesHero(
+            relationship.sourceHeroId,
+            relationship.sourceHeroName,
+          );
+        })
+        .toList(growable: false);
+
+    return FractionallySizedBox(
+      heightFactor: 0.82,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 10, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    heroName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close hero details',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: context.hokTheme.outlineSoft),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+              children: [
+                detailValue.when(
+                  data: (detail) => _RelationshipHeroIntro(
+                    heroName: heroName,
+                    fallbackHero: hero,
+                    detail: detail,
+                  ),
+                  loading: () => const SizedBox(
+                    height: 126,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (_, _) => _RelationshipHeroIntro(
+                    heroName: heroName,
+                    fallbackHero: hero,
+                    detail: const {},
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'Relationships',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: context.hokTheme.onSurfaceStrong,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (outgoing.isEmpty)
+                  Text(
+                    'No outgoing relationships available.',
+                    style: TextStyle(color: context.hokTheme.onSurfaceMuted),
+                  )
+                else
+                  for (final relationship in outgoing) ...[
+                    _RelationshipDetailTile(
+                      relationship: relationship,
+                      targetHero: _targetHero(relationship),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _matchesHero(String id, String name) {
+    final ids = {hero?.id, hero?.heroId}
+      ..removeWhere((value) => value == null || value.isEmpty);
+    return ids.contains(id) ||
+        name.trim().toLowerCase() == heroName.trim().toLowerCase();
+  }
+
+  HeroSummary? _targetHero(HeroRelationship relationship) {
+    for (final candidate in heroes) {
+      if (candidate.id == relationship.targetHeroId ||
+          candidate.heroId == relationship.targetHeroId ||
+          candidate.name.trim().toLowerCase() ==
+              relationship.targetHeroName.trim().toLowerCase()) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+}
+
+class _RelationshipHeroIntro extends StatelessWidget {
+  const _RelationshipHeroIntro({
+    required this.heroName,
+    required this.fallbackHero,
+    required this.detail,
+  });
+
+  final String heroName;
+  final HeroSummary? fallbackHero;
+  final Map<String, dynamic> detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final bundle = _relationshipMap(detail['result']).isNotEmpty
+        ? _relationshipMap(detail['result'])
+        : detail;
+    final heroMap = _relationshipMap(bundle['hero']).isNotEmpty
+        ? _relationshipMap(bundle['hero'])
+        : bundle;
+    final name = _relationshipString(heroMap, const ['name', 'heroName']);
+    final title = _relationshipString(heroMap, const ['title', 'heroTitle']);
+    final lore = _cleanRelationshipMarkup(
+      _relationshipString(heroMap, const ['lore', 'story', 'background']),
+    );
+    final avatar = _relationshipString(heroMap, const [
+      'avatar_url_large',
+      'avatar_url_medium',
+      'avatar_url',
+      'avatar',
+    ]);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.hokTheme.backgroundDeep,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.hokTheme.outlineSoft),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AppImage(
+                  url: (fallbackHero?.avatar ?? '').isNotEmpty
+                      ? fallbackHero!.avatar
+                      : avatar,
+                  width: 62,
+                  height: 62,
+                  borderRadius: 31,
+                  semanticLabel: heroName,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name.isNotEmpty ? name : heroName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: context.hokTheme.onSurfaceStrong,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if ((title.isNotEmpty ? title : fallbackHero?.title ?? '')
+                          .isNotEmpty)
+                        Text(
+                          title.isNotEmpty ? title : fallbackHero!.title,
+                          style: TextStyle(
+                            color: context.hokTheme.onSurfaceMuted,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if ((fallbackHero?.tier ?? '').isNotEmpty)
+                  Text(
+                    fallbackHero!.tier,
+                    style: const TextStyle(
+                      color: AppTheme.gold,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+              ],
+            ),
+            if (lore.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                lore,
+                maxLines: 7,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: context.hokTheme.onSurfaceStrong,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RelationshipDetailTile extends StatelessWidget {
+  const _RelationshipDetailTile({
+    required this.relationship,
+    required this.targetHero,
+  });
+
+  final HeroRelationship relationship;
+  final HeroSummary? targetHero;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _relationshipColor(relationship.title);
+    final targetName = relationship.targetHeroName.isNotEmpty
+        ? relationship.targetHeroName
+        : targetHero?.name ?? relationship.targetHeroId;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.hokTheme.backgroundDeep,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.hokTheme.outlineSoft),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppImage(
+              url: targetHero?.avatar ?? '',
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              semanticLabel: targetName,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          targetName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.hokTheme.onSurfaceStrong,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          relationship.title,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (relationship.description.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      relationship.description,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _NetworkModeControls extends StatelessWidget {
@@ -278,7 +672,9 @@ class _HeroRelationshipNetwork extends StatefulWidget {
     required this.heroes,
     required this.focusedHero,
     required this.viewMode,
+    required this.resetVersion,
     required this.onHeroSelected,
+    required this.onFocusedHeroRetapped,
     this.expand = false,
   });
 
@@ -286,7 +682,9 @@ class _HeroRelationshipNetwork extends StatefulWidget {
   final List<HeroSummary> heroes;
   final String focusedHero;
   final _RelationshipViewMode viewMode;
+  final int resetVersion;
   final ValueChanged<String> onHeroSelected;
+  final ValueChanged<String> onFocusedHeroRetapped;
   final bool expand;
 
   @override
@@ -319,7 +717,7 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
     _fitController =
         AnimationController(
           vsync: this,
-          duration: const Duration(milliseconds: 560),
+          duration: const Duration(milliseconds: 260),
         )..addListener(() {
           final value = _fitAnimation?.value;
           if (value != null) {
@@ -338,6 +736,9 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
         oldWidget.relationships.length != widget.relationships.length ||
         oldWidget.heroes.length != widget.heroes.length) {
       _retarget(_createTargetLayout());
+      _scheduleFit();
+    }
+    if (oldWidget.resetVersion != widget.resetVersion) {
       _scheduleFit();
     }
   }
@@ -413,7 +814,7 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
 
     final edgeKeys = <String>{};
     _activeEdges = [
-      for (final edge in [..._activeEdges, ...nextLayout.edges])
+      for (final edge in [...nextLayout.edges, ..._activeEdges])
         if (edgeKeys.add(_edgeKey(edge))) edge,
     ];
     _lastPhysicsTick = null;
@@ -447,12 +848,20 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
     }
   }
 
-  void _scheduleFit() {
+  void _scheduleFit([int attempt = 0]) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final renderBox =
           _viewerKey.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox == null || !renderBox.hasSize) return;
+      if (renderBox == null || !renderBox.hasSize) {
+        if (attempt < 3) {
+          Future<void>.delayed(
+            const Duration(milliseconds: 60),
+            () => _scheduleFit(attempt + 1),
+          );
+        }
+        return;
+      }
       final viewport = renderBox.size;
       final fitExtent = widget.viewMode == _RelationshipViewMode.focus
           ? math.min(760.0, _canvasSize)
@@ -526,7 +935,15 @@ class _HeroRelationshipNetworkState extends State<_HeroRelationshipNetwork>
                           opacity: node.opacity.clamp(0, 1),
                           child: _RelationshipAvatarNode(
                             node: node,
-                            onTap: () => widget.onHeroSelected(node.name),
+                            onTap: () {
+                              if (widget.viewMode ==
+                                      _RelationshipViewMode.focus &&
+                                  node.highlighted) {
+                                widget.onFocusedHeroRetapped(node.name);
+                                return;
+                              }
+                              widget.onHeroSelected(node.name);
+                            },
                           ),
                         ),
                       ),
@@ -600,6 +1017,7 @@ class _RelationshipNetworkLayout {
             relationship.targetHeroId,
             relationship.targetHeroName,
           ),
+          title: relationship.title,
           color: _relationshipColor(relationship.title),
         ),
     ];
@@ -723,6 +1141,7 @@ class _RelationshipNetworkLayout {
                 visibleKeys.contains(edge.sourceKey) &&
                 visibleKeys.contains(edge.targetKey),
           )
+          .map((edge) => edge.copyWith(showLabel: edge.sourceKey == focusKey))
           .toList(growable: false),
     );
   }
@@ -826,14 +1245,14 @@ class _AnimatedChainNode {
   bool highlighted;
 
   bool get isSettled {
-    return (targetPosition - position).distanceSquared < 0.2 &&
-        velocity.distanceSquared < 0.4 &&
-        (targetSize - size).abs() < 0.08 &&
-        sizeVelocity.abs() < 0.08 &&
-        (targetOpacity - opacity).abs() < 0.01;
+    return (targetPosition - position).distanceSquared < 1.2 &&
+        velocity.distanceSquared < 9 &&
+        (targetSize - size).abs() < 0.25 &&
+        sizeVelocity.abs() < 0.5 &&
+        (targetOpacity - opacity).abs() < 0.025;
   }
 
-  bool get canRemove => targetOpacity == 0 && opacity < 0.012 && isSettled;
+  bool get canRemove => targetOpacity == 0 && opacity < 0.055;
 
   void retarget(_ChainNode node) {
     name = node.name;
@@ -854,15 +1273,15 @@ class _AnimatedChainNode {
   }
 
   void step(double dt) {
-    const stiffness = 76.0;
-    const damping = 9.5;
+    const stiffness = 150.0;
+    const damping = 17.0;
     final drag = math.exp(-damping * dt);
     velocity = (velocity + (targetPosition - position) * stiffness * dt) * drag;
     position += velocity * dt;
 
     sizeVelocity = (sizeVelocity + (targetSize - size) * stiffness * dt) * drag;
     size += sizeVelocity * dt;
-    final opacityEase = 1 - math.exp(-8.5 * dt);
+    final opacityEase = 1 - math.exp(-18 * dt);
     opacity += (targetOpacity - opacity) * opacityEase;
 
     if (isSettled) {
@@ -893,17 +1312,30 @@ class _NetworkEdge {
   const _NetworkEdge({
     required this.sourceKey,
     required this.targetKey,
+    required this.title,
     required this.color,
+    this.showLabel = false,
   });
 
   final String sourceKey;
   final String targetKey;
+  final String title;
   final Color color;
+  final bool showLabel;
+
+  _NetworkEdge copyWith({bool? showLabel}) {
+    return _NetworkEdge(
+      sourceKey: sourceKey,
+      targetKey: targetKey,
+      title: title,
+      color: color,
+      showLabel: showLabel ?? this.showLabel,
+    );
+  }
 }
 
 String _edgeKey(_NetworkEdge edge) {
-  final nodes = [edge.sourceKey, edge.targetKey]..sort();
-  return '${nodes[0]}|${nodes[1]}';
+  return '${edge.sourceKey}|${edge.targetKey}';
 }
 
 String _relationshipKey(String heroId, String heroName) {
@@ -1074,6 +1506,40 @@ class _RelationshipNetworkPainter extends CustomPainter {
         );
       }
       canvas.drawPath(path, paint);
+      if (edge.showLabel && edge.title.isNotEmpty && edgeOpacity > 0.55) {
+        final midpoint = Offset(
+          source.dx * 0.25 + control.dx * 0.5 + target.dx * 0.25,
+          source.dy * 0.25 + control.dy * 0.5 + target.dy * 0.25,
+        );
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: '${edge.title}  →',
+            style: TextStyle(
+              color: edge.color.withValues(alpha: edgeOpacity),
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: 108);
+        final labelRect = Rect.fromCenter(
+          center: midpoint,
+          width: textPainter.width + 12,
+          height: textPainter.height + 6,
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(labelRect, const Radius.circular(5)),
+          Paint()..color = const Color(0xE6050A16),
+        );
+        textPainter.paint(
+          canvas,
+          Offset(
+            labelRect.center.dx - textPainter.width / 2,
+            labelRect.center.dy - textPainter.height / 2,
+          ),
+        );
+      }
     }
   }
 
@@ -1081,4 +1547,26 @@ class _RelationshipNetworkPainter extends CustomPainter {
   bool shouldRepaint(covariant _RelationshipNetworkPainter oldDelegate) {
     return oldDelegate.layout != layout;
   }
+}
+
+Map<String, dynamic> _relationshipMap(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return const {};
+}
+
+String _relationshipString(Map<String, dynamic> map, List<String> keys) {
+  for (final key in keys) {
+    final value = map[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return '';
+}
+
+String _cleanRelationshipMarkup(String value) {
+  return value
+      .replaceAll(RegExp(r'</?color[^>]*>', caseSensitive: false), '')
+      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'<[^>]+>'), '')
+      .trim();
 }

@@ -43,6 +43,7 @@ void main() {
 
     expect(find.text('Global'), findsOneWidget);
     expect(find.text('Focus'), findsOneWidget);
+    expect(find.byTooltip('Reset view'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
     expect(find.text('2 links'), findsNothing);
     expect(find.text('Starlight Pact'), findsNothing);
@@ -55,6 +56,13 @@ void main() {
       find.byKey(const ValueKey('relationship-network-focus')),
       findsOneWidget,
     );
+    expect(find.byTooltip('Reset view'), findsNothing);
+
+    await tester.tap(find.text('Lam').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Relationships'), findsOneWidget);
+    expect(find.text('Starlight Pact'), findsOneWidget);
   });
 
   testWidgets('hydrates focused hero from initial hero id', (tester) async {

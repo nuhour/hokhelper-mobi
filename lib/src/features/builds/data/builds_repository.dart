@@ -58,17 +58,9 @@ class BuildsRepository {
     required int heroId,
     required int regionId,
   }) async {
-    final json = await apiClient.getJson(
-      '/build/schemes',
-      query: {
-        'action': 'mySchemes',
-        'page': 1,
-        'pageSize': 3,
-        'filterRules': jsonEncode([
-          {'field': 'hero__heroId', 'op': 'eq', 'value': heroId},
-          {'field': 'region_id', 'op': 'eq', 'value': regionId},
-        ]),
-      },
+    final json = await apiClient.postJson(
+      '/build/schemes/user-slots',
+      body: {'hero_id': heroId.toString()},
     );
     final slots = <BuildSchemeSummary?>[null, null, null];
     for (final scheme in _readRows(json).map(BuildSchemeSummary.fromJson)) {
@@ -200,6 +192,10 @@ class BuildsRepository {
       final rows = result['rows'];
       if (rows is List) {
         return rows;
+      }
+      final slots = result['slots'];
+      if (slots is List) {
+        return slots;
       }
       final equips = result['equips'];
       if (equips is List) {
