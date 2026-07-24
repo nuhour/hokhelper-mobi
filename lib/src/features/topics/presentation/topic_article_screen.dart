@@ -35,7 +35,6 @@ class TopicArticleScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final articleValue = ref.watch(topicArticleProvider(slug));
-    final title = formatTopicTitle(topicKey);
 
     return Material(
       color: context.hokTheme.backgroundDeep,
@@ -46,16 +45,13 @@ class TopicArticleScreen extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 22),
           children: [
             AppAsyncView<TopicArticleDetail>(
               value: articleValue,
               retry: () => ref.invalidate(topicArticleProvider(slug)),
-              data: (article) => _ArticleBody(
-                topicTitle: title,
-                topicKey: topicKey,
-                article: article,
-              ),
+              data: (article) =>
+                  _ArticleBody(topicKey: topicKey, article: article),
             ),
           ],
         ),
@@ -65,18 +61,15 @@ class TopicArticleScreen extends ConsumerWidget {
 }
 
 class _ArticleBody extends StatelessWidget {
-  const _ArticleBody({
-    required this.topicTitle,
-    required this.topicKey,
-    required this.article,
-  });
+  const _ArticleBody({required this.topicKey, required this.article});
 
-  final String topicTitle;
   final String topicKey;
   final TopicArticleDetail article;
 
   @override
   Widget build(BuildContext context) {
+    final isHokWorld = topicKey.trim().toLowerCase() == 'hok-world';
+    final topicTitle = formatTopicTitle(topicKey);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: context.hokTheme.surfaceSlate,
@@ -84,7 +77,7 @@ class _ArticleBody extends StatelessWidget {
         border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -131,18 +124,22 @@ class _ArticleBody extends StatelessWidget {
               children: [
                 _ArticleAction(
                   icon: Icons.link,
-                  label: 'Back to $topicTitle Hub',
+                  label: isHokWorld ? 'HOK World' : 'Back to $topicTitle Hub',
                   onTap: () => context.go('/$topicKey'),
                 ),
                 _ArticleAction(
                   icon: Icons.leaderboard_outlined,
-                  label: 'View Tier List',
-                  onTap: () => context.go('/tools/rankings'),
+                  label: isHokWorld ? 'HOK Tier List' : 'View Tier List',
+                  onTap: () => context.go(
+                    isHokWorld ? '/stats-home?tab=tier' : '/tools/rankings',
+                  ),
                 ),
                 _ArticleAction(
                   icon: Icons.insights_outlined,
-                  label: 'Open Stats Dashboard',
-                  onTap: () => context.go('/tools/stats'),
+                  label: isHokWorld ? 'HOK Hero Stats' : 'Open Stats Dashboard',
+                  onTap: () => context.go(
+                    isHokWorld ? '/stats-home?tab=trends' : '/tools/stats',
+                  ),
                 ),
               ],
             ),

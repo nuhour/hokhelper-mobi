@@ -211,7 +211,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Patch Notes'), findsWidgets);
+    expect(find.text('Patch Notes'), findsNothing);
     expect(find.text('Version 1.2.3 Patch Notes'), findsOneWidget);
     expect(find.text('Version 1.2.4 Patch Notes'), findsOneWidget);
     expect(find.byTooltip('Lam (buff)'), findsOneWidget);
@@ -228,6 +228,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Hero Adjustments'), findsOneWidget);
+    expect(find.byTooltip('Share'), findsOneWidget);
     expect(find.text('Arthur changes only.'), findsOneWidget);
     expect(find.text('adjust'), findsOneWidget);
   });
@@ -457,6 +458,14 @@ void main() {
                     'Read the [official notes](https://updates.example/hok/125) before playing.',
                 changeCount: 0,
                 tags: ['Patch Notes'],
+                heroChanges: [
+                  PatchHeroChange(
+                    heroId: 88,
+                    heroName: 'Mulan',
+                    avatarUrl: '',
+                    changeType: 'buff',
+                  ),
+                ],
               ),
             ];
           }),
@@ -470,6 +479,7 @@ void main() {
 
     await tester.tap(find.text('Version 1.2.5 Patch Notes'));
     await tester.pumpAndSettle();
+    expect(find.text('Mulan'), findsOneWidget);
     final markdown = tester.widget<MarkdownBody>(find.byType(MarkdownBody));
     markdown.onTapLink!(
       'official notes',

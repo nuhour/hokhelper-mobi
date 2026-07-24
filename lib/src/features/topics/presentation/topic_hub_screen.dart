@@ -32,9 +32,14 @@ final topicArticlesProvider =
     });
 
 class TopicHubScreen extends ConsumerWidget {
-  const TopicHubScreen({required this.topicKey, super.key});
+  const TopicHubScreen({
+    required this.topicKey,
+    this.hideHeader = false,
+    super.key,
+  });
 
   final String topicKey;
+  final bool hideHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,17 +60,19 @@ class TopicHubScreen extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            AppSectionHeader(title: title),
-            const SizedBox(height: 10),
-            Text(
-              'Browse $title topic content from the HOK portal.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: context.hokTheme.onSurfaceMuted,
+            if (!hideHeader) ...[
+              AppSectionHeader(title: title),
+              const SizedBox(height: 10),
+              Text(
+                'Browse $title topic content from the HOK portal.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ],
             AppAsyncView<List<TopicArticleSummary>>(
               value: articlesValue,
               retry: () => ref.invalidate(

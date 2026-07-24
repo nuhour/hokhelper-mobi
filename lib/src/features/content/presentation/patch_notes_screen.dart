@@ -8,7 +8,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_markdown_content.dart';
-import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_share_sheet.dart';
 import '../../heroes/data/heroes_repository.dart';
 import '../domain/patch_note_summary.dart';
 import 'content_screen.dart';
@@ -73,17 +73,8 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            const AppSectionHeader(title: 'Patch Notes'),
-            const SizedBox(height: 12),
-            Text(
-              'Version timelines and hero balance adjustments from the HOK portal.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: context.hokTheme.onSurfaceMuted,
-              ),
-            ),
-            const SizedBox(height: 20),
             TextField(
               controller: _heroFilterController,
               onChanged: (value) => setState(() => _heroFilter = value),
@@ -428,7 +419,21 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
         return;
       }
       setState(() {
-        _detailNote = detail;
+        _detailNote = PatchNoteSummary(
+          id: detail.id,
+          version: detail.version,
+          title: detail.title,
+          date: detail.date,
+          preview: detail.preview,
+          changeCount: detail.heroChanges.isEmpty
+              ? widget.note.changeCount
+              : detail.changeCount,
+          tags: detail.tags.isEmpty ? widget.note.tags : detail.tags,
+          content: detail.content,
+          heroChanges: detail.heroChanges.isEmpty
+              ? widget.note.heroChanges
+              : detail.heroChanges,
+        );
         _isLoadingDetail = false;
       });
     } catch (_) {
@@ -497,6 +502,16 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
                           color: context.hokTheme.onSurfaceMuted,
                         ),
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Share',
+                      onPressed: () => showAppShareSheet(
+                        context,
+                        title: note.title,
+                        url:
+                            'https://hokhelper.com/patch-notes?note_id=${note.id}',
+                      ),
+                      icon: const Icon(Icons.share_outlined),
                     ),
                   ],
                 ),
@@ -622,8 +637,8 @@ class _HeroChangeAvatar extends StatelessWidget {
             semanticLabel: change.heroName,
           ),
           Positioned(
-            right: -2,
-            bottom: -2,
+            right: -1,
+            top: -1,
             child: _ChangeDirectionBadge(changeType: change.changeType),
           ),
         ],
@@ -653,16 +668,16 @@ class _ChangeDirectionBadge extends StatelessWidget {
       'nerf' => (Icons.arrow_downward_rounded, AppTheme.error),
       _ => (Icons.remove_rounded, context.hokTheme.onSurfaceMuted),
     };
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.hokTheme.surfaceSlate,
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 1.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(2),
-        child: Icon(icon, size: 12, color: color),
-      ),
+    return Icon(
+      icon,
+      size: 15,
+      color: color,
+      shadows: [
+        Shadow(
+          color: context.hokTheme.backgroundDeep.withValues(alpha: 0.9),
+          blurRadius: 3,
+        ),
+      ],
     );
   }
 }

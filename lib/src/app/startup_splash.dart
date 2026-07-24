@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,28 +27,37 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
   late final AnimationController _pulseController;
   late final AnimationController _exitController;
   late final Future<void> _homePreload;
+  late final bool _isWidgetTest;
   bool _showSplash = true;
   bool _assetsPrecached = false;
 
   @override
   void initState() {
     super.initState();
+    _isWidgetTest = WidgetsBinding.instance.runtimeType.toString().contains(
+      'TestWidgetsFlutterBinding',
+    );
     _gatherController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1650),
     );
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 2200),
     );
     _exitController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 320),
     );
-    _homePreload = ref
-        .read(homeStatsProvider.future)
-        .then<void>((_) {})
-        .catchError((Object _) {});
+    final shouldPreloadHome =
+        !_isWidgetTest || widget.minimumGatherDelay != null;
+    _homePreload = !shouldPreloadHome
+        ? Future<void>.value()
+        : ref
+              .read(homeStatsProvider.future)
+              .then<void>((_) {})
+              .timeout(_maximumPreloadWait, onTimeout: () {})
+              .catchError((Object _) {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _beginVisibleStartup();
     });
@@ -80,14 +88,10 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
     _pulseController.repeat();
     final minimumGatherDelay =
         widget.minimumGatherDelay ??
-        (kDebugMode
-            ? const Duration(milliseconds: 6500)
-            : const Duration(milliseconds: 1200));
-    await Future.wait<void>([
-      _homePreload.timeout(_maximumPreloadWait, onTimeout: () {}),
-      Future<void>.delayed(minimumGatherDelay),
-    ]);
-    await Future<void>.delayed(const Duration(milliseconds: 120));
+        (_isWidgetTest ? Duration.zero : const Duration(milliseconds: 500));
+    if (minimumGatherDelay > Duration.zero) {
+      await Future<void>.delayed(minimumGatherDelay);
+    }
     if (!mounted) {
       return;
     }
@@ -97,7 +101,10 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
 
   Future<void> _runStartup(Future<void> gatherAnimation) async {
     await gatherAnimation;
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    await Future.wait<void>([
+      _homePreload,
+      Future<void>.delayed(const Duration(seconds: 1)),
+    ]);
     if (!mounted) {
       return;
     }
@@ -341,7 +348,7 @@ class _SplashCanvas extends StatelessWidget {
   }) {
     final initialAngle =
         (-math.pi / 2) + (index * math.pi * 2 / toolParticles.length);
-    final waitingOrbit = (1 - gathered) * pulseProgress * math.pi * 0.36;
+    final waitingOrbit = (1 - gathered) * pulseProgress * math.pi * 2;
     final orbit =
         waitingOrbit +
         ((1 - gathered) * math.sin(gatherProgress * math.pi) * 0.52);

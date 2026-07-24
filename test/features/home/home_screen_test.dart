@@ -260,7 +260,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('站点菜单'), findsNothing);
-    expect(_portalMenuText('Home'), findsWidgets);
+    expect(_portalMenuText('Home'), findsNothing);
     expect(_portalMenuText('Heroes'), findsOneWidget);
     expect(_portalMenuText('Gallery'), findsWidgets);
     expect(_portalMenuText('Tier List'), findsOneWidget);
@@ -314,6 +314,7 @@ void main() {
             'hero_ranking_table': {
               'columns': [
                 {'id': 'hero', 'label': '英雄', 'type': 'hero'},
+                {'id': 'trend_smoothed', 'label': '胜率趋势', 'type': 'sparkline'},
                 {'id': 'wr', 'label': '胜率', 'type': 'percent'},
                 {'id': 'pick_rate', 'label': '出场率', 'type': 'percent'},
               ],
@@ -322,6 +323,7 @@ void main() {
                   'hero': {'id': 2619, 'heroId': '563', 'name': 'Heino'},
                   'wr': 56.2,
                   'pick_rate': 12.4,
+                  'trend_smoothed': [50.1, 51.4, 50.8, 53.2],
                 },
               ],
             },
@@ -339,7 +341,7 @@ void main() {
                   'player_id': 'top-player',
                   'player_name': 'Top Player',
                   'avatar_url': 'https://example.test/top-player.jpg',
-                  'region': 840,
+                  'region': 340,
                   'peak_score': 2400,
                   'avg_kda': 8.7,
                 },
@@ -350,6 +352,9 @@ void main() {
                 'title': '7月16日版本更新公告',
                 'content_preview': '亲爱的玩家，本次版本即将更新。',
                 'created_at': '2026-07-15T10:00:52Z',
+                'view_count': 321,
+                'like_count': 45,
+                'comment_count': 6,
               },
             ],
             'patch_notes': [
@@ -386,9 +391,10 @@ void main() {
     );
     expect(heinoImage.imageUrl, endsWith('/static/game/hero/2619.png'));
     expect(find.text('Heino'), findsNothing);
+    expect(find.byKey(const ValueKey('home-trend-2619')), findsOneWidget);
 
-    await _scrollHomeUntilVisible(tester, find.text('Tier List Preview'));
-    expect(find.text('Tier List Preview'), findsOneWidget);
+    await _scrollHomeUntilVisible(tester, find.text('Tier List'));
+    expect(find.text('Tier List'), findsAtLeastNWidgets(1));
     expect(
       find.byKey(const ValueKey('home-hero-avatar-2624')),
       findsAtLeastNWidgets(1),
@@ -405,7 +411,7 @@ void main() {
       find.byKey(const ValueKey('home-player-flag-top-player')),
       findsOneWidget,
     );
-    expect(find.text('United States'), findsOneWidget);
+    expect(find.text('Honduras'), findsOneWidget);
     expect(find.text('PEAK SCORE'), findsOneWidget);
     expect(find.text('2400'), findsOneWidget);
 
@@ -416,6 +422,9 @@ void main() {
       findsAtLeastNWidgets(1),
     );
     expect(find.textContaining('亲爱的玩家'), findsNothing);
+    expect(find.text('321'), findsOneWidget);
+    expect(find.text('45'), findsOneWidget);
+    expect(find.text('6'), findsOneWidget);
 
     await _scrollHomeUntilVisible(tester, find.text('Latest Updates'));
     expect(find.text('Latest Updates'), findsOneWidget);

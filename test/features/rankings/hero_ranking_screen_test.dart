@@ -158,7 +158,9 @@ void main() {
 
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('T0'), findsOneWidget);
-    expect(find.text('1 heroes'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(find.byKey(const ValueKey('stats-tier-lane-all')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stats-tier-lane-1')), findsOneWidget);
     expect(find.text('Heroes'), findsNothing);
     expect(find.text('Players'), findsNothing);
     expect(find.text('Equips'), findsNothing);

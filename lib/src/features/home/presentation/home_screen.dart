@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/region_country_picker.dart';
 import '../../content/presentation/skin_gallery_screen.dart';
 import '../../esports/presentation/esports_screen.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
@@ -43,7 +46,7 @@ class HomeScreen extends ConsumerWidget {
       child: ListView(
         key: const ValueKey('home-main-scroll-view'),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         children: [
           AppAsyncView<HomeStats>(
             value: statsValue,
@@ -250,7 +253,7 @@ class _HomePortalTopBar extends StatelessWidget {
           icon: Icons.menu_rounded,
           onTap: () => _showPortalMenu(context),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
         Expanded(
           child: Center(
             child: SingleChildScrollView(
@@ -266,14 +269,14 @@ class _HomePortalTopBar extends StatelessWidget {
                       selected: index == selectedIndex,
                       onTap: () => onSelected(index),
                     ),
-                    if (index != entries.length - 1) const SizedBox(width: 18),
+                    if (index != entries.length - 1) const SizedBox(width: 10),
                   ],
                 ],
               ),
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
         _RoundIconButton(
           icon: Icons.search_rounded,
           onTap: () => showPortalSearchSheet(context),
@@ -302,7 +305,7 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
       _readMap(widget.result['season'])['background_pic'],
     );
     final seasonName = _readString(_readMap(widget.result['season'])['name']);
-    final bottomNavigationGap = MediaQuery.viewPaddingOf(context).bottom + 104;
+    const bottomNavigationGap = 24.0;
     return Stack(
       children: [
         ListView(
@@ -388,10 +391,6 @@ class _PortalMenuSheet extends StatelessWidget {
 
   static const _groups = [
     _PortalMenuGroup(
-      titleKey: 'menuHome',
-      links: [_PortalMenuLink('menuHome', '/')],
-    ),
-    _PortalMenuGroup(
       titleKey: 'menuHeroes',
       links: [
         _PortalMenuLink('menuGallery', '/heroes'),
@@ -409,7 +408,7 @@ class _PortalMenuSheet extends StatelessWidget {
     _PortalMenuGroup(
       titleKey: 'menuCommunity',
       links: [
-        _PortalMenuLink('menuPlayerLeaderboard', '/leaderboard'),
+        _PortalMenuLink('menuPlayerLeaderboard', '/stats-home?tab=rankings'),
         _PortalMenuLink('menuForum', '/content/community'),
         _PortalMenuLink('menuLeaks', '/content/community?tab=leaks'),
         _PortalMenuLink('menuEventHelp', '/content/event-assistance'),
@@ -1270,7 +1269,7 @@ class _HomePortalPreviews extends StatelessWidget {
       ),
       _HomeTierPreviewSection(
         icon: Icons.local_fire_department_outlined,
-        title: l10n.homeTierPreview,
+        title: l10n.homeTierList,
         route: '/stats-home?tab=tier',
         groups: tierRows.take(4).toList(growable: false),
       ),
@@ -1292,6 +1291,9 @@ class _HomePortalPreviews extends StatelessWidget {
               ),
               detail: _localizedHomePostDetail(context, row),
               route: _communityPostRoute(row['id']),
+              viewCount: _readCount(row['view_count'] ?? row['views']),
+              likeCount: _readCount(row['like_count'] ?? row['likes']),
+              commentCount: _readCount(row['comment_count'] ?? row['comments']),
             ),
         ],
       ),
@@ -1328,7 +1330,30 @@ class _HomeHeroRankingTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns = _homeTableColumns(context, rawColumns, rows);
+    final sourceColumns = _homeTableColumns(context, rawColumns, rows);
+    final heroColumns = sourceColumns
+        .where((column) => column.id == 'hero' || column.type == 'hero')
+        .toList(growable: false);
+    final trendColumns = sourceColumns
+        .where(
+          (column) =>
+              column.id == 'trend_smoothed' || column.type == 'sparkline',
+        )
+        .toList(growable: false);
+    final metricColumns = sourceColumns
+        .where(
+          (column) =>
+              column.id != 'hero' &&
+              column.type != 'hero' &&
+              column.id != 'trend_smoothed' &&
+              column.type != 'sparkline',
+        )
+        .toList(growable: false);
+    final columns = [
+      if (heroColumns.isNotEmpty) heroColumns.first,
+      ...trendColumns,
+      ...metricColumns,
+    ];
     final dataRows = rows;
 
     return _HomeDataSection(
@@ -1369,7 +1394,7 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
     return _HomeDataSection(
       icon: Icons.emoji_events_outlined,
       title: l10n.homeLeaderboard,
-      route: '/leaderboard',
+      route: '/stats-home?tab=rankings',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1641,6 +1666,7 @@ class _HomeDataSection extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Ink(
+        key: ValueKey('home-data-section-$route'),
         decoration: BoxDecoration(
           color: context.hokTheme.surfaceSlate,
           borderRadius: BorderRadius.circular(16),
@@ -1703,8 +1729,8 @@ class _HomeDataTable extends StatefulWidget {
 }
 
 class _HomeDataTableState extends State<_HomeDataTable> {
-  static const _firstColumnWidth = 52.0;
-  static const _headerHeight = 34.0;
+  static const _firstColumnWidth = 48.0;
+  static const _headerHeight = 32.0;
   static const _rowHeight = 48.0;
 
   final _verticalController = ScrollController();
@@ -1790,6 +1816,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          fontSize: 10,
           color: context.hokTheme.onSurfaceMuted,
           fontWeight: FontWeight.w900,
         ),
@@ -1814,6 +1841,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
                       color: context.hokTheme.onSurfaceMuted,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1945,8 +1973,9 @@ class _HomeDataTableState extends State<_HomeDataTable> {
 
 double _homeTableColumnWidth(_HomeTableColumn column) {
   if (column.id == 'player_name' || column.type == 'player') return 132;
-  if (column.id == 'hero' || column.type == 'hero') return 52;
-  return 72;
+  if (column.id == 'hero' || column.type == 'hero') return 48;
+  if (column.id == 'trend_smoothed' || column.type == 'sparkline') return 92;
+  return 64;
 }
 
 class _HomeTableColumn {
@@ -1971,8 +2000,15 @@ class _HomeDataCell extends StatelessWidget {
     );
     final isHero = column.id == 'hero' || column.type == 'hero';
     final isPlayer = column.id == 'player_name' || column.type == 'player';
-    final minWidth = isHero ? 52.0 : (isPlayer ? 132.0 : 48.0);
-    final maxWidth = isHero ? 52.0 : (isPlayer ? 170.0 : 92.0);
+    final isTrend = column.id == 'trend_smoothed' || column.type == 'sparkline';
+    if (isTrend) {
+      return _HomeMiniSparkline(
+        key: ValueKey('home-trend-${_homeHeroRecordId(row)}'),
+        values: _readTrendValues(row[column.id]),
+      );
+    }
+    final minWidth = isHero ? 48.0 : (isPlayer ? 132.0 : 44.0);
+    final maxWidth = isHero ? 48.0 : (isPlayer ? 170.0 : 72.0);
     if (!isHero && !isPlayer) {
       return ConstrainedBox(
         constraints: BoxConstraints(minWidth: minWidth, maxWidth: maxWidth),
@@ -1980,7 +2016,7 @@ class _HomeDataCell extends StatelessWidget {
           _homeTableValue(row, column),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: cellStyle,
+          style: cellStyle?.copyWith(fontSize: 11),
         ),
       );
     }
@@ -2028,6 +2064,160 @@ class _HomeDataCell extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+List<double> _readTrendValues(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+  return value
+      .map((item) => double.tryParse(item?.toString() ?? ''))
+      .whereType<double>()
+      .toList(growable: false);
+}
+
+class _HomeMiniSparkline extends StatelessWidget {
+  const _HomeMiniSparkline({required this.values, super.key});
+
+  final List<double> values;
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.length < 2) {
+      return Text(
+        '-',
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: context.hokTheme.onSurfaceMuted),
+      );
+    }
+    final rising = values.last > values.first;
+    final falling = values.last < values.first;
+    final color = rising
+        ? const Color(0xFFFF2D2D)
+        : falling
+        ? const Color(0xFFF5A000)
+        : const Color(0xFF2997FF);
+    return SizedBox(
+      width: 84,
+      height: 38,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _HomeSparklinePainter(
+                values: values,
+                color: color,
+                baselineColor: context.hokTheme.onSurfaceMuted,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 1,
+            right: 1,
+            child: Icon(
+              rising
+                  ? Icons.arrow_drop_up_rounded
+                  : falling
+                  ? Icons.arrow_drop_down_rounded
+                  : Icons.remove_rounded,
+              size: 17,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeSparklinePainter extends CustomPainter {
+  const _HomeSparklinePainter({
+    required this.values,
+    required this.color,
+    required this.baselineColor,
+  });
+
+  final List<double> values;
+  final Color color;
+  final Color baselineColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) return;
+    final minValue = values.reduce(math.min);
+    final maxValue = values.reduce(math.max);
+    final span = math.max(0.0001, maxValue - minValue);
+    const horizontalInset = 2.0;
+    const verticalInset = 6.0;
+    final chartHeight = math.max(1.0, size.height - verticalInset * 2);
+    final points = <Offset>[
+      for (var index = 0; index < values.length; index++)
+        Offset(
+          horizontalInset +
+              (size.width - horizontalInset * 2) * index / (values.length - 1),
+          verticalInset +
+              chartHeight * (1 - ((values[index] - minValue) / span)),
+        ),
+    ];
+    final baselineY =
+        verticalInset +
+        chartHeight * (1 - ((values.first - minValue) / span)).clamp(0, 1);
+    final baselinePaint = Paint()
+      ..color = baselineColor.withValues(alpha: 0.62)
+      ..strokeWidth = 1;
+    for (var x = horizontalInset; x < size.width; x += 6) {
+      canvas.drawLine(
+        Offset(x, baselineY),
+        Offset(math.min(x + 3, size.width), baselineY),
+        baselinePaint,
+      );
+    }
+
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var index = 1; index < points.length; index++) {
+      final previous = points[index - 1];
+      final current = points[index];
+      final controlX = (previous.dx + current.dx) / 2;
+      linePath.cubicTo(
+        controlX,
+        previous.dy,
+        controlX,
+        current.dy,
+        current.dx,
+        current.dy,
+      );
+    }
+    final fillPath = Path.from(linePath)
+      ..lineTo(points.last.dx, size.height - 2)
+      ..lineTo(points.first.dx, size.height - 2)
+      ..close();
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [color.withValues(alpha: 0.24), color.withValues(alpha: 0)],
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      linePath,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _HomeSparklinePainter oldDelegate) {
+    return oldDelegate.values != values ||
+        oldDelegate.color != color ||
+        oldDelegate.baselineColor != baselineColor;
   }
 }
 
@@ -2157,32 +2347,8 @@ String _homeRegionFlag(Object? rawRegion) {
 }
 
 String? _homeRegionIso(Object? rawRegion) {
-  const isoByRegion = <int, String>{
-    36: 'AU',
-    76: 'BR',
-    124: 'CA',
-    156: 'CN',
-    246: 'FI',
-    250: 'FR',
-    276: 'DE',
-    344: 'HK',
-    356: 'IN',
-    360: 'ID',
-    392: 'JP',
-    410: 'KR',
-    458: 'MY',
-    484: 'MX',
-    608: 'PH',
-    642: 'RO',
-    643: 'RU',
-    702: 'SG',
-    764: 'TH',
-    784: 'AE',
-    826: 'GB',
-    840: 'US',
-  };
   final region = int.tryParse(rawRegion?.toString() ?? '');
-  return region == null ? null : isoByRegion[region];
+  return region == null ? null : RegionCountry.fromRegionCode(region)?.isoCode;
 }
 
 String _homeRegionName(Object? rawRegion) {
@@ -2195,6 +2361,7 @@ String _homeRegionName(Object? rawRegion) {
     'FR': 'France',
     'DE': 'Germany',
     'HK': 'Hong Kong',
+    'HN': 'Honduras',
     'IN': 'India',
     'ID': 'Indonesia',
     'JP': 'Japan',
@@ -2210,7 +2377,8 @@ String _homeRegionName(Object? rawRegion) {
     'GB': 'United Kingdom',
     'US': 'United States',
   };
-  return names[_homeRegionIso(rawRegion)] ?? 'International';
+  final iso = _homeRegionIso(rawRegion);
+  return names[iso] ?? iso ?? 'International';
 }
 
 String _homeCompactNumber(Object? rawValue) {
@@ -2655,7 +2823,7 @@ class _HomeCommunitySection extends StatelessWidget {
                 title: row.title,
                 detail: row.detail,
                 route: row.route,
-                suffix: 'Hot',
+                suffix: _HomeCommunityMetrics(row: row),
               ),
         ],
       ),
@@ -2831,7 +2999,7 @@ class _HomeInfoListRow extends StatelessWidget {
 
   final String title;
   final String detail;
-  final String suffix;
+  final Widget suffix;
   final String? route;
 
   @override
@@ -2868,13 +3036,7 @@ class _HomeInfoListRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            suffix,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppTheme.gold,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          suffix,
         ],
       ),
     );
@@ -2883,6 +3045,61 @@ class _HomeInfoListRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: () => context.go(route!),
       child: child,
+    );
+  }
+}
+
+class _HomeCommunityMetrics extends StatelessWidget {
+  const _HomeCommunityMetrics({required this.row});
+
+  final _HomePreviewRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _HomeCommunityMetric(
+          icon: Icons.visibility_outlined,
+          value: row.viewCount,
+        ),
+        const SizedBox(width: 7),
+        _HomeCommunityMetric(
+          icon: Icons.favorite_border_rounded,
+          value: row.likeCount,
+        ),
+        const SizedBox(width: 7),
+        _HomeCommunityMetric(
+          icon: Icons.chat_bubble_outline_rounded,
+          value: row.commentCount,
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeCommunityMetric extends StatelessWidget {
+  const _HomeCommunityMetric({required this.icon, required this.value});
+
+  final IconData icon;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: context.hokTheme.onSurfaceMuted),
+        const SizedBox(width: 2),
+        Text(
+          _homeCompactNumber(value),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2922,12 +3139,20 @@ class _HomePreviewRow {
     required this.title,
     required this.detail,
     this.route,
+    this.viewCount = 0,
+    this.likeCount = 0,
+    this.commentCount = 0,
   });
 
   final String title;
   final String detail;
   final String? route;
+  final int viewCount;
+  final int likeCount;
+  final int commentCount;
 }
+
+int _readCount(Object? value) => int.tryParse(value?.toString() ?? '') ?? 0;
 
 // ignore: unused_element
 class _HomePrimaryActions extends StatelessWidget {

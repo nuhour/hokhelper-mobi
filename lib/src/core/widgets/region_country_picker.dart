@@ -204,7 +204,7 @@ class _RegionCountrySheetState extends State<_RegionCountrySheet> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: TextField(
               controller: _controller,
-              autofocus: true,
+              autofocus: false,
               decoration: const InputDecoration(
                 hintText: 'Search ISO code or region code',
                 prefixIcon: Icon(Icons.search_rounded),

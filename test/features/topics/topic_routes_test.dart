@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/home/data/home_repository.dart';
+import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dart';
 import 'package:hok_helper_mobile/src/features/topics/domain/topic_article.dart';
 import 'package:hok_helper_mobile/src/features/topics/presentation/topic_article_screen.dart';
 import 'package:hok_helper_mobile/src/features/topics/presentation/topic_hub_screen.dart';
@@ -14,6 +16,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          homeStatsProvider.overrideWith((ref) async => _emptyHomeStats),
           topicArticlesProvider(('hok-world', 12)).overrideWith((ref) async {
             return const [
               TopicArticleSummary(
@@ -51,6 +54,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          homeStatsProvider.overrideWith((ref) async => _emptyHomeStats),
           topicArticleProvider('hok-world-tier-list').overrideWith((ref) async {
             return const TopicArticleDetail(
               id: 11,
@@ -77,7 +81,9 @@ void main() {
 
     expect(find.text('Why it matters'), findsOneWidget);
     expect(find.text('Use hero roles and stats together.'), findsOneWidget);
-    expect(find.text('Back to Hok World Hub'), findsOneWidget);
+    expect(find.text('HOK World'), findsWidgets);
+    expect(find.text('HOK Tier List'), findsOneWidget);
+    expect(find.text('HOK Hero Stats'), findsOneWidget);
   });
 
   testWidgets('legacy topics slug route opens the hok world article detail', (
@@ -89,6 +95,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          homeStatsProvider.overrideWith((ref) async => _emptyHomeStats),
           topicArticlesProvider((
             'hok-world-tier-list',
             12,
@@ -116,10 +123,11 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
 
     expect(find.text('Why it matters'), findsOneWidget);
-    expect(find.text('Back to Hok World Hub'), findsOneWidget);
+    expect(find.text('HOK World'), findsWidgets);
   });
 
   testWidgets('hok world hub opens a topic article detail', (tester) async {
@@ -128,6 +136,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          homeStatsProvider.overrideWith((ref) async => _emptyHomeStats),
           topicArticlesProvider(('hok-world', 12)).overrideWith((ref) async {
             return const [
               TopicArticleSummary(
@@ -170,7 +179,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Hok World'), findsOneWidget);
+    expect(find.text('HOK World'), findsWidgets);
     expect(find.text('HOK World Tier List'), findsOneWidget);
     expect(
       find.text('A starter guide for HOK World rankings.'),
@@ -182,7 +191,9 @@ void main() {
 
     expect(find.text('Why it matters'), findsOneWidget);
     expect(find.text('Use hero roles and stats together.'), findsOneWidget);
-    expect(find.text('Back to Hok World Hub'), findsOneWidget);
+    expect(find.text('HOK World'), findsWidgets);
+    expect(find.text('HOK Tier List'), findsOneWidget);
+    expect(find.text('HOK Hero Stats'), findsOneWidget);
   });
 
   testWidgets('top-level topic routes mirror hokx generic topics', (
@@ -194,6 +205,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          homeStatsProvider.overrideWith((ref) async => _emptyHomeStats),
           topicArticlesProvider(('pro-guides', 12)).overrideWith((ref) async {
             return const [
               TopicArticleSummary(
@@ -247,3 +259,5 @@ void main() {
     expect(find.text('Back to Pro Guides Hub'), findsOneWidget);
   });
 }
+
+const _emptyHomeStats = HomeStats(success: true, message: 'Ready', result: {});

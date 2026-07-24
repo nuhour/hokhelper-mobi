@@ -109,7 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Version 1.2.3 Patch Notes'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
+    expect(find.byTooltip('Lam (buff)'), findsOneWidget);
   });
 
   testWidgets('content patch note preview opens a focused patch detail route', (

@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_lane_icon.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -74,6 +75,7 @@ final tierHistoryProvider = FutureProvider.family<List<TierHistoryPoint>, int>((
 });
 
 final tierCompactModeProvider = StateProvider<bool>((ref) => true);
+final tierLanePositionProvider = StateProvider<int?>((ref) => null);
 
 final tierRankingDisplayProvider = FutureProvider<List<TierListEntry>>((
   ref,
@@ -370,14 +372,20 @@ class _TierListTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final compact = ref.watch(tierCompactModeProvider);
+    final lanePosition = ref.watch(tierLanePositionProvider);
     return AppAsyncView<List<TierListEntry>>(
       value: tierValue,
       previousData: previousEntries,
       loadingStyle: AppAsyncLoadingStyle.gallery,
       retry: () => ref.invalidate(tierRankingDisplayProvider),
       data: (entries) {
+        final filteredEntries = lanePosition == null
+            ? entries
+            : entries
+                  .where((entry) => entry.position == lanePosition)
+                  .toList(growable: false);
         final groups = <String, List<TierListEntry>>{};
-        for (final entry in entries) {
+        for (final entry in filteredEntries) {
           groups.putIfAbsent(entry.tier, () => []).add(entry);
         }
         final tiers = groups.keys.toList(growable: false)
@@ -436,7 +444,14 @@ class _TierListTab extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              if (entries.isEmpty)
+              _TierLaneFilterBar(
+                selectedPosition: lanePosition,
+                onChanged: (value) {
+                  ref.read(tierLanePositionProvider.notifier).state = value;
+                },
+              ),
+              const SizedBox(height: 10),
+              if (filteredEntries.isEmpty)
                 const SizedBox(
                   height: 360,
                   child: AppEmptyState(
@@ -457,6 +472,78 @@ class _TierListTab extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _TierLaneFilterBar extends StatelessWidget {
+  const _TierLaneFilterBar({
+    required this.selectedPosition,
+    required this.onChanged,
+  });
+
+  final int? selectedPosition;
+  final ValueChanged<int?> onChanged;
+
+  static const _options = <({String label, String? asset, int? position})>[
+    (label: 'All lanes', asset: null, position: null),
+    (label: 'Clash', asset: 'clash', position: 0),
+    (label: 'Mid', asset: 'mid', position: 1),
+    (label: 'Farm', asset: 'adc', position: 2),
+    (label: 'Jungle', asset: 'jungle', position: 3),
+    (label: 'Support', asset: 'support', position: 4),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final option in _options)
+          Tooltip(
+            message: option.label,
+            child: InkWell(
+              key: ValueKey(
+                'stats-tier-lane-${option.position?.toString() ?? 'all'}',
+              ),
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => onChanged(option.position),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selectedPosition == option.position
+                      ? AppTheme.gold
+                      : context.hokTheme.surfaceSlate,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: selectedPosition == option.position
+                        ? AppTheme.gold
+                        : context.hokTheme.outlineSoft,
+                  ),
+                ),
+                child: option.asset == null
+                    ? Icon(
+                        Icons.grid_view_rounded,
+                        size: 17,
+                        color: selectedPosition == null
+                            ? Colors.white
+                            : context.hokTheme.onSurfaceMuted,
+                      )
+                    : AppLaneIcon(
+                        assetName: option.asset!,
+                        size: 19,
+                        color: selectedPosition == option.position
+                            ? Colors.white
+                            : context.hokTheme.onSurfaceMuted,
+                      ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

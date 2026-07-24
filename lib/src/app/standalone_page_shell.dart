@@ -10,6 +10,7 @@ class StandalonePageShell extends StatelessWidget {
     required this.child,
     this.title,
     this.alwaysUseFallback = false,
+    this.showAppBarInLandscape = false,
     super.key,
   });
 
@@ -17,6 +18,7 @@ class StandalonePageShell extends StatelessWidget {
   final String? title;
   final Widget child;
   final bool alwaysUseFallback;
+  final bool showAppBarInLandscape;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,7 @@ class StandalonePageShell extends StatelessWidget {
         }
       },
       child: Scaffold(
-        appBar: isLandscape
+        appBar: isLandscape && !showAppBarInLandscape
             ? null
             : AppBar(
                 leading: IconButton(
@@ -42,6 +44,7 @@ class StandalonePageShell extends StatelessWidget {
                   onPressed: () => _goBack(context),
                 ),
                 title: title == null ? null : Text(title!),
+                centerTitle: true,
                 backgroundColor: context.hokTheme.backgroundDeep,
                 surfaceTintColor: Colors.transparent,
               ),

@@ -310,14 +310,6 @@ class _LeaderboardTable extends ConsumerWidget {
           ],
         ),
         AppStatsTableColumn(
-          label: 'KDA',
-          width: 72,
-          cells: [
-            for (final player in players)
-              _MetricText(player.avgKda.toStringAsFixed(1)),
-          ],
-        ),
-        AppStatsTableColumn(
           label: 'Favorite Heroes',
           width: 168,
           cells: [

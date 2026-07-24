@@ -68,7 +68,7 @@ void main() {
     router.go('/');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Tier List'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Tier List'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(router.routeInformationProvider.value.uri.path, '/stats-home');
@@ -174,7 +174,9 @@ void main() {
 
     router.go('/');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Tier List Preview'));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('home-data-section-/stats-home?tab=tier')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'View More').at(1));
     await tester.pumpAndSettle();
@@ -190,7 +192,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'View More').at(2));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/leaderboard');
+    expect(router.routeInformationProvider.value.uri.path, '/stats-home');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['tab'],
+      'rankings',
+    );
 
     router.go('/');
     await tester.pumpAndSettle();

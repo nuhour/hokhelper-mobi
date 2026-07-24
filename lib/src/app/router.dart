@@ -51,11 +51,13 @@ Widget _standalonePage({
   required Widget child,
   String? title,
   bool alwaysUseFallback = false,
+  bool showAppBarInLandscape = false,
 }) {
   return StandalonePageShell(
     fallbackRoute: fallbackRoute,
     title: title,
     alwaysUseFallback: alwaysUseFallback,
+    showAppBarInLandscape: showAppBarInLandscape,
     child: child,
   );
 }
@@ -810,15 +812,25 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/hok-world',
-        builder: (context, state) =>
-            const TopicHubScreen(topicKey: 'hok-world'),
+        builder: (context, state) => _standalonePage(
+          fallbackRoute: '/',
+          title: 'HOK World',
+          alwaysUseFallback: true,
+          showAppBarInLandscape: true,
+          child: const TopicHubScreen(topicKey: 'hok-world', hideHeader: true),
+        ),
         routes: [
           GoRoute(
             path: ':slug',
             builder: (context, state) {
-              return TopicArticleScreen(
-                topicKey: 'hok-world',
-                slug: state.pathParameters['slug'] ?? '',
+              return _standalonePage(
+                fallbackRoute: '/hok-world',
+                title: 'HOK World',
+                showAppBarInLandscape: true,
+                child: TopicArticleScreen(
+                  topicKey: 'hok-world',
+                  slug: state.pathParameters['slug'] ?? '',
+                ),
               );
             },
           ),
@@ -991,7 +1003,9 @@ GoRouter createAppRouter() {
                     path: 'patch-notes',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/',
+                      title: 'Patch Notes',
                       alwaysUseFallback: true,
+                      showAppBarInLandscape: true,
                       child: PatchNotesScreen(
                         initialNoteId: int.tryParse(
                           state.uri.queryParameters['note_id'] ??

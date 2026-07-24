@@ -36,6 +36,7 @@ class AppShell extends StatelessWidget {
                   }),
                 ),
                 child: NavigationBar(
+                  height: 56,
                   selectedIndex: _selectedIndex(location),
                   onDestinationSelected: (index) {
                     context.go(_destinationRoute(index));

@@ -59,6 +59,7 @@ void main() {
     expect(find.text('68.40% win'), findsOneWidget);
     expect(find.text('Pro'), findsOneWidget);
     expect(find.text('Favorite Heroes'), findsOneWidget);
+    expect(find.text('KDA'), findsNothing);
     expect(find.byTooltip('Diaochan · 99.1'), findsOneWidget);
 
     await tester.tap(find.text('Peak'));
