@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/providers/core_providers.dart';
@@ -16,7 +15,6 @@ import '../domain/rank_fortune.dart';
 
 const _fortuneGold = Color(0xFFF6C453);
 const _fortuneRed = Color(0xFFE5484D);
-const _fortuneBlue = Color(0xFF4F7CFF);
 
 final rankFortuneRepositoryProvider = Provider<RankFortuneRepository>((ref) {
   return RankFortuneRepository(apiClient: ref.watch(apiClientProvider));
@@ -40,48 +38,21 @@ class RankFortuneScreen extends ConsumerStatefulWidget {
   ConsumerState<RankFortuneScreen> createState() => _RankFortuneScreenState();
 }
 
-class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
-    with WidgetsBindingObserver {
+class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
   RankFortuneRecord? _localToday;
   List<RankFortuneRecord>? _localRows;
   List<RankFortuneRecord> _visibleRows = const [];
-  List<RankFortuneCatalogEntry>? _localCatalog;
   bool? _localCanDraw;
   bool _isDrawing = false;
-  bool _sensorAvailable = true;
-  bool _canShakeDraw = false;
-  int _shakePeaks = 0;
-  DateTime? _shakeWindowStartedAt;
-  DateTime? _lastShakePeakAt;
-  DateTime? _lastShakeTriggeredAt;
-  StreamSubscription<UserAccelerometerEvent>? _motionSubscription;
+  bool _canDraw = false;
   WebViewController? _instrumentController;
   Completer<void>? _instrumentSpinCompleter;
   bool _instrumentReady = false;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _listenForShake();
-  }
-
-  @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _motionSubscription?.cancel();
     _instrumentSpinCompleter?.complete();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _listenForShake();
-    } else if (state != AppLifecycleState.hidden) {
-      _motionSubscription?.cancel();
-      _motionSubscription = null;
-    }
   }
 
   @override
@@ -99,7 +70,7 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
         final today = _localToday ?? history.today;
         final rows = _localRows ?? history.rows;
         final canDraw = _localCanDraw ?? history.canDraw;
-        _canShakeDraw = canDraw && !_isDrawing;
+        _canDraw = canDraw && !_isDrawing;
         _visibleRows = rows;
 
         return LayoutBuilder(
@@ -121,7 +92,6 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
                   _FortuneActionPanel(
                     today: today,
                     isDrawing: _isDrawing,
-                    sensorAvailable: _sensorAvailable,
                     onDraw: canDraw && !_isDrawing ? _drawToday : null,
                   ),
                   Expanded(child: _FortuneTrendPanel(rows: rows)),
@@ -140,58 +110,6 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
     } else {
       ref.invalidate(rankFortuneHistoryByDaysProvider(days));
     }
-  }
-
-  void _listenForShake() {
-    if (_motionSubscription != null) return;
-    _motionSubscription =
-        userAccelerometerEventStream(
-          samplingPeriod: SensorInterval.gameInterval,
-        ).listen(
-          _handleMotion,
-          onError: (_) {
-            if (mounted) setState(() => _sensorAvailable = false);
-            _motionSubscription = null;
-          },
-          cancelOnError: true,
-        );
-  }
-
-  void _handleMotion(UserAccelerometerEvent event) {
-    if (!_canShakeDraw || _isDrawing) {
-      _shakePeaks = 0;
-      _shakeWindowStartedAt = null;
-      return;
-    }
-    final now = DateTime.now();
-    if (_lastShakeTriggeredAt != null &&
-        now.difference(_lastShakeTriggeredAt!) <
-            const Duration(milliseconds: 2400)) {
-      return;
-    }
-    final magnitude = math.sqrt(
-      event.x * event.x + event.y * event.y + event.z * event.z,
-    );
-    if (magnitude < 12.5 ||
-        (_lastShakePeakAt != null &&
-            now.difference(_lastShakePeakAt!) <
-                const Duration(milliseconds: 140))) {
-      return;
-    }
-    if (_shakeWindowStartedAt == null ||
-        now.difference(_shakeWindowStartedAt!) >
-            const Duration(milliseconds: 850)) {
-      _shakeWindowStartedAt = now;
-      _shakePeaks = 0;
-    }
-    _lastShakePeakAt = now;
-    _shakePeaks += 1;
-    if (_shakePeaks < 2) return;
-    _lastShakeTriggeredAt = now;
-    _shakePeaks = 0;
-    _shakeWindowStartedAt = null;
-    unawaited(HapticFeedback.mediumImpact());
-    unawaited(_drawToday());
   }
 
   void _handleInstrumentMessage(String message) {
@@ -234,10 +152,10 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
   }
 
   Future<void> _drawToday() async {
-    if (_isDrawing || !_canShakeDraw) return;
+    if (_isDrawing || !_canDraw) return;
     setState(() {
       _isDrawing = true;
-      _canShakeDraw = false;
+      _canDraw = false;
     });
     final drawFuture = ref.read(rankFortuneRepositoryProvider).drawToday();
     final spinFuture = _spinInstrument();
@@ -248,7 +166,6 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
       setState(() {
         _localToday = draw.record;
         _localCanDraw = draw.canDraw;
-        _localCatalog = draw.catalog;
         _localRows = [
           ..._visibleRows.where((row) => row.date != draw.record.date),
           draw.record,
@@ -268,7 +185,7 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
       if (mounted) {
         setState(() {
           _isDrawing = false;
-          _canShakeDraw = _localCanDraw ?? true;
+          _canDraw = _localCanDraw ?? true;
         });
       }
     }
@@ -352,13 +269,11 @@ class _FortuneActionPanel extends StatelessWidget {
   const _FortuneActionPanel({
     required this.today,
     required this.isDrawing,
-    required this.sensorAvailable,
     required this.onDraw,
   });
 
   final RankFortuneRecord? today;
   final bool isDrawing;
-  final bool sensorAvailable;
   final VoidCallback? onDraw;
 
   @override
@@ -366,12 +281,8 @@ class _FortuneActionPanel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: today == null
-          ? _DrawPrompt(
-              isDrawing: isDrawing,
-              sensorAvailable: sensorAvailable,
-              onDraw: onDraw,
-            )
-          : _TodayFortune(record: today!, isDrawing: isDrawing),
+          ? _DrawPrompt(isDrawing: isDrawing, onDraw: onDraw)
+          : _TodayFortune(record: today!),
     );
   }
 }
@@ -401,74 +312,52 @@ class _StageHeader extends StatelessWidget {
 }
 
 class _DrawPrompt extends StatelessWidget {
-  const _DrawPrompt({
-    required this.isDrawing,
-    required this.sensorAvailable,
-    required this.onDraw,
-  });
+  const _DrawPrompt({required this.isDrawing, required this.onDraw});
 
   final bool isDrawing;
-  final bool sensorAvailable;
   final VoidCallback? onDraw;
 
   @override
   Widget build(BuildContext context) {
-    final prompt = isDrawing
-        ? 'Drawing...'
-        : sensorAvailable
-        ? 'Shake / Tap'
-        : 'Tap';
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF090E1C).withValues(alpha: 0.78),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isDrawing
-                ? Icons.motion_photos_on_rounded
-                : Icons.vibration_rounded,
-            color: _fortuneGold,
-            size: 24,
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: FilledButton(
+        onPressed: onDraw,
+        style: FilledButton.styleFrom(
+          backgroundColor: _fortuneRed,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: _fortuneRed.withValues(alpha: 0.58),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              prompt,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          FilledButton(
-            onPressed: onDraw,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(88, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              backgroundColor: _fortuneRed,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(isDrawing ? '...' : 'Tap', maxLines: 1),
-          ),
-        ],
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: isDrawing
+              ? const SizedBox.square(
+                  key: ValueKey('drawing'),
+                  dimension: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text(
+                  'Try My Luck',
+                  key: ValueKey('ready'),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+                ),
+        ),
       ),
     );
   }
 }
 
 class _TodayFortune extends StatelessWidget {
-  const _TodayFortune({required this.record, required this.isDrawing});
+  const _TodayFortune({required this.record});
 
   final RankFortuneRecord record;
-  final bool isDrawing;
 
   @override
   Widget build(BuildContext context) {
@@ -481,162 +370,72 @@ class _TodayFortune extends StatelessWidget {
         border: Border.all(color: _fortuneGold.withValues(alpha: 0.45)),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          _FortuneSlip(title: copy.title),
-          const SizedBox(width: 12),
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.only(right: 42),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 38),
-                  child: Text(
-                    isDrawing ? 'Drawing...' : copy.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: scoreColor,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 17,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Text(
-                  copy.description,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  copy.title,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.76),
-                    fontSize: 12,
-                    height: 1.25,
+                    color: scoreColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _ResultBadge(
-                      icon: Icons.auto_graph_rounded,
-                      label: 'Fortune Value',
-                      value: '${record.score}',
-                      color: scoreColor,
+                    Text(
+                      '${record.score}',
+                      style: TextStyle(
+                        color: scoreColor,
+                        fontSize: 30,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    const _ResultBadge(
-                      icon: Icons.event_available_rounded,
-                      label: 'Already drawn today',
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        'Fortune Value',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.62),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  copy.description,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.76),
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            tooltip: 'Share Fortune',
-            visualDensity: VisualDensity.compact,
-            onPressed: () => _shareFortune(context, record, copy),
-            icon: const Icon(
-              Icons.ios_share_outlined,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FortuneSlip extends StatelessWidget {
-  const _FortuneSlip({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 104,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFFBEB), Color(0xFFFDE68A)],
-        ),
-        border: Border.all(color: const Color(0xFFB45309), width: 1.5),
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: [
-          BoxShadow(
-            color: _fortuneGold.withValues(alpha: 0.18),
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(height: 10, color: const Color(0xFFB91C1C)),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  title.split(' ').join('\n'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFF111827),
-                    fontSize: 12,
-                    height: 1.05,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: IconButton(
+              tooltip: 'Share Fortune',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _shareFortune(context, record, copy),
+              icon: const Icon(
+                Icons.ios_share_outlined,
+                color: Colors.white,
+                size: 20,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResultBadge extends StatelessWidget {
-  const _ResultBadge({
-    required this.icon,
-    required this.label,
-    this.value,
-    this.color = _fortuneGold,
-  });
-
-  final IconData icon;
-  final String label;
-  final String? value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 13),
-          const SizedBox(width: 4),
-          Text(
-            value == null ? label : '$label: $value',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.86),
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -867,29 +666,6 @@ Future<void> _shareFortune(
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(const SnackBar(content: Text('Fortune link copied')));
-}
-
-int _currentStreak(List<RankFortuneRecord> rows) {
-  if (rows.isEmpty) return 0;
-  final dates =
-      rows
-          .map((row) => DateTime.tryParse(row.date))
-          .whereType<DateTime>()
-          .toList(growable: false)
-        ..sort();
-  if (dates.length != rows.length) return rows.length;
-  var streak = 1;
-  for (var index = dates.length - 1; index > 0; index -= 1) {
-    final expected = dates[index].subtract(const Duration(days: 1));
-    final previous = dates[index - 1];
-    if (previous.year != expected.year ||
-        previous.month != expected.month ||
-        previous.day != expected.day) {
-      break;
-    }
-    streak += 1;
-  }
-  return streak;
 }
 
 ({String title, String description}) _fortuneCopy(String typeId) {

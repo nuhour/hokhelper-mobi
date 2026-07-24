@@ -118,13 +118,14 @@ void main() {
 
     expect(find.text('Rank Fortune'), findsOneWidget);
     expect(find.text('A daily ritual before your ranked queue'), findsNothing);
-    expect(find.text('Great Fortune'), findsWidgets);
+    expect(find.text('Great Fortune'), findsOneWidget);
     expect(
       find.text('Perfect day for ranked, win streak incoming!'),
       findsOneWidget,
     );
-    expect(find.text('Fortune Value: 92'), findsOneWidget);
-    expect(find.text('Already drawn today'), findsOneWidget);
+    expect(find.text('92'), findsOneWidget);
+    expect(find.text('Fortune Value'), findsOneWidget);
+    expect(find.text('Already drawn today'), findsNothing);
   });
 
   testWidgets('draw button updates today fortune', (tester) async {
@@ -147,17 +148,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Shake / Tap'), findsOneWidget);
-    expect(find.byIcon(Icons.vibration_rounded), findsOneWidget);
-    await tester.tap(find.text('Tap'));
+    expect(find.text('Try My Luck'), findsOneWidget);
+    expect(find.textContaining('Shake'), findsNothing);
+    expect(find.text('Tap'), findsNothing);
+    await tester.tap(find.text('Try My Luck'));
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('Legendary Luck'), findsNothing);
-    expect(find.text('Drawing...'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
     await tester.pumpAndSettle();
 
-    expect(find.text('Legendary Luck'), findsWidgets);
-    expect(find.text('Fortune Value: 99'), findsOneWidget);
+    expect(find.text('Legendary Luck'), findsOneWidget);
+    expect(find.text('99'), findsOneWidget);
   });
 
   testWidgets('shows fortune drawing feedback while draw is pending', (
@@ -186,10 +188,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Tap'));
+    await tester.tap(find.text('Try My Luck'));
     await tester.pump();
 
-    expect(find.text('Drawing...'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     completer.complete(
       const RankFortuneDraw(
@@ -206,7 +208,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Legendary Luck'), findsWidgets);
+    expect(find.text('Legendary Luck'), findsOneWidget);
   });
 
   testWidgets('copies today fortune share links', (tester) async {
@@ -300,7 +302,7 @@ void main() {
 
     expect(find.text('30d Average'), findsNothing);
     expect(find.text('Best'), findsNothing);
-    expect(find.text('Fortune Value: 31'), findsOneWidget);
+    expect(find.text('31'), findsOneWidget);
     expect(find.text('Lowest'), findsNothing);
     expect(find.text('Streak'), findsNothing);
   });
