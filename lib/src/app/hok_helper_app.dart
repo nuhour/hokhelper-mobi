@@ -7,6 +7,7 @@ import '../core/i18n/app_localizations.dart';
 import '../core/theme/app_theme.dart';
 import '../features/settings/presentation/settings_controller.dart';
 import 'router.dart';
+import 'startup_splash.dart';
 
 class HokHelperApp extends ConsumerWidget {
   HokHelperApp({super.key, GoRouter? router})
@@ -21,32 +22,34 @@ class HokHelperApp extends ConsumerWidget {
         ? ThemeMode.light
         : ThemeMode.dark;
 
-    return MaterialApp.router(
-      title: 'HOK Helper',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: themeMode,
-      locale: settings == null ? null : Locale(settings.languageCode),
-      routerConfig: _router,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) {
-        final textScale = MediaQuery.textScalerOf(
-          context,
-        ).scale(1).clamp(0.9, 1.0).toDouble();
-        return MediaQuery(
-          data: MediaQuery.of(
+    return StartupSplash(
+      child: MaterialApp.router(
+        title: 'HOK Helper',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeMode,
+        locale: settings == null ? null : Locale(settings.languageCode),
+        routerConfig: _router,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) {
+          final textScale = MediaQuery.textScalerOf(
             context,
-          ).copyWith(textScaler: TextScaler.linear(textScale)),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
+          ).scale(1).clamp(0.9, 1.0).toDouble();
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
+      ),
     );
   }
 }
