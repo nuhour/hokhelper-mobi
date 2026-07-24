@@ -117,12 +117,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Rank Fortune'), findsOneWidget);
+    expect(find.text('A daily ritual before your ranked queue'), findsNothing);
+    expect(find.text('Great Fortune'), findsWidgets);
     expect(
-      find.text('A daily ritual before your ranked queue'),
+      find.text('Perfect day for ranked, win streak incoming!'),
       findsOneWidget,
     );
-    expect(find.text('Great Luck'), findsWidgets);
-    expect(find.text('92'), findsWidgets);
+    expect(find.text('Fortune Value: 92'), findsOneWidget);
+    expect(find.text('Already drawn today'), findsOneWidget);
   });
 
   testWidgets('draw button updates today fortune', (tester) async {
@@ -145,13 +147,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Your daily sign is waiting'), findsOneWidget);
+    expect(find.text('Shake / Tap'), findsOneWidget);
     expect(find.byIcon(Icons.vibration_rounded), findsOneWidget);
-    await tester.tap(find.text('Tap to draw instead'));
+    await tester.tap(find.text('Tap'));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Legendary Luck'), findsNothing);
+    expect(find.text('Drawing...'), findsOneWidget);
     await tester.pumpAndSettle();
 
     expect(find.text('Legendary Luck'), findsWidgets);
-    expect(find.text('99'), findsWidgets);
+    expect(find.text('Fortune Value: 99'), findsOneWidget);
   });
 
   testWidgets('shows fortune drawing feedback while draw is pending', (
@@ -180,10 +186,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Tap to draw instead'));
+    await tester.tap(find.text('Tap'));
     await tester.pump();
 
-    expect(find.text('Shaking the fortune instrument...'), findsOneWidget);
+    expect(find.text('Drawing...'), findsOneWidget);
 
     completer.complete(
       const RankFortuneDraw(
@@ -253,7 +259,7 @@ void main() {
     expect(clipboardCall, isNotNull);
     expect(clipboardCall!.arguments, {
       'text':
-          'I just drew Great Luck on HOK Helper today! Fortune Value: 92\n/tools/rank-fortune',
+          "I just drew 【Great Fortune】 on HOK Helper today! Perfect day for ranked, win streak incoming! Who's ready to rank up with me? #HonorOfKings #HOKHelper\n/tools/rank-fortune",
     });
     expect(find.text('Fortune link copied'), findsOneWidget);
   });
@@ -294,7 +300,7 @@ void main() {
 
     expect(find.text('30d Average'), findsNothing);
     expect(find.text('Best'), findsNothing);
-    expect(find.text('31'), findsWidgets);
+    expect(find.text('Fortune Value: 31'), findsOneWidget);
     expect(find.text('Lowest'), findsNothing);
     expect(find.text('Streak'), findsNothing);
   });

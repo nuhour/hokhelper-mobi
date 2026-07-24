@@ -120,7 +120,6 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
                   ),
                   _FortuneActionPanel(
                     today: today,
-                    canDraw: canDraw,
                     isDrawing: _isDrawing,
                     sensorAvailable: _sensorAvailable,
                     onDraw: canDraw && !_isDrawing ? _drawToday : null,
@@ -243,8 +242,8 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
     final drawFuture = ref.read(rankFortuneRepositoryProvider).drawToday();
     final spinFuture = _spinInstrument();
     try {
-      final draw = await drawFuture;
       await spinFuture;
+      final draw = await drawFuture;
       if (!mounted) return;
       setState(() {
         _localToday = draw.record;
@@ -352,14 +351,12 @@ class _FortuneStage extends StatelessWidget {
 class _FortuneActionPanel extends StatelessWidget {
   const _FortuneActionPanel({
     required this.today,
-    required this.canDraw,
     required this.isDrawing,
     required this.sensorAvailable,
     required this.onDraw,
   });
 
   final RankFortuneRecord? today;
-  final bool canDraw;
   final bool isDrawing;
   final bool sensorAvailable;
   final VoidCallback? onDraw;
@@ -370,7 +367,6 @@ class _FortuneActionPanel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: today == null
           ? _DrawPrompt(
-              canDraw: canDraw,
               isDrawing: isDrawing,
               sensorAvailable: sensorAvailable,
               onDraw: onDraw,
@@ -389,31 +385,14 @@ class _StageHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Rank Fortune',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 21,
-                  fontWeight: FontWeight.w900,
-                  shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'A daily ritual before your ranked queue',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.78),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
-                ),
-              ),
-            ],
+          child: const Text(
+            'Rank Fortune',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
+            ),
           ),
         ),
       ],
@@ -423,21 +402,24 @@ class _StageHeader extends StatelessWidget {
 
 class _DrawPrompt extends StatelessWidget {
   const _DrawPrompt({
-    required this.canDraw,
     required this.isDrawing,
     required this.sensorAvailable,
     required this.onDraw,
   });
 
-  final bool canDraw;
   final bool isDrawing;
   final bool sensorAvailable;
   final VoidCallback? onDraw;
 
   @override
   Widget build(BuildContext context) {
+    final prompt = isDrawing
+        ? 'Drawing...'
+        : sensorAvailable
+        ? 'Shake / Tap'
+        : 'Tap';
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
       decoration: BoxDecoration(
         color: const Color(0xFF090E1C).withValues(alpha: 0.78),
         border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
@@ -454,32 +436,15 @@ class _DrawPrompt extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isDrawing
-                      ? 'Shaking the fortune instrument...'
-                      : 'Your daily sign is waiting',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  sensorAvailable
-                      ? 'Shake your phone or tap to draw'
-                      : 'Tap to draw your ranked omen',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.64),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
+            child: Text(
+              prompt,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -491,14 +456,7 @@ class _DrawPrompt extends StatelessWidget {
               backgroundColor: _fortuneRed,
               foregroundColor: Colors.white,
             ),
-            child: Text(
-              isDrawing
-                  ? 'Drawing...'
-                  : canDraw
-                  ? 'Tap to draw instead'
-                  : 'Done',
-              maxLines: 1,
-            ),
+            child: Text(isDrawing ? '...' : 'Tap', maxLines: 1),
           ),
         ],
       ),
@@ -515,72 +473,69 @@ class _TodayFortune extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = _fortuneCopy(record.typeId);
-    return Stack(
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(14, 11, 52, 11),
-          decoration: BoxDecoration(
-            color: const Color(0xFF090E1C).withValues(alpha: 0.82),
-            border: Border.all(color: _fortuneGold.withValues(alpha: 0.45)),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _scoreColor(
-                    context,
-                    record.score,
-                  ).withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _scoreColor(context, record.score)),
-                ),
-                child: Text(
-                  '${record.score}',
-                  style: TextStyle(
-                    color: _scoreColor(context, record.score),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
+    final scoreColor = _scoreColor(context, record.score);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF090E1C).withValues(alpha: 0.88),
+        border: Border.all(color: _fortuneGold.withValues(alpha: 0.45)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _FortuneSlip(title: copy.title),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 38),
+                  child: Text(
+                    isDrawing ? 'Drawing...' : copy.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: scoreColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 17,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 4),
+                Text(
+                  copy.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.76),
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(
-                      isDrawing ? 'Recasting your omen...' : copy.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
+                    _ResultBadge(
+                      icon: Icons.auto_graph_rounded,
+                      label: 'Fortune Value',
+                      value: '${record.score}',
+                      color: scoreColor,
                     ),
-                    Text(
-                      copy.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.66),
-                        fontSize: 11,
-                      ),
+                    const _ResultBadge(
+                      icon: Icons.event_available_rounded,
+                      label: 'Already drawn today',
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        Positioned(
-          top: 5,
-          right: 4,
-          child: IconButton(
+          IconButton(
             tooltip: 'Share Fortune',
             visualDensity: VisualDensity.compact,
             onPressed: () => _shareFortune(context, record, copy),
@@ -590,8 +545,102 @@ class _TodayFortune extends StatelessWidget {
               size: 20,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FortuneSlip extends StatelessWidget {
+  const _FortuneSlip({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 104,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFFBEB), Color(0xFFFDE68A)],
         ),
-      ],
+        border: Border.all(color: const Color(0xFFB45309), width: 1.5),
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(
+            color: _fortuneGold.withValues(alpha: 0.18),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(height: 10, color: const Color(0xFFB91C1C)),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title.split(' ').join('\n'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 12,
+                    height: 1.05,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResultBadge extends StatelessWidget {
+  const _ResultBadge({
+    required this.icon,
+    required this.label,
+    this.value,
+    this.color = _fortuneGold,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 4),
+          Text(
+            value == null ? label : '$label: $value',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.86),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -810,7 +859,7 @@ Future<void> _shareFortune(
   await Clipboard.setData(
     ClipboardData(
       text:
-          'I just drew ${copy.title} on HOK Helper today! Fortune Value: ${record.score}\n/tools/rank-fortune',
+          "I just drew 【${copy.title}】 on HOK Helper today! ${copy.description} Who's ready to rank up with me? #HonorOfKings #HOKHelper\n/tools/rank-fortune",
     ),
   );
   if (!context.mounted) return;
@@ -851,7 +900,7 @@ int _currentStreak(List<RankFortuneRecord> rows) {
     ),
     'destiny_surge' => (
       title: 'Destiny Surge',
-      description: 'Momentum is on your side. Climb aggressively.',
+      description: 'Momentum is on your side, climb aggressively.',
     ),
     'lucky_star' => (
       title: 'Lucky Star',
@@ -875,7 +924,7 @@ int _currentStreak(List<RankFortuneRecord> rows) {
     ),
     'calm_focus' => (
       title: 'Calm Focus',
-      description: 'Lower error rate and clearer decisions.',
+      description: 'Lower error rate, clearer decisions.',
     ),
     'even_match' => (
       title: 'Even Match',
@@ -887,11 +936,11 @@ int _currentStreak(List<RankFortuneRecord> rows) {
     ),
     'queue_trap' => (
       title: 'Queue Trap',
-      description: 'Tough lobbies expected. Reduce your game count.',
+      description: 'Tough lobbies expected, reduce game count.',
     ),
     'tilt_alert' => (
       title: 'Tilt Alert',
-      description: 'Mental risk is high. Take breaks between games.',
+      description: 'Mental risk is high, take breaks between games.',
     ),
     'bad_timing' => (
       title: 'Bad Timing',
@@ -899,23 +948,39 @@ int _currentStreak(List<RankFortuneRecord> rows) {
     ),
     'lose_streak_risk' => (
       title: 'Lose Streak Risk',
-      description: 'Not an ideal day for forcing a climb.',
+      description: 'Not ideal for forcing a climb.',
     ),
     'doom_queue' => (
       title: 'Doom Queue',
-      description: 'High-variance day. Consider casual modes.',
+      description: 'High-variance day, consider casual modes.',
     ),
     'legendary' => (
       title: 'Legendary Luck',
       description: 'Queue with your best hero and call tempo early.',
     ),
     'great' => (
-      title: 'Great Luck',
-      description: 'Push your main role and play around objective windows.',
+      title: 'Great Fortune',
+      description: 'Perfect day for ranked, win streak incoming!',
     ),
     'good' => (
-      title: 'Good Luck',
-      description: 'Stable climb energy. Draft comfort picks first.',
+      title: 'Good Fortune',
+      description: "Good luck today, play steady and you'll climb.",
+    ),
+    'fair' => (
+      title: 'Fair Fortune',
+      description: 'Stable condition, good for duo queue.',
+    ),
+    'neutral' => (
+      title: 'Neutral',
+      description: 'Average luck, depends entirely on your skills.',
+    ),
+    'bad' => (
+      title: 'Bad Fortune',
+      description: 'Not in the best shape, maybe play some casual matches.',
+    ),
+    'terrible' => (
+      title: 'Terrible Fortune',
+      description: 'Avoid ranked today, lose streak warning!',
     ),
     'steady' => (
       title: 'Steady Luck',
