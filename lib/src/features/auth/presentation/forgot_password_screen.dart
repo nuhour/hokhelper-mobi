@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'auth_page_scaffold.dart';
 import 'auth_controller.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -33,8 +34,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final isLoading = authState.isLoading;
     final error = authState.hasError ? authState.error.toString() : null;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reset password')),
+    return AuthPageScaffold(
+      title: 'Reset password',
+      fallbackRoute: '/login',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -137,7 +139,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: isLoading ? null : () => context.go('/login'),
+                  onPressed: isLoading ? null : () => _backToLogin(context),
                   child: const Text('Back to login'),
                 ),
               ],
@@ -146,6 +148,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         ),
       ),
     );
+  }
+
+  void _backToLogin(BuildContext context) {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+    } else {
+      context.go('/login');
+    }
   }
 
   Future<void> _sendCode() async {

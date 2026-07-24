@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/theme/app_theme.dart';
+import 'auth_page_scaffold.dart';
 import 'auth_controller.dart';
 
 typedef OAuthUrlOpener = Future<void> Function(String url);
@@ -55,115 +57,181 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+    return AuthPageScaffold(
+      title: 'Sign in',
+      fallbackRoute: '/me',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              shrinkWrap: true,
-              children: [
-                Text(
-                  'Welcome back',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.email],
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  enabled: !isLoading,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  textInputAction: TextInputAction.done,
-                  autofillHints: const [AutofillHints.password],
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
-                  enabled: !isLoading,
-                  onSubmitted: (_) => _submit(),
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   Text(
-                    error,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                    'Welcome to HOK Helper',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                ],
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: isLoading || isOAuthLoading ? null : _submit,
-                  child: isLoading
-                      ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Login'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        'or',
-                        style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(height: 6),
+                  Text(
+                    'Sign in to sync your builds, tier lists, and community activity.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: context.hokTheme.surfaceSlate,
+                      border: Border.all(color: context.hokTheme.outlineSoft),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Quick sign in',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceStrong,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Continue securely with your existing account.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
+                        ),
+                        const SizedBox(height: 14),
+                        _OAuthButton(
+                          provider: 'google',
+                          label: 'Continue with Google',
+                          isLoading: _oauthLoadingProvider == 'google',
+                          enabled: !isLoading && !isOAuthLoading,
+                          onPressed: () => _startOAuth('google'),
+                        ),
+                        const SizedBox(height: 10),
+                        _OAuthButton(
+                          provider: 'discord',
+                          label: 'Continue with Discord',
+                          isLoading: _oauthLoadingProvider == 'discord',
+                          enabled: !isLoading && !isOAuthLoading,
+                          onPressed: () => _startOAuth('discord'),
+                        ),
+                        if (_oauthError != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _oauthError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'or continue with email',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceMuted,
+                              ),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.email],
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    enabled: !isLoading,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                    enabled: !isLoading,
+                    onSubmitted: (_) => _submit(),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: isLoading
+                          ? null
+                          : () => context.go('/forgot-password'),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      error,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
                       ),
                     ),
-                    const Expanded(child: Divider()),
                   ],
-                ),
-                const SizedBox(height: 16),
-                _OAuthButton(
-                  label: 'Sign in with Google',
-                  icon: Icons.g_mobiledata_rounded,
-                  isLoading: _oauthLoadingProvider == 'google',
-                  enabled: !isLoading && !isOAuthLoading,
-                  onPressed: () => _startOAuth('google'),
-                ),
-                const SizedBox(height: 10),
-                _OAuthButton(
-                  label: 'Sign in with Discord',
-                  icon: Icons.discord_rounded,
-                  isLoading: _oauthLoadingProvider == 'discord',
-                  enabled: !isLoading && !isOAuthLoading,
-                  onPressed: () => _startOAuth('discord'),
-                ),
-                if (_oauthError != null) ...[
                   const SizedBox(height: 12),
-                  Text(
-                    _oauthError!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                  FilledButton(
+                    onPressed: isLoading || isOAuthLoading ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
                     ),
+                    child: isLoading
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Login'),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'New to HOK Helper?',
+                        style: TextStyle(
+                          color: context.hokTheme.onSurfaceMuted,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => context.go('/register'),
+                        child: const Text('Create account'),
+                      ),
+                    ],
                   ),
                 ],
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => context.go('/forgot-password'),
-                  child: const Text('Forgot password?'),
-                ),
-                TextButton(
-                  onPressed: isLoading ? null : () => context.go('/register'),
-                  child: const Text('Create account'),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -209,30 +277,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 class _OAuthButton extends StatelessWidget {
   const _OAuthButton({
+    required this.provider,
     required this.label,
-    required this.icon,
     required this.isLoading,
     required this.enabled,
     required this.onPressed,
   });
 
+  final String provider;
   final String label;
-  final IconData icon;
   final bool isLoading;
   final bool enabled;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final isGoogle = provider == 'google';
+    final backgroundColor = isGoogle ? Colors.white : const Color(0xFF5865F2);
+    final foregroundColor = isGoogle ? const Color(0xFF202124) : Colors.white;
+
     return OutlinedButton.icon(
       onPressed: enabled ? onPressed : null,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(54),
+        backgroundColor: backgroundColor,
+        foregroundColor: foregroundColor,
+        disabledBackgroundColor: backgroundColor.withValues(alpha: 0.5),
+        disabledForegroundColor: foregroundColor.withValues(alpha: 0.65),
+        side: BorderSide(
+          color: isGoogle ? const Color(0xFFDADCE0) : const Color(0xFF7289DA),
+        ),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+      ),
       icon: isLoading
-          ? const SizedBox.square(
+          ? SizedBox.square(
               dimension: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: foregroundColor,
+              ),
             )
-          : Icon(icon),
+          : isGoogle
+          ? const _GoogleMark()
+          : const Icon(Icons.discord_rounded, size: 22),
       label: Text(label),
+    );
+  }
+}
+
+class _GoogleMark extends StatelessWidget {
+  const _GoogleMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.square(
+      dimension: 22,
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            color: Color(0xFF4285F4),
+            fontSize: 19,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
     );
   }
 }

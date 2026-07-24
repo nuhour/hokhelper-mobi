@@ -124,6 +124,71 @@ void main() {
           .text,
       AppConfig.loginPassword,
     );
+    expect(
+      tester
+          .getTopLeft(
+            find.widgetWithText(OutlinedButton, 'Continue with Google'),
+          )
+          .dy,
+      lessThan(tester.getTopLeft(find.widgetWithText(TextField, 'Email')).dy),
+    );
+  });
+
+  testWidgets('login back button returns to its source page', (tester) async {
+    final router = GoRouter(
+      initialLocation: '/source',
+      routes: [
+        GoRoute(
+          path: '/source',
+          builder: (context, state) => Scaffold(
+            body: FilledButton(
+              onPressed: () => context.push('/login'),
+              child: const Text('Open login'),
+            ),
+          ),
+        ),
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [tokenStoreProvider.overrideWithValue(_NoopTokenStore())],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.tap(find.text('Open login'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('auth-back-/me')));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/source');
+  });
+
+  testWidgets('register back button falls back to login', (tester) async {
+    final router = GoRouter(
+      initialLocation: '/register',
+      routes: [
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [tokenStoreProvider.overrideWithValue(_NoopTokenStore())],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('auth-back-/login')));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/login');
   });
 
   testWidgets('login screen links to register', (tester) async {
@@ -223,10 +288,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     await tester.ensureVisible(
-      find.widgetWithText(OutlinedButton, 'Sign in with Google'),
+      find.widgetWithText(OutlinedButton, 'Continue with Google'),
     );
     await tester.tap(
-      find.widgetWithText(OutlinedButton, 'Sign in with Google'),
+      find.widgetWithText(OutlinedButton, 'Continue with Google'),
     );
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -238,7 +303,7 @@ void main() {
     expect(openedUrls.single, contains('https://oauth.example.test/google'));
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, 'Sign in with Discord'),
+      find.widgetWithText(OutlinedButton, 'Continue with Discord'),
     );
     await tester.pump(const Duration(milliseconds: 300));
 

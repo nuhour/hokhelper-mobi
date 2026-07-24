@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import 'auth_page_scaffold.dart';
 import 'auth_controller.dart';
 
 class OAuthCallbackScreen extends ConsumerStatefulWidget {
@@ -66,7 +67,9 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
   Widget build(BuildContext context) {
     final hasError = _errorMessage != null;
 
-    return Scaffold(
+    return AuthPageScaffold(
+      title: '${_providerName(widget.provider)} sign in',
+      fallbackRoute: '/login',
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -133,4 +136,9 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
       ),
     );
   }
+}
+
+String _providerName(String provider) {
+  if (provider.isEmpty) return 'Third-party';
+  return '${provider[0].toUpperCase()}${provider.substring(1)}';
 }
