@@ -19,38 +19,56 @@ class AppShell extends StatelessWidget {
       body: SafeArea(child: navigationShell),
       bottomNavigationBar: isLandscape
           ? null
-          : NavigationBar(
-              selectedIndex: _selectedIndex(location),
-              onDestinationSelected: (index) {
-                context.go(_destinationRoute(index));
-              },
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon: const Icon(Icons.home),
-                  label: l10n.navHome,
+          : MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.noScaling),
+              child: NavigationBarTheme(
+                data: NavigationBarTheme.of(context).copyWith(
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    return Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
+                      height: 1,
+                      fontWeight: states.contains(WidgetState.selected)
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                    );
+                  }),
                 ),
-                NavigationDestination(
-                  icon: const Icon(Icons.query_stats_outlined),
-                  selectedIcon: const Icon(Icons.query_stats),
-                  label: l10n.navStats,
+                child: NavigationBar(
+                  selectedIndex: _selectedIndex(location),
+                  onDestinationSelected: (index) {
+                    context.go(_destinationRoute(index));
+                  },
+                  destinations: [
+                    NavigationDestination(
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon: const Icon(Icons.home),
+                      label: l10n.navHome,
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.query_stats_outlined),
+                      selectedIcon: const Icon(Icons.query_stats),
+                      label: l10n.navStats,
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.forum_outlined),
+                      selectedIcon: const Icon(Icons.forum),
+                      label: l10n.navCommunity,
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.handyman_outlined),
+                      selectedIcon: const Icon(Icons.handyman_rounded),
+                      label: l10n.navTools,
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.person_outline),
+                      selectedIcon: const Icon(Icons.person),
+                      label: l10n.navMe,
+                    ),
+                  ],
                 ),
-                NavigationDestination(
-                  icon: const Icon(Icons.forum_outlined),
-                  selectedIcon: const Icon(Icons.forum),
-                  label: l10n.navCommunity,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.handyman_outlined),
-                  selectedIcon: const Icon(Icons.handyman_rounded),
-                  label: l10n.navTools,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.person_outline),
-                  selectedIcon: const Icon(Icons.person),
-                  label: l10n.navMe,
-                ),
-              ],
+              ),
             ),
     );
   }

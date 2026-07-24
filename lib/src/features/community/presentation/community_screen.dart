@@ -236,9 +236,31 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: _CommunityTopTabs(
-              selectedIndex: _selectedPage,
-              onSelected: _selectPage,
+            child: SizedBox(
+              height: 48,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned.fill(
+                    right: 42,
+                    child: _CommunityTopTabs(
+                      selectedIndex: _selectedPage,
+                      onSelected: _selectPage,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      key: const ValueKey('community-join-us'),
+                      tooltip: AppLocalizations.of(
+                        context,
+                      ).translate('communityJoinUs'),
+                      onPressed: () => _showCommunityJoinSheet(context),
+                      icon: const Icon(Icons.groups_2_outlined),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -270,6 +292,274 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       ),
     );
   }
+}
+
+const _communitySocialChannels = [
+  _CommunitySocialChannel(
+    label: 'Telegram',
+    url: 'https://t.me/hokhelper',
+    icon: Icons.send_rounded,
+    color: Color(0xFF38BDF8),
+  ),
+  _CommunitySocialChannel(
+    label: 'Discord',
+    url: 'https://discord.gg/jmVttVkzU',
+    icon: Icons.forum_rounded,
+    color: Color(0xFF818CF8),
+  ),
+  _CommunitySocialChannel(
+    label: 'Instagram',
+    url: 'https://instagram.com/hokhelper',
+    icon: Icons.camera_alt_outlined,
+    color: Color(0xFFF472B6),
+  ),
+  _CommunitySocialChannel(
+    label: 'TikTok',
+    url: 'https://www.tiktok.com/@hokhelper6',
+    icon: Icons.music_note_rounded,
+    color: Color(0xFFF8FAFC),
+  ),
+  _CommunitySocialChannel(
+    label: 'X',
+    url: 'https://twitter.com/hokhelper',
+    icon: Icons.alternate_email_rounded,
+    color: Color(0xFF60A5FA),
+  ),
+  _CommunitySocialChannel(
+    label: 'Facebook',
+    url: 'https://www.facebook.com/hokhelper',
+    icon: Icons.facebook_rounded,
+    color: Color(0xFF3B82F6),
+  ),
+];
+
+class _CommunitySocialChannel {
+  const _CommunitySocialChannel({
+    required this.label,
+    required this.url,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String url;
+  final IconData icon;
+  final Color color;
+}
+
+void _showCommunityJoinSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => const _CommunityJoinSheet(),
+  );
+}
+
+class _CommunityJoinSheet extends ConsumerWidget {
+  const _CommunityJoinSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return SafeArea(
+      top: false,
+      child: Container(
+        key: const ValueKey('community-join-sheet'),
+        decoration: BoxDecoration(
+          color: context.hokTheme.surfaceSlate,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(top: BorderSide(color: context.hokTheme.outlineSoft)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.hokTheme.outlineSoft,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Icon(Icons.groups_2_outlined, color: AppTheme.gold),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.translate('communityJoinTitle'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l10n.close,
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            Text(
+              l10n.translate('communityJoinSubtitle'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.hokTheme.onSurfaceMuted,
+              ),
+            ),
+            const SizedBox(height: 18),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _communitySocialChannels.length + 1,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 3.2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+              ),
+              itemBuilder: (context, index) {
+                if (index == _communitySocialChannels.length) {
+                  return _CommunityChannelButton(
+                    label: l10n.translate('communityWechatGroup'),
+                    icon: Icons.qr_code_2_rounded,
+                    color: const Color(0xFF22C55E),
+                    onTap: () => _showCommunityWechatQr(context, ref),
+                  );
+                }
+                final channel = _communitySocialChannels[index];
+                return _CommunityChannelButton(
+                  label: channel.label,
+                  icon: channel.icon,
+                  color: channel.color,
+                  onTap: () => launchUrl(
+                    Uri.parse(channel.url),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommunityChannelButton extends StatelessWidget {
+  const _CommunityChannelButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: context.hokTheme.surfaceRaised,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: context.hokTheme.onSurfaceStrong,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: context.hokTheme.onSurfaceMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showCommunityWechatQr(BuildContext context, WidgetRef ref) {
+  final l10n = AppLocalizations.of(context);
+  final request = ref.read(apiClientProvider).getJson('/site/wechat-qr');
+  showDialog<void>(
+    context: context,
+    useRootNavigator: true,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(l10n.translate('communityWechatGroup')),
+        content: SizedBox(
+          width: 240,
+          height: 240,
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: request,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    l10n.translate('communityWechatQrFailed'),
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              }
+              final result = snapshot.data?['result'];
+              final qrUrl = result is Map
+                  ? (result['qr_url'] ?? '').toString().trim()
+                  : '';
+              if (qrUrl.isEmpty) {
+                return Center(
+                  child: Text(
+                    l10n.translate('communityWechatQrEmpty'),
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              }
+              return AppImage(
+                url: qrUrl,
+                fit: BoxFit.contain,
+                borderRadius: 8,
+                semanticLabel: l10n.translate('communityWechatGroup'),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.close),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _CommunityTopTabs extends StatelessWidget {

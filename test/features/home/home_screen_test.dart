@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
@@ -46,6 +47,13 @@ Finder _portalMenuScrollable() {
       (widget) =>
           widget is Scrollable && widget.axisDirection == AxisDirection.down,
     ),
+  );
+}
+
+Finder _portalMenuText(String text) {
+  return find.descendant(
+    of: find.byKey(const ValueKey('home-portal-menu-drawer')),
+    matching: find.text(text),
   );
 }
 
@@ -252,44 +260,44 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('站点菜单'), findsNothing);
-    expect(find.text('首页'), findsWidgets);
-    expect(find.text('英雄'), findsWidgets);
-    expect(find.text('图鉴'), findsWidgets);
-    expect(find.text('梯度榜'), findsOneWidget);
-    expect(find.text('强度趋势'), findsOneWidget);
-    expect(find.text('皮肤'), findsWidgets);
-    expect(find.text('CG'), findsOneWidget);
-    expect(find.text('社区'), findsWidgets);
-    expect(find.text('玩家排行榜'), findsOneWidget);
-    expect(find.text('论坛'), findsOneWidget);
-    expect(find.text('爆料'), findsOneWidget);
-    expect(find.text('活动互助'), findsOneWidget);
-    expect(find.text('赛事'), findsOneWidget);
-    expect(find.text('赛程'), findsOneWidget);
-    expect(find.text('赛事统计'), findsOneWidget);
-    expect(find.text('战队'), findsOneWidget);
-    expect(find.text('职业选手'), findsOneWidget);
+    expect(_portalMenuText('Home'), findsWidgets);
+    expect(_portalMenuText('Heroes'), findsOneWidget);
+    expect(_portalMenuText('Gallery'), findsWidgets);
+    expect(_portalMenuText('Tier List'), findsOneWidget);
+    expect(_portalMenuText('Power Trends'), findsOneWidget);
+    expect(_portalMenuText('Skins'), findsOneWidget);
+    expect(_portalMenuText('CG Center'), findsOneWidget);
+    expect(_portalMenuText('Community'), findsOneWidget);
+    expect(_portalMenuText('Player Leaderboard'), findsOneWidget);
+    expect(_portalMenuText('Forum'), findsOneWidget);
+    expect(_portalMenuText('Leaks'), findsOneWidget);
+    expect(_portalMenuText('Event Help'), findsOneWidget);
+    expect(_portalMenuText('Esports'), findsOneWidget);
+    expect(_portalMenuText('Schedule'), findsOneWidget);
+    expect(_portalMenuText('Esports Stats'), findsOneWidget);
+    expect(_portalMenuText('Teams'), findsOneWidget);
+    expect(_portalMenuText('Pro Players'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('工具'),
+      _portalMenuText('Tools'),
       180,
       scrollable: _portalMenuScrollable(),
     );
-    expect(find.text('工具'), findsWidgets);
-    expect(find.text('全局 BP 模拟器'), findsOneWidget);
-    expect(find.text('梯度编辑器'), findsOneWidget);
-    expect(find.text('AI 提示词'), findsOneWidget);
-    expect(find.text('阵容搭配'), findsOneWidget);
-    expect(find.text('出装方案'), findsOneWidget);
-    expect(find.text('局内助手'), findsOneWidget);
-    expect(find.text('上分运势'), findsOneWidget);
+    expect(_portalMenuText('Tools'), findsOneWidget);
+    expect(_portalMenuText('Global BP Simulator'), findsOneWidget);
+    expect(_portalMenuText('Tier List Editor'), findsOneWidget);
+    expect(_portalMenuText('AI Prompts'), findsOneWidget);
+    expect(_portalMenuText('Team Builder'), findsOneWidget);
+    expect(_portalMenuText('Builds'), findsOneWidget);
+    expect(_portalMenuText('Game Assistant'), findsOneWidget);
+    expect(_portalMenuText('Rank Fortune'), findsOneWidget);
 
     expect(find.text('友链'), findsNothing);
     expect(find.text('关于站点'), findsNothing);
     expect(find.text('关系图谱'), findsNothing);
     expect(find.text('王者大陆'), findsNothing);
 
-    await tester.tap(find.byTooltip('Close menu'));
+    await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('home-portal-menu-drawer')), findsNothing);
   });
@@ -311,7 +319,7 @@ void main() {
               ],
               'rows': [
                 {
-                  'hero': {'id': 2625, 'name': 'Angela'},
+                  'hero': {'id': 2619, 'heroId': '563', 'name': 'Heino'},
                   'wr': 56.2,
                   'pick_rate': 12.4,
                 },
@@ -365,10 +373,19 @@ void main() {
     );
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
     expect(
-      find.byKey(const ValueKey('home-hero-avatar-2625')),
+      find.byKey(const ValueKey('home-hero-avatar-2619')),
       findsAtLeastNWidgets(1),
     );
-    expect(find.text('Angela'), findsNothing);
+    final heinoImage = tester.widget<CachedNetworkImage>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('home-hero-avatar-2619')),
+            matching: find.byType(CachedNetworkImage),
+          )
+          .first,
+    );
+    expect(heinoImage.imageUrl, endsWith('/static/game/hero/2619.png'));
+    expect(find.text('Heino'), findsNothing);
 
     await _scrollHomeUntilVisible(tester, find.text('Tier List Preview'));
     expect(find.text('Tier List Preview'), findsOneWidget);
@@ -407,6 +424,69 @@ void main() {
       findsAtLeastNWidgets(1),
     );
     expect(find.textContaining('英雄平衡性调整'), findsNothing);
+  });
+
+  testWidgets('home hero ranking opens hero detail inside the home portal', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: HomeScreen(
+              initialPortalTab: state.uri.queryParameters['tab'],
+              initialHeroId: state.uri.queryParameters['hero_id'],
+            ),
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeStatsProvider.overrideWith(
+            (ref) async => const HomeStats(
+              success: true,
+              message: 'Ready',
+              result: {
+                'hero_ranking_table': {
+                  'columns': [
+                    {'id': 'hero', 'label': 'Hero', 'type': 'hero'},
+                    {'id': 'wr', 'label': 'Win Rate', 'type': 'percent'},
+                  ],
+                  'rows': [
+                    {
+                      'hero': {'id': 2619, 'heroId': '563', 'name': 'Heino'},
+                      'wr': 51.2,
+                    },
+                  ],
+                },
+              },
+            ),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _scrollHomeUntilVisible(
+      tester,
+      find.byKey(const ValueKey('home-hero-open-2619')),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('home-hero-open-2619')));
+    await tester.pump();
+
+    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['tab'],
+      'heroes',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['hero_id'],
+      '2619',
+    );
   });
 
   testWidgets('home screen exposes hokx portal tool and topic entry points', (

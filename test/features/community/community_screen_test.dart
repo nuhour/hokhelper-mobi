@@ -202,6 +202,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('community-join-us')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('community-join-us')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('community-join-sheet')), findsOneWidget);
+    expect(find.text('Discord'), findsOneWidget);
+    expect(find.text('WeChat Group'), findsOneWidget);
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Community'), findsNothing);
     expect(
       find.text('Read hot posts, track leaks, and share event help.'),

@@ -184,7 +184,10 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
                       heroId: _openedHeroId!,
                       onBack: _closeHeroDetail,
                     ),
-              _HomeLandingTab(result: widget.result),
+              _HomeLandingTab(
+                result: widget.result,
+                onHeroSelected: _openHeroDetail,
+              ),
             ],
           ),
         ),
@@ -281,9 +284,10 @@ class _HomePortalTopBar extends StatelessWidget {
 }
 
 class _HomeLandingTab extends StatefulWidget {
-  const _HomeLandingTab({required this.result});
+  const _HomeLandingTab({required this.result, required this.onHeroSelected});
 
   final Map<String, dynamic> result;
+  final ValueChanged<String> onHeroSelected;
 
   @override
   State<_HomeLandingTab> createState() => _HomeLandingTabState();
@@ -319,7 +323,10 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
                     },
                   ),
                   const SizedBox(height: 18),
-                  _HomePortalPreviews(result: widget.result),
+                  _HomePortalPreviews(
+                    result: widget.result,
+                    onHeroSelected: widget.onHeroSelected,
+                  ),
                 ],
               ),
             ),
@@ -336,7 +343,7 @@ void _showPortalMenu(BuildContext context) {
     context: context,
     useRootNavigator: true,
     barrierDismissible: true,
-    barrierLabel: 'Close menu',
+    barrierLabel: AppLocalizations.of(context).close,
     barrierColor: Colors.black.withValues(alpha: 0.62),
     transitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (context, animation, secondaryAnimation) {
@@ -380,50 +387,53 @@ class _PortalMenuSheet extends StatelessWidget {
   const _PortalMenuSheet();
 
   static const _groups = [
-    _PortalMenuGroup(title: '首页', links: [_PortalMenuLink('首页', '/')]),
     _PortalMenuGroup(
-      title: '英雄',
+      titleKey: 'menuHome',
+      links: [_PortalMenuLink('menuHome', '/')],
+    ),
+    _PortalMenuGroup(
+      titleKey: 'menuHeroes',
       links: [
-        _PortalMenuLink('图鉴', '/heroes'),
-        _PortalMenuLink('梯度榜', '/stats-home?tab=tier'),
-        _PortalMenuLink('强度趋势', '/tools/stats?entry=hero_trend'),
+        _PortalMenuLink('menuGallery', '/heroes'),
+        _PortalMenuLink('menuTierList', '/stats-home?tab=tier'),
+        _PortalMenuLink('menuPowerTrends', '/tools/stats?entry=hero_trend'),
       ],
     ),
     _PortalMenuGroup(
-      title: '皮肤',
+      titleKey: 'menuSkins',
       links: [
-        _PortalMenuLink('图鉴', '/content/skins'),
-        _PortalMenuLink('CG', '/content/cgs'),
+        _PortalMenuLink('menuGallery', '/content/skins'),
+        _PortalMenuLink('menuCg', '/content/cgs'),
       ],
     ),
     _PortalMenuGroup(
-      title: '社区',
+      titleKey: 'menuCommunity',
       links: [
-        _PortalMenuLink('玩家排行榜', '/leaderboard'),
-        _PortalMenuLink('论坛', '/content/community'),
-        _PortalMenuLink('爆料', '/content/community?tab=leaks'),
-        _PortalMenuLink('活动互助', '/content/event-assistance'),
+        _PortalMenuLink('menuPlayerLeaderboard', '/leaderboard'),
+        _PortalMenuLink('menuForum', '/content/community'),
+        _PortalMenuLink('menuLeaks', '/content/community?tab=leaks'),
+        _PortalMenuLink('menuEventHelp', '/content/event-assistance'),
       ],
     ),
     _PortalMenuGroup(
-      title: '赛事',
+      titleKey: 'menuEsports',
       links: [
-        _PortalMenuLink('赛程', '/esports/schedule'),
-        _PortalMenuLink('赛事统计', '/esports/stats'),
-        _PortalMenuLink('战队', '/esports/teams'),
-        _PortalMenuLink('职业选手', '/esports/players'),
+        _PortalMenuLink('menuSchedule', '/esports/schedule'),
+        _PortalMenuLink('menuEsportsStats', '/esports/stats'),
+        _PortalMenuLink('menuTeams', '/esports/teams'),
+        _PortalMenuLink('menuProPlayers', '/esports/players'),
       ],
     ),
     _PortalMenuGroup(
-      title: '工具',
+      titleKey: 'menuTools',
       links: [
-        _PortalMenuLink('全局 BP 模拟器', '/tools/bp-simulator'),
-        _PortalMenuLink('梯度编辑器', '/tools/tier-list'),
-        _PortalMenuLink('AI 提示词', '/tools/prompts'),
-        _PortalMenuLink('阵容搭配', '/tools/team-builder'),
-        _PortalMenuLink('出装方案', '/tools/build-sim'),
-        _PortalMenuLink('局内助手', '/tools/game-assistant'),
-        _PortalMenuLink('上分运势', '/tools/rank-fortune'),
+        _PortalMenuLink('menuBpSimulator', '/tools/bp-simulator'),
+        _PortalMenuLink('menuTierEditor', '/tools/tier-list'),
+        _PortalMenuLink('menuAiPrompts', '/tools/prompts'),
+        _PortalMenuLink('menuTeamBuilder', '/tools/team-builder'),
+        _PortalMenuLink('menuBuilds', '/tools/build-sim'),
+        _PortalMenuLink('menuGameAssistant', '/tools/game-assistant'),
+        _PortalMenuLink('menuRankFortune', '/tools/rank-fortune'),
       ],
     ),
   ];
@@ -439,7 +449,7 @@ class _PortalMenuSheet extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: IconButton(
-                tooltip: 'Close menu',
+                tooltip: AppLocalizations.of(context).close,
                 onPressed: () =>
                     Navigator.of(context, rootNavigator: true).pop(),
                 icon: Icon(Icons.close, color: context.hokTheme.onSurfaceMuted),
@@ -465,16 +475,16 @@ class _PortalMenuSheet extends StatelessWidget {
 }
 
 class _PortalMenuGroup {
-  const _PortalMenuGroup({required this.title, required this.links});
+  const _PortalMenuGroup({required this.titleKey, required this.links});
 
-  final String title;
+  final String titleKey;
   final List<_PortalMenuLink> links;
 }
 
 class _PortalMenuLink {
-  const _PortalMenuLink(this.label, this.route);
+  const _PortalMenuLink(this.labelKey, this.route);
 
-  final String label;
+  final String labelKey;
   final String route;
 }
 
@@ -489,7 +499,7 @@ class _PortalMenuGroupView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          group.title,
+          AppLocalizations.of(context).translate(group.titleKey),
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w900,
@@ -532,7 +542,7 @@ class _PortalMenuChip extends StatelessWidget {
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Text(
-            link.label,
+            AppLocalizations.of(context).translate(link.labelKey),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: context.hokTheme.onSurfaceMuted,
               fontWeight: FontWeight.w800,
@@ -1234,9 +1244,13 @@ class _LatestPatchCard extends StatelessWidget {
 }
 
 class _HomePortalPreviews extends StatelessWidget {
-  const _HomePortalPreviews({required this.result});
+  const _HomePortalPreviews({
+    required this.result,
+    required this.onHeroSelected,
+  });
 
   final Map<String, dynamic> result;
+  final ValueChanged<String> onHeroSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1249,7 +1263,11 @@ class _HomePortalPreviews extends StatelessWidget {
     final patchNotes = _readList(result['patch_notes']);
 
     final sections = <Widget>[
-      _HomeHeroRankingTable(rows: heroRows, rawColumns: heroColumns),
+      _HomeHeroRankingTable(
+        rows: heroRows,
+        rawColumns: heroColumns,
+        onHeroSelected: onHeroSelected,
+      ),
       _HomeTierPreviewSection(
         icon: Icons.local_fire_department_outlined,
         title: l10n.homeTierPreview,
@@ -1298,10 +1316,15 @@ class _HomePortalPreviews extends StatelessWidget {
 }
 
 class _HomeHeroRankingTable extends StatelessWidget {
-  const _HomeHeroRankingTable({required this.rows, required this.rawColumns});
+  const _HomeHeroRankingTable({
+    required this.rows,
+    required this.rawColumns,
+    required this.onHeroSelected,
+  });
 
   final List<Map<String, dynamic>> rows;
   final Object? rawColumns;
+  final ValueChanged<String> onHeroSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1312,7 +1335,12 @@ class _HomeHeroRankingTable extends StatelessWidget {
       icon: Icons.bar_chart_outlined,
       title: AppLocalizations.of(context).homeHeroRankings,
       route: '/stats-home',
-      child: _HomeDataTable(columns: columns, rows: dataRows, maxRows: 116),
+      child: _HomeDataTable(
+        columns: columns,
+        rows: dataRows,
+        maxRows: 116,
+        onHeroSelected: onHeroSelected,
+      ),
     );
   }
 }
@@ -1662,11 +1690,13 @@ class _HomeDataTable extends StatefulWidget {
     required this.columns,
     required this.rows,
     this.maxRows = 8,
+    this.onHeroSelected,
   });
 
   final List<_HomeTableColumn> columns;
   final List<Map<String, dynamic>> rows;
   final int maxRows;
+  final ValueChanged<String>? onHeroSelected;
 
   @override
   State<_HomeDataTable> createState() => _HomeDataTableState();
@@ -1824,7 +1854,11 @@ class _HomeDataTableState extends State<_HomeDataTable> {
             child: ColoredBox(
               color: context.hokTheme.surfaceSlate,
               child: Center(
-                child: _HomeFixedTableIdentity(row: row, column: heroColumn),
+                child: _HomeFixedTableIdentity(
+                  row: row,
+                  column: heroColumn,
+                  onHeroSelected: widget.onHeroSelected,
+                ),
               ),
             ),
           ),
@@ -2034,10 +2068,15 @@ class _HomeDataIcon extends StatelessWidget {
 }
 
 class _HomeFixedTableIdentity extends StatelessWidget {
-  const _HomeFixedTableIdentity({required this.row, required this.column});
+  const _HomeFixedTableIdentity({
+    required this.row,
+    required this.column,
+    this.onHeroSelected,
+  });
 
   final Map<String, dynamic> row;
   final _HomeTableColumn column;
+  final ValueChanged<String>? onHeroSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -2046,6 +2085,12 @@ class _HomeFixedTableIdentity extends StatelessWidget {
       return _HomeHeroAvatarCluster(
         row: row,
         heroName: _homeTableValue(row, column),
+        onTap: onHeroSelected == null
+            ? null
+            : () {
+                final id = _homeHeroRecordId(row);
+                if (id.isNotEmpty) onHeroSelected!(id);
+              },
       );
     }
 
@@ -2172,14 +2217,19 @@ String _homeCompactNumber(Object? rawValue) {
 }
 
 class _HomeHeroAvatarCluster extends StatelessWidget {
-  const _HomeHeroAvatarCluster({required this.row, required this.heroName});
+  const _HomeHeroAvatarCluster({
+    required this.row,
+    required this.heroName,
+    this.onTap,
+  });
 
   final Map<String, dynamic> row;
   final String heroName;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final cluster = SizedBox(
       width: 48,
       height: 42,
       child: ClipRect(
@@ -2190,8 +2240,9 @@ class _HomeHeroAvatarCluster extends StatelessWidget {
               left: 7,
               top: 0,
               child: _HomeHeroAvatar(
-                heroId: _readMap(row['hero'])['id'] ?? row['id'],
+                heroId: _homeHeroRecordId(row),
                 name: heroName,
+                imageUrl: _homeHeroAvatarUrl(row),
               ),
             ),
             Positioned(
@@ -2218,7 +2269,26 @@ class _HomeHeroAvatarCluster extends StatelessWidget {
         ),
       ),
     );
+    if (onTap == null) return cluster;
+    return Semantics(
+      button: true,
+      label: heroName,
+      child: Material(
+        color: Colors.transparent,
+        child: InkResponse(
+          key: ValueKey('home-hero-open-${_homeHeroRecordId(row)}'),
+          radius: 25,
+          onTap: onTap,
+          child: cluster,
+        ),
+      ),
+    );
   }
+}
+
+String _homeHeroRecordId(Map<String, dynamic> row) {
+  final hero = _readMap(row['hero']);
+  return _readString(hero['id'] ?? row['hero_id'] ?? row['id']);
 }
 
 String _homeHeroAvatarUrl(Map<String, dynamic> row) {
@@ -2233,7 +2303,13 @@ String _homeHeroAvatarUrl(Map<String, dynamic> row) {
   if (explicit.isNotEmpty) {
     return explicit;
   }
-  final heroId = _readString(hero['id'] ?? row['id']);
+  final heroId = _readString(
+    hero['hero_asset_id'] ??
+        hero['heroPkId'] ??
+        hero['id'] ??
+        row['hero_id'] ??
+        row['id'],
+  );
   if (heroId.isEmpty) {
     return '';
   }

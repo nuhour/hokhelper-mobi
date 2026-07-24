@@ -47,6 +47,39 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
+  testWidgets('keeps bottom navigation labels on one line on narrow devices', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      PreferencesStore.selectedLanguageCodeKey: 'en',
+    });
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeStatsProvider.overrideWith(
+            (ref) async => const HomeStats(
+              success: true,
+              message: 'Ready',
+              result: {'heroes': 128},
+            ),
+          ),
+        ],
+        child: HokHelperApp(router: createAppRouter()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(tester.getSize(find.text('Community')).height, lessThan(24));
+  });
+
   testWidgets('shows app shell destinations in selected Chinese locale', (
     WidgetTester tester,
   ) async {
