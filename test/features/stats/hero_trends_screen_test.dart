@@ -45,6 +45,68 @@ void main() {
     expect(find.byIcon(Icons.arrow_drop_up_rounded), findsWidgets);
   });
 
+  testWidgets('localizes backend Chinese metric headers in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith((ref, query) async {
+            return sampleStatsTrendTable(
+              columns: const [
+                {'id': 'hero', 'label': '英雄', 'type': 'hero', 'sortable': true},
+                {
+                  'id': 'avg_total_hero_hurt_cnt',
+                  'label': '对人伤害',
+                  'type': 'number',
+                  'sortable': true,
+                  'group': '输出',
+                },
+                {
+                  'id': 'avg_total_behurt_cnt_per_min',
+                  'label': '分均承伤',
+                  'type': 'number',
+                  'sortable': true,
+                  'group': '承伤',
+                },
+                {
+                  'id': 'avg_money',
+                  'label': '全部经济',
+                  'type': 'number',
+                  'sortable': true,
+                  'group': '经济',
+                },
+              ],
+              rows: const [
+                {
+                  'hero': {'id': 199, 'heroId': '199', 'name': 'Lam'},
+                  'avg_total_hero_hurt_cnt': 100,
+                  'avg_total_behurt_cnt_per_min': 200,
+                  'avg_money': 300,
+                },
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          home: Scaffold(body: HeroTrendsScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hero Damage'), findsOneWidget);
+    expect(find.text('Taken / Min'), findsOneWidget);
+    expect(find.text('Total Gold'), findsOneWidget);
+    expect(find.text('Damage'), findsOneWidget);
+    expect(find.text('Taken'), findsOneWidget);
+    expect(find.text('Economy'), findsOneWidget);
+    expect(find.text('对人伤害'), findsNothing);
+    expect(find.text('分均承伤'), findsNothing);
+    expect(find.text('全部经济'), findsNothing);
+  });
+
   testWidgets('marks only the two largest seven-day rises and falls', (
     tester,
   ) async {

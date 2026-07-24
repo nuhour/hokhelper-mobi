@@ -67,6 +67,12 @@ void main() {
         find.byKey(const ValueKey('app-async-loading-surface')),
         findsOneWidget,
       );
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('app-async-loading-surface')))
+            .height,
+        480,
+      );
       expect(tester.takeException(), isNull);
     });
 

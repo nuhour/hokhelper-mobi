@@ -10,6 +10,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_share_sheet.dart';
 import '../data/rank_fortune_repository.dart';
 import '../domain/rank_fortune.dart';
 
@@ -654,18 +655,12 @@ Future<void> _shareFortune(
   BuildContext context,
   RankFortuneRecord record,
   ({String title, String description}) copy,
-) async {
-  await Clipboard.setData(
-    ClipboardData(
-      text:
-          "I just drew 【${copy.title}】 on HOK Helper today! ${copy.description} Who's ready to rank up with me? #HonorOfKings #HOKHelper\n/tools/rank-fortune",
-    ),
+) {
+  return showAppShareSheet(
+    context,
+    title: 'HOK Helper Rank Fortune: ${copy.title} (${record.score})',
+    url: 'https://hokhelper.com/tools/rank-fortune',
   );
-  if (!context.mounted) return;
-  final messenger = ScaffoldMessenger.of(context);
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(const SnackBar(content: Text('Fortune link copied')));
 }
 
 ({String title, String description}) _fortuneCopy(String typeId) {

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
@@ -211,20 +210,9 @@ void main() {
     expect(find.text('Legendary Luck'), findsOneWidget);
   });
 
-  testWidgets('copies today fortune share links', (tester) async {
-    MethodCall? clipboardCall;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-          if (call.method == 'Clipboard.setData') {
-            clipboardCall = call;
-          }
-          return null;
-        });
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
-    });
-
+  testWidgets('opens the unified share sheet for today fortune', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -258,12 +246,11 @@ void main() {
     await tester.tap(find.byTooltip('Share Fortune'));
     await tester.pumpAndSettle();
 
-    expect(clipboardCall, isNotNull);
-    expect(clipboardCall!.arguments, {
-      'text':
-          "I just drew 【Great Fortune】 on HOK Helper today! Perfect day for ranked, win streak incoming! Who's ready to rank up with me? #HonorOfKings #HOKHelper\n/tools/rank-fortune",
-    });
-    expect(find.text('Fortune link copied'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
+    expect(find.text('Instagram'), findsOneWidget);
+    expect(find.text('Facebook'), findsOneWidget);
+    expect(find.text('Reddit'), findsOneWidget);
+    expect(find.text('Copy'), findsOneWidget);
   });
 
   testWidgets('summarizes the latest thirty fortune history rows', (

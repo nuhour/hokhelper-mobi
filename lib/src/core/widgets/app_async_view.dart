@@ -63,18 +63,32 @@ class _AppAsyncLoadingSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      key: const ValueKey('app-async-loading-surface'),
-      color: context.hokTheme.backgroundDeep,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: switch (style) {
-          AppAsyncLoadingStyle.gallery => const _GalleryLoadingSkeleton(),
-          AppAsyncLoadingStyle.dashboard => const _DashboardLoadingSkeleton(),
-          AppAsyncLoadingStyle.detail => const _DetailLoadingSkeleton(),
-          AppAsyncLoadingStyle.list => const _ListLoadingSkeleton(),
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : 0.0;
+        return ColoredBox(
+          key: const ValueKey('app-async-loading-surface'),
+          color: context.hokTheme.backgroundDeep,
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: minHeight),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: switch (style) {
+                  AppAsyncLoadingStyle.gallery =>
+                    const _GalleryLoadingSkeleton(),
+                  AppAsyncLoadingStyle.dashboard =>
+                    const _DashboardLoadingSkeleton(),
+                  AppAsyncLoadingStyle.detail => const _DetailLoadingSkeleton(),
+                  AppAsyncLoadingStyle.list => const _ListLoadingSkeleton(),
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -90,6 +104,12 @@ class _ListLoadingSkeleton extends StatelessWidget {
       SizedBox(height: 16),
       _AppAsyncLoadingBar(width: double.infinity, height: 46),
       SizedBox(height: 16),
+      _LoadingListCard(),
+      SizedBox(height: 12),
+      _LoadingListCard(),
+      SizedBox(height: 12),
+      _LoadingListCard(),
+      SizedBox(height: 12),
       _LoadingListCard(),
       SizedBox(height: 12),
       _LoadingListCard(),
@@ -126,6 +146,9 @@ class _GalleryLoadingSkeleton extends StatelessWidget {
           const _LoadingGalleryCard(),
           const _LoadingGalleryCard(),
           const _LoadingGalleryCard(),
+          const _LoadingGalleryCard(),
+          const _LoadingGalleryCard(),
+          const _LoadingGalleryCard(),
         ],
       ),
     ],
@@ -152,6 +175,10 @@ class _DashboardLoadingSkeleton extends StatelessWidget {
       _LoadingListCard(height: 146),
       SizedBox(height: 12),
       _LoadingListCard(height: 114),
+      SizedBox(height: 12),
+      _LoadingListCard(height: 114),
+      SizedBox(height: 12),
+      _LoadingListCard(height: 114),
     ],
   );
 }
@@ -168,6 +195,10 @@ class _DetailLoadingSkeleton extends StatelessWidget {
       _LoadingListCard(height: 196),
       SizedBox(height: 18),
       _AppAsyncLoadingBar(width: 168, height: 24),
+      SizedBox(height: 12),
+      _LoadingListCard(),
+      SizedBox(height: 12),
+      _LoadingListCard(),
       SizedBox(height: 12),
       _LoadingListCard(),
       SizedBox(height: 12),

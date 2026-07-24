@@ -3,37 +3,40 @@ import 'package:hok_helper_mobile/src/features/stats/domain/stats_trends.dart';
 StatsTrendTable sampleStatsTrendTable({
   String dimension = 'hero_rank',
   String view = 'base',
+  List<Object?>? columns,
   List<Object?>? rows,
 }) {
   return StatsTrendTable.fromJson({
     'dimension': dimension,
     'baseline': 'peak_1000',
     'view': view,
-    'columns': const [
-      {'id': 'hero', 'label': 'Hero', 'type': 'hero', 'sortable': true},
-      {
-        'id': 'wr',
-        'label': 'Win Rate',
-        'type': 'percent',
-        'sortable': true,
-        'group': 'Core',
-      },
-      {
-        'id': 'pick_rate',
-        'label': 'Pick Rate',
-        'type': 'percent',
-        'sortable': true,
-        'group': 'Core',
-      },
-      {
-        'id': 'avg_kills',
-        'label': 'Kills',
-        'type': 'number',
-        'sortable': true,
-        'group': 'KDA',
-      },
-      {'id': 'trend_smoothed', 'label': 'Trend', 'type': 'sparkline'},
-    ],
+    'columns':
+        columns ??
+        const [
+          {'id': 'hero', 'label': 'Hero', 'type': 'hero', 'sortable': true},
+          {
+            'id': 'wr',
+            'label': 'Win Rate',
+            'type': 'percent',
+            'sortable': true,
+            'group': 'Core',
+          },
+          {
+            'id': 'pick_rate',
+            'label': 'Pick Rate',
+            'type': 'percent',
+            'sortable': true,
+            'group': 'Core',
+          },
+          {
+            'id': 'avg_kills',
+            'label': 'Kills',
+            'type': 'number',
+            'sortable': true,
+            'group': 'KDA',
+          },
+          {'id': 'trend_smoothed', 'label': 'Trend', 'type': 'sparkline'},
+        ],
     'rows':
         rows ??
         const [
