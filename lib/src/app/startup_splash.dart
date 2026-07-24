@@ -67,6 +67,9 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
       context,
     );
     precacheImage(const AssetImage('assets/brand/light-logo.png'), context);
+    for (final particle in _SplashCanvas.toolParticles) {
+      precacheImage(AssetImage(particle.assetPath), context);
+    }
   }
 
   Future<void> _beginVisibleStartup() async {
@@ -161,13 +164,13 @@ class _SplashCanvas extends StatelessWidget {
   final double gatherProgress;
   final double pulseProgress;
 
-  static const _particles = <_GameParticle>[
-    _GameParticle(Icons.shield_outlined, Color(0xFF60A5FA)),
-    _GameParticle(Icons.flash_on_rounded, Color(0xFFFBBF24)),
-    _GameParticle(Icons.sports_esports_rounded, Color(0xFFFB7185)),
-    _GameParticle(Icons.auto_awesome_rounded, Color(0xFF93C5FD)),
-    _GameParticle(Icons.hexagon_outlined, Color(0xFFF87171)),
-    _GameParticle(Icons.sports_martial_arts_rounded, Color(0xFFFDE68A)),
+  static const toolParticles = <_ToolParticle>[
+    _ToolParticle('assets/tools/bp.png', Color(0xFF60A5FA)),
+    _ToolParticle('assets/tools/tier.png', Color(0xFFFBBF24)),
+    _ToolParticle('assets/tools/prompt.png', Color(0xFFFB7185)),
+    _ToolParticle('assets/tools/team.png', Color(0xFF93C5FD)),
+    _ToolParticle('assets/tools/build.png', Color(0xFFF87171)),
+    _ToolParticle('assets/tools/fortune.png', Color(0xFFFDE68A)),
   ];
 
   @override
@@ -181,7 +184,7 @@ class _SplashCanvas extends StatelessWidget {
     final logoProgress = reduceMotion
         ? 1.0
         : Curves.easeOutBack.transform(
-            const Interval(0.34, 0.9).transform(gatherProgress),
+            const Interval(0.78, 1).transform(gatherProgress),
           );
 
     return ColoredBox(
@@ -207,9 +210,9 @@ class _SplashCanvas extends StatelessWidget {
 
               return Stack(
                 children: [
-                  for (var index = 0; index < _particles.length; index++)
+                  for (var index = 0; index < toolParticles.length; index++)
                     _buildParticle(
-                      particle: _particles[index],
+                      particle: toolParticles[index],
                       index: index,
                       center: center,
                       startRadius: startRadius,
@@ -261,8 +264,9 @@ class _SplashCanvas extends StatelessWidget {
                         opacity: logoProgress.clamp(0.0, 1.0),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(26),
+                            color: const Color(0xFF0B1224),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(
@@ -281,10 +285,13 @@ class _SplashCanvas extends StatelessWidget {
                             ],
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Image.asset(
-                              'assets/brand/light-logo.png',
-                              semanticLabel: 'HOK Helper',
+                            padding: const EdgeInsets.all(5),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/brand/light-logo.png',
+                                fit: BoxFit.cover,
+                                semanticLabel: 'HOK Helper',
+                              ),
                             ),
                           ),
                         ),
@@ -326,14 +333,14 @@ class _SplashCanvas extends StatelessWidget {
   }
 
   Widget _buildParticle({
-    required _GameParticle particle,
+    required _ToolParticle particle,
     required int index,
     required Offset center,
     required double startRadius,
     required double gathered,
   }) {
     final initialAngle =
-        (-math.pi / 2) + (index * math.pi * 2 / _particles.length);
+        (-math.pi / 2) + (index * math.pi * 2 / toolParticles.length);
     final waitingOrbit = (1 - gathered) * pulseProgress * math.pi * 0.36;
     final orbit =
         waitingOrbit +
@@ -347,10 +354,10 @@ class _SplashCanvas extends StatelessWidget {
     );
 
     return Positioned(
-      left: position.dx - 23,
-      top: position.dy - 23,
-      width: 46,
-      height: 46,
+      left: position.dx - 27,
+      top: position.dy - 27,
+      width: 54,
+      height: 54,
       child: Transform.rotate(
         angle: (index.isEven ? 1 : -1) * gathered * math.pi * 0.75,
         child: Transform.scale(
@@ -359,10 +366,11 @@ class _SplashCanvas extends StatelessWidget {
             opacity: fade,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.88),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.92),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: particle.color.withValues(alpha: 0.7),
+                  width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -371,7 +379,13 @@ class _SplashCanvas extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(particle.icon, color: particle.color, size: 23),
+              child: ClipOval(
+                child: Image.asset(
+                  particle.assetPath,
+                  fit: BoxFit.cover,
+                  semanticLabel: 'Tool icon ${index + 1}',
+                ),
+              ),
             ),
           ),
         ),
@@ -410,9 +424,9 @@ class _LoadingDots extends StatelessWidget {
   }
 }
 
-class _GameParticle {
-  const _GameParticle(this.icon, this.color);
+class _ToolParticle {
+  const _ToolParticle(this.assetPath, this.color);
 
-  final IconData icon;
+  final String assetPath;
   final Color color;
 }

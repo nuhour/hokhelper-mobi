@@ -32,6 +32,9 @@ void main() {
     expect(loadCount, 1);
     expect(find.text('HOK HELPER'), findsOneWidget);
     expect(find.text('Home ready'), findsOneWidget);
+    for (var index = 1; index <= 6; index++) {
+      expect(find.bySemanticsLabel('Tool icon $index'), findsOneWidget);
+    }
 
     homeStats.complete(
       const HomeStats(success: true, message: 'Ready', result: {}),
