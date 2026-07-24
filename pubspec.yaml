@@ -45,6 +45,7 @@ dependencies:
   shared_preferences: 2.3.3
   url_launcher: ^6.3.1
   video_player: ^2.9.3
+  webview_flutter: ^4.14.1
   country_code: ^1.1.0
   country_flags: ^4.1.2
 dev_dependencies:
@@ -78,6 +79,8 @@ flutter:
     - assets/lane-icons/
     - assets/world/
     - assets/home/
+    - assets/rank-fortune/
+    - assets/rank-fortune-3d/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

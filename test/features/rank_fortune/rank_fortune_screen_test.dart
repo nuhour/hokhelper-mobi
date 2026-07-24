@@ -124,8 +124,6 @@ void main() {
     expect(find.text('Great Luck'), findsWidgets);
     expect(find.text('Fortune Value'), findsOneWidget);
     expect(find.text('92'), findsWidgets);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -220));
-    await tester.pumpAndSettle();
     expect(find.text('30-day History'), findsOneWidget);
   });
 
@@ -156,7 +154,7 @@ void main() {
 
     expect(find.text('Legendary Luck'), findsWidgets);
     expect(find.text('99'), findsWidgets);
-    expect(find.text('Come back tomorrow'), findsOneWidget);
+    expect(find.text('DRAWN'), findsOneWidget);
   });
 
   testWidgets('shows fortune drawing feedback while draw is pending', (
@@ -188,7 +186,7 @@ void main() {
     await tester.tap(find.text('Tap to draw instead'));
     await tester.pump();
 
-    expect(find.text('Shaking the fortune jar...'), findsOneWidget);
+    expect(find.text('Shaking the fortune instrument...'), findsOneWidget);
 
     completer.complete(
       const RankFortuneDraw(
@@ -252,7 +250,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Share Fortune'));
+    await tester.tap(find.widgetWithText(TextButton, 'Share Fortune'));
     await tester.pumpAndSettle();
 
     expect(clipboardCall, isNotNull);
@@ -297,9 +295,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -260));
-    await tester.pumpAndSettle();
-
     expect(find.text('30d Average'), findsOneWidget);
     expect(find.text('16.5'), findsNothing);
     expect(find.text('17'), findsOneWidget);
@@ -309,8 +304,6 @@ void main() {
     expect(find.text('2'), findsOneWidget);
     expect(find.text('Streak'), findsOneWidget);
     expect(find.text('30 days'), findsOneWidget);
-    expect(find.text('2026-07-01'), findsNothing);
-    expect(find.text('2026-07-31'), findsOneWidget);
   });
 
   testWidgets('loads hokx rank fortune history days from route query', (
@@ -331,8 +324,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.loadedDays, 7);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -220));
-    await tester.pumpAndSettle();
     expect(find.text('7-day History'), findsOneWidget);
   });
 

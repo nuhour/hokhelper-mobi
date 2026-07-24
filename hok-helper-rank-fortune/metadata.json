@@ -1,0 +1,6 @@
+{
+  "name": "HOK Helper - Rank Fortune",
+  "description": "Honor of Kings Rank Fortune 3D Magic Cube interactive experience with CG energy effects, fortune roll system, and rank analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
