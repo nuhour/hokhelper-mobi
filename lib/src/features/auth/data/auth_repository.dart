@@ -40,6 +40,15 @@ class AuthRepository {
     return _readAuthResponse(json, fallbackMessage: 'OAuth login failed');
   }
 
+  Future<AuthUser> loginWithGoogleIdToken(String idToken) async {
+    final json = await apiClient.postJson(
+      '/auth/google/login',
+      body: {'id_token': idToken},
+    );
+
+    return _readAuthResponse(json, fallbackMessage: 'Google login failed');
+  }
+
   Future<String> getOAuthAuthorizationUrl({
     required String provider,
     required String redirectUri,

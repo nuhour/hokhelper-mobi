@@ -297,6 +297,34 @@ void main() {
       expect(user.username, 'oauth-user');
     });
 
+    test('logs in with a native Google ID token', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {
+          'access': 'native-access',
+          'refresh': 'native-refresh',
+          'user': {
+            'id': 11,
+            'username': 'google-user',
+            'email': 'google@example.test',
+          },
+        },
+      });
+      final tokenStore = _MemoryTokenStore();
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: tokenStore,
+      );
+
+      final user = await repository.loginWithGoogleIdToken('google-id-token');
+
+      expect(apiClient.path, '/auth/google/login');
+      expect(apiClient.body, {'id_token': 'google-id-token'});
+      expect(tokenStore.access, 'native-access');
+      expect(tokenStore.refresh, 'native-refresh');
+      expect(user.id, 11);
+    });
+
     test('rejects unsupported OAuth providers before calling API', () async {
       final apiClient = _FakeApiClient({'success': true});
       final repository = AuthRepository(

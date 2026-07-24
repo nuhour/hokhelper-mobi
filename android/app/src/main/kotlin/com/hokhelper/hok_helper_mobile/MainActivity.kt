@@ -13,24 +13,45 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             "hokhelper/open_url"
         ).setMethodCallHandler { call, result ->
-            if (call.method != "openUrl") {
+            if (call.method != "openOAuthUrl") {
                 result.notImplemented()
                 return@setMethodCallHandler
             }
 
             val url = call.argument<String>("url")?.trim().orEmpty()
+            val provider = call.argument<String>("provider")?.trim()?.lowercase().orEmpty()
             if (url.isEmpty()) {
                 result.success(false)
                 return@setMethodCallHandler
             }
 
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                startActivity(intent)
+                val uri = Uri.parse(url)
+                val openedInProviderApp =
+                    provider == "discord" && openDiscordAuthorization(uri)
+                if (!openedInProviderApp) {
+                    startActivity(Intent(Intent.ACTION_VIEW, uri))
+                }
                 result.success(true)
             } catch (_: Exception) {
                 result.success(false)
             }
         }
+    }
+
+    private fun openDiscordAuthorization(uri: Uri): Boolean {
+        val discordPackages = listOf(
+            "com.discord",
+            "com.discord.beta",
+            "com.discord.canary"
+        )
+        for (packageName in discordPackages) {
+            val intent = Intent(Intent.ACTION_VIEW, uri).setPackage(packageName)
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+                return true
+            }
+        }
+        return false
     }
 }

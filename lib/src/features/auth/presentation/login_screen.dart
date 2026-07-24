@@ -5,19 +5,29 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
+import '../data/auth_repository.dart';
+import '../data/native_google_sign_in.dart';
 import 'auth_page_scaffold.dart';
 import 'auth_controller.dart';
 
-typedef OAuthUrlOpener = Future<void> Function(String url);
+typedef OAuthUrlOpener =
+    Future<void> Function({required String provider, required String url});
 
 final oauthUrlOpenerProvider = Provider<OAuthUrlOpener>((ref) {
-  return (url) async {
+  return ({required provider, required url}) async {
     const channel = MethodChannel('hokhelper/open_url');
-    final launched = await channel.invokeMethod<bool>('openUrl', {'url': url});
+    final launched = await channel.invokeMethod<bool>('openOAuthUrl', {
+      'provider': provider,
+      'url': url,
+    });
     if (launched != true) {
       throw StateError('Unable to open OAuth authorization URL.');
     }
   };
+});
+
+final nativeGoogleSignInProvider = Provider<NativeGoogleSignIn>((ref) {
+  return GoogleFrameworkSignIn();
 });
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -261,7 +271,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         redirectUri: redirectUri,
         state: state,
       );
-      await ref.read(oauthUrlOpenerProvider)(authUrl);
+      if (provider == 'google') {
+        final nativeResult = await _tryNativeGoogleSignIn(
+          repository: repository,
+          authUrl: authUrl,
+        );
+        if (nativeResult == NativeGoogleSignInStatus.authenticated) {
+          await stateStore.clear(provider);
+          if (mounted) {
+            context.go('/me');
+          }
+          return;
+        }
+        if (nativeResult == NativeGoogleSignInStatus.cancelled) {
+          await stateStore.clear(provider);
+          return;
+        }
+      }
+
+      await ref.read(oauthUrlOpenerProvider)(provider: provider, url: authUrl);
     } catch (error) {
       await ref.read(oauthStateStoreProvider).clear(provider);
       if (mounted) {
@@ -275,6 +303,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _oauthLoadingProvider = null;
         });
       }
+    }
+  }
+
+  Future<NativeGoogleSignInStatus> _tryNativeGoogleSignIn({
+    required AuthRepository repository,
+    required String authUrl,
+  }) async {
+    final serverClientId =
+        Uri.tryParse(authUrl)?.queryParameters['client_id']?.trim() ?? '';
+    final result = await ref
+        .read(nativeGoogleSignInProvider)
+        .authenticate(serverClientId: serverClientId);
+    final idToken = result.idToken;
+    if (result.status != NativeGoogleSignInStatus.authenticated ||
+        idToken == null) {
+      return result.status;
+    }
+
+    try {
+      await repository.loginWithGoogleIdToken(idToken);
+      ref.invalidate(authControllerProvider);
+      return NativeGoogleSignInStatus.authenticated;
+    } catch (_) {
+      // Older server deployments may not accept native ID tokens yet.
+      return NativeGoogleSignInStatus.unavailable;
     }
   }
 }

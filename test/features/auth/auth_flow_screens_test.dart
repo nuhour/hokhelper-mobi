@@ -6,6 +6,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
 import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
+import 'package:hok_helper_mobile/src/features/auth/data/native_google_sign_in.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/oauth_state_store.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
@@ -32,6 +33,7 @@ class _FakeAuthRepository implements AuthRepository {
   String? oauthProvider;
   String? oauthCode;
   String? oauthRedirectUri;
+  String? googleIdToken;
 
   @override
   Future<AuthUser> registerWithEmail({
@@ -77,6 +79,17 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> loginWithGoogleIdToken(String idToken) async {
+    googleIdToken = idToken;
+    return const AuthUser(
+      id: 28,
+      username: 'google-user',
+      email: 'google@example.test',
+      displayName: 'Google User',
+    );
+  }
+
+  @override
   Future<String> getOAuthAuthorizationUrl({
     required String provider,
     required String redirectUri,
@@ -111,6 +124,19 @@ class _MemoryOAuthStateStore extends OAuthStateStore {
   @override
   Future<void> clear(String provider) async {
     _states.remove(provider);
+  }
+}
+
+class _FakeNativeGoogleSignIn implements NativeGoogleSignIn {
+  const _FakeNativeGoogleSignIn(this.result);
+
+  final NativeGoogleSignInResult result;
+
+  @override
+  Future<NativeGoogleSignInResult> authenticate({
+    required String serverClientId,
+  }) async {
+    return result;
   }
 }
 
@@ -309,7 +335,15 @@ void main() {
           tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
           authRepositoryProvider.overrideWithValue(repository),
           oauthStateStoreProvider.overrideWithValue(oauthStateStore),
-          oauthUrlOpenerProvider.overrideWithValue((url) async {
+          nativeGoogleSignInProvider.overrideWithValue(
+            const _FakeNativeGoogleSignIn(
+              NativeGoogleSignInResult.unavailable(),
+            ),
+          ),
+          oauthUrlOpenerProvider.overrideWithValue(({
+            required provider,
+            required url,
+          }) async {
             openedUrls.add(url);
           }),
         ],
