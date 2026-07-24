@@ -1927,7 +1927,12 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                       child: child,
                     );
                   },
-                  child: identityRows,
+                  child: OverflowBox(
+                    alignment: Alignment.topCenter,
+                    minHeight: 0,
+                    maxHeight: double.infinity,
+                    child: identityRows,
+                  ),
                 ),
               ),
             ),

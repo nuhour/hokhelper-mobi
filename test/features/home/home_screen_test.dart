@@ -531,4 +531,44 @@ void main() {
       expect(find.text('Ready'), findsNothing);
     },
   );
+
+  testWidgets('long hero rankings keep the fixed hero column overflow-free', (
+    tester,
+  ) async {
+    final rows = List.generate(
+      20,
+      (index) => {
+        'hero': {'id': 2500 + index, 'name': 'Hero $index'},
+        'wr': 50 + index / 10,
+        'pick_rate': 10 + index / 10,
+      },
+    );
+
+    await tester.pumpWidget(
+      _buildHomeScreen(
+        HomeStats(
+          success: true,
+          message: 'Ready',
+          result: {
+            'hero_ranking_table': {
+              'columns': const [
+                {'id': 'hero', 'label': 'Hero', 'type': 'hero'},
+                {'id': 'wr', 'label': 'Win Rate', 'type': 'percent'},
+                {'id': 'pick_rate', 'label': 'Pick Rate', 'type': 'percent'},
+              ],
+              'rows': rows,
+            },
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _scrollHomeUntilVisible(tester, find.text('Hero Rankings'));
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey('home-hero-ranking-scroll-area')),
+      findsOneWidget,
+    );
+  });
 }
