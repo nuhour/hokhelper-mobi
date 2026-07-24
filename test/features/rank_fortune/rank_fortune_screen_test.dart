@@ -152,7 +152,6 @@ void main() {
 
     expect(find.text('Legendary Luck'), findsWidgets);
     expect(find.text('99'), findsWidgets);
-    expect(find.text('DRAWN'), findsOneWidget);
   });
 
   testWidgets('shows fortune drawing feedback while draw is pending', (

@@ -112,7 +112,6 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
                   SizedBox(
                     height: stageHeight,
                     child: _FortuneStage(
-                      canDraw: canDraw,
                       onWebViewCreated: (controller) {
                         _instrumentController = controller;
                       },
@@ -279,12 +278,10 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
 
 class _FortuneStage extends StatelessWidget {
   const _FortuneStage({
-    required this.canDraw,
     required this.onWebViewCreated,
     required this.onInstrumentMessage,
   });
 
-  final bool canDraw;
   final ValueChanged<WebViewController> onWebViewCreated;
   final ValueChanged<String> onInstrumentMessage;
 
@@ -342,7 +339,7 @@ class _FortuneStage extends StatelessWidget {
                 left: 16,
                 top: 14,
                 right: 16,
-                child: _StageHeader(canDraw: canDraw),
+                child: const _StageHeader(),
               ),
             ],
           ),
@@ -384,9 +381,7 @@ class _FortuneActionPanel extends StatelessWidget {
 }
 
 class _StageHeader extends StatelessWidget {
-  const _StageHeader({required this.canDraw});
-
-  final bool canDraw;
+  const _StageHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -419,27 +414,6 @@ class _StageHeader extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.42),
-            border: Border.all(
-              color: (canDraw ? _fortuneGold : AppTheme.cyan).withValues(
-                alpha: 0.7,
-              ),
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            canDraw ? 'READY' : 'DRAWN',
-            style: TextStyle(
-              color: canDraw ? _fortuneGold : AppTheme.cyan,
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-            ),
           ),
         ),
       ],
