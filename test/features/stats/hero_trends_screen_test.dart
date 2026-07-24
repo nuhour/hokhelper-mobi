@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 
 import 'stats_trends_fixture.dart';
@@ -105,6 +106,66 @@ void main() {
     expect(find.text('对人伤害'), findsNothing);
     expect(find.text('分均承伤'), findsNothing);
     expect(find.text('全部经济'), findsNothing);
+  });
+
+  testWidgets('renders player main hero images from camp hero ids', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith((ref, query) async {
+            return sampleStatsTrendTable(
+              dimension: 'player_rank',
+              view: 'peak',
+              columns: const [
+                {
+                  'id': 'player',
+                  'label': '玩家',
+                  'type': 'player',
+                  'sortable': true,
+                },
+                {
+                  'id': 'best_heroes',
+                  'label': '常用英雄',
+                  'type': 'hero_list',
+                  'sortable': false,
+                },
+              ],
+              rows: const [
+                {
+                  'player': {
+                    'id': '13336883548184068654',
+                    'name': 'Top Player',
+                    'avatar_url': 'https://example.test/player.png',
+                  },
+                  'best_heroes': [
+                    {'hero_id': 522},
+                    {
+                      'hero_id': 150,
+                      'avatar_url': 'https://example.test/han-xin.png',
+                    },
+                  ],
+                },
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          home: Scaffold(body: HeroTrendsScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final mainHeroImages = tester
+        .widgetList<AppImage>(find.byType(AppImage))
+        .where((image) => image.width == 24 && image.height == 24)
+        .map((image) => image.url)
+        .toList(growable: false);
+    expect(mainHeroImages, contains('https://img.nourhr.cc/heroes/522.png'));
+    expect(mainHeroImages, contains('https://example.test/han-xin.png'));
   });
 
   testWidgets('marks only the two largest seven-day rises and falls', (

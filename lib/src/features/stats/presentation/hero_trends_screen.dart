@@ -736,8 +736,7 @@ class _TrendValueCell extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: AppImage(
-                url:
-                    'https://hokhelper.com/static/game/hero/${_map(item)['hero_id'] ?? ''}.png',
+                url: _trendHeroListImageUrl(item),
                 width: 24,
                 height: 24,
                 borderRadius: 12,
@@ -757,6 +756,34 @@ class _TrendValueCell extends StatelessWidget {
       ),
     );
   }
+}
+
+String _trendHeroListImageUrl(Object? value) {
+  final item = _map(value);
+  final hero = _map(item['hero']);
+  for (final source in [item, hero]) {
+    for (final key in const [
+      'avatar_url',
+      'icon_url',
+      'image_url',
+      'avatar',
+      'icon',
+    ]) {
+      final url = source[key]?.toString().trim() ?? '';
+      if (url.isNotEmpty) return url;
+    }
+  }
+  final heroId =
+      (item['heroId'] ??
+              item['hero_id'] ??
+              hero['heroId'] ??
+              hero['hero_id'] ??
+              item['id'] ??
+              hero['id'])
+          ?.toString()
+          .trim() ??
+      '';
+  return heroId.isEmpty ? '' : 'https://img.nourhr.cc/heroes/$heroId.png';
 }
 
 class _TrendFilterSheet extends StatefulWidget {
