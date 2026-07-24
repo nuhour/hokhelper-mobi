@@ -43,6 +43,7 @@ class AuthRepository {
   Future<String> getOAuthAuthorizationUrl({
     required String provider,
     required String redirectUri,
+    required String state,
   }) async {
     final normalizedProvider = provider.trim().toLowerCase();
     if (!{'google', 'discord'}.contains(normalizedProvider)) {
@@ -54,7 +55,7 @@ class AuthRepository {
 
     final json = await apiClient.postJson(
       '/auth/$normalizedProvider/auth_url',
-      body: {'redirect_uri': redirectUri},
+      body: {'redirect_uri': redirectUri, 'state': state},
     );
     final result = json['result'];
     final payload = result is Map ? Map<String, dynamic>.from(result) : json;

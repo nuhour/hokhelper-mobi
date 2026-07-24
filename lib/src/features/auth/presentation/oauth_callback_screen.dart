@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
 import 'auth_page_scaffold.dart';
 import 'auth_controller.dart';
@@ -11,12 +12,14 @@ class OAuthCallbackScreen extends ConsumerStatefulWidget {
     required this.provider,
     required this.code,
     required this.error,
+    required this.state,
     super.key,
   });
 
   final String provider;
   final String? code;
   final String? error;
+  final String? state;
 
   @override
   ConsumerState<OAuthCallbackScreen> createState() =>
@@ -33,15 +36,32 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
   }
 
   Future<void> _exchangeCode() async {
+    final stateIsValid = await ref
+        .read(oauthStateStoreProvider)
+        .consume(provider: widget.provider, state: widget.state?.trim());
+    if (!stateIsValid) {
+      if (mounted) {
+        setState(
+          () => _errorMessage =
+              'This sign-in request has expired. Please start again.',
+        );
+      }
+      return;
+    }
+
     final oauthError = widget.error?.trim();
     if (oauthError != null && oauthError.isNotEmpty) {
-      setState(() => _errorMessage = 'OAuth authorization failed.');
+      if (mounted) {
+        setState(() => _errorMessage = 'OAuth authorization failed.');
+      }
       return;
     }
 
     final callbackCode = widget.code?.trim();
     if (callbackCode == null || callbackCode.isEmpty) {
-      setState(() => _errorMessage = 'Missing OAuth callback code.');
+      if (mounted) {
+        setState(() => _errorMessage = 'Missing OAuth callback code.');
+      }
       return;
     }
 
@@ -51,7 +71,7 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
           .loginWithOAuth(
             provider: widget.provider,
             code: callbackCode,
-            redirectUri: 'hokhelper://auth/${widget.provider}/callback',
+            redirectUri: AppConfig.current.oauthRedirectUri(widget.provider),
           );
       if (mounted) {
         context.go('/me');

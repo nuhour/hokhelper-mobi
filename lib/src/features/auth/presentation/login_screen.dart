@@ -253,16 +253,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final repository = ref.read(authRepositoryProvider);
-      final redirectUri = 'hokhelper://auth/$provider/callback';
+      final stateStore = ref.read(oauthStateStoreProvider);
+      final state = await stateStore.create(provider);
+      final redirectUri = AppConfig.current.oauthRedirectUri(provider);
       final authUrl = await repository.getOAuthAuthorizationUrl(
         provider: provider,
         redirectUri: redirectUri,
+        state: state,
       );
       await ref.read(oauthUrlOpenerProvider)(authUrl);
-    } catch (_) {
+    } catch (error) {
+      await ref.read(oauthStateStoreProvider).clear(provider);
       if (mounted) {
         setState(() {
-          _oauthError = 'Failed to start OAuth login.';
+          _oauthError = 'Failed to start OAuth login. ${error.toString()}';
         });
       }
     } finally {

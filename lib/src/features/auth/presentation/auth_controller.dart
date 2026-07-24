@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/core_providers.dart';
 import '../data/auth_repository.dart';
+import '../data/oauth_state_store.dart';
 import '../domain/auth_user.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -10,6 +11,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     apiClient: ref.watch(apiClientProvider),
     tokenStore: ref.watch(tokenStoreProvider),
   );
+});
+
+final oauthStateStoreProvider = Provider<OAuthStateStore>((ref) {
+  return OAuthStateStore();
 });
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, AuthUser?>(

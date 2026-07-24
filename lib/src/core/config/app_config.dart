@@ -43,4 +43,9 @@ class AppConfig {
 
     return '$base/$prefix';
   }
+
+  String oauthRedirectUri(String provider) {
+    final base = mediaBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+    return '$base/auth/${provider.trim().toLowerCase()}/callback';
+  }
 }

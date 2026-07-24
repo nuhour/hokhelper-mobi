@@ -237,6 +237,30 @@ void main() {
       expect(user.displayName, 'Newbie');
     });
 
+    test('requests OAuth URL with HTTPS callback and state', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {'auth_url': 'https://accounts.example.test/authorize'},
+      });
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: _MemoryTokenStore(),
+      );
+
+      final authUrl = await repository.getOAuthAuthorizationUrl(
+        provider: 'Google',
+        redirectUri: 'https://hokhelper.com/auth/google/callback',
+        state: 'hokhelper-mobile.google.nonce',
+      );
+
+      expect(authUrl, 'https://accounts.example.test/authorize');
+      expect(apiClient.path, '/auth/google/auth_url');
+      expect(apiClient.body, {
+        'redirect_uri': 'https://hokhelper.com/auth/google/callback',
+        'state': 'hokhelper-mobile.google.nonce',
+      });
+    });
+
     test('logs in with OAuth provider callback code', () async {
       final apiClient = _FakeApiClient({
         'success': true,
@@ -259,13 +283,13 @@ void main() {
       final user = await repository.loginWithOAuth(
         provider: 'Google',
         code: 'callback-code',
-        redirectUri: 'hokhelper://auth/google/callback',
+        redirectUri: 'https://hokhelper.com/auth/google/callback',
       );
 
       expect(apiClient.path, '/auth/google/login');
       expect(apiClient.body, {
         'code': 'callback-code',
-        'redirect_uri': 'hokhelper://auth/google/callback',
+        'redirect_uri': 'https://hokhelper.com/auth/google/callback',
       });
       expect(tokenStore.access, 'oauth-access');
       expect(tokenStore.refresh, 'oauth-refresh');
@@ -284,7 +308,7 @@ void main() {
         repository.loginWithOAuth(
           provider: 'github',
           code: 'callback-code',
-          redirectUri: 'hokhelper://auth/github/callback',
+          redirectUri: 'https://hokhelper.com/auth/github/callback',
         ),
         throwsA(
           isA<ApiError>().having(

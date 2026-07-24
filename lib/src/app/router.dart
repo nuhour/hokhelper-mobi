@@ -384,6 +384,16 @@ GoRouter createAppRouter() {
           provider: 'google',
           code: state.uri.queryParameters['code'],
           error: state.uri.queryParameters['error'],
+          state: state.uri.queryParameters['state'],
+        ),
+      ),
+      GoRoute(
+        path: '/google/callback',
+        builder: (context, state) => OAuthCallbackScreen(
+          provider: 'google',
+          code: state.uri.queryParameters['code'],
+          error: state.uri.queryParameters['error'],
+          state: state.uri.queryParameters['state'],
         ),
       ),
       GoRoute(
@@ -392,6 +402,16 @@ GoRouter createAppRouter() {
           provider: 'discord',
           code: state.uri.queryParameters['code'],
           error: state.uri.queryParameters['error'],
+          state: state.uri.queryParameters['state'],
+        ),
+      ),
+      GoRoute(
+        path: '/discord/callback',
+        builder: (context, state) => OAuthCallbackScreen(
+          provider: 'discord',
+          code: state.uri.queryParameters['code'],
+          error: state.uri.queryParameters['error'],
+          state: state.uri.queryParameters['state'],
         ),
       ),
       GoRoute(
@@ -400,6 +420,7 @@ GoRouter createAppRouter() {
           provider: 'reddit',
           code: state.uri.queryParameters['code'],
           error: state.uri.queryParameters['error'],
+          state: state.uri.queryParameters['state'],
         ),
       ),
       GoRoute(

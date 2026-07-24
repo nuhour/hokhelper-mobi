@@ -6,6 +6,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
 import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
+import 'package:hok_helper_mobile/src/features/auth/data/oauth_state_store.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/forgot_password_screen.dart';
@@ -27,6 +28,7 @@ class _FakeAuthRepository implements AuthRepository {
   var didOAuthLogin = false;
   var requestedOAuthProvider = '';
   var requestedOAuthRedirectUri = '';
+  var requestedOAuthState = '';
   String? oauthProvider;
   String? oauthCode;
   String? oauthRedirectUri;
@@ -78,10 +80,37 @@ class _FakeAuthRepository implements AuthRepository {
   Future<String> getOAuthAuthorizationUrl({
     required String provider,
     required String redirectUri,
+    required String state,
   }) async {
     requestedOAuthProvider = provider;
     requestedOAuthRedirectUri = redirectUri;
+    requestedOAuthState = state;
     return 'https://oauth.example.test/$provider?redirect_uri=$redirectUri';
+  }
+}
+
+class _MemoryOAuthStateStore extends OAuthStateStore {
+  final Map<String, String> _states = {};
+
+  @override
+  Future<String> create(String provider) async {
+    final state = 'hokhelper-mobile.$provider.${'a' * 43}';
+    _states[provider] = state;
+    return state;
+  }
+
+  @override
+  Future<bool> consume({
+    required String provider,
+    required String? state,
+  }) async {
+    final expected = _states.remove(provider);
+    return expected != null && expected == state;
+  }
+
+  @override
+  Future<void> clear(String provider) async {
+    _states.remove(provider);
   }
 }
 
@@ -259,6 +288,7 @@ void main() {
 
   testWidgets('login screen starts Google and Discord OAuth', (tester) async {
     final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final oauthStateStore = _MemoryOAuthStateStore();
     final openedUrls = <String>[];
     final router = GoRouter(
       initialLocation: '/login',
@@ -278,6 +308,7 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
           authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(oauthStateStore),
           oauthUrlOpenerProvider.overrideWithValue((url) async {
             openedUrls.add(url);
           }),
@@ -298,7 +329,11 @@ void main() {
     expect(repository.requestedOAuthProvider, 'google');
     expect(
       repository.requestedOAuthRedirectUri,
-      'hokhelper://auth/google/callback',
+      'https://hokhelper.com/auth/google/callback',
+    );
+    expect(
+      repository.requestedOAuthState,
+      startsWith('hokhelper-mobile.google.'),
     );
     expect(openedUrls.single, contains('https://oauth.example.test/google'));
 
@@ -310,7 +345,11 @@ void main() {
     expect(repository.requestedOAuthProvider, 'discord');
     expect(
       repository.requestedOAuthRedirectUri,
-      'hokhelper://auth/discord/callback',
+      'https://hokhelper.com/auth/discord/callback',
+    );
+    expect(
+      repository.requestedOAuthState,
+      startsWith('hokhelper-mobile.discord.'),
     );
     expect(openedUrls.last, contains('https://oauth.example.test/discord'));
   });
@@ -409,8 +448,11 @@ void main() {
 
   testWidgets('OAuth callback exchanges code and opens me tab', (tester) async {
     final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final oauthStateStore = _MemoryOAuthStateStore();
+    final oauthState = await oauthStateStore.create('google');
     final router = GoRouter(
-      initialLocation: '/auth/google/callback?code=mobile-code',
+      initialLocation:
+          '/auth/google/callback?code=mobile-code&state=$oauthState',
       routes: [
         GoRoute(
           path: '/auth/google/callback',
@@ -418,6 +460,7 @@ void main() {
             provider: 'google',
             code: state.uri.queryParameters['code'],
             error: state.uri.queryParameters['error'],
+            state: state.uri.queryParameters['state'],
           ),
         ),
         GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
@@ -429,6 +472,7 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
           authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(oauthStateStore),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -438,7 +482,10 @@ void main() {
     expect(repository.didOAuthLogin, isTrue);
     expect(repository.oauthProvider, 'google');
     expect(repository.oauthCode, 'mobile-code');
-    expect(repository.oauthRedirectUri, 'hokhelper://auth/google/callback');
+    expect(
+      repository.oauthRedirectUri,
+      'https://hokhelper.com/auth/google/callback',
+    );
     expect(router.routerDelegate.currentConfiguration.uri.path, '/me');
   });
 
@@ -446,8 +493,10 @@ void main() {
     tester,
   ) async {
     final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final oauthStateStore = _MemoryOAuthStateStore();
+    final oauthState = await oauthStateStore.create('discord');
     final router = GoRouter(
-      initialLocation: '/auth/discord/callback',
+      initialLocation: '/auth/discord/callback?state=$oauthState',
       routes: [
         GoRoute(
           path: '/auth/discord/callback',
@@ -455,6 +504,7 @@ void main() {
             provider: 'discord',
             code: state.uri.queryParameters['code'],
             error: state.uri.queryParameters['error'],
+            state: state.uri.queryParameters['state'],
           ),
         ),
       ],
@@ -465,6 +515,7 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
           authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(oauthStateStore),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
