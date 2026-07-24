@@ -122,9 +122,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Great Luck'), findsWidgets);
-    expect(find.text('Fortune Value'), findsOneWidget);
     expect(find.text('92'), findsWidgets);
-    expect(find.text('30-day History'), findsOneWidget);
   });
 
   testWidgets('draw button updates today fortune', (tester) async {
@@ -250,7 +248,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(TextButton, 'Share Fortune'));
+    await tester.tap(find.byTooltip('Share Fortune'));
     await tester.pumpAndSettle();
 
     expect(clipboardCall, isNotNull);
@@ -295,15 +293,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('30d Average'), findsOneWidget);
-    expect(find.text('16.5'), findsNothing);
-    expect(find.text('17'), findsOneWidget);
-    expect(find.text('Best'), findsOneWidget);
+    expect(find.text('30d Average'), findsNothing);
+    expect(find.text('Best'), findsNothing);
     expect(find.text('31'), findsWidgets);
-    expect(find.text('Lowest'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
-    expect(find.text('Streak'), findsOneWidget);
-    expect(find.text('30 days'), findsOneWidget);
+    expect(find.text('Lowest'), findsNothing);
+    expect(find.text('Streak'), findsNothing);
   });
 
   testWidgets('loads hokx rank fortune history days from route query', (
@@ -324,7 +318,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.loadedDays, 7);
-    expect(find.text('7-day History'), findsOneWidget);
   });
 
   testWidgets('web rank fortune alias preserves history days in app router', (

@@ -98,7 +98,6 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
       data: (history) {
         final today = _localToday ?? history.today;
         final rows = _localRows ?? history.rows;
-        final catalog = _localCatalog ?? history.catalog;
         final canDraw = _localCanDraw ?? history.canDraw;
         _canShakeDraw = canDraw && !_isDrawing;
         _visibleRows = rows;
@@ -113,25 +112,21 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
                   SizedBox(
                     height: stageHeight,
                     child: _FortuneStage(
-                      today: today,
                       canDraw: canDraw,
-                      isDrawing: _isDrawing,
-                      sensorAvailable: _sensorAvailable,
-                      onDraw: canDraw && !_isDrawing ? _drawToday : null,
                       onWebViewCreated: (controller) {
                         _instrumentController = controller;
                       },
                       onInstrumentMessage: _handleInstrumentMessage,
                     ),
                   ),
-                  Expanded(
-                    child: _FortuneTrendPanel(
-                      rows: rows,
-                      catalog: catalog,
-                      days: days,
-                      today: today,
-                    ),
+                  _FortuneActionPanel(
+                    today: today,
+                    canDraw: canDraw,
+                    isDrawing: _isDrawing,
+                    sensorAvailable: _sensorAvailable,
+                    onDraw: canDraw && !_isDrawing ? _drawToday : null,
                   ),
+                  Expanded(child: _FortuneTrendPanel(rows: rows)),
                 ],
               ),
             );
@@ -284,20 +279,12 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen>
 
 class _FortuneStage extends StatelessWidget {
   const _FortuneStage({
-    required this.today,
     required this.canDraw,
-    required this.isDrawing,
-    required this.sensorAvailable,
-    required this.onDraw,
     required this.onWebViewCreated,
     required this.onInstrumentMessage,
   });
 
-  final RankFortuneRecord? today;
   final bool canDraw;
-  final bool isDrawing;
-  final bool sensorAvailable;
-  final VoidCallback? onDraw;
   final ValueChanged<WebViewController> onWebViewCreated;
   final ValueChanged<String> onInstrumentMessage;
 
@@ -310,8 +297,8 @@ class _FortuneStage extends StatelessWidget {
           destination: constraints.biggest,
         );
         final instrumentSize = math.min(
-          geometry.renderedSize.width * 0.53,
-          constraints.maxHeight * 0.5,
+          geometry.renderedSize.width * 0.58,
+          constraints.maxHeight * 0.54,
         );
         final instrumentCenter = geometry.point(0.76, 0.44);
 
@@ -357,33 +344,41 @@ class _FortuneStage extends StatelessWidget {
                 right: 16,
                 child: _StageHeader(canDraw: canDraw),
               ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 14,
-                child: today == null
-                    ? _DrawPrompt(
-                        canDraw: canDraw,
-                        isDrawing: isDrawing,
-                        sensorAvailable: sensorAvailable,
-                        onDraw: onDraw,
-                      )
-                    : _TodayFortune(record: today!, isDrawing: isDrawing),
-              ),
-              if (today != null && canDraw)
-                Positioned(
-                  right: 16,
-                  bottom: 18,
-                  child: IconButton.filled(
-                    tooltip: 'Draw fortune',
-                    onPressed: onDraw,
-                    icon: const Icon(Icons.vibration_rounded),
-                  ),
-                ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _FortuneActionPanel extends StatelessWidget {
+  const _FortuneActionPanel({
+    required this.today,
+    required this.canDraw,
+    required this.isDrawing,
+    required this.sensorAvailable,
+    required this.onDraw,
+  });
+
+  final RankFortuneRecord? today;
+  final bool canDraw;
+  final bool isDrawing;
+  final bool sensorAvailable;
+  final VoidCallback? onDraw;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      child: today == null
+          ? _DrawPrompt(
+              canDraw: canDraw,
+              isDrawing: isDrawing,
+              sensorAvailable: sensorAvailable,
+              onDraw: onDraw,
+            )
+          : _TodayFortune(record: today!, isDrawing: isDrawing),
     );
   }
 }
@@ -546,85 +541,83 @@ class _TodayFortune extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = _fortuneCopy(record.typeId);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
-      decoration: BoxDecoration(
-        color: const Color(0xFF090E1C).withValues(alpha: 0.82),
-        border: Border.all(color: _fortuneGold.withValues(alpha: 0.45)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _scoreColor(context, record.score).withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-              border: Border.all(color: _scoreColor(context, record.score)),
-            ),
-            child: Text(
-              '${record.score}',
-              style: TextStyle(
-                color: _scoreColor(context, record.score),
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 11, 52, 11),
+          decoration: BoxDecoration(
+            color: const Color(0xFF090E1C).withValues(alpha: 0.82),
+            border: Border.all(color: _fortuneGold.withValues(alpha: 0.45)),
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isDrawing ? 'Recasting your omen...' : copy.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  copy.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.66),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Row(
             children: [
-              Text(
-                'Fortune Value',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.58),
-                  fontSize: 10,
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _scoreColor(
+                    context,
+                    record.score,
+                  ).withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _scoreColor(context, record.score)),
+                ),
+                child: Text(
+                  '${record.score}',
+                  style: TextStyle(
+                    color: _scoreColor(context, record.score),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-              IconButton(
-                tooltip: 'Share Fortune',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => _shareFortune(context, record, copy),
-                icon: const Icon(
-                  Icons.ios_share_outlined,
-                  color: Colors.white,
-                  size: 20,
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isDrawing ? 'Recasting your omen...' : copy.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      copy.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.66),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        Positioned(
+          top: 5,
+          right: 4,
+          child: IconButton(
+            tooltip: 'Share Fortune',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _shareFortune(context, record, copy),
+            icon: const Icon(
+              Icons.ios_share_outlined,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -683,148 +676,39 @@ class _RankFortuneInstrumentState extends State<_RankFortuneInstrument> {
 }
 
 class _FortuneTrendPanel extends StatelessWidget {
-  const _FortuneTrendPanel({
-    required this.rows,
-    required this.catalog,
-    required this.days,
-    required this.today,
-  });
+  const _FortuneTrendPanel({required this.rows});
 
   final List<RankFortuneRecord> rows;
-  final List<RankFortuneCatalogEntry> catalog;
-  final int days;
-  final RankFortuneRecord? today;
 
   @override
   Widget build(BuildContext context) {
     final sorted = [...rows]..sort((a, b) => a.date.compareTo(b.date));
-    final recent = sorted.length > days
-        ? sorted.sublist(sorted.length - days)
+    final recent = sorted.length > 30
+        ? sorted.sublist(sorted.length - 30)
         : sorted;
     final scores = recent.map((row) => row.score).toList(growable: false);
-    final average = scores.isEmpty
-        ? 0
-        : (scores.reduce((a, b) => a + b) / scores.length).round();
-    final best = scores.isEmpty ? 0 : scores.reduce(math.max);
-    final lowest = scores.isEmpty ? 0 : scores.reduce(math.min);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       decoration: BoxDecoration(
         color: context.hokTheme.surfaceSlate,
         border: Border(top: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.show_chart_rounded,
-                color: _fortuneBlue,
-                size: 20,
+      child: scores.isEmpty
+          ? Center(
+              child: Text(
+                'Draw a fortune to start the trend.',
+                style: TextStyle(color: context.hokTheme.onSurfaceMuted),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '$days-day History',
-                  style: TextStyle(
-                    color: context.hokTheme.onSurfaceStrong,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+            )
+          : CustomPaint(
+              painter: _FortuneCurvePainter(
+                scores: scores,
+                lineColor: _scoreColor(context, scores.last),
+                gridColor: context.hokTheme.outlineSoft,
               ),
-              Text(
-                '${catalog.length} tiers',
-                style: TextStyle(
-                  color: context.hokTheme.onSurfaceMuted,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _TrendMetric(label: '30d Average', value: '$average'),
-              _TrendMetric(label: 'Best', value: '$best'),
-              _TrendMetric(label: 'Lowest', value: '$lowest'),
-              _TrendMetric(
-                label: 'Streak',
-                value: '${_currentStreak(recent)} days',
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: scores.isEmpty
-                ? Center(
-                    child: Text(
-                      'Draw a fortune to start the trend.',
-                      style: TextStyle(color: context.hokTheme.onSurfaceMuted),
-                    ),
-                  )
-                : CustomPaint(
-                    painter: _FortuneCurvePainter(
-                      scores: scores,
-                      lineColor: _scoreColor(context, scores.last),
-                      gridColor: context.hokTheme.outlineSoft,
-                    ),
-                    child: const SizedBox.expand(),
-                  ),
-          ),
-          if (today != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () =>
-                    _shareFortune(context, today!, _fortuneCopy(today!.typeId)),
-                icon: const Icon(Icons.ios_share_outlined, size: 16),
-                label: const Text('Share Fortune'),
-              ),
+              child: const SizedBox.expand(),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrendMetric extends StatelessWidget {
-  const _TrendMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.hokTheme.onSurfaceMuted,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: context.hokTheme.onSurfaceStrong,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
