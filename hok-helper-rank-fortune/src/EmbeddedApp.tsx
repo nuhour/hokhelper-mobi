@@ -38,6 +38,9 @@ export default function EmbeddedApp() {
     postToFlutter('spinComplete');
     setCubeState('AUTO_ROTATING');
   }, []);
+  const handleResourceError = useCallback(() => {
+    postToFlutter('resourceError');
+  }, []);
 
   return (
     <HexagramInstrument3D
@@ -45,7 +48,7 @@ export default function EmbeddedApp() {
       cubeState={cubeState}
       onStateChange={setCubeState}
       onShakeComplete={handleShakeComplete}
-      onResourceError={() => postToFlutter('resourceError')}
+      onResourceError={handleResourceError}
     />
   );
 }

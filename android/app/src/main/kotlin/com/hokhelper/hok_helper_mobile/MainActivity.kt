@@ -40,27 +40,38 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun openDiscordAuthorization(uri: Uri): Boolean {
-        val deepLink = uri.buildUpon()
-            .scheme("discord")
-            .authority("-")
-            .path("/oauth2/authorize")
-            .build()
+        val deepLinks = listOf(
+            uri.buildUpon()
+                .scheme("discord")
+                .authority("-")
+                .path("/oauth2/authorize")
+                .build(),
+            uri.buildUpon()
+                .scheme("discord")
+                .authority("discord.com")
+                .path("/oauth2/authorize")
+                .build()
+        )
         val discordPackages = listOf(
             "com.discord",
             "com.discord.beta",
             "com.discord.canary"
         )
         for (packageName in discordPackages) {
-            val deepLinkIntent =
-                Intent(Intent.ACTION_VIEW, deepLink).setPackage(packageName)
-            val webIntent = Intent(Intent.ACTION_VIEW, uri).setPackage(packageName)
-            val intent = if (deepLinkIntent.resolveActivity(packageManager) != null) {
-                deepLinkIntent
-            } else {
-                webIntent
+            for (deepLink in deepLinks) {
+                val deepLinkIntent = Intent(Intent.ACTION_VIEW, deepLink)
+                    .addCategory(Intent.CATEGORY_BROWSABLE)
+                    .setPackage(packageName)
+                if (deepLinkIntent.resolveActivity(packageManager) != null) {
+                    startActivity(deepLinkIntent)
+                    return true
+                }
             }
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
+            val webIntent = Intent(Intent.ACTION_VIEW, uri)
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+                .setPackage(packageName)
+            if (webIntent.resolveActivity(packageManager) != null) {
+                startActivity(webIntent)
                 return true
             }
         }

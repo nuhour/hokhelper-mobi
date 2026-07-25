@@ -382,7 +382,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
-    expect(find.text('Trend'), findsAtLeastNWidgets(1));
+    expect(find.text('Trend'), findsOneWidget);
     expect(find.text('Core'), findsAtLeastNWidgets(1));
     expect(find.text('趋势'), findsNothing);
     expect(find.text('核心'), findsNothing);

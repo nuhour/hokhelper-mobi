@@ -990,7 +990,6 @@ export const HexagramInstrument3D: React.FC<HexagramInstrument3DProps> = ({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
-        onDoubleClick={handleDoubleTapReset}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

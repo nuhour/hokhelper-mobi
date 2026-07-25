@@ -376,12 +376,6 @@ class _BuilderToolbar extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(
-          Icons.psychology_alt_rounded,
-          color: AppTheme.gold,
-          size: 20,
-        ),
-        const SizedBox(width: 8),
         const Spacer(),
         IconButton(
           tooltip: 'Swap Red/Blue',

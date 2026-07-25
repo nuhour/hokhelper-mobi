@@ -1870,16 +1870,19 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                           ),
                         ),
                       ),
-                      child: Text(
-                        group.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontSize: 9,
-                          color: context.hokTheme.onSurfaceMuted,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      child: group.isTrend
+                          ? const SizedBox.shrink()
+                          : Text(
+                              group.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    fontSize: 9,
+                                    color: context.hokTheme.onSurfaceMuted,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
                     ),
                 ],
               ),
@@ -2082,10 +2085,11 @@ class _HomeTableColumn {
 }
 
 class _HomeColumnGroup {
-  const _HomeColumnGroup(this.label, this.width);
+  const _HomeColumnGroup(this.label, this.width, {this.isTrend = false});
 
   final String label;
   final double width;
+  final bool isTrend;
 }
 
 List<_HomeColumnGroup> _homeColumnGroups(List<_HomeTableColumn> columns) {
@@ -2094,9 +2098,21 @@ List<_HomeColumnGroup> _homeColumnGroups(List<_HomeTableColumn> columns) {
     final width = _homeTableColumnWidth(column);
     if (groups.isNotEmpty && groups.last.label == column.group) {
       final previous = groups.removeLast();
-      groups.add(_HomeColumnGroup(previous.label, previous.width + width));
+      groups.add(
+        _HomeColumnGroup(
+          previous.label,
+          previous.width + width,
+          isTrend: previous.isTrend,
+        ),
+      );
     } else {
-      groups.add(_HomeColumnGroup(column.group, width));
+      groups.add(
+        _HomeColumnGroup(
+          column.group,
+          width,
+          isTrend: column.id == 'trend_smoothed' || column.type == 'sparkline',
+        ),
+      );
     }
   }
   return groups;

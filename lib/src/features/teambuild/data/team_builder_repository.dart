@@ -12,7 +12,7 @@ class TeamBuilderRepository {
       '/teambuild/heroes',
       body: {
         'page': 1,
-        'pageSize': 80,
+        'pageSize': 200,
         'filterRules': [
           {'field': 'region_id', 'op': 'eq', 'value': regionId},
         ],

@@ -78,7 +78,7 @@ void main() {
       expect(apiClient.postPath, '/teambuild/heroes');
       expect(apiClient.postBody, {
         'page': 1,
-        'pageSize': 80,
+        'pageSize': 200,
         'filterRules': [
           {'field': 'region_id', 'op': 'eq', 'value': 2},
         ],

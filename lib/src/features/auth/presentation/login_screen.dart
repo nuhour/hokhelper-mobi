@@ -315,13 +315,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final result = await ref
         .read(nativeGoogleSignInProvider)
         .authenticate(serverClientId: serverClientId);
-    final nativeError = result.error;
-    if (nativeError != null && nativeError.isNotEmpty) {
-      throw StateError(nativeError);
-    }
     final idToken = result.idToken;
     if (result.status != NativeGoogleSignInStatus.authenticated ||
         idToken == null) {
+      // Device-side Google configuration differs between stores and debug
+      // signatures. Keep the browser OAuth path available when Play Services
+      // cannot issue an ID token instead of leaving the user at a dead end.
       return result.status;
     }
 
