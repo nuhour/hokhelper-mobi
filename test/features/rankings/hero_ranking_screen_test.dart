@@ -144,9 +144,21 @@ void main() {
                 name: 'Lam',
                 mainJob: '4',
                 tier: 'T0',
-                position: 1,
+                position: 8,
+                lanePositions: [1],
                 score: 96.5,
                 winRate: 0.55,
+              ),
+              TierListEntry(
+                heroId: 43,
+                externalHeroId: '111',
+                name: 'Hou Yi',
+                mainJob: '5',
+                tier: 'T1',
+                position: 1,
+                lanePositions: [2],
+                score: 88,
+                winRate: 0.51,
               ),
             ];
           }),
@@ -158,11 +170,17 @@ void main() {
 
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('T0'), findsOneWidget);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('1'), findsNWidgets(2));
     expect(find.byKey(const ValueKey('stats-tier-lane-all')), findsOneWidget);
     expect(find.byKey(const ValueKey('stats-tier-lane-1')), findsOneWidget);
     expect(find.text('Heroes'), findsNothing);
     expect(find.text('Players'), findsNothing);
     expect(find.text('Equips'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('stats-tier-lane-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lam'), findsOneWidget);
+    expect(find.text('Hou Yi'), findsNothing);
   });
 }

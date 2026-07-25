@@ -382,7 +382,7 @@ class _TierListTab extends ConsumerWidget {
         final filteredEntries = lanePosition == null
             ? entries
             : entries
-                  .where((entry) => entry.position == lanePosition)
+                  .where((entry) => entry.lanePositions.contains(lanePosition))
                   .toList(growable: false);
         final groups = <String, List<TierListEntry>>{};
         for (final entry in filteredEntries) {

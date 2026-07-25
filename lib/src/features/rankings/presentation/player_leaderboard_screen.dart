@@ -476,19 +476,57 @@ class _BestHeroesCell extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         for (final hero in heroes.take(3))
-          Tooltip(
-            message: hero.score > 0
-                ? '${hero.heroName} · ${hero.score.toStringAsFixed(1)}'
-                : hero.heroName,
-            child: AppImage(
-              url: hero.avatarUrl,
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              semanticLabel: hero.heroName,
+          Expanded(
+            child: Tooltip(
+              message: hero.score > 0
+                  ? '${hero.heroName} · ${_formatHeroPower(hero.score)}'
+                  : hero.heroName,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppImage(
+                    url: hero.avatarUrl,
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    semanticLabel: hero.heroName,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bolt_rounded,
+                        size: 10,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      Text(
+                        hero.score > 0 ? _formatHeroPower(hero.score) : '-',
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontSize: 9,
+                          height: 1,
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
       ],
     );
   }
+}
+
+String _formatHeroPower(double value) {
+  if (value >= 1000) {
+    final compact = value / 1000;
+    return '${compact.toStringAsFixed(compact >= 10 ? 0 : 1)}k';
+  }
+  return value == value.roundToDouble()
+      ? value.toStringAsFixed(0)
+      : value.toStringAsFixed(1);
 }

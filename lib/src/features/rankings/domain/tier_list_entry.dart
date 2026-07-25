@@ -7,6 +7,7 @@ class TierListEntry {
     required this.mainJob,
     required this.tier,
     required this.position,
+    this.lanePositions = const [],
     required this.score,
     required this.winRate,
   });
@@ -18,6 +19,7 @@ class TierListEntry {
   final String mainJob;
   final String tier;
   final int position;
+  final List<int> lanePositions;
   final double score;
   final double winRate;
 
@@ -30,6 +32,7 @@ class TierListEntry {
       mainJob: mainJob,
       tier: tier,
       position: position,
+      lanePositions: lanePositions,
       score: score,
       winRate: winRate,
     );
@@ -55,10 +58,33 @@ class TierListEntry {
       mainJob: _readString(map['mainJob'] ?? map['main_job']),
       tier: _readString(map['tier'], fallback: 'T?').toUpperCase(),
       position: _readInt(map['position']),
+      lanePositions: _readLanePositions(
+        map['lanePosition'] ??
+            map['lane_position'] ??
+            map['hero_position'] ??
+            map['postion'],
+      ),
       score: _readDouble(map['score']),
       winRate: _readRate(map['win_rate']),
     );
   }
+}
+
+List<int> _readLanePositions(Object? value) {
+  if (value is List) {
+    return value
+        .map(_readInt)
+        .where((position) => position >= 0 && position <= 4)
+        .toSet()
+        .toList(growable: false);
+  }
+  return (value?.toString() ?? '')
+      .split(RegExp(r'[,|/;\s]+'))
+      .map(int.tryParse)
+      .whereType<int>()
+      .where((position) => position >= 0 && position <= 4)
+      .toSet()
+      .toList(growable: false);
 }
 
 class TierHistoryPoint {

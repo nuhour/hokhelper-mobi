@@ -39,10 +39,10 @@ void main() {
     homeStats.complete(
       const HomeStats(success: true, message: 'Ready', result: {}),
     );
-    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pump(const Duration(milliseconds: 2500));
     expect(find.text('HOK HELPER'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 1100));
     await tester.pumpAndSettle();
     expect(find.text('HOK HELPER'), findsNothing);
     expect(find.text('Home ready'), findsOneWidget);

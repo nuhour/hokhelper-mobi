@@ -39,7 +39,7 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
     );
     _gatherController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1650),
+      duration: const Duration(milliseconds: 2400),
     );
     _pulseController = AnimationController(
       vsync: this,
@@ -88,7 +88,7 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
     _pulseController.repeat();
     final minimumGatherDelay =
         widget.minimumGatherDelay ??
-        (_isWidgetTest ? Duration.zero : const Duration(milliseconds: 500));
+        (_isWidgetTest ? Duration.zero : const Duration(milliseconds: 1400));
     if (minimumGatherDelay > Duration.zero) {
       await Future<void>.delayed(minimumGatherDelay);
     }
@@ -186,12 +186,12 @@ class _SplashCanvas extends StatelessWidget {
     final gathered = reduceMotion
         ? 1.0
         : Curves.easeInOutCubic.transform(
-            (gatherProgress / 0.82).clamp(0.0, 1.0),
+            const Interval(0.34, 0.86).transform(gatherProgress),
           );
     final logoProgress = reduceMotion
         ? 1.0
         : Curves.easeOutBack.transform(
-            const Interval(0.78, 1).transform(gatherProgress),
+            const Interval(0.82, 1).transform(gatherProgress),
           );
 
     return ColoredBox(

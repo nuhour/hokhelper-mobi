@@ -89,6 +89,7 @@ class _FakeApiClient extends ApiClient {
               'mainJob': 4,
               'tier': 'T0',
               'position': 1,
+              'lanePosition': '1,3',
               'score': 96.5,
               'win_rate': 55.0,
             },
@@ -220,6 +221,7 @@ void main() {
     expect(entries.single.mainJob, '4');
     expect(entries.single.tier, 'T0');
     expect(entries.single.position, 1);
+    expect(entries.single.lanePositions, [1, 3]);
     expect(entries.single.score, 96.5);
     expect(entries.single.winRate, 0.55);
     expect(

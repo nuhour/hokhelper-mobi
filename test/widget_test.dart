@@ -44,7 +44,11 @@ void main() {
     expect(find.text('Community'), findsOneWidget);
     expect(find.text('Tools'), findsOneWidget);
     expect(find.text('Me'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    final bottomNavigation = find.byKey(
+      const ValueKey('compact-bottom-navigation'),
+    );
+    expect(bottomNavigation, findsOneWidget);
+    expect(tester.getSize(bottomNavigation).height, 58);
   });
 
   testWidgets('keeps bottom navigation labels on one line on narrow devices', (
@@ -112,7 +116,10 @@ void main() {
     expect(find.text('社区'), findsOneWidget);
     expect(find.text('工具'), findsOneWidget);
     expect(find.text('我的'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('compact-bottom-navigation')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('uses Material light theme mode for the hokx classic palette', (
