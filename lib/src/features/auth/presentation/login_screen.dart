@@ -31,7 +31,9 @@ final nativeGoogleSignInProvider = Provider<NativeGoogleSignIn>((ref) {
 });
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({this.returnTo, super.key});
+
+  final String? returnTo;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -63,7 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.listen(authControllerProvider, (previous, next) {
       if (next.hasValue && next.value != null && mounted) {
-        context.go('/me');
+        context.go(_safeReturnRoute(widget.returnTo));
       }
     });
 
@@ -279,7 +281,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (nativeResult == NativeGoogleSignInStatus.authenticated) {
           await stateStore.clear(provider);
           if (mounted) {
-            context.go('/me');
+            context.go(_safeReturnRoute(widget.returnTo));
           }
           return;
         }
@@ -328,6 +330,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.invalidate(authControllerProvider);
     return NativeGoogleSignInStatus.authenticated;
   }
+}
+
+String _safeReturnRoute(String? value) {
+  final route = value?.trim() ?? '';
+  return route.startsWith('/') && !route.startsWith('//') ? route : '/me';
 }
 
 class _OAuthButton extends StatelessWidget {

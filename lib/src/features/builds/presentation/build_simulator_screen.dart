@@ -759,7 +759,7 @@ class _SlotCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          height: scheme == null ? 132 : 154,
+          height: scheme == null ? 118 : 176,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: context.hokTheme.surfaceSlate,
@@ -849,6 +849,16 @@ class _SlotCard extends StatelessWidget {
                       )
                       .toList(growable: false),
                 ),
+              if (scheme != null) ...[
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 26,
+                  child: _CompactBuildLoadout(
+                    summonerSkillIcon: scheme!.summonerSkillIcon,
+                    runes: _buildRuneGroups(scheme!.runeIds),
+                  ),
+                ),
+              ],
               const Spacer(),
               if (scheme != null)
                 Text(
@@ -867,6 +877,16 @@ class _SlotCard extends StatelessWidget {
       ),
     );
   }
+}
+
+List<_BuildRuneGroup> _buildRuneGroups(List<int> runeIds) {
+  final counts = <int, int>{};
+  for (final runeId in runeIds) {
+    if (runeId > 0) counts[runeId] = (counts[runeId] ?? 0) + 1;
+  }
+  return counts.entries
+      .map((entry) => _BuildRuneGroup(id: entry.key, count: entry.value))
+      .toList(growable: false);
 }
 
 class _BuildCollectionTabs extends StatelessWidget {
@@ -1145,7 +1165,9 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   void _toggleRune(int runeId) {
     setState(() {
       if (_runeIds.contains(runeId)) {
-        _runeIds = _runeIds.where((id) => id != runeId).toList();
+        final next = [..._runeIds];
+        next.remove(runeId);
+        _runeIds = next;
       } else if (_runeIds.length < 30) {
         _runeIds = [..._runeIds, runeId];
       }
@@ -1207,23 +1229,17 @@ class _BuildEditorToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 108,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      height: 96,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: context.hokTheme.surfaceSlate,
         border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: onClose,
-            tooltip: 'Close editor',
-            icon: const Icon(Icons.close),
-            color: context.hokTheme.onSurfaceMuted,
-          ),
           Container(
-            width: 62,
-            height: 62,
+            width: 76,
+            height: 76,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppTheme.gold.withValues(alpha: 0.16),
@@ -1235,61 +1251,82 @@ class _BuildEditorToolbar extends StatelessWidget {
                     child: AppImage(url: heroAvatar, semanticLabel: heroName),
                   ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
           Expanded(
-            child: TextField(
-              controller: titleController,
-              maxLines: 1,
-              textInputAction: TextInputAction.done,
-              style: TextStyle(
-                color: context.hokTheme.onSurfaceStrong,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: heroName.isEmpty ? 'Build name' : '$heroName build',
-                hintStyle: TextStyle(color: context.hokTheme.onSurfaceMuted),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 38,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (!isTemporary)
+                        IconButton(
+                          onPressed: onToggleVisibility,
+                          tooltip: isPublic ? 'Public build' : 'Private build',
+                          icon: Icon(
+                            isPublic ? Icons.public : Icons.lock_outline,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      IconButton(
+                        onPressed: onClear,
+                        tooltip: 'Clear build',
+                        icon: const Icon(Icons.delete_outline),
+                        color: AppTheme.error,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        onPressed: onClose,
+                        tooltip: 'Close editor',
+                        icon: const Icon(Icons.close),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      if (!isTemporary)
+                        IconButton(
+                          onPressed: onSave,
+                          tooltip: 'Save build',
+                          icon: saving
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined),
+                          color: AppTheme.gold,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 38,
+                  child: TextField(
+                    controller: titleController,
+                    maxLines: 1,
+                    textInputAction: TextInputAction.done,
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: heroName.isEmpty
+                          ? 'Build name'
+                          : '$heroName build',
+                      hintStyle: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          if (isTemporary)
-            Tooltip(
-              message: 'Temporary editing cannot be saved',
-              child: Icon(
-                Icons.visibility_outlined,
-                color: context.hokTheme.onSurfaceMuted,
-              ),
-            )
-          else
-            IconButton(
-              onPressed: onToggleVisibility,
-              tooltip: isPublic ? 'Public build' : 'Private build',
-              icon: Icon(isPublic ? Icons.public : Icons.lock_outline),
-              color: isPublic
-                  ? AppTheme.success
-                  : context.hokTheme.onSurfaceMuted,
-            ),
-          IconButton(
-            onPressed: onClear,
-            tooltip: 'Clear equipment, arcana, and skill',
-            icon: const Icon(Icons.delete_outline),
-            color: AppTheme.error,
-          ),
-          if (!isTemporary)
-            IconButton(
-              onPressed: onSave,
-              tooltip: 'Save build',
-              icon: saving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-              color: AppTheme.gold,
-            ),
         ],
       ),
     );
@@ -1313,17 +1350,17 @@ class _BuildEditorTabs extends StatelessWidget {
       (
         tab: _BuildEditorTab.arcana,
         icon: Icons.hexagon_outlined,
-        label: 'Arcana Matrix',
+        label: 'Arcana',
       ),
       (
         tab: _BuildEditorTab.skill,
         icon: Icons.auto_fix_high_outlined,
-        label: 'Skill',
+        label: 'Spells',
       ),
     ];
     return Container(
-      height: 84,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+      height: 58,
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       color: context.hokTheme.surfaceSlate,
       child: Row(
         children: tabs
@@ -1358,7 +1395,7 @@ class _BuildEditorTabs extends StatelessWidget {
                                 ? Colors.white
                                 : context.hokTheme.onSurfaceMuted,
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               entry.label,
@@ -1369,7 +1406,7 @@ class _BuildEditorTabs extends StatelessWidget {
                                     ? Colors.white
                                     : context.hokTheme.onSurfaceMuted,
                                 fontWeight: FontWeight.w900,
-                                fontSize: 13,
+                                fontSize: 11,
                               ),
                             ),
                           ),
@@ -1600,7 +1637,7 @@ class _BuildCatalogTabs extends StatelessWidget {
       children: [
         Expanded(child: _CatalogTab(label: 'ITEMS', selected: true)),
         Expanded(child: _CatalogTab(label: 'ARCANA')),
-        Expanded(child: _CatalogTab(label: 'ARCANA OVERVIEW')),
+        Expanded(child: _CatalogTab(label: 'OVERVIEW')),
       ],
     ),
   );
@@ -1626,7 +1663,7 @@ class _CatalogTab extends StatelessWidget {
       style: TextStyle(
         color: selected ? AppTheme.gold : context.hokTheme.onSurfaceMuted,
         fontWeight: FontWeight.w900,
-        letterSpacing: 1.1,
+        fontSize: 11,
       ),
     ),
   );
@@ -1635,11 +1672,11 @@ class _CatalogTab extends StatelessWidget {
 class _EquipmentFilterBar extends StatelessWidget {
   const _EquipmentFilterBar();
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
-    child: Wrap(
-      spacing: 9,
-      runSpacing: 9,
+  Widget build(BuildContext context) => SizedBox(
+    height: 46,
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       children: const [
         _EquipmentFilter(label: 'All', selected: true),
         _EquipmentFilter(label: 'Attack'),
@@ -1659,7 +1696,8 @@ class _EquipmentFilter extends StatelessWidget {
   final bool selected;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+    margin: const EdgeInsets.only(right: 6),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
       color: selected ? AppTheme.gold : context.hokTheme.backgroundDeep,
       borderRadius: BorderRadius.circular(999),
@@ -1672,6 +1710,7 @@ class _EquipmentFilter extends StatelessWidget {
       style: TextStyle(
         color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
         fontWeight: FontWeight.w800,
+        fontSize: 11,
       ),
     ),
   );
@@ -1700,8 +1739,9 @@ class _BuildArcanaWorkspace extends StatelessWidget {
         .toList();
     return Column(
       children: [
+        _ArcanaMatrixPreview(runes: runes, selectedIds: selectedIds),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Row(
             children: [
               for (final color in const [1, 2, 3]) ...[
@@ -1770,6 +1810,140 @@ class _BuildArcanaWorkspace extends StatelessWidget {
         .map((rune) => rune.id)
         .toSet();
     return selectedIds.where(ids.contains).length;
+  }
+}
+
+class _ArcanaMatrixPreview extends StatelessWidget {
+  const _ArcanaMatrixPreview({required this.runes, required this.selectedIds});
+
+  final List<BuildRuneSummary> runes;
+  final List<int> selectedIds;
+
+  @override
+  Widget build(BuildContext context) {
+    final byId = {for (final rune in runes) rune.id: rune};
+    final selected = selectedIds
+        .map((id) => byId[id])
+        .whereType<BuildRuneSummary>()
+        .toList(growable: false);
+    return Container(
+      height: 184,
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      decoration: BoxDecoration(
+        color: context.hokTheme.surfaceSlate,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.hokTheme.outlineSoft),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: context.hokTheme.backgroundDeep,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: context.hokTheme.outlineSoft),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${selectedIds.length * 5}',
+                  style: TextStyle(
+                    color: context.hokTheme.onSurfaceStrong,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  'ARCANA',
+                  style: TextStyle(
+                    color: context.hokTheme.onSurfaceMuted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 14,
+            top: 34,
+            bottom: 22,
+            child: _ArcanaMatrixGroup(
+              runes: selected.where((rune) => rune.color == 2).toList(),
+              accent: _arcanaAccent(2),
+            ),
+          ),
+          Positioned(
+            right: 14,
+            top: 34,
+            bottom: 22,
+            child: _ArcanaMatrixGroup(
+              runes: selected.where((rune) => rune.color == 1).toList(),
+              accent: _arcanaAccent(1),
+            ),
+          ),
+          Positioned(
+            left: 82,
+            right: 82,
+            top: 8,
+            child: _ArcanaMatrixGroup(
+              runes: selected.where((rune) => rune.color == 3).toList(),
+              accent: _arcanaAccent(3),
+              horizontal: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArcanaMatrixGroup extends StatelessWidget {
+  const _ArcanaMatrixGroup({
+    required this.runes,
+    required this.accent,
+    this.horizontal = false,
+  });
+
+  final List<BuildRuneSummary> runes;
+  final Color accent;
+  final bool horizontal;
+
+  @override
+  Widget build(BuildContext context) {
+    final icons = List<Widget>.generate(10, (index) {
+      final rune = index < runes.length ? runes[index] : null;
+      return Container(
+        width: 23,
+        height: 23,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: accent.withValues(alpha: rune == null ? 0.08 : 0.2),
+          border: Border.all(color: accent.withValues(alpha: 0.55)),
+        ),
+        child: rune == null
+            ? null
+            : AppImage(
+                url: rune.iconUrl,
+                borderRadius: 999,
+                excludeFromSemantics: true,
+              ),
+      );
+    });
+    return SizedBox(
+      width: horizontal ? 130 : 60,
+      child: Wrap(
+        direction: horizontal ? Axis.horizontal : Axis.vertical,
+        spacing: 2,
+        runSpacing: 2,
+        alignment: WrapAlignment.center,
+        children: icons,
+      ),
+    );
   }
 }
 
@@ -2651,15 +2825,19 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              scheme.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: context.hokTheme.onSurfaceStrong,
-                                fontSize: 15,
-                                height: 1,
-                                fontWeight: FontWeight.w900,
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: onView,
+                              child: Text(
+                                scheme.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: context.hokTheme.onSurfaceStrong,
+                                  fontSize: 15,
+                                  height: 1,
+                                  fontWeight: FontWeight.w900,
+                                ),
                               ),
                             ),
                             Text(
@@ -2756,14 +2934,6 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                             value: scheme.cloneCount,
                             tooltip: 'Choose clone slot',
                             onTap: disabled ? null : onClone,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _CompactBuildAction(
-                            icon: Icons.visibility_outlined,
-                            tooltip: 'Temporarily edit build',
-                            onTap: onView,
                           ),
                         ),
                       ],

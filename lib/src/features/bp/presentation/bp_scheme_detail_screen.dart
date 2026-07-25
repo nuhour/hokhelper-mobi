@@ -1044,10 +1044,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
 
   bool _canSelectHero(int heroId) {
     if (_isPeakMode) {
-      return !_isSaved &&
-          !_peakRevealed &&
-          heroId > 0 &&
-          !_peakEnemyPicks.contains(heroId);
+      return !_isSaved && !_peakRevealed && heroId > 0;
     }
     final step = _currentStep;
     if (!_canAct || heroId <= 0 || step == null) return false;
@@ -1058,11 +1055,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       ..._redPicks.whereType<int>(),
     };
     if (inCurrentDraft.contains(heroId)) return false;
-    final activeTeamIsA = _activeSideIsTeamA();
-    if (step.type == _BpSlotType.pick) {
-      return !_teamUsedHeroes(activeTeamIsA).contains(heroId);
-    }
-    return !_teamUsedHeroes(!activeTeamIsA).contains(heroId);
+    return true;
   }
 
   _BpHeroStatus _heroStatus(int heroId) {
@@ -1076,13 +1069,6 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     }
     if (_bluePicks.contains(heroId) || _redPicks.contains(heroId)) {
       return _BpHeroStatus.picked;
-    }
-    final activeTeamIsA = _activeSideIsTeamA();
-    if (_teamUsedHeroes(activeTeamIsA).contains(heroId)) {
-      return _BpHeroStatus.usedByActiveTeam;
-    }
-    if (_teamUsedHeroes(!activeTeamIsA).contains(heroId)) {
-      return _BpHeroStatus.usedByOpponent;
     }
     return _BpHeroStatus.available;
   }
@@ -1109,7 +1095,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       final byId = {for (final hero in heroes) int.tryParse(hero.id): hero};
       final picked = <int>[];
       final usedPositions = <int>{};
-      final excluded = {..._peakUserPicks};
+      final excluded = <int>{};
       for (final recommendation in result.recommendations) {
         final id = recommendation.heroId;
         final hero = byId[id];
@@ -1151,7 +1137,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     } catch (_) {
       final fallback = heroes
           .map((hero) => int.tryParse(hero.id) ?? 0)
-          .where((id) => id > 0 && !_peakUserPicks.contains(id))
+          .where((id) => id > 0)
           .take(5)
           .toList(growable: false);
       if (mounted) {
@@ -1440,6 +1426,8 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                             loserTeamName: _gameWinner == 'blue'
                                 ? _redTeamName
                                 : _blueTeamName,
+                            blueTeamName: _blueTeamName,
+                            redTeamName: _redTeamName,
                             nextGameLoserSide: _nextGameLoserSide,
                             selectedHeroId: _selectedHeroId,
                             canUndo: _undoStack.isNotEmpty,
@@ -1909,6 +1897,8 @@ class _BpFlowControls extends StatelessWidget {
     required this.isSeriesCompleted,
     required this.sideSelectionRule,
     required this.loserTeamName,
+    required this.blueTeamName,
+    required this.redTeamName,
     required this.nextGameLoserSide,
     required this.selectedHeroId,
     required this.canUndo,
@@ -1939,6 +1929,8 @@ class _BpFlowControls extends StatelessWidget {
   final bool isSeriesCompleted;
   final String sideSelectionRule;
   final String loserTeamName;
+  final String blueTeamName;
+  final String redTeamName;
   final _BpSide nextGameLoserSide;
   final int? selectedHeroId;
   final bool canUndo;
@@ -2018,7 +2010,9 @@ class _BpFlowControls extends StatelessWidget {
                         : Colors.white24,
                   ),
                 ),
-                child: const Text('蓝方胜'),
+                child: Text(
+                  '${blueTeamName.isEmpty ? 'Team A' : blueTeamName} wins',
+                ),
               ),
               const SizedBox(width: 6),
               OutlinedButton(
@@ -2034,7 +2028,9 @@ class _BpFlowControls extends StatelessWidget {
                         : Colors.white24,
                   ),
                 ),
-                child: const Text('红方胜'),
+                child: Text(
+                  '${redTeamName.isEmpty ? 'Team B' : redTeamName} wins',
+                ),
               ),
               const SizedBox(width: 6),
               FilledButton.icon(
@@ -2112,7 +2108,7 @@ class _BpFlowControls extends StatelessWidget {
   }
 }
 
-class _BpSlot extends StatelessWidget {
+class _BpSlot extends StatefulWidget {
   const _BpSlot({
     required this.heroId,
     required this.color,
@@ -2130,39 +2126,95 @@ class _BpSlot extends StatelessWidget {
   final bool banned;
 
   @override
+  State<_BpSlot> createState() => _BpSlotState();
+}
+
+class _BpSlotState extends State<_BpSlot> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _pulse = Tween<double>(
+      begin: 1,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    if (widget.active) _controller.repeat(reverse: true, count: 4);
+  }
+
+  @override
+  void didUpdateWidget(covariant _BpSlot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _controller.repeat(reverse: true, count: 4);
+    } else if (!widget.active && oldWidget.active) {
+      _controller
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
+    final slot = Container(
+      width: widget.size,
+      height: widget.size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: active ? color : color.withValues(alpha: 0.7),
-          width: active ? 3 : 2,
+          color: widget.active
+              ? widget.color
+              : widget.color.withValues(alpha: 0.7),
+          width: widget.active ? 3 : 2,
         ),
-        color: color.withValues(alpha: 0.08),
+        color: widget.color.withValues(alpha: 0.08),
+        boxShadow: widget.active
+            ? [
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 0.55),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                ),
+              ]
+            : null,
       ),
-      child: (heroId ?? previewHeroId) == null
+      child: (widget.heroId ?? widget.previewHeroId) == null
           ? Center(
-              child: Text('•', style: TextStyle(color: color, fontSize: 22)),
+              child: Text(
+                '•',
+                style: TextStyle(color: widget.color, fontSize: 22),
+              ),
             )
           : Stack(
               fit: StackFit.expand,
               children: [
                 Opacity(
-                  opacity: heroId == null ? 0.6 : 1,
+                  opacity: widget.heroId == null ? 0.6 : 1,
                   child: AppImage(
                     url:
-                        'https://hokhelper.com/static/game/hero/${heroId ?? previewHeroId}.png',
+                        'https://hokhelper.com/static/game/hero/${widget.heroId ?? widget.previewHeroId}.png',
                     borderRadius: 999,
                     semanticLabel: 'Selected hero',
                   ),
                 ),
-                if (banned && heroId != null && heroId! > 0)
+                if (widget.banned &&
+                    widget.heroId != null &&
+                    widget.heroId! > 0)
                   const Center(
                     child: Icon(Icons.block_rounded, color: AppTheme.error),
                   ),
-                if (heroId == -1)
+                if (widget.heroId == -1)
                   const Center(
                     child: Icon(
                       Icons.remove_circle_outline,
@@ -2172,6 +2224,7 @@ class _BpSlot extends StatelessWidget {
               ],
             ),
     );
+    return widget.active ? ScaleTransition(scale: _pulse, child: slot) : slot;
   }
 }
 

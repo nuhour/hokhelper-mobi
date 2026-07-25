@@ -370,7 +370,11 @@ GoRouter createAppRouter() {
     initialLocation: '/',
     routes: [
       ..._localizedPathRedirects(),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) =>
+            LoginScreen(returnTo: state.uri.queryParameters['returnTo']),
+      ),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),

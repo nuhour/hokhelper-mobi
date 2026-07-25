@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../auth/presentation/auth_controller.dart';
 
-class ToolsScreen extends StatelessWidget {
+class ToolsScreen extends ConsumerWidget {
   const ToolsScreen({super.key});
 
   static const _primaryTools = [
@@ -54,8 +56,10 @@ class ToolsScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final isAuthenticated =
+        ref.watch(authControllerProvider).valueOrNull != null;
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -80,6 +84,19 @@ class ToolsScreen extends StatelessWidget {
                       tool: tool,
                       title: l10n.toolTitle(tool.route),
                       subtitle: l10n.toolSubtitle(tool.route),
+                      onTap: () {
+                        final requiresAccount =
+                            tool.route == '/tools/bp-simulator' ||
+                            tool.route == '/tools/tier-list' ||
+                            tool.route == '/tools/prompts';
+                        if (requiresAccount && !isAuthenticated) {
+                          context.go(
+                            '/login?returnTo=${Uri.encodeComponent(tool.route)}',
+                          );
+                          return;
+                        }
+                        context.go(tool.route);
+                      },
                     ),
                   ),
               ],
@@ -112,12 +129,14 @@ class _ToolGridCard extends StatelessWidget {
     required this.tool,
     required this.title,
     required this.subtitle,
+    required this.onTap,
     super.key,
   });
 
   final _ToolItem tool;
   final String title;
   final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +145,7 @@ class _ToolGridCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go(tool.route),
+        onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: context.hokTheme.surfaceSlate,

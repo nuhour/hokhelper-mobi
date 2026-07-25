@@ -71,6 +71,9 @@ class TierListToolRepository {
     );
     final result = json['result'];
     final updatedScheme = result is Map ? result['scheme'] : json['scheme'];
+    if (updatedScheme is! Map && result is! Map) {
+      return scheme;
+    }
     return TierListSchemeSummary.fromJson(
       updatedScheme is Map ? updatedScheme : result,
     );

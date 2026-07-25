@@ -166,16 +166,23 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (isAuthenticated)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: FilledButton.icon(
-                              onPressed: () => _openCreateSheet(context),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Create'),
-                            ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              if (!isAuthenticated) {
+                                context.go(
+                                  '/login?returnTo=${Uri.encodeComponent('/tools/prompts')}',
+                                );
+                                return;
+                              }
+                              _openCreateSheet(context);
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create'),
                           ),
-                        if (isAuthenticated) const SizedBox(height: 8),
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           'Explore public AI prompt templates from the community.',
                           style: Theme.of(context).textTheme.bodyMedium
@@ -1666,7 +1673,18 @@ enum _PromptImageTarget { source, effect }
 enum _PromptLanguage {
   english('en', 'English'),
   chinese('zh', 'Chinese'),
-  indonesian('id', 'Indonesian');
+  indonesian('id', 'Indonesian'),
+  japanese('ja', 'Japanese'),
+  korean('ko', 'Korean'),
+  spanish('es', 'Spanish'),
+  portuguese('pt', 'Portuguese'),
+  french('fr', 'French'),
+  german('de', 'German'),
+  russian('ru', 'Russian'),
+  thai('th', 'Thai'),
+  vietnamese('vi', 'Vietnamese'),
+  turkish('tr', 'Turkish'),
+  arabic('ar', 'Arabic');
 
   const _PromptLanguage(this.code, this.label);
 
@@ -1689,6 +1707,17 @@ extension _PromptLanguageOptionX on _PromptLanguage {
     return switch (langTag) {
       'zh' || 'chinese' || '中文' => _PromptLanguage.chinese,
       'id' || 'indonesian' || 'bahasa' => _PromptLanguage.indonesian,
+      'ja' || 'japanese' => _PromptLanguage.japanese,
+      'ko' || 'korean' => _PromptLanguage.korean,
+      'es' || 'spanish' => _PromptLanguage.spanish,
+      'pt' || 'portuguese' => _PromptLanguage.portuguese,
+      'fr' || 'french' => _PromptLanguage.french,
+      'de' || 'german' => _PromptLanguage.german,
+      'ru' || 'russian' => _PromptLanguage.russian,
+      'th' || 'thai' => _PromptLanguage.thai,
+      'vi' || 'vietnamese' => _PromptLanguage.vietnamese,
+      'tr' || 'turkish' => _PromptLanguage.turkish,
+      'ar' || 'arabic' => _PromptLanguage.arabic,
       _ => _PromptLanguage.english,
     };
   }
@@ -1814,6 +1843,12 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                             const SizedBox(width: 8),
                             _PublicBadge(isPublic: prompt.isPublic),
                           ],
+                          const SizedBox(width: 4),
+                          _PromptIconAction(
+                            icon: Icons.ios_share_outlined,
+                            tooltip: 'Share',
+                            onPressed: () => _sharePrompt(context),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -1829,13 +1864,20 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
             ),
             if (prompt.content.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(
-                prompt.content,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: context.hokTheme.onSurfaceMuted,
-                  height: 1.35,
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onView,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    prompt.content,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                      height: 1.35,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1869,22 +1911,12 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                     onPressed: () => _favoritePrompt(context),
                   ),
                   const SizedBox(width: 8),
-                  _PromptIconAction(
-                    icon: Icons.visibility_outlined,
-                    tooltip: 'View prompt',
-                    onPressed: widget.onView,
-                  ),
                   if (prompt.content.isNotEmpty)
                     _PromptIconAction(
                       icon: Icons.copy_outlined,
                       tooltip: 'Copy',
                       onPressed: () => _copyPrompt(context),
                     ),
-                  _PromptIconAction(
-                    icon: Icons.ios_share_outlined,
-                    tooltip: 'Share',
-                    onPressed: () => _sharePrompt(context),
-                  ),
                   if (widget.canManage) ...[
                     _PromptIconAction(
                       icon: Icons.edit_outlined,

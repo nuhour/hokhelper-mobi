@@ -131,6 +131,9 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
       messenger.showSnackBar(
         const SnackBar(content: Text('BP scheme created')),
       );
+      context.go(
+        '/tools/bp-simulator/${created.id}?gameIndex=${created.history.length}',
+      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -384,7 +387,11 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
     final selectedGame = selectedHistoryIndex == null
         ? null
         : history[selectedHistoryIndex];
-    final openGameIndex = selectedHistoryIndex ?? history.length;
+    final openGameIndex =
+        selectedHistoryIndex ??
+        (history.length > scheme.historyCount
+            ? history.length
+            : scheme.historyCount);
     return Material(
       color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(18),
@@ -547,7 +554,35 @@ class _BpGamePreview extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
         ),
-        child: board,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            board,
+            IgnorePointer(
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF246BFF),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF246BFF).withValues(alpha: 0.35),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  current
+                      ? Icons.play_arrow_rounded
+                      : Icons.visibility_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

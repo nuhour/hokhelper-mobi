@@ -15,11 +15,13 @@ class BuildEquipSummary {
     required this.id,
     required this.name,
     required this.iconUrl,
+    this.category = '',
   });
 
   final int id;
   final String name;
   final String iconUrl;
+  final String category;
 
   factory BuildEquipSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -33,6 +35,9 @@ class BuildEquipSummary {
         kind: 'equip',
         id: id,
       ),
+      category: _readString(
+        map['category'] ?? map['type'] ?? map['equip_type'] ?? map['function'],
+      ).toLowerCase(),
     );
   }
 }
