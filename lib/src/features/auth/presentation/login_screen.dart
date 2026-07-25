@@ -315,20 +315,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final result = await ref
         .read(nativeGoogleSignInProvider)
         .authenticate(serverClientId: serverClientId);
+    final nativeError = result.error;
+    if (nativeError != null && nativeError.isNotEmpty) {
+      throw StateError(nativeError);
+    }
     final idToken = result.idToken;
     if (result.status != NativeGoogleSignInStatus.authenticated ||
         idToken == null) {
       return result.status;
     }
 
-    try {
-      await repository.loginWithGoogleIdToken(idToken);
-      ref.invalidate(authControllerProvider);
-      return NativeGoogleSignInStatus.authenticated;
-    } catch (_) {
-      // Older server deployments may not accept native ID tokens yet.
-      return NativeGoogleSignInStatus.unavailable;
-    }
+    await repository.loginWithGoogleIdToken(idToken);
+    ref.invalidate(authControllerProvider);
+    return NativeGoogleSignInStatus.authenticated;
   }
 }
 

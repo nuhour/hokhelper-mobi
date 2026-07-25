@@ -101,7 +101,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('BP Simulator'), findsOneWidget);
+    expect(find.text('BP Simulator'), findsNothing);
     expect(find.text('KPL Finals Draft'), findsOneWidget);
     expect(find.text('BO7'), findsOneWidget);
     expect(find.text('Loser selects side'), findsOneWidget);

@@ -68,7 +68,6 @@ export const HexagramInstrument3D: React.FC<HexagramInstrument3DProps> = ({
   const isSpinningRef = useRef(false);
   const spinProgressRef = useRef(0);
   const lastTouchDistance = useRef<number | null>(null);
-  const lastTapTime = useRef<number>(0);
 
   const [hoverTip, setHoverTip] = useState<string>('玄法悬空 · 拖动旋转 · 双指缩放');
 
@@ -936,18 +935,6 @@ export const HexagramInstrument3D: React.FC<HexagramInstrument3DProps> = ({
     targetCamDistance.current = Math.min(Math.max(targetCamDistance.current + zoomDelta, 4.0), 9.0);
   };
 
-  const handleDoubleTapReset = () => {
-    targetCamDistance.current = 6.2;
-    if (mainGroupRef.current) {
-      mainGroupRef.current.rotation.x = 0.2;
-      mainGroupRef.current.rotation.y = 0.4;
-      mainGroupRef.current.rotation.z = 0;
-    }
-    angularVelocity.current = { x: 0, y: 0.004 };
-    triggerHaptic([20, 20]);
-    setHoverTip('视角已重置为默认视角');
-  };
-
   const handleMouseDown = (e: React.MouseEvent) => handlePointerDown(e.clientX, e.clientY);
   const handleMouseMove = (e: React.MouseEvent) => handlePointerMove(e.clientX, e.clientY);
   const handleMouseUp = () => handlePointerUp();
@@ -956,12 +943,6 @@ export const HexagramInstrument3D: React.FC<HexagramInstrument3DProps> = ({
     if (e.touches.length === 1) {
       const touch = e.touches[0];
       handlePointerDown(touch.clientX, touch.clientY);
-
-      const now = Date.now();
-      if (now - lastTapTime.current < 300) {
-        handleDoubleTapReset();
-      }
-      lastTapTime.current = now;
     } else if (e.touches.length === 2) {
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,

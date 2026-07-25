@@ -86,8 +86,6 @@ class BuildExplorerScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const AppSectionHeader(title: 'Build Explorer'),
-                      const SizedBox(height: 8),
                       Text(
                         focusedHeroId == null
                             ? 'Browse public hero builds from the community.'

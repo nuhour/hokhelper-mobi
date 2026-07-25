@@ -264,14 +264,14 @@ void main() {
     expect(_portalMenuText('Heroes'), findsOneWidget);
     expect(_portalMenuText('Gallery'), findsWidgets);
     expect(_portalMenuText('Tier List'), findsOneWidget);
-    expect(_portalMenuText('Power Trends'), findsOneWidget);
+    expect(_portalMenuText('Trends'), findsOneWidget);
     expect(_portalMenuText('Skins'), findsOneWidget);
     expect(_portalMenuText('CG Center'), findsOneWidget);
     expect(_portalMenuText('Community'), findsOneWidget);
     expect(_portalMenuText('Player Leaderboard'), findsOneWidget);
     expect(_portalMenuText('Forum'), findsOneWidget);
     expect(_portalMenuText('Leaks'), findsOneWidget);
-    expect(_portalMenuText('Event Help'), findsOneWidget);
+    expect(_portalMenuText('Event Helper'), findsOneWidget);
     expect(_portalMenuText('Esports'), findsOneWidget);
     expect(_portalMenuText('Schedule'), findsOneWidget);
     expect(_portalMenuText('Esports Stats'), findsOneWidget);
@@ -289,7 +289,7 @@ void main() {
     expect(_portalMenuText('AI Prompts'), findsOneWidget);
     expect(_portalMenuText('Team Builder'), findsOneWidget);
     expect(_portalMenuText('Builds'), findsOneWidget);
-    expect(_portalMenuText('Game Assistant'), findsOneWidget);
+    expect(_portalMenuText('Game Assistant'), findsNothing);
     expect(_portalMenuText('Rank Fortune'), findsOneWidget);
 
     expect(find.text('友链'), findsNothing);
@@ -314,8 +314,13 @@ void main() {
             'hero_ranking_table': {
               'columns': [
                 {'id': 'hero', 'label': '英雄', 'type': 'hero'},
-                {'id': 'trend_smoothed', 'label': '胜率趋势', 'type': 'sparkline'},
-                {'id': 'wr', 'label': '胜率', 'type': 'percent'},
+                {
+                  'id': 'trend_smoothed',
+                  'label': '胜率趋势',
+                  'type': 'sparkline',
+                  'group': '趋势',
+                },
+                {'id': 'wr', 'label': '胜率', 'type': 'percent', 'group': '核心'},
                 {'id': 'pick_rate', 'label': '出场率', 'type': 'percent'},
               ],
               'rows': [
@@ -377,6 +382,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
+    expect(find.text('Trend'), findsAtLeastNWidgets(1));
+    expect(find.text('Core'), findsAtLeastNWidgets(1));
+    expect(find.text('趋势'), findsNothing);
+    expect(find.text('核心'), findsNothing);
     expect(
       find.byKey(const ValueKey('home-hero-avatar-2619')),
       findsAtLeastNWidgets(1),

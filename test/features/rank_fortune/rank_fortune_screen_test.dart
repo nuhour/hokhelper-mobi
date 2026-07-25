@@ -10,6 +10,7 @@ import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/rank_fortune/data/rank_fortune_repository.dart';
 import 'package:hok_helper_mobile/src/features/rank_fortune/domain/rank_fortune.dart';
 import 'package:hok_helper_mobile/src/features/rank_fortune/presentation/rank_fortune_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeRepository extends RankFortuneRepository {
   _FakeRepository()
@@ -84,6 +85,10 @@ class _PendingRepository extends RankFortuneRepository {
 }
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('renders today fortune and history summary', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -115,7 +120,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Rank Fortune'), findsOneWidget);
+    expect(find.text('Rank Fortune'), findsNothing);
     expect(find.text('A daily ritual before your ranked queue'), findsNothing);
     expect(find.text('Great Fortune'), findsOneWidget);
     expect(

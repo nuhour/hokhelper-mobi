@@ -19,7 +19,7 @@ class ToolsScreen extends StatelessWidget {
     _ToolItem(
       icon: Icons.format_list_numbered_outlined,
       assetIcon: 'assets/tools/tier.png',
-      title: 'Tier List Tool',
+      title: 'Tier List Editor',
       subtitle: 'Edit tiers',
       route: '/tools/tier-list',
     ),

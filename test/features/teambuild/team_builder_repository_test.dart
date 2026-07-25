@@ -101,6 +101,8 @@ void main() {
         enemyPicks: const [7],
         bans: const [11],
         recommendType: TeamRecommendType.balanced,
+        mainJob: 3,
+        limit: 50,
       );
 
       expect(apiClient.postPath, '/teambuild/recommend');
@@ -113,7 +115,8 @@ void main() {
         'slot_index': 0,
         'region_id': 2,
         'recommend_type': 'balanced',
-        'limit': 10,
+        'limit': 50,
+        'main_job': 3,
       });
       expect(result.recommendations, hasLength(1));
       expect(result.recommendations.single.heroId, 99);

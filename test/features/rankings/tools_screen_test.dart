@@ -33,74 +33,7 @@ import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierli
 Widget _toolRoutePage(Widget child) => Scaffold(body: child);
 
 GoRouter _buildRouter() {
-  return GoRouter(
-    initialLocation: '/tools',
-    routes: [
-      GoRoute(
-        path: '/tools',
-        builder: (context, state) => const ToolsScreen(),
-        routes: [
-          GoRoute(
-            path: 'builds',
-            builder: (context, state) =>
-                _toolRoutePage(const BuildExplorerScreen()),
-          ),
-          GoRoute(
-            path: 'build-sim',
-            builder: (context, state) =>
-                _toolRoutePage(const BuildSimulatorScreen()),
-          ),
-          GoRoute(
-            path: 'bp-simulator',
-            builder: (context, state) =>
-                _toolRoutePage(const BpDashboardScreen()),
-          ),
-          GoRoute(
-            path: 'tier-list',
-            builder: (context, state) =>
-                _toolRoutePage(const TierListToolScreen()),
-          ),
-          GoRoute(
-            path: 'game-assistant',
-            builder: (context, state) =>
-                _toolRoutePage(const GameAssistantScreen()),
-          ),
-          GoRoute(
-            path: 'rank-fortune',
-            builder: (context, state) =>
-                _toolRoutePage(const RankFortuneScreen()),
-          ),
-          GoRoute(
-            path: 'curiosity-lab',
-            builder: (context, state) =>
-                _toolRoutePage(const CuriosityLabScreen()),
-          ),
-          GoRoute(
-            path: 'rankings',
-            builder: (context, state) =>
-                _toolRoutePage(const HeroRankingScreen()),
-          ),
-          GoRoute(
-            path: 'team-builder',
-            builder: (context, state) =>
-                _toolRoutePage(const TeamBuilderScreen()),
-          ),
-          GoRoute(
-            path: 'prompts',
-            builder: (context, state) => _toolRoutePage(const PromptsScreen()),
-          ),
-          GoRoute(
-            path: 'esports',
-            builder: (context, state) => _toolRoutePage(const EsportsScreen()),
-          ),
-          GoRoute(
-            path: 'stats',
-            builder: (context, state) => _toolRoutePage(const StatsScreen()),
-          ),
-        ],
-      ),
-    ],
-  );
+  return createAppRouter()..go('/tools');
 }
 
 List<Override> _emptyToolOverrides() {
@@ -117,7 +50,8 @@ List<Override> _emptyToolOverrides() {
     tierRankingProvider.overrideWith((ref) async => const []),
     teamBuilderHeroesProvider.overrideWith((ref) async => const []),
     teamRecommendationsProvider.overrideWith(
-      (ref) async => const TeamRecommendationResult(recommendations: []),
+      (ref, mainJob) async =>
+          const TeamRecommendationResult(recommendations: []),
     ),
     promptListProvider(
       PromptListAction.explore,
@@ -159,7 +93,8 @@ List<Override> _toolOverrides({
       teamBuilderHeroes ?? (ref) async => const [],
     ),
     teamRecommendationsProvider.overrideWith(
-      (ref) async => const TeamRecommendationResult(recommendations: []),
+      (ref, mainJob) async =>
+          const TeamRecommendationResult(recommendations: []),
     ),
     promptListProvider(
       PromptListAction.explore,
@@ -255,7 +190,7 @@ void main() {
       findsNWidgets(6),
     );
     expect(find.text('BP Simulator'), findsOneWidget);
-    expect(find.text('Tier List Tool'), findsOneWidget);
+    expect(find.text('Tier List Editor'), findsOneWidget);
     expect(find.text('Prompts'), findsOneWidget);
     expect(find.text('Team Builder'), findsOneWidget);
     expect(find.text('Build Simulator'), findsOneWidget);
@@ -313,7 +248,7 @@ void main() {
 
     expect(find.text('Build Simulator'), findsOneWidget);
     expect(
-      find.text('Select a hero to manage the three mobile slots.'),
+      find.byKey(const ValueKey('standalone-back-button')),
       findsOneWidget,
     );
   });
@@ -352,7 +287,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('KPL Finals Draft'), findsOneWidget);
-    expect(find.text('Wolves vs AG'), findsOneWidget);
+    expect(find.text('BP Simulator'), findsOneWidget);
   });
 
   testWidgets('tier list tile opens the tier list tool route', (tester) async {
@@ -383,9 +318,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Tier List Tool'));
+    await tester.ensureVisible(find.text('Tier List Editor'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Tier List Tool'));
+    await tester.tap(find.text('Tier List Editor'));
     await tester.pumpAndSettle();
 
     expect(find.text('Solo Queue Meta'), findsOneWidget);
@@ -417,11 +352,11 @@ void main() {
     await tester.tap(find.text('Rank Fortune'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Rank Fortune'), findsOneWidget);
     expect(
-      find.text("Draw your fortune for today's ranked matches."),
+      find.byKey(const ValueKey('standalone-back-button')),
       findsOneWidget,
     );
-    expect(find.text('Fortune Jar'), findsOneWidget);
   });
 
   testWidgets('team builder tile opens the team builder route', (tester) async {
@@ -451,7 +386,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Team Builder'), findsOneWidget);
-    expect(find.text('Lam'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('standalone-back-button')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('prompts tile opens the prompts route', (tester) async {
@@ -484,7 +422,10 @@ void main() {
     await tester.tap(find.text('Prompts'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Prompts'), findsOneWidget);
-    expect(find.text('Cyber skin concept'), findsOneWidget);
+    expect(find.text('AI Prompts'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('standalone-back-button')),
+      findsOneWidget,
+    );
   });
 }

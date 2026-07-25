@@ -5,19 +5,20 @@ import 'package:google_sign_in/google_sign_in.dart';
 enum NativeGoogleSignInStatus { authenticated, cancelled, unavailable }
 
 class NativeGoogleSignInResult {
-  const NativeGoogleSignInResult._(this.status, this.idToken);
+  const NativeGoogleSignInResult._(this.status, this.idToken, this.error);
 
   const NativeGoogleSignInResult.authenticated(String idToken)
-    : this._(NativeGoogleSignInStatus.authenticated, idToken);
+    : this._(NativeGoogleSignInStatus.authenticated, idToken, null);
 
   const NativeGoogleSignInResult.cancelled()
-    : this._(NativeGoogleSignInStatus.cancelled, null);
+    : this._(NativeGoogleSignInStatus.cancelled, null, null);
 
-  const NativeGoogleSignInResult.unavailable()
-    : this._(NativeGoogleSignInStatus.unavailable, null);
+  const NativeGoogleSignInResult.unavailable([String? error])
+    : this._(NativeGoogleSignInStatus.unavailable, null, error);
 
   final NativeGoogleSignInStatus status;
   final String? idToken;
+  final String? error;
 }
 
 abstract class NativeGoogleSignIn {
@@ -62,9 +63,14 @@ class GoogleFrameworkSignIn implements NativeGoogleSignIn {
       if (error.code == GoogleSignInExceptionCode.canceled) {
         return const NativeGoogleSignInResult.cancelled();
       }
-      return const NativeGoogleSignInResult.unavailable();
-    } catch (_) {
-      return const NativeGoogleSignInResult.unavailable();
+      return NativeGoogleSignInResult.unavailable(
+        'Google sign-in failed (${error.code.name}): '
+        '${error.description ?? 'check the Android OAuth client configuration'}',
+      );
+    } catch (error) {
+      return NativeGoogleSignInResult.unavailable(
+        'Google sign-in failed: $error',
+      );
     }
   }
 }

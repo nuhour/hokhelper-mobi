@@ -39,7 +39,7 @@ final ptTranslations = {
   'statsTabTrends': 'Tendencias',
   'communityTabLeaks': 'Vazamentos',
   'communityTabForum': 'Forum',
-  'communityTabEvents': 'Ajuda de eventos',
+  'communityTabEvents': 'Assistente de eventos',
   'toolsTitle': 'Ferramentas',
   'toolsMore': 'Mais',
   'toolTitle:/tools/bp-simulator': 'Simulador BP',
@@ -47,7 +47,7 @@ final ptTranslations = {
   'toolTitle:/tools/team-builder': 'Montador de equipe',
   'toolTitle:/tools/build-sim': 'Simulador de build',
   'toolTitle:/tools/game-assistant': 'Assistente de jogo',
-  'toolTitle:/content/event-assistance': 'Ajuda de eventos',
+  'toolTitle:/content/event-assistance': 'Assistente de eventos',
   'toolTitle:/tools/leaderboard': 'Ranking de jogadores',
   'toolTitle:/tools/stats': 'Estatisticas',
 };

@@ -40,13 +40,25 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun openDiscordAuthorization(uri: Uri): Boolean {
+        val deepLink = uri.buildUpon()
+            .scheme("discord")
+            .authority("-")
+            .path("/oauth2/authorize")
+            .build()
         val discordPackages = listOf(
             "com.discord",
             "com.discord.beta",
             "com.discord.canary"
         )
         for (packageName in discordPackages) {
-            val intent = Intent(Intent.ACTION_VIEW, uri).setPackage(packageName)
+            val deepLinkIntent =
+                Intent(Intent.ACTION_VIEW, deepLink).setPackage(packageName)
+            val webIntent = Intent(Intent.ACTION_VIEW, uri).setPackage(packageName)
+            val intent = if (deepLinkIntent.resolveActivity(packageManager) != null) {
+                deepLinkIntent
+            } else {
+                webIntent
+            }
             if (intent.resolveActivity(packageManager) != null) {
                 startActivity(intent)
                 return true

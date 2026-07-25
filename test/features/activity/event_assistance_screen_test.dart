@@ -93,7 +93,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Event Assistance'), findsOneWidget);
+    expect(find.text('Event Helper'), findsOneWidget);
     expect(find.text('Need one player for Friday event team.'), findsOneWidget);
     expect(find.text('captain'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
@@ -184,7 +184,11 @@ void main() {
 
     expect(
       router.routeInformationProvider.value.uri.path,
-      '/content/event-assistance',
+      '/content/community',
+    );
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['tab'],
+      'events',
     );
     expect(find.text('Share Assistance Text'), findsOneWidget);
     expect(find.text('Join my activity code ABCD.'), findsOneWidget);

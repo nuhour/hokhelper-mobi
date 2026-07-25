@@ -215,7 +215,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Prompts'), findsOneWidget);
+    expect(find.text('Prompts'), findsNothing);
     expect(find.text('Cyber skin concept'), findsOneWidget);
     expect(
       find.text('Create a neon Honor of Kings skin splash art.'),

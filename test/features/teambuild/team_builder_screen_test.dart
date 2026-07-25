@@ -35,7 +35,7 @@ Widget _app({TeamBuilderScreen screen = const TeamBuilderScreen()}) =>
       overrides: [
         teamBuilderHeroesProvider.overrideWith((ref) async => _heroes),
         teamRecommendationsProvider.overrideWith(
-          (ref) async => const TeamRecommendationResult(
+          (ref, mainJob) async => const TeamRecommendationResult(
             recommendations: [
               TeamRecommendation(
                 heroId: 99,
@@ -63,7 +63,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
-    expect(find.text('Smart Team Builder'), findsOneWidget);
+    expect(find.text('Smart Team Builder'), findsNothing);
     expect(find.text('Synergy Picks'), findsOneWidget);
     expect(find.text('Counter Picks'), findsOneWidget);
     expect(find.text('Dolia'), findsOneWidget);

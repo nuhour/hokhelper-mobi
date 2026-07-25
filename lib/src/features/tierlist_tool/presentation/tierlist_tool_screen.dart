@@ -50,9 +50,9 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
             children: [
-              AppSectionHeader(
-                title: 'Tier List Tool',
-                action: FilledButton.icon(
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
                   onPressed: _isCreating ? null : () => _openCreateSheet(),
                   icon: const Icon(Icons.add),
                   label: const Text('Create Tier List'),

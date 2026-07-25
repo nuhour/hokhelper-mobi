@@ -116,7 +116,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Tier List Tool'), findsOneWidget);
+    expect(find.text('Tier List Tool'), findsNothing);
     expect(find.text('Solo Queue Meta'), findsOneWidget);
     expect(find.text('3 heroes'), findsOneWidget);
     expect(find.text('Updated 2026-07-03'), findsOneWidget);

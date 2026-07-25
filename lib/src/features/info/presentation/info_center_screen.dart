@@ -522,7 +522,7 @@ class _PortalDirectorySection extends StatelessWidget {
       links: [
         _PortalDirectoryLink('Community', '/community'),
         _PortalDirectoryLink('Community Leaks', '/community/leaks'),
-        _PortalDirectoryLink('Event Assistance', '/event-assistance'),
+        _PortalDirectoryLink('Event Helper', '/event-assistance'),
         _PortalDirectoryLink('Esports', '/esports'),
         _PortalDirectoryLink('HOK World', '/hok-world'),
       ],

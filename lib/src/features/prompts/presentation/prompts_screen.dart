@@ -166,17 +166,16 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AppSectionHeader(
-                          title: 'Prompts',
-                          action: isAuthenticated
-                              ? FilledButton.icon(
-                                  onPressed: () => _openCreateSheet(context),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Create'),
-                                )
-                              : null,
-                        ),
-                        const SizedBox(height: 8),
+                        if (isAuthenticated)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton.icon(
+                              onPressed: () => _openCreateSheet(context),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Create'),
+                            ),
+                          ),
+                        if (isAuthenticated) const SizedBox(height: 8),
                         Text(
                           'Explore public AI prompt templates from the community.',
                           style: Theme.of(context).textTheme.bodyMedium

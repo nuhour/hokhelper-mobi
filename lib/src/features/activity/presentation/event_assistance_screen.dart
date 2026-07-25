@@ -59,7 +59,7 @@ class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Expanded(
-                      child: AppSectionHeader(title: 'Event Assistance'),
+                      child: AppSectionHeader(title: 'Event Helper'),
                     ),
                     const SizedBox(width: 12),
                     FilledButton.icon(

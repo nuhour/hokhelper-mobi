@@ -105,7 +105,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Build Explorer'), findsOneWidget);
+    expect(find.text('Build Explorer'), findsNothing);
     expect(find.text('Burst jungle'), findsOneWidget);
     expect(find.text('Lam · '), findsOneWidget);
     expect(find.text('coach'), findsOneWidget);

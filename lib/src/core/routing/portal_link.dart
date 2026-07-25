@@ -96,6 +96,15 @@ String _normalizeInternalTarget(String target) {
         .toString();
   }
 
+  if (uri.path == '/event-assistance') {
+    return uri
+        .replace(
+          path: '/content/community',
+          queryParameters: {'tab': 'events', ...uri.queryParameters},
+        )
+        .toString();
+  }
+
   if (uri.path == '/honor-of-kings-world-tier-list' ||
       uri.path == '/hok-world-tier-list') {
     return uri.replace(path: '/hok-world/hok-world-tier-list').toString();
@@ -279,7 +288,6 @@ String? _mobileAliasPath(String path) {
     '/team-builder' => '/tools/team-builder',
     '/prompts' => '/tools/prompts',
     '/stats' => '/tools/stats',
-    '/event-assistance' => '/content/event-assistance',
     '/patch-notes' || '/versions' => '/content/patch-notes',
     _ => null,
   };

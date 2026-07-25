@@ -32,7 +32,7 @@ class TeamBuilderDraft {
     this.activeSlotType = TeamBuilderSlotType.pick,
     this.activeSide = TeamBuilderSide.ally,
     this.activeIndex = 0,
-    this.recommendType = TeamRecommendType.synergy,
+    this.recommendType = TeamRecommendType.balanced,
     this.allyIsBlue = true,
   });
 
@@ -94,25 +94,26 @@ final teamBuilderDraftProvider = StateProvider<TeamBuilderDraft>((ref) {
   return const TeamBuilderDraft();
 });
 
-final teamRecommendationsProvider = FutureProvider<TeamRecommendationResult>((
-  ref,
-) async {
-  final settings = await ref.watch(appSettingsControllerProvider.future);
-  final draft = ref.watch(teamBuilderDraftProvider);
-  final isAllyTarget = draft.activeSide == TeamBuilderSide.ally;
-  return ref
-      .watch(teamBuilderRepositoryProvider)
-      .loadRecommendations(
-        regionId: settings.region.regionId,
-        myPicks: isAllyTarget ? draft.allyIds : draft.enemyIds,
-        enemyPicks: isAllyTarget ? draft.enemyIds : draft.allyIds,
-        bans: draft.banIds,
-        mySide: isAllyTarget == draft.allyIsBlue ? 'blue' : 'red',
-        slotType: draft.activeSlotType.apiValue,
-        slotIndex: draft.activeIndex,
-        recommendType: draft.recommendType,
-      );
-});
+final teamRecommendationsProvider =
+    FutureProvider.family<TeamRecommendationResult, int?>((ref, mainJob) async {
+      final settings = await ref.watch(appSettingsControllerProvider.future);
+      final draft = ref.watch(teamBuilderDraftProvider);
+      final isAllyTarget = draft.activeSide == TeamBuilderSide.ally;
+      return ref
+          .watch(teamBuilderRepositoryProvider)
+          .loadRecommendations(
+            regionId: settings.region.regionId,
+            myPicks: isAllyTarget ? draft.allyIds : draft.enemyIds,
+            enemyPicks: isAllyTarget ? draft.enemyIds : draft.allyIds,
+            bans: draft.banIds,
+            mySide: isAllyTarget == draft.allyIsBlue ? 'blue' : 'red',
+            slotType: draft.activeSlotType.apiValue,
+            slotIndex: draft.activeIndex,
+            recommendType: draft.recommendType,
+            mainJob: mainJob,
+            limit: 50,
+          );
+    });
 
 class TeamBuilderScreen extends ConsumerStatefulWidget {
   const TeamBuilderScreen({
@@ -246,7 +247,9 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   Widget build(BuildContext context) {
     final heroesValue = ref.watch(teamBuilderHeroesProvider);
     final draft = ref.watch(teamBuilderDraftProvider);
-    final recommendations = ref.watch(teamRecommendationsProvider);
+    final recommendations = ref.watch(
+      teamRecommendationsProvider(_recommendJob),
+    );
     if (heroesValue case AsyncData(value: final heroes)) {
       _hydrateInitialDraft(heroes);
     }
@@ -379,15 +382,7 @@ class _BuilderToolbar extends StatelessWidget {
           size: 20,
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Smart Team Builder',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: context.hokTheme.onSurfaceStrong,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
+        const Spacer(),
         IconButton(
           tooltip: 'Swap Red/Blue',
           onPressed: onSwap,
@@ -825,7 +820,8 @@ class _RecommendationPanel extends StatelessWidget {
     final result = value.valueOrNull;
     final items = (result?.recommendations ?? const <TeamRecommendation>[])
         .where((item) => mainJob == null || item.mainJob == mainJob)
-        .toList();
+        .take(10)
+        .toList(growable: false);
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border.symmetric(
@@ -841,8 +837,8 @@ class _RecommendationPanel extends StatelessWidget {
                 Expanded(
                   child: _RecTab(
                     label: 'Synergy Picks',
-                    selected: type == TeamRecommendType.synergy,
-                    onTap: () => onTypeChanged(TeamRecommendType.synergy),
+                    selected: type != TeamRecommendType.counter,
+                    onTap: () => onTypeChanged(TeamRecommendType.balanced),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -854,30 +850,6 @@ class _RecommendationPanel extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            height: 33,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: .26),
-              border: Border.symmetric(
-                horizontal: BorderSide(
-                  color: Colors.white.withValues(alpha: .07),
-                ),
-              ),
-            ),
-            child: Text(
-              type == TeamRecommendType.counter
-                  ? 'COUNTER OPPONENT LINEUP'
-                  : 'FIT MY SIDE LINEUP RECOMMENDATIONS',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppTheme.cyan,
-                fontWeight: FontWeight.w900,
-              ),
             ),
           ),
           _JobFilter(selected: mainJob, onChanged: onMainJobChanged),
@@ -963,7 +935,14 @@ class _RecommendationTile extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    final score = item.score <= 1 ? item.score * 100 : item.score;
+    final rawScore = item.score > 0
+        ? item.score
+        : item.counter > 0
+        ? item.counter
+        : item.synergy > 0
+        ? item.synergy
+        : item.pickRate + item.banRate;
+    final score = rawScore <= 1 ? rawScore * 100 : rawScore;
     return Material(
       color: Colors.transparent,
       child: InkWell(

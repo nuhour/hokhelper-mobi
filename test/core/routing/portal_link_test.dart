@@ -37,11 +37,11 @@ void main() {
     );
     expect(
       normalizePortalLinkTarget('/event-assistance'),
-      '/content/event-assistance',
+      '/content/community?tab=events',
     );
     expect(
       normalizePortalLinkTarget('/event-assistance?text=Join%20ABCD'),
-      '/content/event-assistance?text=Join%20ABCD',
+      '/content/community?tab=events&text=Join+ABCD',
     );
     expect(
       normalizePortalLinkTarget('/patch-notes?note_id=31'),

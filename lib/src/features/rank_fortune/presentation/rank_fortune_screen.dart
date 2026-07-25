@@ -5,17 +5,18 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_share_sheet.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../data/rank_fortune_repository.dart';
 import '../domain/rank_fortune.dart';
 
 const _fortuneGold = Color(0xFFF6C453);
-const _fortuneRed = Color(0xFFE5484D);
 
 final rankFortuneRepositoryProvider = Provider<RankFortuneRepository>((ref) {
   return RankFortuneRepository(apiClient: ref.watch(apiClientProvider));
@@ -49,6 +50,15 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
   WebViewController? _instrumentController;
   Completer<void>? _instrumentSpinCompleter;
   bool _instrumentReady = false;
+  bool _guestDrewToday = false;
+
+  static const _guestDrawDateKey = 'rank_fortune_guest_draw_date';
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreGuestDrawState();
+  }
 
   @override
   void dispose() {
@@ -70,7 +80,11 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
       data: (history) {
         final today = _localToday ?? history.today;
         final rows = _localRows ?? history.rows;
-        final canDraw = _localCanDraw ?? history.canDraw;
+        final isAuthenticated =
+            ref.watch(authControllerProvider).valueOrNull != null;
+        final canDraw =
+            (_localCanDraw ?? history.canDraw) &&
+            (isAuthenticated || !_guestDrewToday);
         _canDraw = canDraw && !_isDrawing;
         _visibleRows = rows;
 
@@ -166,12 +180,15 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
       if (!mounted) return;
       setState(() {
         _localToday = draw.record;
-        _localCanDraw = draw.canDraw;
+        _localCanDraw = false;
+        _guestDrewToday = true;
         _localRows = [
           ..._visibleRows.where((row) => row.date != draw.record.date),
           draw.record,
         ]..sort((a, b) => a.date.compareTo(b.date));
       });
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(_guestDrawDateKey, _todayKey());
       unawaited(HapticFeedback.heavyImpact());
     } catch (error) {
       if (mounted) {
@@ -190,6 +207,21 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
         });
       }
     }
+  }
+
+  Future<void> _restoreGuestDrawState() async {
+    final preferences = await SharedPreferences.getInstance();
+    final drewToday = preferences.getString(_guestDrawDateKey) == _todayKey();
+    if (mounted && drewToday != _guestDrewToday) {
+      setState(() => _guestDrewToday = drewToday);
+    }
+  }
+
+  String _todayKey() {
+    final now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
   }
 }
 
@@ -252,12 +284,6 @@ class _FortuneStage extends StatelessWidget {
                   onMessage: onInstrumentMessage,
                 ),
               ),
-              Positioned(
-                left: 16,
-                top: 14,
-                right: 16,
-                child: const _StageHeader(),
-              ),
             ],
           ),
         );
@@ -288,30 +314,6 @@ class _FortuneActionPanel extends StatelessWidget {
   }
 }
 
-class _StageHeader extends StatelessWidget {
-  const _StageHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: const Text(
-            'Rank Fortune',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
-              shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _DrawPrompt extends StatelessWidget {
   const _DrawPrompt({required this.isDrawing, required this.onDraw});
 
@@ -320,37 +322,164 @@ class _DrawPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: FilledButton(
-        onPressed: onDraw,
-        style: FilledButton.styleFrom(
-          backgroundColor: _fortuneRed,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: _fortuneRed.withValues(alpha: 0.58),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+    return Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: onDraw == null
+                ? [
+                    _fortuneGold.withValues(alpha: 0.36),
+                    AppTheme.cyan.withValues(alpha: 0.25),
+                  ]
+                : const [_fortuneGold, Color(0xFFEB7C63), AppTheme.cyan],
+          ),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.42)),
+          boxShadow: [
+            BoxShadow(
+              color: _fortuneGold.withValues(alpha: 0.28),
+              blurRadius: 20,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: onDraw,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: isDrawing
+                    ? const SizedBox.square(
+                        key: ValueKey('drawing'),
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Try My Luck',
+                        key: ValueKey('ready'),
+                        style: TextStyle(
+                          color: Color(0xFF111827),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+              ),
+            ),
           ),
         ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          child: isDrawing
-              ? const SizedBox.square(
-                  key: ValueKey('drawing'),
-                  dimension: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text(
-                  'Try My Luck',
-                  key: ValueKey('ready'),
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
-                ),
-        ),
       ),
+    );
+  }
+}
+
+class _FortuneTrendPanel extends StatefulWidget {
+  const _FortuneTrendPanel({required this.rows});
+
+  final List<RankFortuneRecord> rows;
+
+  @override
+  State<_FortuneTrendPanel> createState() => _FortuneTrendPanelState();
+}
+
+class _FortuneTrendPanelState extends State<_FortuneTrendPanel> {
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...widget.rows]..sort((a, b) => a.date.compareTo(b.date));
+    final recent = sorted.length > 30
+        ? sorted.sublist(sorted.length - 30)
+        : sorted;
+    final scores = recent.map((row) => row.score).toList(growable: false);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+      decoration: BoxDecoration(
+        color: context.hokTheme.surfaceSlate,
+        border: Border(top: BorderSide(color: context.hokTheme.outlineSoft)),
+      ),
+      child: scores.isEmpty
+          ? Center(
+              child: Text(
+                'Draw a fortune to start the trend.',
+                style: TextStyle(color: context.hokTheme.onSurfaceMuted),
+              ),
+            )
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (details) {
+                    const left = 30.0;
+                    const right = 6.0;
+                    final width = math.max(
+                      1.0,
+                      constraints.maxWidth - left - right,
+                    );
+                    final ratio = ((details.localPosition.dx - left) / width)
+                        .clamp(0.0, 1.0);
+                    final index = scores.length == 1
+                        ? 0
+                        : (ratio * (scores.length - 1)).round();
+                    setState(() => _selectedIndex = index);
+                  },
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _FortuneCurvePainter(
+                            rows: recent,
+                            lineColor: _scoreColor(context, scores.last),
+                            gridColor: context.hokTheme.outlineSoft,
+                            selectedIndex: _selectedIndex,
+                          ),
+                        ),
+                      ),
+                      if (_selectedIndex != null &&
+                          _selectedIndex! < recent.length)
+                        Positioned(
+                          top: 2,
+                          right: 4,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF090E1C,
+                              ).withValues(alpha: 0.94),
+                              border: Border.all(
+                                color: _fortuneGold.withValues(alpha: 0.7),
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
+                              child: Text(
+                                '${recent[_selectedIndex!].date} · '
+                                '${recent[_selectedIndex!].score} · '
+                                '${_fortuneCopy(recent[_selectedIndex!].typeId).title}',
+                                style: const TextStyle(
+                                  color: Color(0xFFFDE7A8),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -498,66 +627,49 @@ class _RankFortuneInstrumentState extends State<_RankFortuneInstrument> {
   }
 }
 
-class _FortuneTrendPanel extends StatelessWidget {
-  const _FortuneTrendPanel({required this.rows});
-
-  final List<RankFortuneRecord> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final sorted = [...rows]..sort((a, b) => a.date.compareTo(b.date));
-    final recent = sorted.length > 30
-        ? sorted.sublist(sorted.length - 30)
-        : sorted;
-    final scores = recent.map((row) => row.score).toList(growable: false);
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      decoration: BoxDecoration(
-        color: context.hokTheme.surfaceSlate,
-        border: Border(top: BorderSide(color: context.hokTheme.outlineSoft)),
-      ),
-      child: scores.isEmpty
-          ? Center(
-              child: Text(
-                'Draw a fortune to start the trend.',
-                style: TextStyle(color: context.hokTheme.onSurfaceMuted),
-              ),
-            )
-          : CustomPaint(
-              painter: _FortuneCurvePainter(
-                scores: scores,
-                lineColor: _scoreColor(context, scores.last),
-                gridColor: context.hokTheme.outlineSoft,
-              ),
-              child: const SizedBox.expand(),
-            ),
-    );
-  }
-}
-
 class _FortuneCurvePainter extends CustomPainter {
   const _FortuneCurvePainter({
-    required this.scores,
+    required this.rows,
     required this.lineColor,
     required this.gridColor,
+    this.selectedIndex,
   });
 
-  final List<int> scores;
+  final List<RankFortuneRecord> rows;
   final Color lineColor;
   final Color gridColor;
+  final int? selectedIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final scores = rows.map((row) => row.score).toList(growable: false);
     if (scores.isEmpty || size.isEmpty) return;
-    final chart = Rect.fromLTWH(2, 4, size.width - 4, size.height - 10);
+    final chart = Rect.fromLTWH(30, 8, size.width - 36, size.height - 26);
     final gridPaint = Paint()
       ..color = gridColor.withValues(alpha: 0.62)
       ..strokeWidth = 1;
     for (var index = 0; index < 3; index += 1) {
       final y = chart.top + chart.height * index / 2;
       canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), gridPaint);
+      _paintChartLabel(
+        canvas,
+        '${100 - index * 50}',
+        Offset(2, y - 6),
+        gridColor,
+      );
     }
+    _paintChartLabel(
+      canvas,
+      _compactChartDate(rows.first.date),
+      Offset(chart.left, chart.bottom + 5),
+      gridColor,
+    );
+    final lastDate = _compactChartDate(rows.last.date);
+    final lastDatePainter = _chartLabelPainter(lastDate, gridColor);
+    lastDatePainter.paint(
+      canvas,
+      Offset(chart.right - lastDatePainter.width, chart.bottom + 5),
+    );
 
     final points = <Offset>[];
     for (var index = 0; index < scores.length; index += 1) {
@@ -607,16 +719,52 @@ class _FortuneCurvePainter extends CustomPainter {
     );
     canvas.drawCircle(points.last, 4, Paint()..color = contextFreeWhite);
     canvas.drawCircle(points.last, 2.5, Paint()..color = lineColor);
+    final selected = selectedIndex;
+    if (selected != null && selected >= 0 && selected < points.length) {
+      canvas.drawCircle(
+        points[selected],
+        7,
+        Paint()..color = _fortuneGold.withValues(alpha: 0.26),
+      );
+      canvas.drawCircle(points[selected], 3.5, Paint()..color = _fortuneGold);
+    }
   }
 
   static const contextFreeWhite = Colors.white;
 
   @override
   bool shouldRepaint(_FortuneCurvePainter oldDelegate) {
-    return oldDelegate.scores != scores ||
+    return oldDelegate.rows != rows ||
         oldDelegate.lineColor != lineColor ||
-        oldDelegate.gridColor != gridColor;
+        oldDelegate.gridColor != gridColor ||
+        oldDelegate.selectedIndex != selectedIndex;
   }
+}
+
+TextPainter _chartLabelPainter(String text, Color color) {
+  return TextPainter(
+    text: TextSpan(
+      text: text,
+      style: TextStyle(
+        color: color.withValues(alpha: 0.9),
+        fontSize: 9,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+}
+
+void _paintChartLabel(Canvas canvas, String text, Offset offset, Color color) {
+  _chartLabelPainter(text, color).paint(canvas, offset);
+}
+
+String _compactChartDate(String value) {
+  final date = DateTime.tryParse(value);
+  return date == null
+      ? value
+      : '${date.month.toString().padLeft(2, '0')}/'
+            '${date.day.toString().padLeft(2, '0')}';
 }
 
 class _CoverGeometry {

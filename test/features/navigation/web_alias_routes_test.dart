@@ -99,8 +99,8 @@ void main() {
             userId: null,
           ),
           '/event-assistance': (
-            path: '/content/event-assistance',
-            tab: null,
+            path: '/content/community',
+            tab: 'events',
             entry: null,
             equipId: null,
             postId: null,

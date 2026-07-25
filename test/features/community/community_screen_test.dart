@@ -226,10 +226,10 @@ void main() {
     );
     expect(find.text('Forum'), findsOneWidget);
     expect(find.text('Leaks'), findsOneWidget);
-    expect(find.text('Event Help'), findsOneWidget);
+    expect(find.text('Event Helper'), findsOneWidget);
     final leakTopLeft = tester.getTopLeft(find.text('Leaks'));
     final forumTopLeft = tester.getTopLeft(find.text('Forum'));
-    final eventTopLeft = tester.getTopLeft(find.text('Event Help'));
+    final eventTopLeft = tester.getTopLeft(find.text('Event Helper'));
     expect(leakTopLeft.dx, lessThan(forumTopLeft.dx));
     expect(forumTopLeft.dx, lessThan(eventTopLeft.dx));
     expect(find.text('Best jungle rotation'), findsOneWidget);
@@ -246,10 +246,10 @@ void main() {
     expect(find.text('1.2k'), findsOneWidget);
     expect(find.text('SKIN'), findsOneWidget);
 
-    await tester.tap(find.text('Event Help'));
+    await tester.tap(find.text('Event Helper'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Event Assistance'), findsOneWidget);
+    expect(find.text('Event Helper'), findsWidgets);
     expect(find.text('Join my activity code ABCD.'), findsOneWidget);
   });
 
@@ -746,18 +746,14 @@ void main() {
     expect(find.text('Paged post 1'), findsOneWidget);
     expect(find.text('Paged post 31'), findsNothing);
 
-    await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Load more', skipOffstage: false),
-      900,
-      scrollable: _scrollableUnder(
-        const ValueKey('community-posts-scroll-view'),
-      ),
-    );
-    final loadMore = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Load more'),
-    );
+    for (var index = 0; index < 14; index++) {
+      await tester.drag(
+        find.byKey(const ValueKey('community-posts-scroll-view')),
+        const Offset(0, -800),
+      );
+      await tester.pump();
+    }
     await tester.runAsync(() async {
-      loadMore.onPressed!();
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
@@ -809,18 +805,14 @@ void main() {
     expect(find.text('Paged leak 1'), findsOneWidget);
     expect(find.text('Paged leak 31'), findsNothing);
 
-    await tester.scrollUntilVisible(
-      find.widgetWithText(FilledButton, 'Load more'),
-      900,
-      scrollable: _scrollableUnder(
-        const ValueKey('community-leaks-scroll-view'),
-      ),
-    );
-    final loadMore = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Load more'),
-    );
+    for (var index = 0; index < 14; index++) {
+      await tester.drag(
+        find.byKey(const ValueKey('community-leaks-scroll-view')),
+        const Offset(0, -800),
+      );
+      await tester.pump();
+    }
     await tester.runAsync(() async {
-      loadMore.onPressed!();
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();

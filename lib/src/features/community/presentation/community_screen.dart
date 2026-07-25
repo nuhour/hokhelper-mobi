@@ -166,6 +166,7 @@ class CommunityScreen extends ConsumerStatefulWidget {
     this.initialLeakCategory,
     this.initialLeakPlatform,
     this.initialPostTag,
+    this.initialEventShareText,
     super.key,
   });
 
@@ -175,6 +176,7 @@ class CommunityScreen extends ConsumerStatefulWidget {
   final String? initialLeakCategory;
   final String? initialLeakPlatform;
   final String? initialPostTag;
+  final String? initialEventShareText;
 
   @override
   ConsumerState<CommunityScreen> createState() => _CommunityScreenState();
@@ -189,6 +191,27 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     super.initState();
     _selectedPage = widget.initialTabIndex.clamp(0, 2);
     _pageController = PageController(initialPage: _selectedPage);
+    Future<void>.microtask(() {
+      if (!mounted) return;
+      if (_selectedPage != 1) ref.read(communityPostsProvider);
+      if (_selectedPage != 0) ref.read(leakPostsProvider);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant CommunityScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextPage = widget.initialTabIndex.clamp(0, 2);
+    if (nextPage == _selectedPage) return;
+    setState(() => _selectedPage = nextPage);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) return;
+      _pageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   @override
@@ -276,15 +299,20 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
               },
               children: [
                 _LeaksTab(
+                  key: const PageStorageKey('community-leaks'),
                   initialQuery: widget.initialLeakQuery,
                   initialCategory: widget.initialLeakCategory,
                   initialPlatform: widget.initialLeakPlatform,
                 ),
                 _PostsTab(
+                  key: const PageStorageKey('community-forum'),
                   initialView: widget.initialView,
                   initialTag: widget.initialPostTag,
                 ),
-                const EventAssistanceScreen(),
+                EventAssistanceScreen(
+                  key: const PageStorageKey('community-event-helper'),
+                  initialShareText: widget.initialEventShareText,
+                ),
               ],
             ),
           ),
@@ -656,7 +684,11 @@ class _CommunityTabButton extends StatelessWidget {
 }
 
 class _PostsTab extends ConsumerStatefulWidget {
-  const _PostsTab({required this.initialView, required this.initialTag});
+  const _PostsTab({
+    required this.initialView,
+    required this.initialTag,
+    super.key,
+  });
 
   final CommunityInitialView initialView;
   final String? initialTag;
@@ -683,6 +715,8 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   var _nextPostsPage = 2;
   var _hasMorePosts = true;
   var _isLoadingMorePosts = false;
+  var _loadMorePostsScheduled = false;
+  List<CommunityPostSummary>? _lastResolvedPosts;
   late CommunityInitialView _activeView;
   late String _activeTag;
 
@@ -691,6 +725,18 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
     super.initState();
     _activeView = widget.initialView;
     _activeTag = widget.initialTag?.trim() ?? '';
+  }
+
+  @override
+  void didUpdateWidget(covariant _PostsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextTag = widget.initialTag?.trim() ?? '';
+    if (widget.initialView == _activeView && nextTag == _activeTag) return;
+    setState(() {
+      _activeView = widget.initialView;
+      _activeTag = nextTag;
+      _resetLoadedPages();
+    });
   }
 
   @override
@@ -708,9 +754,12 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
     final tag = _activeTag;
     final query = CommunityPostsQuery(search: _search, tag: tag, sort: _sort);
     final postsValue = ref.watch(communityPostsQueryProvider(query));
+    final freshPosts = postsValue.valueOrNull;
+    if (freshPosts != null) _lastResolvedPosts = freshPosts;
     final tags = ref.watch(communityPostTagsProvider).valueOrNull ?? const [];
     return AppAsyncView<List<CommunityPostSummary>>(
       value: postsValue,
+      previousData: _lastResolvedPosts,
       retry: () => ref.invalidate(communityPostsQueryProvider(query)),
       loadingStyle: AppAsyncLoadingStyle.list,
       data: (posts) {
@@ -748,113 +797,125 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
             _resetLoadedPages();
             return ref.refresh(communityPostsQueryProvider(query).future);
           },
-          child: ListView(
-            key: const ValueKey('community-posts-scroll-view'),
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            children: [
-              _PostSearchSortBar(
-                controller: _searchController,
-                search: _search,
-                sort: _sort,
-                activeTag: tag,
-                activeView: _activeView,
-                tags: tags,
-                onCreate: () => _showCreatePostSheet(context),
-                onSearchChanged: (value) {
-                  setState(() {
-                    _search = value;
-                    _resetLoadedPages();
-                  });
-                },
-                onSortChanged: (value) {
-                  setState(() {
-                    _sort = value;
-                    _resetLoadedPages();
-                  });
-                },
-                onTagChanged: (value) {
-                  setState(() {
-                    _activeTag = value;
-                    _resetLoadedPages();
-                  });
-                },
-                onViewChanged: (value) {
-                  if (value != CommunityInitialView.hot && authUser == null) {
-                    context.push('/login');
-                    return;
-                  }
-                  setState(() => _activeView = value);
-                },
-              ),
-              const SizedBox(height: 12),
-              if (_activeView == CommunityInitialView.myPosts) ...[
-                const _ModePill(
-                  icon: Icons.person_outline,
-                  label: 'My Posts',
-                  message: 'Showing posts authored by your signed-in account.',
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollUpdateNotification &&
+                  _canLoadMorePosts(posts) &&
+                  notification.metrics.extentAfter < 260) {
+                _scheduleLoadMorePosts(context);
+              }
+              return false;
+            },
+            child: ListView(
+              key: const ValueKey('community-posts-scroll-view'),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              children: [
+                _PostSearchSortBar(
+                  controller: _searchController,
+                  search: _search,
+                  sort: _sort,
+                  activeTag: tag,
+                  activeView: _activeView,
+                  tags: tags,
+                  onCreate: () => _showCreatePostSheet(context),
+                  onSearchChanged: (value) {
+                    setState(() {
+                      _search = value;
+                      _resetLoadedPages();
+                    });
+                  },
+                  onSortChanged: (value) {
+                    setState(() {
+                      _sort = value;
+                      _resetLoadedPages();
+                    });
+                  },
+                  onTagChanged: (value) {
+                    setState(() {
+                      _activeTag = value;
+                      _resetLoadedPages();
+                    });
+                  },
+                  onViewChanged: (value) {
+                    if (value != CommunityInitialView.hot && authUser == null) {
+                      context.push('/login');
+                      return;
+                    }
+                    setState(() => _activeView = value);
+                  },
                 ),
                 const SizedBox(height: 12),
-              ],
-              if (_activeView == CommunityInitialView.likedPosts) ...[
-                const _ModePill(
-                  icon: Icons.favorite_border,
-                  label: 'Liked Posts',
-                  message: 'Showing posts you liked on HOK Helper.',
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (tag.isNotEmpty) ...[
-                _ModePill(
-                  icon: Icons.sell_outlined,
-                  label: 'Tag Filter',
-                  message: 'Showing posts tagged "$tag".',
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (visiblePosts.isEmpty)
-                _PostsEmptyState(tag: tag, initialView: _activeView)
-              else
-                for (final post in visiblePosts) ...[
-                  _PostCard(
-                    onDelete: _activeView == CommunityInitialView.myPosts
-                        ? () => _deletePost(context, post.id)
-                        : null,
-                    post: post,
-                    onLikeChanged: (liked) {
-                      setState(() {
-                        if (liked) {
-                          _likedPostIds.add(post.id);
-                          _unlikedPostIds.remove(post.id);
-                        } else {
-                          _unlikedPostIds.add(post.id);
-                          _likedPostIds.remove(post.id);
-                        }
-                      });
-                    },
+                if (_activeView == CommunityInitialView.myPosts) ...[
+                  const _ModePill(
+                    icon: Icons.person_outline,
+                    label: 'My Posts',
+                    message:
+                        'Showing posts authored by your signed-in account.',
                   ),
                   const SizedBox(height: 12),
                 ],
-              if (_canLoadMorePosts(posts)) ...[
-                const SizedBox(height: 4),
-                Center(
-                  child: FilledButton.icon(
-                    onPressed: _isLoadingMorePosts
-                        ? null
-                        : () => _loadMorePosts(context),
-                    icon: _isLoadingMorePosts
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.expand_more, size: 18),
-                    label: Text(
-                      _isLoadingMorePosts ? 'Loading...' : 'Load more',
+                if (_activeView == CommunityInitialView.likedPosts) ...[
+                  const _ModePill(
+                    icon: Icons.favorite_border,
+                    label: 'Liked Posts',
+                    message: 'Showing posts you liked on HOK Helper.',
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (tag.isNotEmpty) ...[
+                  _ModePill(
+                    icon: Icons.sell_outlined,
+                    label: 'Tag Filter',
+                    message: 'Showing posts tagged "$tag".',
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (visiblePosts.isEmpty)
+                  _PostsEmptyState(tag: tag, initialView: _activeView)
+                else
+                  for (final post in visiblePosts) ...[
+                    _PostCard(
+                      onDelete: _activeView == CommunityInitialView.myPosts
+                          ? () => _deletePost(context, post.id)
+                          : null,
+                      post: post,
+                      onLikeChanged: (liked) {
+                        setState(() {
+                          if (liked) {
+                            _likedPostIds.add(post.id);
+                            _unlikedPostIds.remove(post.id);
+                          } else {
+                            _unlikedPostIds.add(post.id);
+                            _likedPostIds.remove(post.id);
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                if (_canLoadMorePosts(posts)) ...[
+                  const SizedBox(height: 4),
+                  Center(
+                    child: FilledButton.icon(
+                      onPressed: _isLoadingMorePosts
+                          ? null
+                          : () => _loadMorePosts(context),
+                      icon: _isLoadingMorePosts
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.expand_more, size: 18),
+                      label: Text(
+                        _isLoadingMorePosts ? 'Loading...' : 'Load more',
+                      ),
                     ),
                   ),
-                ),
+                ] else if (visiblePosts.isNotEmpty)
+                  const _CommunityListEnd(),
               ],
-            ],
+            ),
           ),
         );
       },
@@ -902,6 +963,17 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
         const SnackBar(content: Text('Failed to load more posts')),
       );
     }
+  }
+
+  void _scheduleLoadMorePosts(BuildContext context) {
+    if (_loadMorePostsScheduled || _isLoadingMorePosts || !_hasMorePosts) {
+      return;
+    }
+    _loadMorePostsScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMorePostsScheduled = false;
+      if (mounted) _loadMorePosts(context);
+    });
   }
 
   void _resetLoadedPages() {
@@ -1581,6 +1653,7 @@ class _LeaksTab extends ConsumerStatefulWidget {
     required this.initialQuery,
     required this.initialCategory,
     required this.initialPlatform,
+    super.key,
   });
 
   final String? initialQuery;
@@ -1615,6 +1688,41 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
   var _nextLeaksPage = 2;
   var _hasMoreLeaks = true;
   var _isLoadingMoreLeaks = false;
+  var _loadMoreLeaksScheduled = false;
+  List<LeakPostSummary>? _lastResolvedLeaks;
+
+  @override
+  void didUpdateWidget(covariant _LeaksTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextQuery = widget.initialQuery?.trim() ?? '';
+    final nextCategory = _normalizeInitialFilter(widget.initialCategory, {
+      'all',
+      'hero',
+      'skin',
+    });
+    final nextPlatform = _normalizeInitialFilter(widget.initialPlatform, {
+      'all',
+      'twitter',
+      'youtube',
+      'instagram',
+      'facebook',
+      'telegram',
+      'tiktok',
+      'reddit',
+    });
+    if (nextQuery == _query &&
+        nextCategory == _category &&
+        nextPlatform == _platform) {
+      return;
+    }
+    setState(() {
+      _query = nextQuery;
+      _category = nextCategory;
+      _platform = nextPlatform;
+      _searchController.text = nextQuery;
+      _resetLoadedPages();
+    });
+  }
 
   @override
   void dispose() {
@@ -1626,8 +1734,11 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
   Widget build(BuildContext context) {
     final leakQuery = LeakPostsQuery(category: _category, platform: _platform);
     final leakValue = ref.watch(leakPostsQueryProvider(leakQuery));
+    final freshLeaks = leakValue.valueOrNull;
+    if (freshLeaks != null) _lastResolvedLeaks = freshLeaks;
     return AppAsyncView<List<LeakPostSummary>>(
       value: leakValue,
+      previousData: _lastResolvedLeaks,
       retry: () => ref.invalidate(leakPostsQueryProvider(leakQuery)),
       data: (leaks) {
         final query = _query;
@@ -1672,53 +1783,64 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
             _resetLoadedPages();
             return ref.refresh(leakPostsQueryProvider(leakQuery).future);
           },
-          child: ListView(
-            key: const ValueKey('community-leaks-scroll-view'),
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            children: [
-              _LeakFilterControls(
-                controller: _searchController,
-                query: _query,
-                category: _category,
-                platform: _platform,
-                onCategoryChanged: _setCategory,
-                onPlatformChanged: _setPlatform,
-                onQueryChanged: (value) => setState(() => _query = value),
-              ),
-              const SizedBox(height: 12),
-              if (query.isNotEmpty) ...[
-                _ModePill(
-                  icon: Icons.search,
-                  label: 'Leak Search',
-                  message: 'Showing leaks matching "$query".',
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollUpdateNotification &&
+                  _canLoadMoreLeaks(leaks) &&
+                  notification.metrics.extentAfter < 260) {
+                _scheduleLoadMoreLeaks(context);
+              }
+              return false;
+            },
+            child: ListView(
+              key: const ValueKey('community-leaks-scroll-view'),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              children: [
+                _LeakFilterControls(
+                  controller: _searchController,
+                  query: _query,
+                  category: _category,
+                  platform: _platform,
+                  onCategoryChanged: _setCategory,
+                  onPlatformChanged: _setPlatform,
+                  onQueryChanged: (value) => setState(() => _query = value),
                 ),
                 const SizedBox(height: 12),
-              ],
-              for (final leak in visibleLeaks) ...[
-                _LeakCard(leak: leak),
-                const SizedBox(height: 12),
-              ],
-              if (_canLoadMoreLeaks(leaks)) ...[
-                const SizedBox(height: 4),
-                Center(
-                  child: FilledButton.icon(
-                    onPressed: _isLoadingMoreLeaks
-                        ? null
-                        : () => _loadMoreLeaks(context),
-                    icon: _isLoadingMoreLeaks
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.expand_more, size: 18),
-                    label: Text(
-                      _isLoadingMoreLeaks ? 'Loading...' : 'Load more',
+                if (query.isNotEmpty) ...[
+                  _ModePill(
+                    icon: Icons.search,
+                    label: 'Leak Search',
+                    message: 'Showing leaks matching "$query".',
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                for (final leak in visibleLeaks) ...[
+                  _LeakCard(leak: leak),
+                  const SizedBox(height: 12),
+                ],
+                if (_canLoadMoreLeaks(leaks)) ...[
+                  const SizedBox(height: 4),
+                  Center(
+                    child: FilledButton.icon(
+                      onPressed: _isLoadingMoreLeaks
+                          ? null
+                          : () => _loadMoreLeaks(context),
+                      icon: _isLoadingMoreLeaks
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.expand_more, size: 18),
+                      label: Text(
+                        _isLoadingMoreLeaks ? 'Loading...' : 'Load more',
+                      ),
                     ),
                   ),
-                ),
+                ] else
+                  const _CommunityListEnd(),
               ],
-            ],
+            ),
           ),
         );
       },
@@ -1800,6 +1922,17 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
     }
   }
 
+  void _scheduleLoadMoreLeaks(BuildContext context) {
+    if (_loadMoreLeaksScheduled || _isLoadingMoreLeaks || !_hasMoreLeaks) {
+      return;
+    }
+    _loadMoreLeaksScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMoreLeaksScheduled = false;
+      if (mounted) _loadMoreLeaks(context);
+    });
+  }
+
   void _resetLoadedPages() {
     _extraLeaks.clear();
     _nextLeaksPage = 2;
@@ -1819,6 +1952,33 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
       _platform = value;
       _resetLoadedPages();
     });
+  }
+}
+
+class _CommunityListEnd extends StatelessWidget {
+  const _CommunityListEnd();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(color: context.hokTheme.outlineSoft, endIndent: 12),
+          ),
+          Text(
+            'You have reached the end',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: context.hokTheme.onSurfaceMuted,
+            ),
+          ),
+          Expanded(
+            child: Divider(color: context.hokTheme.outlineSoft, indent: 12),
+          ),
+        ],
+      ),
+    );
   }
 }
 

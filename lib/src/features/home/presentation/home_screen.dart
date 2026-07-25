@@ -30,12 +30,16 @@ class HomeScreen extends ConsumerWidget {
     this.initialPortalTab,
     this.initialHeroId,
     this.initialSkinId,
+    this.initialEsportsTab,
+    this.showPortalBack = false,
     super.key,
   });
 
   final String? initialPortalTab;
   final String? initialHeroId;
   final int? initialSkinId;
+  final String? initialEsportsTab;
+  final bool showPortalBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,6 +64,8 @@ class HomeScreen extends ConsumerWidget {
                   initialPortalTab: initialPortalTab,
                   initialHeroId: initialHeroId,
                   initialSkinId: initialSkinId,
+                  initialEsportsTab: initialEsportsTab,
+                  showPortalBack: showPortalBack,
                 ),
               ],
             ),
@@ -76,12 +82,16 @@ class _HomePortalFramework extends StatefulWidget {
     this.initialPortalTab,
     this.initialHeroId,
     this.initialSkinId,
+    this.initialEsportsTab,
+    this.showPortalBack = false,
   });
 
   final Map<String, dynamic> result;
   final String? initialPortalTab;
   final String? initialHeroId;
   final int? initialSkinId;
+  final String? initialEsportsTab;
+  final bool showPortalBack;
 
   @override
   State<_HomePortalFramework> createState() => _HomePortalFrameworkState();
@@ -160,6 +170,7 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
         _HomePortalTopBar(
           selectedIndex: _selectedPage,
           onSelected: _selectPage,
+          showBack: widget.showPortalBack && _selectedPage == 2,
         ),
         const SizedBox(height: 18),
         SizedBox(
@@ -174,7 +185,15 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
               });
             },
             children: [
-              const EsportsScreen(syncRouteOnTabTap: false),
+              EsportsScreen(
+                key: ValueKey(
+                  'home-esports-${widget.initialEsportsTab ?? 'schedule'}',
+                ),
+                initialTab: esportsInitialTabFromRoute(
+                  widget.initialEsportsTab,
+                ),
+                syncRouteOnTabTap: false,
+              ),
               _openedSkinId == null
                   ? SkinGalleryScreen(onSkinSelected: _openSkinDetail)
                   : SkinDetailScreen(
@@ -232,10 +251,12 @@ class _HomePortalTopBar extends StatelessWidget {
   const _HomePortalTopBar({
     required this.selectedIndex,
     required this.onSelected,
+    this.showBack = false,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final bool showBack;
 
   @override
   Widget build(BuildContext context) {
@@ -250,8 +271,10 @@ class _HomePortalTopBar extends StatelessWidget {
     return Row(
       children: [
         _RoundIconButton(
-          icon: Icons.menu_rounded,
-          onTap: () => _showPortalMenu(context),
+          icon: showBack ? Icons.arrow_back_rounded : Icons.menu_rounded,
+          onTap: showBack
+              ? () => context.go('/')
+              : () => _showPortalMenu(context),
         ),
         const SizedBox(width: 6),
         Expanded(
@@ -393,15 +416,15 @@ class _PortalMenuSheet extends StatelessWidget {
     _PortalMenuGroup(
       titleKey: 'menuHeroes',
       links: [
-        _PortalMenuLink('menuGallery', '/heroes'),
+        _PortalMenuLink('menuGallery', '/?tab=heroes&from=menu'),
         _PortalMenuLink('menuTierList', '/stats-home?tab=tier'),
-        _PortalMenuLink('menuPowerTrends', '/tools/stats?entry=hero_trend'),
+        _PortalMenuLink('menuPowerTrends', '/stats-home?tab=trends'),
       ],
     ),
     _PortalMenuGroup(
       titleKey: 'menuSkins',
       links: [
-        _PortalMenuLink('menuGallery', '/content/skins'),
+        _PortalMenuLink('menuGallery', '/?tab=skins'),
         _PortalMenuLink('menuCg', '/content/cgs'),
       ],
     ),
@@ -411,16 +434,16 @@ class _PortalMenuSheet extends StatelessWidget {
         _PortalMenuLink('menuPlayerLeaderboard', '/stats-home?tab=rankings'),
         _PortalMenuLink('menuForum', '/content/community'),
         _PortalMenuLink('menuLeaks', '/content/community?tab=leaks'),
-        _PortalMenuLink('menuEventHelp', '/content/event-assistance'),
+        _PortalMenuLink('menuEventHelp', '/content/community?tab=events'),
       ],
     ),
     _PortalMenuGroup(
       titleKey: 'menuEsports',
       links: [
-        _PortalMenuLink('menuSchedule', '/esports/schedule'),
-        _PortalMenuLink('menuEsportsStats', '/esports/stats'),
-        _PortalMenuLink('menuTeams', '/esports/teams'),
-        _PortalMenuLink('menuProPlayers', '/esports/players'),
+        _PortalMenuLink('menuSchedule', '/?tab=esports&esports_tab=schedule'),
+        _PortalMenuLink('menuEsportsStats', '/?tab=esports&esports_tab=stats'),
+        _PortalMenuLink('menuTeams', '/?tab=esports&esports_tab=teams'),
+        _PortalMenuLink('menuProPlayers', '/?tab=esports&esports_tab=players'),
       ],
     ),
     _PortalMenuGroup(
@@ -431,7 +454,6 @@ class _PortalMenuSheet extends StatelessWidget {
         _PortalMenuLink('menuAiPrompts', '/tools/prompts'),
         _PortalMenuLink('menuTeamBuilder', '/tools/team-builder'),
         _PortalMenuLink('menuBuilds', '/tools/build-sim'),
-        _PortalMenuLink('menuGameAssistant', '/tools/game-assistant'),
         _PortalMenuLink('menuRankFortune', '/tools/rank-fortune'),
       ],
     ),
@@ -1730,7 +1752,7 @@ class _HomeDataTable extends StatefulWidget {
 
 class _HomeDataTableState extends State<_HomeDataTable> {
   static const _firstColumnWidth = 48.0;
-  static const _headerHeight = 32.0;
+  static const _headerHeight = 52.0;
   static const _rowHeight = 48.0;
 
   final _verticalController = ScrollController();
@@ -1828,26 +1850,76 @@ class _HomeDataTableState extends State<_HomeDataTable> {
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
         constraints: BoxConstraints(minWidth: metricWidth),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final column in metricColumns)
-              SizedBox(
-                width: _homeTableColumnWidth(column),
-                height: _headerHeight,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    column.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
-                      color: context.hokTheme.onSurfaceMuted,
-                      fontWeight: FontWeight.w900,
+            SizedBox(
+              height: 24,
+              child: Row(
+                children: [
+                  for (final group in _homeColumnGroups(metricColumns))
+                    Container(
+                      width: group.width,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(
+                            color: context.hokTheme.outlineSoft.withValues(
+                              alpha: 0.8,
+                            ),
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        group.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontSize: 9,
+                          color: context.hokTheme.onSurfaceMuted,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                ],
               ),
+            ),
+            SizedBox(
+              height: _headerHeight - 24,
+              child: Row(
+                children: [
+                  for (var index = 0; index < metricColumns.length; index++)
+                    Container(
+                      width: _homeTableColumnWidth(metricColumns[index]),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 4),
+                      decoration: BoxDecoration(
+                        border:
+                            index == 0 ||
+                                metricColumns[index - 1].group !=
+                                    metricColumns[index].group
+                            ? Border(
+                                left: BorderSide(
+                                  color: context.hokTheme.outlineSoft
+                                      .withValues(alpha: 0.8),
+                                ),
+                              )
+                            : null,
+                      ),
+                      child: Text(
+                        metricColumns[index].label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontSize: 9,
+                          color: context.hokTheme.onSurfaceMuted,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -1859,13 +1931,30 @@ class _HomeDataTableState extends State<_HomeDataTable> {
             height: _rowHeight,
             child: Row(
               children: [
-                for (final column in metricColumns)
-                  SizedBox(
-                    width: _homeTableColumnWidth(column),
+                for (var index = 0; index < metricColumns.length; index++)
+                  Container(
+                    width: _homeTableColumnWidth(metricColumns[index]),
                     height: _rowHeight,
+                    decoration: BoxDecoration(
+                      border:
+                          index == 0 ||
+                              metricColumns[index - 1].group !=
+                                  metricColumns[index].group
+                          ? Border(
+                              left: BorderSide(
+                                color: context.hokTheme.outlineSoft.withValues(
+                                  alpha: 0.45,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: _HomeDataCell(row: row, column: column),
+                      child: _HomeDataCell(
+                        row: row,
+                        column: metricColumns[index],
+                      ),
                     ),
                   ),
               ],
@@ -1979,11 +2068,38 @@ double _homeTableColumnWidth(_HomeTableColumn column) {
 }
 
 class _HomeTableColumn {
-  const _HomeTableColumn({required this.id, required this.label, this.type});
+  const _HomeTableColumn({
+    required this.id,
+    required this.label,
+    this.type,
+    this.group = 'More',
+  });
 
   final String id;
   final String label;
   final String? type;
+  final String group;
+}
+
+class _HomeColumnGroup {
+  const _HomeColumnGroup(this.label, this.width);
+
+  final String label;
+  final double width;
+}
+
+List<_HomeColumnGroup> _homeColumnGroups(List<_HomeTableColumn> columns) {
+  final groups = <_HomeColumnGroup>[];
+  for (final column in columns) {
+    final width = _homeTableColumnWidth(column);
+    if (groups.isNotEmpty && groups.last.label == column.group) {
+      final previous = groups.removeLast();
+      groups.add(_HomeColumnGroup(previous.label, previous.width + width));
+    } else {
+      groups.add(_HomeColumnGroup(column.group, width));
+    }
+  }
+  return groups;
 }
 
 class _HomeDataCell extends StatelessWidget {
@@ -2543,6 +2659,14 @@ List<_HomeTableColumn> _homeTableColumns(
             _readString(value['label'], fallback: id),
           ),
           type: _readString(value['type']),
+          group: _localizedHomeMetricGroup(
+            context,
+            id,
+            _readString(
+              value['group'] ?? value['category'],
+              fallback: _homeMetricGroup(id),
+            ),
+          ),
         ),
       );
     }
@@ -2551,14 +2675,71 @@ List<_HomeTableColumn> _homeTableColumns(
     return columns;
   }
   return [
-    const _HomeTableColumn(id: 'hero', label: 'Hero', type: 'hero'),
+    const _HomeTableColumn(
+      id: 'hero',
+      label: 'Hero',
+      type: 'hero',
+      group: 'Hero',
+    ),
     if (rows.any((row) => row.containsKey('win_rate')))
       const _HomeTableColumn(
         id: 'win_rate',
         label: 'Win Rate',
         type: 'percent',
+        group: 'Core',
       ),
   ];
+}
+
+String _homeMetricGroup(String id) {
+  if (id == 'hero') return 'Hero';
+  if (id == 'trend_smoothed') return 'Trend';
+  if (const {
+    'wr',
+    'win_rate',
+    'pick_rate',
+    'ban_rate',
+    'bp_rate',
+  }.contains(id)) {
+    return 'Core';
+  }
+  if (id.startsWith('phase_')) return 'Match Phase';
+  if (id.contains('grade') || id.startsWith('mvp_')) return 'Performance';
+  if (const {'avg_kills', 'avg_deaths', 'avg_assists'}.contains(id)) {
+    return 'Combat';
+  }
+  if (id.contains('hurt') || id.contains('dmg')) return 'Damage';
+  if (id.contains('money') || id.contains('coin')) return 'Economy';
+  if (id.contains('join') ||
+      id.contains('heal') ||
+      id.contains('ctrl') ||
+      id.contains('soldier')) {
+    return 'Utility';
+  }
+  return 'More';
+}
+
+String _localizedHomeMetricGroup(
+  BuildContext context,
+  String id,
+  String fallback,
+) {
+  if (Localizations.localeOf(context).languageCode == 'zh') return fallback;
+  final derived = _homeMetricGroup(id);
+  if (derived != 'More') return derived;
+  return switch (fallback.trim()) {
+    '趋势' => 'Trend',
+    '核心' => 'Core',
+    '对局阶段' || '比赛阶段' => 'Match Phase',
+    '表现' => 'Performance',
+    '战斗' => 'Combat',
+    '伤害' => 'Damage',
+    '经济' => 'Economy',
+    '功能' || '功能性' => 'Utility',
+    '英雄' => 'Hero',
+    '更多' => 'More',
+    _ => _containsHan(fallback) ? 'More' : fallback,
+  };
 }
 
 String _localizedHomeMetricLabel(
@@ -2605,7 +2786,7 @@ String _localizedHomeMetricLabel(
     'mvp_rate': 'MVP Rate',
     'mvp_rate_win': 'Win MVP Rate',
     'mvp_rate_lose': 'Loss MVP Rate',
-    'trend_smoothed': 'Win Rate Trend',
+    'trend_smoothed': 'Trend',
   };
   return labels[id] ?? (_containsHan(fallback) ? _titleFromId(id) : fallback);
 }
@@ -3280,8 +3461,8 @@ class _HomeToolGrid extends StatelessWidget {
       icon: Icons.auto_awesome_outlined,
     ),
     _HomeTool(
-      title: 'Event Assistance',
-      route: '/content/event-assistance',
+      title: 'Event Helper',
+      route: '/content/community?tab=events',
       icon: Icons.event_available_outlined,
     ),
   ];
