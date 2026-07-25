@@ -34,7 +34,10 @@ class ContentItemSummary {
     return ContentItemSummary(
       id: _readInt(map['id']),
       kind: ContentKind.skin,
-      title: _readString(map['name'], fallback: 'Skin #${_readInt(map['id'])}'),
+      title: _readString(
+        map['name'] ?? map['skin_name'] ?? map['skinName'],
+        fallback: 'Skin #${_readInt(map['id'])}',
+      ),
       heroName: _readString(map['hero_name'] ?? map['heroName']),
       imageUrl: _readString(
         map['additional_image_url'] ??
@@ -45,7 +48,9 @@ class ContentItemSummary {
       landscapeImageUrl: _readString(
         map['image_url'] ?? map['landscapeUrl'] ?? map['landscape_image_url'],
       ),
-      subtitle: _readString(map['series_name']),
+      subtitle: _readString(
+        map['series_name'] ?? map['seriesName'] ?? map['series'],
+      ),
       rating: _readDouble(map['rating']),
       ratingCount: _readInt(map['rating_count'] ?? map['ratingCount']),
       viewCount: 0,

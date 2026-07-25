@@ -243,7 +243,8 @@ void main() {
     expect(find.text('Skin Detail'), findsOneWidget);
     expect(find.text('Hunter Series'), findsWidgets);
     expect(find.byIcon(Icons.star_rounded), findsWidgets);
-    expect(find.text('12 ratings'), findsWidgets);
+    expect(find.text('12'), findsWidgets);
+    expect(find.textContaining('ratings'), findsNothing);
   });
 
   testWidgets('filters skins from initial search query', (tester) async {
@@ -506,7 +507,8 @@ void main() {
     expect(repository.ratedSkinId, 1001);
     expect(repository.submittedRating, 5);
     expect(find.text('Rating submitted'), findsOneWidget);
-    expect(find.text('13 ratings'), findsOneWidget);
+    expect(find.text('13'), findsOneWidget);
+    expect(find.textContaining('ratings'), findsNothing);
   });
 
   testWidgets('skin detail source links open through the mobile link route', (

@@ -701,58 +701,52 @@ class _SkinCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (skin.subtitle.isNotEmpty)
-                Positioned(
-                  top: 9,
-                  right: 9,
-                  child: _SkinSeriesPill(label: skin.subtitle),
-                ),
               Positioned(
                 left: 11,
                 right: 11,
                 bottom: 10,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            skin.title,
-                            maxLines: isSplash ? 1 : 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  shadows: const [
-                                    Shadow(color: Colors.black, blurRadius: 6),
-                                  ],
-                                ),
-                          ),
-                          if (skin.heroName.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              skin.heroName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: Colors.white70,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                          ],
+                    Text(
+                      skin.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        shadows: const [
+                          Shadow(color: Colors.black, blurRadius: 6),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    AppRatingStars(
-                      rating: skin.rating,
-                      ratingCount: skin.ratingCount,
-                      size: isSplash ? 15 : 11,
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            skin.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w700,
+                                  shadows: const [
+                                    Shadow(color: Colors.black, blurRadius: 5),
+                                  ],
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        AppRatingStars(
+                          rating: skin.rating,
+                          ratingCount: skin.ratingCount,
+                          size: isSplash ? 13 : 10,
+                          countLabel: '',
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -779,35 +773,6 @@ class _SkinCard extends StatelessWidget {
           Navigator.of(sheetContext).pop();
           onRate(rating);
         },
-      ),
-    );
-  }
-}
-
-class _SkinSeriesPill extends StatelessWidget {
-  const _SkinSeriesPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
       ),
     );
   }
@@ -1074,7 +1039,12 @@ class _SkinDetailContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        AppRatingStars(rating: rating, ratingCount: ratingCount, size: 20),
+        AppRatingStars(
+          rating: rating,
+          ratingCount: ratingCount,
+          size: 20,
+          countLabel: '',
+        ),
         const SizedBox(height: 14),
         _SkinRatingControl(rating: rating, isRating: isRating, onRate: onRate),
         if (detail.linkUrl.isNotEmpty) ...[
