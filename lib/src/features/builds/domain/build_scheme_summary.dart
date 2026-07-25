@@ -48,6 +48,36 @@ class BuildSchemeSummary {
       ? ''
       : '/static/game/summoner_skill/$summonerSkillId.png';
 
+  BuildSchemeSummary copyWith({
+    String? title,
+    int? likeCount,
+    int? favoriteCount,
+    int? cloneCount,
+    bool? isLiked,
+    bool? isFavorited,
+  }) {
+    return BuildSchemeSummary(
+      id: id,
+      title: title ?? this.title,
+      heroName: heroName,
+      authorName: authorName,
+      equipmentIcons: equipmentIcons,
+      likeCount: likeCount ?? this.likeCount,
+      favoriteCount: favoriteCount ?? this.favoriteCount,
+      cloneCount: cloneCount ?? this.cloneCount,
+      isPublic: isPublic,
+      isLiked: isLiked ?? this.isLiked,
+      isFavorited: isFavorited ?? this.isFavorited,
+      slotIndex: slotIndex,
+      equipmentIds: equipmentIds,
+      runeIds: runeIds,
+      summonerSkillId: summonerSkillId,
+      authorId: authorId,
+      heroId: heroId,
+      heroAvatar: heroAvatar,
+    );
+  }
+
   factory BuildSchemeSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     final author = map['author'] is Map ? map['author'] as Map : map['user'];

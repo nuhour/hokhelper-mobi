@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -64,6 +65,7 @@ class _TierListSchemeDetailScreenState
   TierListSchemeSummary? _savedScheme;
   bool _isSaving = false;
   bool _showLaneBoard = false;
+  bool _isHeroPoolOpen = true;
   int? _boardLanePosition;
 
   @override
@@ -128,6 +130,7 @@ class _TierListSchemeDetailScreenState
                       nameController: _nameController,
                       isSaving: _isSaving,
                       isLaneBoardMode: _showLaneBoard,
+                      isHeroPoolOpen: _isHeroPoolOpen,
                       onBack: () {
                         if (context.canPop()) {
                           context.pop();
@@ -136,7 +139,8 @@ class _TierListSchemeDetailScreenState
                         }
                       },
                       onSave: save,
-                      onExport: () => _exportBoardImage(displayScheme),
+                      onExport: () =>
+                          _exportBoardImage(displayScheme, heroesById),
                       onToggleLaneBoard: () {
                         setState(() {
                           _showLaneBoard = !_showLaneBoard;
@@ -145,6 +149,8 @@ class _TierListSchemeDetailScreenState
                           }
                         });
                       },
+                      onToggleHeroPool: () =>
+                          setState(() => _isHeroPoolOpen = !_isHeroPoolOpen),
                     ),
                     Expanded(
                       child: Padding(
@@ -156,6 +162,7 @@ class _TierListSchemeDetailScreenState
                           heroesValue: heroesValue,
                           boardBoundaryKey: _boardBoundaryKey,
                           labelControllers: _labelControllers,
+                          isHeroPoolOpen: _isHeroPoolOpen,
                           showLaneBoard: _showLaneBoard,
                           boardLanePosition: _boardLanePosition,
                           onBoardLaneChanged: (value) {
@@ -166,6 +173,7 @@ class _TierListSchemeDetailScreenState
                           onLabelChanged: _updateRowLabel,
                           onColorChanged: _updateRowColor,
                           onHeroAdded: _addHeroToRow,
+                          onHeroReturnedToPool: _removeHeroFromAllRows,
                           onRowsReordered: _reorderRows,
                         ),
                       ),
@@ -340,15 +348,30 @@ class _TierListSchemeDetailScreenState
     setState(() {
       _editedRows = [
         for (final row in _editedRows)
-          if (row.id == rowId && !row.heroIds.contains(heroId))
+          if (row.id == rowId)
             row.copyWith(
-              heroIds: [...row.heroIds, heroId],
-              heroCount: row.heroIds.length + 1,
+              heroIds: [...row.heroIds.where((id) => id != heroId), heroId],
+              heroCount: row.heroIds.where((id) => id != heroId).length + 1,
             )
           else
-            row,
+            row.copyWith(
+              heroIds: row.heroIds.where((id) => id != heroId).toList(),
+              heroCount: row.heroIds.where((id) => id != heroId).length,
+            ),
       ];
       _heroIdControllers[rowId]?.clear();
+    });
+  }
+
+  void _removeHeroFromAllRows(int heroId) {
+    setState(() {
+      _editedRows = [
+        for (final row in _editedRows)
+          row.copyWith(
+            heroIds: row.heroIds.where((id) => id != heroId).toList(),
+            heroCount: row.heroIds.where((id) => id != heroId).length,
+          ),
+      ];
     });
   }
 
@@ -421,13 +444,60 @@ class _TierListSchemeDetailScreenState
     }
   }
 
-  Future<void> _exportBoardImage(TierListSchemeSummary scheme) async {
+  Future<void> _exportBoardImage(
+    TierListSchemeSummary scheme,
+    Map<int, HeroSummary> heroesById,
+  ) async {
+    final exportKey = GlobalKey();
+    OverlayEntry? exportEntry;
     try {
+      final rowHeight = _showLaneBoard ? 112.0 : 104.0;
+      final exportHeight =
+          50 +
+          (_showLaneBoard ? 34 : 0) +
+          scheme.rows.length * rowHeight +
+          math.max(0, scheme.rows.length - 1) * 10;
+      exportEntry = OverlayEntry(
+        builder: (context) => Positioned.fill(
+          child: IgnorePointer(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                OverflowBox(
+                  alignment: Alignment.topLeft,
+                  minWidth: 1200,
+                  maxWidth: 1200,
+                  minHeight: exportHeight,
+                  maxHeight: exportHeight,
+                  child: RepaintBoundary(
+                    key: exportKey,
+                    child: _TierExportBoard(
+                      scheme: scheme,
+                      heroesById: heroesById,
+                      showLaneGroups: _showLaneBoard,
+                      rowHeight: rowHeight,
+                    ),
+                  ),
+                ),
+                const Positioned.fill(
+                  child: ColoredBox(
+                    color: Color(0xD9000618),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      Overlay.of(context, rootOverlay: true).insert(exportEntry);
+      await WidgetsBinding.instance.endOfFrame;
+      await Future<void>.delayed(const Duration(milliseconds: 200));
       final boundary =
-          _boardBoundaryKey.currentContext?.findRenderObject()
+          exportKey.currentContext?.findRenderObject()
               as RenderRepaintBoundary?;
-      if (boundary == null) throw StateError('Tier board is not ready');
-      final image = await boundary.toImage(pixelRatio: 3);
+      if (boundary == null) throw StateError('Tier export is not ready');
+      final image = await boundary.toImage(pixelRatio: 2);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
       final bytes = data?.buffer.asUint8List();
       if (bytes == null || bytes.isEmpty) throw StateError('Empty tier image');
@@ -458,7 +528,9 @@ class _TierListSchemeDetailScreenState
       messenger.showSnackBar(
         const SnackBar(content: Text('Tier list image saved: Photos')),
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Failed to export tier list: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) {
         return;
       }
@@ -467,6 +539,8 @@ class _TierListSchemeDetailScreenState
       messenger.showSnackBar(
         const SnackBar(content: Text('Failed to download tier list image')),
       );
+    } finally {
+      exportEntry?.remove();
     }
   }
 }
@@ -600,20 +674,24 @@ class _TierListEditorToolbar extends StatelessWidget {
     required this.nameController,
     required this.isSaving,
     required this.isLaneBoardMode,
+    required this.isHeroPoolOpen,
     required this.onBack,
     required this.onSave,
     required this.onExport,
     required this.onToggleLaneBoard,
+    required this.onToggleHeroPool,
   });
 
   final String schemeName;
   final TextEditingController nameController;
   final bool isSaving;
   final bool isLaneBoardMode;
+  final bool isHeroPoolOpen;
   final VoidCallback onBack;
   final VoidCallback onSave;
   final VoidCallback onExport;
   final VoidCallback onToggleLaneBoard;
+  final VoidCallback onToggleHeroPool;
 
   @override
   Widget build(BuildContext context) {
@@ -667,6 +745,16 @@ class _TierListEditorToolbar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              _ToolbarButton(
+                buttonKey: const ValueKey('tier-hero-pool-toggle'),
+                tooltip: isHeroPoolOpen ? 'Close hero pool' : 'Open hero pool',
+                icon: isHeroPoolOpen
+                    ? Icons.view_sidebar_outlined
+                    : Icons.view_sidebar_rounded,
+                isSelected: isHeroPoolOpen,
+                onPressed: onToggleHeroPool,
+              ),
+              const SizedBox(width: 6),
               _ToolbarButton(
                 buttonKey: const ValueKey('tier-lane-board-toggle'),
                 tooltip: 'Lane tier view',
@@ -748,12 +836,14 @@ class _TierListEditorWorkspace extends StatelessWidget {
     required this.heroesValue,
     required this.boardBoundaryKey,
     required this.labelControllers,
+    required this.isHeroPoolOpen,
     required this.showLaneBoard,
     required this.boardLanePosition,
     required this.onBoardLaneChanged,
     required this.onLabelChanged,
     required this.onColorChanged,
     required this.onHeroAdded,
+    required this.onHeroReturnedToPool,
     required this.onRowsReordered,
   });
 
@@ -763,12 +853,14 @@ class _TierListEditorWorkspace extends StatelessWidget {
   final AsyncValue<List<HeroSummary>> heroesValue;
   final GlobalKey boardBoundaryKey;
   final Map<String, TextEditingController> labelControllers;
+  final bool isHeroPoolOpen;
   final bool showLaneBoard;
   final int? boardLanePosition;
   final ValueChanged<int?> onBoardLaneChanged;
   final void Function(String rowId, String label) onLabelChanged;
   final void Function(String rowId, String color) onColorChanged;
   final void Function(String rowId, int heroId) onHeroAdded;
+  final ValueChanged<int> onHeroReturnedToPool;
   final void Function(int oldIndex, int newIndex) onRowsReordered;
 
   @override
@@ -795,15 +887,31 @@ class _TierListEditorWorkspace extends StatelessWidget {
                 onRowsReordered: onRowsReordered,
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: poolWidth,
-              child: _HeroPoolPanel(
-                value: heroesValue,
-                heroes: heroes,
-                assignedHeroIds: scheme.rows
-                    .expand((row) => row.heroIds)
-                    .toSet(),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              width: isHeroPoolOpen ? 8 : 0,
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              width: isHeroPoolOpen ? poolWidth : 0,
+              child: ClipRect(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  widthFactor: isHeroPoolOpen ? 1 : 0,
+                  child: SizedBox(
+                    width: poolWidth,
+                    child: _HeroPoolPanel(
+                      value: heroesValue,
+                      heroes: heroes,
+                      assignedHeroIds: scheme.rows
+                          .expand((row) => row.heroIds)
+                          .toSet(),
+                      onHeroReturned: onHeroReturnedToPool,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -948,11 +1056,13 @@ class _HeroPoolPanel extends StatefulWidget {
     required this.value,
     required this.heroes,
     required this.assignedHeroIds,
+    required this.onHeroReturned,
   });
 
   final AsyncValue<List<HeroSummary>> value;
   final List<HeroSummary> heroes;
   final Set<int> assignedHeroIds;
+  final ValueChanged<int> onHeroReturned;
 
   @override
   State<_HeroPoolPanel> createState() => _HeroPoolPanelState();
@@ -960,7 +1070,6 @@ class _HeroPoolPanel extends StatefulWidget {
 
 class _HeroPoolPanelState extends State<_HeroPoolPanel> {
   int? _lanePosition;
-  bool _collapsed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -978,102 +1087,99 @@ class _HeroPoolPanelState extends State<_HeroPoolPanel> {
         })
         .toList(growable: false);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.hokTheme.surfaceSlate,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: context.hokTheme.outlineSoft),
-      ),
-      child: _collapsed
-          ? Center(
-              child: IconButton.filledTonal(
-                tooltip: 'Open hero pool',
-                onPressed: () => setState(() => _collapsed = false),
-                icon: const Icon(Icons.chevron_left_rounded),
-              ),
-            )
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return DragTarget<int>(
+      onAcceptWithDetails: (details) => widget.onHeroReturned(details.data),
+      builder: (context, candidates, rejected) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: candidates.isEmpty
+              ? context.hokTheme.surfaceSlate
+              : AppTheme.gold.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: candidates.isEmpty
+                ? context.hokTheme.outlineSoft
+                : AppTheme.gold,
+            width: candidates.isEmpty ? 1 : 2,
+          ),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.refresh_rounded,
-                            color: AppTheme.gold,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Hero Pool',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: context.hokTheme.onSurfaceStrong,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            tooltip: 'Collapse hero pool',
-                            onPressed: () => setState(() => _collapsed = true),
-                            icon: const Icon(
-                              Icons.chevron_right_rounded,
-                              size: 18,
-                            ),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ],
+                      const Icon(
+                        Icons.refresh_rounded,
+                        color: AppTheme.gold,
+                        size: 16,
                       ),
-                      const SizedBox(height: 8),
-                      _LaneIconFilterBar(
-                        lanePosition: _lanePosition,
-                        onChanged: (value) {
-                          setState(() {
-                            _lanePosition = value;
-                          });
-                        },
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          candidates.isEmpty
+                              ? 'Hero Pool'
+                              : 'Release to return',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: context.hokTheme.onSurfaceStrong,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  _LaneIconFilterBar(
+                    lanePosition: _lanePosition,
+                    onChanged: (value) {
+                      setState(() {
+                        _lanePosition = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: widget.value.when(
+                data: (_) => GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6,
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 6,
+                  ),
+                  itemCount: filteredHeroes.length,
+                  itemBuilder: (context, index) {
+                    return _HeroPoolDraggable(hero: filteredHeroes[index]);
+                  },
                 ),
-                Expanded(
-                  child: widget.value.when(
-                    data: (_) => GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 6,
-                            mainAxisSpacing: 6,
-                            crossAxisSpacing: 6,
-                          ),
-                      itemCount: filteredHeroes.length,
-                      itemBuilder: (context, index) {
-                        return _HeroPoolDraggable(hero: filteredHeroes[index]);
-                      },
-                    ),
-                    loading: () => Center(
-                      child: Text(
-                        'Loading heroes...',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.hokTheme.onSurfaceMuted,
-                        ),
-                      ),
-                    ),
-                    error: (_, _) => Center(
-                      child: Text(
-                        'Failed to load heroes',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.hokTheme.onSurfaceMuted,
-                        ),
-                      ),
+                loading: () => Center(
+                  child: Text(
+                    'Loading heroes...',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
                     ),
                   ),
                 ),
-              ],
+                error: (_, _) => Center(
+                  child: Text(
+                    'Failed to load heroes',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
+                  ),
+                ),
+              ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1812,6 +1918,7 @@ class _TierRowDetail extends StatelessWidget {
                                 heroId: heroId,
                                 hero: heroesById[heroId],
                                 size: isEditMode ? 30 : 44,
+                                draggable: isEditMode,
                               ),
                               SizedBox(width: isEditMode ? 6 : 10),
                             ],
@@ -1891,6 +1998,7 @@ class _TierLaneHeroGroups extends StatelessWidget {
                           heroId: heroId,
                           hero: heroesById[heroId],
                           size: 28,
+                          draggable: true,
                         ),
                         const SizedBox(width: 3),
                       ],
@@ -1981,18 +2089,20 @@ class _TierHeroToken extends StatelessWidget {
     required this.heroId,
     required this.size,
     this.hero,
+    this.draggable = false,
   });
 
   final int heroId;
   final double size;
   final HeroSummary? hero;
+  final bool draggable;
 
   @override
   Widget build(BuildContext context) {
     final label = hero?.name.trim().isNotEmpty == true
         ? hero!.name
         : 'Hero #$heroId';
-    return Tooltip(
+    final token = Tooltip(
       message: label,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -2011,6 +2121,76 @@ class _TierHeroToken extends StatelessWidget {
           height: size,
           borderRadius: size <= 30 ? 6 : 10,
           semanticLabel: label,
+        ),
+      ),
+    );
+    if (!draggable) {
+      return token;
+    }
+    return LongPressDraggable<int>(
+      data: heroId,
+      delay: const Duration(milliseconds: 220),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(scale: 1.12, child: token),
+      ),
+      childWhenDragging: Opacity(opacity: 0.22, child: token),
+      child: token,
+    );
+  }
+}
+
+class _TierExportBoard extends StatelessWidget {
+  const _TierExportBoard({
+    required this.scheme,
+    required this.heroesById,
+    required this.showLaneGroups,
+    required this.rowHeight,
+  });
+
+  final TierListSchemeSummary scheme;
+  final Map<int, HeroSummary> heroesById;
+  final bool showLaneGroups;
+  final double rowHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF02050E),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFF050B19),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFF24324B), width: 2),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              children: [
+                if (showLaneGroups) ...[
+                  const _TierLaneHeader(),
+                  const SizedBox(height: 8),
+                ],
+                for (var index = 0; index < scheme.rows.length; index++) ...[
+                  SizedBox(
+                    height: rowHeight,
+                    child: _TierRowDetail(
+                      row: scheme.rows[index],
+                      heroesById: heroesById,
+                      isEditMode: false,
+                      exposeDropKey: false,
+                      showLaneGroups: showLaneGroups,
+                      onHeroAdded: (_) {},
+                    ),
+                  ),
+                  if (index != scheme.rows.length - 1)
+                    const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

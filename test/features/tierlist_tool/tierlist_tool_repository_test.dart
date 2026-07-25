@@ -3,6 +3,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/data/tierlist_tool_repository.dart';
+import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -153,6 +154,16 @@ class _UnauthorizedApiClient extends _FakeApiClient {
 }
 
 void main() {
+  test('reads camel-case scheme id returned by the remote backend', () {
+    final scheme = TierListSchemeSummary.fromJson(const {
+      'schemeId': 'remote-42',
+      'name': 'Remote tier list',
+      'rows': <Object?>[],
+    });
+
+    expect(scheme.id, 'remote-42');
+  });
+
   test('treats unauthorized tier list schemes as empty for guests', () async {
     final apiClient = _UnauthorizedApiClient();
     final repository = TierListToolRepository(apiClient: apiClient);

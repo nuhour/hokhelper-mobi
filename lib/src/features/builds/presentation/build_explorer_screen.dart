@@ -179,6 +179,8 @@ class BuildSchemeCard extends ConsumerStatefulWidget {
 class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   late var _likeCount = widget.scheme.likeCount;
   late var _favoriteCount = widget.scheme.favoriteCount;
+  late var _isLiked = widget.scheme.isLiked;
+  late var _isFavorited = widget.scheme.isFavorited;
   var _likeSubmitting = false;
   var _favoriteSubmitting = false;
   var _cloneSubmitting = false;
@@ -189,11 +191,13 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
     if (oldWidget.scheme.id != widget.scheme.id ||
         oldWidget.scheme.likeCount != widget.scheme.likeCount) {
       _likeCount = widget.scheme.likeCount;
+      _isLiked = widget.scheme.isLiked;
       _likeSubmitting = false;
     }
     if (oldWidget.scheme.id != widget.scheme.id ||
         oldWidget.scheme.favoriteCount != widget.scheme.favoriteCount) {
       _favoriteCount = widget.scheme.favoriteCount;
+      _isFavorited = widget.scheme.isFavorited;
       _favoriteSubmitting = false;
     }
     if (oldWidget.scheme.id != widget.scheme.id) {
@@ -261,11 +265,15 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                   runSpacing: 8,
                   children: [
                     _MetricChip(
-                      icon: Icons.thumb_up_outlined,
+                      icon: _isLiked
+                          ? Icons.thumb_up_rounded
+                          : Icons.thumb_up_outlined,
                       value: _likeCount,
                     ),
                     _MetricChip(
-                      icon: Icons.star_border_rounded,
+                      icon: _isFavorited
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
                       value: _favoriteCount,
                     ),
                     _MetricChip(
@@ -276,15 +284,25 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                       onPressed: _likeSubmitting
                           ? null
                           : () => _likeScheme(context),
-                      icon: const Icon(Icons.thumb_up_outlined, size: 16),
-                      label: const Text('Like'),
+                      icon: Icon(
+                        _isLiked
+                            ? Icons.thumb_up_rounded
+                            : Icons.thumb_up_outlined,
+                        size: 16,
+                      ),
+                      label: Text(_isLiked ? 'Unlike' : 'Like'),
                     ),
                     OutlinedButton.icon(
                       onPressed: _favoriteSubmitting
                           ? null
                           : () => _favoriteScheme(context),
-                      icon: const Icon(Icons.star_border_rounded, size: 16),
-                      label: const Text('Favorite'),
+                      icon: Icon(
+                        _isFavorited
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        size: 16,
+                      ),
+                      label: Text(_isFavorited ? 'Unfavorite' : 'Favorite'),
                     ),
                     OutlinedButton.icon(
                       onPressed: _cloneSubmitting
@@ -311,19 +329,26 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   Future<void> _likeScheme(BuildContext context) async {
     setState(() => _likeSubmitting = true);
     try {
-      await ref
-          .read(buildsRepositoryProvider)
-          .likeBuildScheme(widget.scheme.id);
+      final repository = ref.read(buildsRepositoryProvider);
+      if (_isLiked) {
+        await repository.unlikeBuildScheme(widget.scheme.id);
+      } else {
+        await repository.likeBuildScheme(widget.scheme.id);
+      }
       if (!mounted || !context.mounted) {
         return;
       }
       setState(() {
-        _likeCount += 1;
+        final nextCount = _likeCount + (_isLiked ? -1 : 1);
+        _likeCount = nextCount < 0 ? 0 : nextCount;
+        _isLiked = !_isLiked;
         _likeSubmitting = false;
       });
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(const SnackBar(content: Text('Build liked')));
+      messenger.showSnackBar(
+        SnackBar(content: Text(_isLiked ? 'Build liked' : 'Like removed')),
+      );
     } catch (_) {
       if (!mounted || !context.mounted) {
         return;
@@ -340,19 +365,28 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   Future<void> _favoriteScheme(BuildContext context) async {
     setState(() => _favoriteSubmitting = true);
     try {
-      await ref
-          .read(buildsRepositoryProvider)
-          .favoriteBuildScheme(widget.scheme.id);
+      final repository = ref.read(buildsRepositoryProvider);
+      if (_isFavorited) {
+        await repository.unfavoriteBuildScheme(widget.scheme.id);
+      } else {
+        await repository.favoriteBuildScheme(widget.scheme.id);
+      }
       if (!mounted || !context.mounted) {
         return;
       }
       setState(() {
-        _favoriteCount += 1;
+        final nextCount = _favoriteCount + (_isFavorited ? -1 : 1);
+        _favoriteCount = nextCount < 0 ? 0 : nextCount;
+        _isFavorited = !_isFavorited;
         _favoriteSubmitting = false;
       });
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(const SnackBar(content: Text('Build favorited')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(_isFavorited ? 'Build favorited' : 'Favorite removed'),
+        ),
+      );
     } catch (_) {
       if (!mounted || !context.mounted) {
         return;
@@ -410,7 +444,11 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
     try {
       await ref
           .read(buildsRepositoryProvider)
-          .cloneBuildScheme(schemeId: widget.scheme.id, slotIndex: slotIndex);
+          .cloneBuildScheme(
+            schemeId: widget.scheme.id,
+            slotIndex: slotIndex,
+            name: 'Default Build $slotIndex',
+          );
       if (!mounted || !context.mounted) {
         return;
       }

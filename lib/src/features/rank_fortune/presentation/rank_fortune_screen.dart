@@ -14,7 +14,6 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_share_sheet.dart';
-import '../../auth/presentation/auth_controller.dart';
 import '../data/rank_fortune_repository.dart';
 import '../domain/rank_fortune.dart';
 
@@ -82,11 +81,7 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
       data: (history) {
         final today = _localToday ?? history.today;
         final rows = _localRows ?? history.rows;
-        final isAuthenticated =
-            ref.watch(authControllerProvider).valueOrNull != null;
-        final canDraw =
-            (_localCanDraw ?? history.canDraw) &&
-            (isAuthenticated || !_guestDrewToday);
+        final canDraw = (_localCanDraw ?? history.canDraw) && !_guestDrewToday;
         _canDraw = canDraw && !_isDrawing;
         _visibleRows = rows;
 

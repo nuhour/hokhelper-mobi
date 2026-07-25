@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -718,7 +720,7 @@ class _SlotColumn extends StatelessWidget {
   );
 }
 
-class _TeamSlot extends StatelessWidget {
+class _TeamSlot extends StatefulWidget {
   const _TeamSlot({
     super.key,
     required this.hero,
@@ -736,57 +738,142 @@ class _TeamSlot extends StatelessWidget {
   final bool isBan;
   final double? size;
   final VoidCallback? onLongPress;
+
+  @override
+  State<_TeamSlot> createState() => _TeamSlotState();
+}
+
+class _TeamSlotState extends State<_TeamSlot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rotationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    if (widget.active) {
+      _rotationController.repeat(count: 4);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _TeamSlot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active == oldWidget.active) return;
+    if (widget.active) {
+      _rotationController.repeat(count: 4);
+    } else {
+      _rotationController
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final slotSize = size ?? (isBan ? 40.0 : 50.0);
+    final slotSize = widget.size ?? (widget.isBan ? 40.0 : 50.0);
     return Semantics(
       button: true,
-      label: hero == null ? 'Empty ${isBan ? 'ban' : 'pick'} slot' : hero!.name,
+      label: widget.hero == null
+          ? 'Empty ${widget.isBan ? 'ban' : 'pick'} slot'
+          : widget.hero!.name,
       child: Material(
         color: Colors.transparent,
         shape: const CircleBorder(),
         child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
+          onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
           customBorder: const CircleBorder(),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
+          child: SizedBox(
             width: slotSize,
             height: slotSize,
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.black.withValues(alpha: .22),
-              border: Border.all(
-                color: active
-                    ? AppTheme.gold
-                    : color.withValues(alpha: hero == null ? .25 : .85),
-                width: active ? 3 : 1.5,
-              ),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: AppTheme.gold.withValues(alpha: .45),
-                        blurRadius: 9,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (widget.active)
+                  Positioned.fill(
+                    child: RotationTransition(
+                      turns: _rotationController,
+                      child: CustomPaint(
+                        painter: const _ActiveTeamSlotRingPainter(),
                       ),
-                    ]
-                  : null,
-            ),
-            child: hero == null
-                ? Icon(
-                    Icons.add_rounded,
-                    color: Colors.white.withValues(alpha: .26),
-                    size: isBan ? 18 : 23,
-                  )
-                : AppImage(
-                    url: hero!.avatarUrl,
-                    borderRadius: 999,
-                    semanticLabel: hero!.name,
+                    ),
                   ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: EdgeInsets.all(widget.active ? 4 : 1),
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black.withValues(alpha: .22),
+                    border: Border.all(
+                      color: widget.color.withValues(
+                        alpha: widget.hero == null ? .25 : .85,
+                      ),
+                      width: 1.5,
+                    ),
+                    boxShadow: widget.active
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.gold.withValues(alpha: .38),
+                              blurRadius: 10,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: widget.hero == null
+                      ? Icon(
+                          Icons.add_rounded,
+                          color: Colors.white.withValues(alpha: .26),
+                          size: widget.isBan ? 18 : 23,
+                        )
+                      : AppImage(
+                          url: widget.hero!.avatarUrl,
+                          borderRadius: 999,
+                          semanticLabel: widget.hero!.name,
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _ActiveTeamSlotRingPainter extends CustomPainter {
+  const _ActiveTeamSlotRingPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide / 2 - 1.5;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final paint = Paint()
+      ..color = AppTheme.gold
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.8
+      ..strokeCap = StrokeCap.round;
+    const segments = 8;
+    const sweep = math.pi / 7;
+    for (var index = 0; index < segments; index++) {
+      canvas.drawArc(rect, index * math.pi * 2 / segments, sweep, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ActiveTeamSlotRingPainter oldDelegate) {
+    return false;
   }
 }
 

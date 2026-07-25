@@ -1890,47 +1890,54 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
               ),
             ],
             const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _PromptCountAction(
-                    icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                    value: _likeCount,
-                    tooltip: _isLiked ? 'Unlike' : 'Like',
-                    color: _isLiked ? AppTheme.error : AppTheme.gold,
-                    isLoading: _likeSubmitting,
-                    onPressed: () => _likePrompt(context),
-                  ),
-                  const SizedBox(width: 4),
-                  _PromptCountAction(
-                    icon: _isFavorited ? Icons.bookmark : Icons.bookmark_border,
-                    value: _favoriteCount,
-                    tooltip: _isFavorited ? 'Remove favorite' : 'Favorite',
-                    isLoading: _favoriteSubmitting,
-                    onPressed: () => _favoritePrompt(context),
-                  ),
-                  const SizedBox(width: 8),
-                  if (prompt.content.isNotEmpty)
-                    _PromptIconAction(
-                      icon: Icons.copy_outlined,
-                      tooltip: 'Copy',
-                      onPressed: () => _copyPrompt(context),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _PromptCountAction(
+                      icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                      value: _likeCount,
+                      tooltip: _isLiked ? 'Unlike' : 'Like',
+                      color: _isLiked ? AppTheme.error : AppTheme.gold,
+                      isLoading: _likeSubmitting,
+                      onPressed: () => _likePrompt(context),
                     ),
-                  if (widget.canManage) ...[
-                    _PromptIconAction(
-                      icon: Icons.edit_outlined,
-                      tooltip: 'Edit',
-                      onPressed: widget.onEdit,
+                    const SizedBox(width: 4),
+                    _PromptCountAction(
+                      icon: _isFavorited
+                          ? Icons.bookmark
+                          : Icons.bookmark_border,
+                      value: _favoriteCount,
+                      tooltip: _isFavorited ? 'Remove favorite' : 'Favorite',
+                      isLoading: _favoriteSubmitting,
+                      onPressed: () => _favoritePrompt(context),
                     ),
-                    _PromptIconAction(
-                      icon: Icons.delete_outline,
-                      tooltip: 'Delete',
-                      color: AppTheme.error,
-                      onPressed: widget.onDelete,
-                    ),
+                    const SizedBox(width: 8),
+                    if (prompt.content.isNotEmpty)
+                      _PromptIconAction(
+                        icon: Icons.copy_outlined,
+                        tooltip: 'Copy',
+                        onPressed: () => _copyPrompt(context),
+                      ),
+                    if (widget.canManage) ...[
+                      _PromptIconAction(
+                        icon: Icons.edit_outlined,
+                        tooltip: 'Edit',
+                        onPressed: widget.onEdit,
+                      ),
+                      _PromptIconAction(
+                        icon: Icons.delete_outline,
+                        tooltip: 'Delete',
+                        color: AppTheme.error,
+                        onPressed: widget.onDelete,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],

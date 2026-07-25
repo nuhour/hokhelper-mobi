@@ -54,7 +54,7 @@ class TierListSchemeSummary {
     final rawRows = json['rows'];
 
     return TierListSchemeSummary(
-      id: _readString(json['id'] ?? json['scheme_id']),
+      id: _readString(json['id'] ?? json['scheme_id'] ?? json['schemeId']),
       name: _readString(json['name'], fallback: 'Untitled Tier List'),
       createdAt: _readString(json['createdAt'] ?? json['created_at']),
       updatedAt: _readString(json['updatedAt'] ?? json['updated_at']),

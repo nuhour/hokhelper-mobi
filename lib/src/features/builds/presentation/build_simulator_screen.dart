@@ -102,7 +102,7 @@ final buildSimCloneSchemeProvider =
       return (scheme, slotIndex) => repository.cloneBuildScheme(
         schemeId: scheme.id,
         slotIndex: slotIndex,
-        name: scheme.title,
+        name: 'Default Build $slotIndex',
       );
     });
 
@@ -1103,6 +1103,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
           onToggle: _toggleEquip,
           onRemove: _removeEquip,
           onReorder: _reorderEquips,
+          onCatalogTabSelected: (tab) => setState(() => _activeTab = tab),
         ),
         _BuildEditorTab.arcana => _BuildArcanaWorkspace(
           key: const ValueKey('arcana'),
@@ -1139,17 +1140,18 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   }
 
   void _reorderEquips(int oldIndex, int newIndex) {
-    if (oldIndex == newIndex ||
-        oldIndex < 0 ||
+    if (oldIndex < 0 ||
         newIndex < 0 ||
         oldIndex >= _equipIds.length ||
-        newIndex >= _equipIds.length) {
+        _equipIds.length < 2) {
       return;
     }
+    final targetIndex = newIndex.clamp(0, _equipIds.length - 1);
+    if (oldIndex == targetIndex) return;
     setState(() {
       final next = [..._equipIds];
       final item = next.removeAt(oldIndex);
-      next.insert(newIndex, item);
+      next.insert(targetIndex, item);
       _equipIds = next;
     });
   }
@@ -1431,6 +1433,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
     required this.onToggle,
     required this.onRemove,
     required this.onReorder,
+    required this.onCatalogTabSelected,
   });
 
   final List<BuildEquipSummary> equips;
@@ -1438,6 +1441,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
   final ValueChanged<int> onToggle;
   final ValueChanged<int> onRemove;
   final void Function(int oldIndex, int newIndex) onReorder;
+  final ValueChanged<_BuildEditorTab> onCatalogTabSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1446,9 +1450,9 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
     return Column(
       children: [
         Container(
-          height: compactViewport ? 124 : 190,
+          height: compactViewport ? 102 : 132,
           margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
           decoration: BoxDecoration(
             color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(22),
@@ -1464,7 +1468,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                   const Icon(
                     Icons.flash_on_outlined,
                     color: AppTheme.gold,
-                    size: 20,
+                    size: 17,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -1477,7 +1481,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '+ Slot',
+                    '${selectedIds.length}/12',
                     style: TextStyle(
                       color: context.hokTheme.onSurfaceMuted.withValues(
                         alpha: 0.8,
@@ -1487,88 +1491,83 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: compactViewport ? 4 : 10),
+              const SizedBox(height: 4),
               Expanded(
-                child: selectedIds.isEmpty
-                    ? ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: List.generate(
-                          6,
-                          (_) => const Padding(
-                            padding: EdgeInsets.only(right: 10),
-                            child: _BuildEmptyEquipmentSlot(),
-                          ),
-                        ),
-                      )
-                    : ReorderableListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        buildDefaultDragHandles: false,
-                        itemCount: selectedIds.length,
-                        onReorderItem: onReorder,
-                        itemBuilder: (context, index) {
-                          final equipId = selectedIds[index];
-                          final equip = equipById[equipId];
-                          return Padding(
-                            key: ValueKey('selected-equip-$equipId'),
-                            padding: const EdgeInsets.only(right: 12),
-                            child: ReorderableDelayedDragStartListener(
-                              index: index,
-                              child: Tooltip(
-                                message: equip?.name ?? 'Equipment $equipId',
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.14,
-                                          ),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: AppImage(
-                                        url: equip?.iconUrl,
-                                        width: 62,
-                                        height: 62,
-                                        borderRadius: 999,
-                                        semanticLabel: equip?.name,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      right: -5,
-                                      top: -5,
-                                      child: InkWell(
-                                        onTap: () => onRemove(equipId),
-                                        borderRadius: BorderRadius.circular(99),
-                                        child: const CircleAvatar(
-                                          radius: 11,
-                                          backgroundColor: AppTheme.error,
-                                          child: Icon(
-                                            Icons.close,
-                                            size: 14,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                child: ReorderableListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  buildDefaultDragHandles: false,
+                  itemCount: math.max(6, selectedIds.length),
+                  onReorderItem: onReorder,
+                  itemBuilder: (context, index) {
+                    if (index >= selectedIds.length) {
+                      return Padding(
+                        key: ValueKey('empty-equipment-slot-$index'),
+                        padding: const EdgeInsets.only(right: 7),
+                        child: const _BuildEmptyEquipmentSlot(),
+                      );
+                    }
+                    final equipId = selectedIds[index];
+                    final equip = equipById[equipId];
+                    return Padding(
+                      key: ValueKey('selected-equip-$equipId'),
+                      padding: const EdgeInsets.only(right: 7),
+                      child: ReorderableDelayedDragStartListener(
+                        index: index,
+                        child: Tooltip(
+                          message: equip?.name ?? 'Equipment $equipId',
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.14),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: AppImage(
+                                  url: equip?.iconUrl,
+                                  width: 42,
+                                  height: 42,
+                                  borderRadius: 999,
+                                  semanticLabel: equip?.name,
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                              Positioned(
+                                right: -5,
+                                top: -5,
+                                child: InkWell(
+                                  onTap: () => onRemove(equipId),
+                                  borderRadius: BorderRadius.circular(99),
+                                  child: const CircleAvatar(
+                                    radius: 9,
+                                    backgroundColor: AppTheme.error,
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
         ),
-        if (!compactViewport) ...[
-          const _BuildCatalogTabs(),
-          const _EquipmentFilterBar(),
-        ],
+        _BuildCatalogTabs(
+          selected: _BuildEditorTab.equipment,
+          onSelected: onCatalogTabSelected,
+        ),
+        if (!compactViewport) const _EquipmentFilterBar(),
         Expanded(
           child: equips.isEmpty
               ? const AppEmptyState(
@@ -1609,8 +1608,8 @@ class _BuildEmptyEquipmentSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 76,
-      height: 76,
+      width: 52,
+      height: 52,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -1623,47 +1622,76 @@ class _BuildEmptyEquipmentSlot extends StatelessWidget {
 }
 
 class _BuildCatalogTabs extends StatelessWidget {
-  const _BuildCatalogTabs();
+  const _BuildCatalogTabs({required this.selected, required this.onSelected});
+
+  final _BuildEditorTab selected;
+  final ValueChanged<_BuildEditorTab> onSelected;
+
   @override
   Widget build(BuildContext context) => Container(
-    height: 52,
-    margin: const EdgeInsets.only(top: 8),
+    height: 42,
+    margin: const EdgeInsets.only(top: 4),
     decoration: BoxDecoration(
       border: Border(
         bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
       ),
     ),
-    child: const Row(
+    child: Row(
       children: [
-        Expanded(child: _CatalogTab(label: 'ITEMS', selected: true)),
-        Expanded(child: _CatalogTab(label: 'ARCANA')),
-        Expanded(child: _CatalogTab(label: 'OVERVIEW')),
+        Expanded(
+          child: _CatalogTab(
+            label: 'ITEMS',
+            selected: selected == _BuildEditorTab.equipment,
+            onTap: () => onSelected(_BuildEditorTab.equipment),
+          ),
+        ),
+        Expanded(
+          child: _CatalogTab(
+            label: 'ARCANA',
+            selected: selected == _BuildEditorTab.arcana,
+            onTap: () => onSelected(_BuildEditorTab.arcana),
+          ),
+        ),
+        Expanded(
+          child: _CatalogTab(
+            label: 'OVERVIEW',
+            onTap: () => onSelected(_BuildEditorTab.arcana),
+          ),
+        ),
       ],
     ),
   );
 }
 
 class _CatalogTab extends StatelessWidget {
-  const _CatalogTab({required this.label, this.selected = false});
+  const _CatalogTab({
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
   final String label;
   final bool selected;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Container(
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(
-          width: 3,
-          color: selected ? AppTheme.gold : Colors.transparent,
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            width: 3,
+            color: selected ? AppTheme.gold : Colors.transparent,
+          ),
         ),
       ),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        color: selected ? AppTheme.gold : context.hokTheme.onSurfaceMuted,
-        fontWeight: FontWeight.w900,
-        fontSize: 11,
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected ? AppTheme.gold : context.hokTheme.onSurfaceMuted,
+          fontWeight: FontWeight.w900,
+          fontSize: 10,
+        ),
       ),
     ),
   );
@@ -2156,6 +2184,7 @@ class _CommunityBuilds extends ConsumerStatefulWidget {
 class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
   String? _busyAction;
   bool _latestFirst = true;
+  final Map<int, BuildSchemeSummary> _schemeOverrides = {};
 
   @override
   Widget build(BuildContext context) {
@@ -2265,7 +2294,9 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
                 message: 'Pull to refresh or switch region in settings.',
               );
             }
-            final visibleSchemes = _visibleSchemes(schemes).toList();
+            final visibleSchemes = _visibleSchemes(
+              schemes,
+            ).map((scheme) => _schemeOverrides[scheme.id] ?? scheme).toList();
             if (!_latestFirst) {
               visibleSchemes.sort(
                 (left, right) => right.likeCount.compareTo(left.likeCount),
@@ -2283,16 +2314,8 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
                     heroAvatar: _heroFor(scheme)?.avatar ?? scheme.heroAvatar,
                     equipmentIcons: _topEquipmentIcons(scheme),
                     busyAction: _busyAction,
-                    onLike: () => _runProtectedAction(
-                      context,
-                      'like-${scheme.id}',
-                      () => ref.read(buildSimLikeSchemeProvider)(scheme),
-                    ),
-                    onFavorite: () => _runProtectedAction(
-                      context,
-                      'favorite-${scheme.id}',
-                      () => ref.read(buildSimFavoriteSchemeProvider)(scheme),
-                    ),
+                    onLike: () => _toggleLike(context, scheme),
+                    onFavorite: () => _toggleFavorite(context, scheme),
                     onClone: () => _showCloneSheet(context, scheme),
                     onView: () => _openTemporaryEditor(context, scheme),
                     onShare: () => showAppShareSheet(
@@ -2397,6 +2420,41 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
           const SnackBar(content: Text('Unable to update this build')),
         );
     }
+  }
+
+  Future<void> _toggleLike(
+    BuildContext context,
+    BuildSchemeSummary scheme,
+  ) async {
+    await _runProtectedAction(context, 'like-${scheme.id}', () async {
+      await ref.read(buildSimLikeSchemeProvider)(scheme);
+      if (!mounted) return;
+      setState(() {
+        _schemeOverrides[scheme.id] = scheme.copyWith(
+          isLiked: !scheme.isLiked,
+          likeCount: math.max(0, scheme.likeCount + (scheme.isLiked ? -1 : 1)),
+        );
+      });
+    });
+  }
+
+  Future<void> _toggleFavorite(
+    BuildContext context,
+    BuildSchemeSummary scheme,
+  ) async {
+    await _runProtectedAction(context, 'favorite-${scheme.id}', () async {
+      await ref.read(buildSimFavoriteSchemeProvider)(scheme);
+      if (!mounted) return;
+      setState(() {
+        _schemeOverrides[scheme.id] = scheme.copyWith(
+          isFavorited: !scheme.isFavorited,
+          favoriteCount: math.max(
+            0,
+            scheme.favoriteCount + (scheme.isFavorited ? -1 : 1),
+          ),
+        );
+      });
+    });
   }
 
   Future<void> _showCloneSheet(

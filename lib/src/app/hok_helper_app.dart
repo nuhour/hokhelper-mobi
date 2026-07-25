@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../core/i18n/app_localizations.dart';
 import '../core/theme/app_theme.dart';
 import '../features/settings/presentation/settings_controller.dart';
+import 'global_edge_back_gesture.dart';
 import 'router.dart';
 import 'startup_splash.dart';
 
@@ -42,11 +43,14 @@ class HokHelperApp extends ConsumerWidget {
           final textScale = MediaQuery.textScalerOf(
             context,
           ).scale(1).clamp(0.9, 1.0).toDouble();
-          return MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: child ?? const SizedBox.shrink(),
+          return GlobalEdgeBackGesture(
+            router: _router,
+            child: MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child ?? const SizedBox.shrink(),
+            ),
           );
         },
       ),
