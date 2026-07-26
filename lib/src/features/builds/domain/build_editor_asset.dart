@@ -75,12 +75,18 @@ class BuildRuneSummary {
     required this.name,
     required this.color,
     this.iconUrl = '',
+    this.description = '',
+    this.level = 5,
+    this.effects = const [],
   });
 
   final int id;
   final String name;
   final int color;
   final String iconUrl;
+  final String description;
+  final int level;
+  final List<BuildRuneEffect> effects;
 
   String get colorName {
     return switch (color) {
@@ -98,12 +104,38 @@ class BuildRuneSummary {
       id: id,
       name: _readString(map['name'] ?? map['rune_name']),
       color: _readInt(map['color']),
+      description: _readString(map['description']),
+      level: _readInt(map['level']) == 0 ? 5 : _readInt(map['level']),
+      effects: _readList(
+        map['rune_effects'],
+      ).map(BuildRuneEffect.fromJson).toList(growable: false),
       iconUrl: _assetUrl(
         explicit:
             map['icon'] ?? map['icon_url'] ?? map['image'] ?? map['avatar'],
         kind: 'rune',
         id: id,
       ),
+    );
+  }
+}
+
+class BuildRuneEffect {
+  const BuildRuneEffect({
+    required this.effectType,
+    required this.valueType,
+    required this.value,
+  });
+
+  final int effectType;
+  final int valueType;
+  final double value;
+
+  factory BuildRuneEffect.fromJson(Object? json) {
+    final map = json is Map ? json : const <String, Object?>{};
+    return BuildRuneEffect(
+      effectType: _readInt(map['effectType'] ?? map['effect_type']),
+      valueType: _readInt(map['valueType'] ?? map['value_type']),
+      value: _readDouble(map['value']),
     );
   }
 }
@@ -151,6 +183,17 @@ int _readInt(Object? value) {
     return value;
   }
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double _readDouble(Object? value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+List<Object?> _readList(Object? value) {
+  return value is List ? value.cast<Object?>() : const [];
 }
 
 String _readString(Object? value) {

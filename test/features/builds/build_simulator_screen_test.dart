@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/builds/domain/build_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/builds/domain/build_editor_asset.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_simulator_screen.dart';
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
+
+class _TestAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async {
+    return const AuthUser(
+      id: 42,
+      username: 'builder',
+      email: 'builder@example.test',
+      displayName: 'Builder',
+    );
+  }
+}
 
 void main() {
   testWidgets(
@@ -13,6 +27,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            authControllerProvider.overrideWith(_TestAuthController.new),
             buildSimHeroesProvider.overrideWith((ref) async {
               return const [
                 HeroSummary(
@@ -100,6 +115,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -167,6 +183,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -283,6 +300,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -366,6 +384,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -408,8 +427,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
     expect(find.text('Equipment'), findsOneWidget);
-    expect(find.text('Arcana Matrix'), findsOneWidget);
-    expect(find.text('Skill'), findsOneWidget);
+    expect(find.text('Arcana'), findsOneWidget);
+    expect(find.text('Spells'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Mobile burst');
     await tester.ensureVisible(find.bySemanticsLabel('Storm Axe'));
@@ -418,14 +437,21 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Swift Boots'));
     await tester.pump();
     await tester.tap(find.byTooltip('Private build'));
-    await tester.tap(find.text('Arcana Matrix'));
+    await tester.tap(find.text('Arcana'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Red'), findsOneWidget);
-    expect(find.text('0/10'), findsNWidgets(3));
-    await tester.tap(find.text('Fate'));
+    expect(find.text('0/10'), findsOneWidget);
+    expect(find.byTooltip('Empty arcana slot'), findsNWidgets(30));
+    await tester.tap(find.byKey(const ValueKey('arcana-level-3')));
+    await tester.tap(find.byKey(const ValueKey('arcana-plus-201')));
     await tester.pump();
     expect(find.text('1/10'), findsOneWidget);
-    await tester.tap(find.text('Skill'));
+    expect(find.byTooltip('Remove Fate'), findsOneWidget);
+    await tester.tap(find.text('OVERVIEW'));
+    await tester.pump();
+    expect(find.text('Lv.3'), findsOneWidget);
+    expect(find.text('1/30 ARCANA'), findsOneWidget);
+    await tester.tap(find.text('Spells'));
     await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(find.text('Smite'));
     await tester.pump();
@@ -452,6 +478,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -493,10 +520,11 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
 
-    for (final tab in const ['Equipment', 'Arcana Matrix', 'Skill']) {
+    for (final tab in const ['Equipment', 'Arcana', 'Spells']) {
       await tester.tap(find.text(tab));
       await tester.pump(const Duration(milliseconds: 200));
-      expect(tester.takeException(), isNull);
+      final exception = tester.takeException();
+      expect(exception, isNull, reason: '$tab overflowed');
     }
   });
 
@@ -508,6 +536,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -573,7 +602,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Like build'));
     await tester.tap(find.byTooltip('Favorite build'));
-    await tester.tap(find.byTooltip('Clone to slot 1'));
+    await tester.tap(find.byTooltip('Choose clone slot'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save to Slot 1'));
     await tester.pumpAndSettle();
 
     expect(actions, ['like:7', 'favorite:7', 'clone:7:1']);
@@ -587,6 +618,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_TestAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(

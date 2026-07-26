@@ -1016,9 +1016,12 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   late bool _isPublic;
   late List<int> _equipIds;
   late List<int> _runeIds;
+  late Map<int, int> _runeLevels;
   int? _summonerSkillId;
   _BuildEditorTab _activeTab = _BuildEditorTab.equipment;
   int _activeRuneColor = 1;
+  int _selectedRuneLevel = 5;
+  bool _showArcanaOverview = false;
   bool _saving = false;
 
   @override
@@ -1033,6 +1036,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
     _isPublic = scheme?.isPublic ?? false;
     _equipIds = [...(scheme?.equipmentIds ?? const [])];
     _runeIds = [...(scheme?.runeIds ?? const [])];
+    _runeLevels = {for (final runeId in _runeIds) runeId: 5};
     _summonerSkillId = scheme?.summonerSkillId;
   }
 
@@ -1067,7 +1071,14 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
                 ),
                 _BuildEditorTabs(
                   selected: _activeTab,
-                  onSelected: (tab) => setState(() => _activeTab = tab),
+                  onSelected: (tab) {
+                    setState(() {
+                      _activeTab = tab;
+                      if (tab == _BuildEditorTab.arcana) {
+                        _showArcanaOverview = false;
+                      }
+                    });
+                  },
                 ),
                 Expanded(
                   child: ref
@@ -1093,34 +1104,37 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   }
 
   Widget _buildEditorBody(BuildEditorCatalog catalog) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 160),
-      child: switch (_activeTab) {
-        _BuildEditorTab.equipment => _BuildEquipmentWorkspace(
-          key: const ValueKey('equipment'),
-          equips: catalog.equips,
-          selectedIds: _equipIds,
-          onToggle: _toggleEquip,
-          onRemove: _removeEquip,
-          onReorder: _reorderEquips,
-          onCatalogTabSelected: (tab) => setState(() => _activeTab = tab),
-        ),
-        _BuildEditorTab.arcana => _BuildArcanaWorkspace(
-          key: const ValueKey('arcana'),
-          runes: catalog.runes,
-          selectedIds: _runeIds,
-          activeColor: _activeRuneColor,
-          onColorSelected: (color) => setState(() => _activeRuneColor = color),
-          onToggle: _toggleRune,
-        ),
-        _BuildEditorTab.skill => _BuildSkillWorkspace(
-          key: const ValueKey('skill'),
-          skills: catalog.summonerSkills,
-          selectedId: _summonerSkillId,
-          onSelected: (skillId) => setState(() => _summonerSkillId = skillId),
-        ),
-      },
-    );
+    return switch (_activeTab) {
+      _BuildEditorTab.equipment => _BuildEquipmentWorkspace(
+        key: const ValueKey('equipment'),
+        equips: catalog.equips,
+        selectedIds: _equipIds,
+        onToggle: _toggleEquip,
+        onRemove: _removeEquip,
+        onReorder: _reorderEquips,
+        onCatalogTabSelected: _selectCatalogTab,
+      ),
+      _BuildEditorTab.arcana => _BuildArcanaWorkspace(
+        key: const ValueKey('arcana'),
+        runes: catalog.runes,
+        selectedIds: _runeIds,
+        selectedLevels: _runeLevels,
+        activeColor: _activeRuneColor,
+        selectedLevel: _selectedRuneLevel,
+        showOverview: _showArcanaOverview,
+        onColorSelected: (color) => setState(() => _activeRuneColor = color),
+        onLevelSelected: (level) => setState(() => _selectedRuneLevel = level),
+        onCountChanged: (rune, delta) =>
+            _updateRune(rune, delta, catalog.runes),
+        onCatalogTabSelected: _selectCatalogTab,
+      ),
+      _BuildEditorTab.skill => _BuildSkillWorkspace(
+        key: const ValueKey('skill'),
+        skills: catalog.summonerSkills,
+        selectedId: _summonerSkillId,
+        onSelected: (skillId) => setState(() => _summonerSkillId = skillId),
+      ),
+    };
   }
 
   void _toggleEquip(int equipId) {
@@ -1160,18 +1174,51 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
     setState(() {
       _equipIds = [];
       _runeIds = [];
+      _runeLevels = {};
       _summonerSkillId = null;
     });
   }
 
-  void _toggleRune(int runeId) {
+  void _selectCatalogTab(_BuildCatalogTab tab) {
     setState(() {
-      if (_runeIds.contains(runeId)) {
+      switch (tab) {
+        case _BuildCatalogTab.items:
+          _activeTab = _BuildEditorTab.equipment;
+          _showArcanaOverview = false;
+        case _BuildCatalogTab.arcana:
+          _activeTab = _BuildEditorTab.arcana;
+          _showArcanaOverview = false;
+        case _BuildCatalogTab.overview:
+          _activeTab = _BuildEditorTab.arcana;
+          _showArcanaOverview = true;
+      }
+    });
+  }
+
+  void _updateRune(
+    BuildRuneSummary rune,
+    int delta,
+    List<BuildRuneSummary> runes,
+  ) {
+    if (delta == 0) return;
+    setState(() {
+      final colorIds = runes
+          .where((item) => item.color == rune.color)
+          .map((item) => item.id)
+          .toSet();
+      final selectedInColor = _runeIds.where(colorIds.contains).length;
+      if (delta < 0 && _runeIds.contains(rune.id)) {
         final next = [..._runeIds];
-        next.remove(runeId);
+        next.remove(rune.id);
         _runeIds = next;
-      } else if (_runeIds.length < 30) {
-        _runeIds = [..._runeIds, runeId];
+        if (!_runeIds.contains(rune.id)) {
+          _runeLevels.remove(rune.id);
+        } else {
+          _runeLevels[rune.id] = _selectedRuneLevel;
+        }
+      } else if (delta > 0 && selectedInColor < 10) {
+        _runeIds = [..._runeIds, rune.id];
+        _runeLevels[rune.id] = _selectedRuneLevel;
       }
     });
   }
@@ -1202,6 +1249,8 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
 }
 
 enum _BuildEditorTab { equipment, arcana, skill }
+
+enum _BuildCatalogTab { items, arcana, overview }
 
 class _BuildEditorToolbar extends StatelessWidget {
   const _BuildEditorToolbar({
@@ -1441,7 +1490,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
   final ValueChanged<int> onToggle;
   final ValueChanged<int> onRemove;
   final void Function(int oldIndex, int newIndex) onReorder;
-  final ValueChanged<_BuildEditorTab> onCatalogTabSelected;
+  final ValueChanged<_BuildCatalogTab> onCatalogTabSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1564,7 +1613,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
           ),
         ),
         _BuildCatalogTabs(
-          selected: _BuildEditorTab.equipment,
+          selected: _BuildCatalogTab.items,
           onSelected: onCatalogTabSelected,
         ),
         if (!compactViewport) const _EquipmentFilterBar(),
@@ -1624,8 +1673,8 @@ class _BuildEmptyEquipmentSlot extends StatelessWidget {
 class _BuildCatalogTabs extends StatelessWidget {
   const _BuildCatalogTabs({required this.selected, required this.onSelected});
 
-  final _BuildEditorTab selected;
-  final ValueChanged<_BuildEditorTab> onSelected;
+  final _BuildCatalogTab selected;
+  final ValueChanged<_BuildCatalogTab> onSelected;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1641,21 +1690,22 @@ class _BuildCatalogTabs extends StatelessWidget {
         Expanded(
           child: _CatalogTab(
             label: 'ITEMS',
-            selected: selected == _BuildEditorTab.equipment,
-            onTap: () => onSelected(_BuildEditorTab.equipment),
+            selected: selected == _BuildCatalogTab.items,
+            onTap: () => onSelected(_BuildCatalogTab.items),
           ),
         ),
         Expanded(
           child: _CatalogTab(
             label: 'ARCANA',
-            selected: selected == _BuildEditorTab.arcana,
-            onTap: () => onSelected(_BuildEditorTab.arcana),
+            selected: selected == _BuildCatalogTab.arcana,
+            onTap: () => onSelected(_BuildCatalogTab.arcana),
           ),
         ),
         Expanded(
           child: _CatalogTab(
             label: 'OVERVIEW',
-            onTap: () => onSelected(_BuildEditorTab.arcana),
+            selected: selected == _BuildCatalogTab.overview,
+            onTap: () => onSelected(_BuildCatalogTab.overview),
           ),
         ),
       ],
@@ -1749,86 +1799,142 @@ class _BuildArcanaWorkspace extends StatelessWidget {
     super.key,
     required this.runes,
     required this.selectedIds,
+    required this.selectedLevels,
     required this.activeColor,
+    required this.selectedLevel,
+    required this.showOverview,
     required this.onColorSelected,
-    required this.onToggle,
+    required this.onLevelSelected,
+    required this.onCountChanged,
+    required this.onCatalogTabSelected,
   });
 
   final List<BuildRuneSummary> runes;
   final List<int> selectedIds;
+  final Map<int, int> selectedLevels;
   final int activeColor;
+  final int selectedLevel;
+  final bool showOverview;
   final ValueChanged<int> onColorSelected;
-  final ValueChanged<int> onToggle;
+  final ValueChanged<int> onLevelSelected;
+  final void Function(BuildRuneSummary rune, int delta) onCountChanged;
+  final ValueChanged<_BuildCatalogTab> onCatalogTabSelected;
 
   @override
   Widget build(BuildContext context) {
     final colorRunes = runes
         .where((rune) => rune.color == activeColor)
         .toList();
-    return Column(
-      children: [
-        _ArcanaMatrixPreview(runes: runes, selectedIds: selectedIds),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Row(
+    final tabs = _BuildCatalogTabs(
+      selected: showOverview
+          ? _BuildCatalogTab.overview
+          : _BuildCatalogTab.arcana,
+      onSelected: onCatalogTabSelected,
+    );
+    final details = showOverview
+        ? _ArcanaOverview(
+            runes: runes,
+            selectedIds: selectedIds,
+            selectedLevels: selectedLevels,
+          )
+        : Column(
             children: [
-              for (final color in const [1, 2, 3]) ...[
-                Expanded(
-                  child: _ArcanaColorButton(
-                    color: color,
-                    selected: activeColor == color,
-                    selectedCount: _selectedCount(color),
-                    onTap: () => onColorSelected(color),
-                  ),
-                ),
-                if (color != 3) const SizedBox(width: 8),
-              ],
-            ],
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Choose up to 10 arcana of each color.',
-              style: TextStyle(
-                color: context.hokTheme.onSurfaceMuted,
-                fontSize: 12,
+              _ArcanaSelectionHeader(
+                activeColor: activeColor,
+                selectedLevel: selectedLevel,
+                selectedCount: _selectedCount(activeColor),
+                onLevelSelected: onLevelSelected,
               ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: colorRunes.isEmpty
-              ? const AppEmptyState(
-                  icon: Icons.hexagon_outlined,
-                  title: 'No arcana available',
-                  message: 'Pull to refresh and try again.',
-                )
-              : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.82,
+              Expanded(
+                child: colorRunes.isEmpty
+                    ? const AppEmptyState(
+                        icon: Icons.hexagon_outlined,
+                        title: 'No arcana available',
+                        message: 'Pull to refresh and try again.',
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(12, 5, 12, 18),
+                        itemCount: colorRunes.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 5),
+                        itemBuilder: (context, index) {
+                          final rune = colorRunes[index];
+                          final count = selectedIds
+                              .where((id) => id == rune.id)
+                              .length;
+                          return _ArcanaRuneRow(
+                            rune: rune,
+                            count: count,
+                            selectedLevel:
+                                selectedLevels[rune.id] ?? selectedLevel,
+                            canAdd: _selectedCount(activeColor) < 10,
+                            onDecrease: count == 0
+                                ? null
+                                : () => onCountChanged(rune, -1),
+                            onIncrease: _selectedCount(activeColor) >= 10
+                                ? null
+                                : () => onCountChanged(rune, 1),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactLandscape =
+            constraints.maxWidth > constraints.maxHeight &&
+            constraints.maxHeight < 300;
+        final matrix = LayoutBuilder(
+          builder: (context, matrixConstraints) {
+            final size = math
+                .max(
+                  0,
+                  math.min(
+                    304.0,
+                    math.min(
+                      matrixConstraints.maxWidth - 16,
+                      matrixConstraints.maxHeight - 8,
+                    ),
                   ),
-                  itemCount: colorRunes.length,
-                  itemBuilder: (context, index) {
-                    final rune = colorRunes[index];
-                    return _BuildCatalogAsset(
-                      label: rune.name,
-                      imageUrl: rune.iconUrl,
-                      selected: selectedIds.contains(rune.id),
-                      accent: _arcanaAccent(rune.color),
-                      onTap: () => onToggle(rune.id),
-                    );
-                  },
+                )
+                .toDouble();
+            return Center(
+              child: _ArcanaMatrixPreview(
+                size: size,
+                runes: runes,
+                selectedIds: selectedIds,
+                selectedLevels: selectedLevels,
+                activeColor: activeColor,
+                onColorSelected: onColorSelected,
+                onRemove: (rune) => onCountChanged(rune, -1),
+              ),
+            );
+          },
+        );
+        if (compactLandscape) {
+          return Row(
+            children: [
+              Expanded(flex: 4, child: matrix),
+              Expanded(
+                flex: 6,
+                child: Column(
+                  children: [
+                    tabs,
+                    Expanded(child: details),
+                  ],
                 ),
-        ),
-      ],
+              ),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Expanded(flex: 5, child: matrix),
+            tabs,
+            Expanded(flex: 4, child: details),
+          ],
+        );
+      },
     );
   }
 
@@ -1842,86 +1948,365 @@ class _BuildArcanaWorkspace extends StatelessWidget {
 }
 
 class _ArcanaMatrixPreview extends StatelessWidget {
-  const _ArcanaMatrixPreview({required this.runes, required this.selectedIds});
+  const _ArcanaMatrixPreview({
+    required this.size,
+    required this.runes,
+    required this.selectedIds,
+    required this.selectedLevels,
+    required this.activeColor,
+    required this.onColorSelected,
+    required this.onRemove,
+  });
 
+  final double size;
   final List<BuildRuneSummary> runes;
   final List<int> selectedIds;
+  final Map<int, int> selectedLevels;
+  final int activeColor;
+  final ValueChanged<int> onColorSelected;
+  final ValueChanged<BuildRuneSummary> onRemove;
 
   @override
   Widget build(BuildContext context) {
     final byId = {for (final rune in runes) rune.id: rune};
-    final selected = selectedIds
-        .map((id) => byId[id])
-        .whereType<BuildRuneSummary>()
-        .toList(growable: false);
+    final groups = <int, List<BuildRuneSummary?>>{1: [], 2: [], 3: []};
+    for (final id in selectedIds) {
+      final rune = byId[id];
+      if (rune != null && groups.containsKey(rune.color)) {
+        groups[rune.color]!.add(rune);
+      }
+    }
+    for (final color in groups.keys) {
+      while (groups[color]!.length < 10) {
+        groups[color]!.add(null);
+      }
+    }
+    final totalLevel = selectedIds.fold<int>(
+      0,
+      (sum, id) => sum + (selectedLevels[id] ?? byId[id]?.level ?? 5),
+    );
+    final scale = size / 288;
+    final hexHeight = 23 * scale;
+    final hexWidth = hexHeight * 1.15474;
+    final distance = (23 * 0.866 + 4) * scale;
+    final innerPadding = 8 * scale;
+    final usage = <int, int>{1: 0, 2: 0, 3: 0};
+    final sectors = <({int color, double angle})>[
+      (color: 3, angle: -math.pi / 2),
+      (color: 3, angle: -math.pi / 6),
+      (color: 1, angle: math.pi / 6),
+      (color: 1, angle: math.pi / 2),
+      (color: 2, angle: 5 * math.pi / 6),
+      (color: 2, angle: -5 * math.pi / 6),
+    ];
+    final slots = <Widget>[];
+    var slotIndex = 0;
+    for (final sector in sectors) {
+      for (var ring = 2; ring <= 3; ring++) {
+        for (var index = 0; index < ring; index++) {
+          final rune = groups[sector.color]![usage[sector.color]!];
+          usage[sector.color] = usage[sector.color]! + 1;
+          final radius = ring * (distance * 0.866) + innerPadding;
+          final offset = (index - (ring - 1) / 2) * distance;
+          final x =
+              radius * math.cos(sector.angle) - offset * math.sin(sector.angle);
+          final y =
+              radius * math.sin(sector.angle) + offset * math.cos(sector.angle);
+          final rotation = sector.angle + math.pi / 2;
+          slots.add(
+            Positioned(
+              key: ValueKey('arcana-matrix-slot-$slotIndex'),
+              left: size / 2 + x - hexWidth / 2,
+              top: size / 2 + y - hexHeight / 2,
+              width: hexWidth,
+              height: hexHeight,
+              child: _ArcanaHexSlot(
+                rune: rune,
+                rotation: rotation,
+                color: sector.color,
+                onTap: rune == null ? null : () => onRemove(rune),
+              ),
+            ),
+          );
+          slotIndex++;
+        }
+      }
+    }
+
     return Container(
-      height: 184,
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: context.hokTheme.surfaceSlate,
-        borderRadius: BorderRadius.circular(18),
+        color: context.hokTheme.surfaceSlate.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Container(
-            width: 76,
-            height: 76,
+          for (final color in const [3, 1, 2])
+            _ArcanaColorCounter(
+              boardSize: size,
+              color: color,
+              count: groups[color]!.whereType<BuildRuneSummary>().length,
+              selected: activeColor == color,
+              onTap: () => onColorSelected(color),
+            ),
+          ClipPath(
+            clipper: const _ArcanaHexClipper(),
+            child: Container(
+              width: 78.52 * scale,
+              height: 68 * scale,
+              alignment: Alignment.center,
+              color: context.hokTheme.backgroundDeep.withValues(alpha: 0.9),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$totalLevel',
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontSize: math.max(12, 22 * scale),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    'ARCANA',
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceMuted,
+                      fontSize: math.max(6, 8 * scale),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ...slots,
+        ],
+      ),
+    );
+  }
+}
+
+class _ArcanaColorCounter extends StatelessWidget {
+  const _ArcanaColorCounter({
+    required this.boardSize,
+    required this.color,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final double boardSize;
+  final int color;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = boardSize / 288;
+    final angle = switch (color) {
+      3 => -math.pi / 2,
+      1 => math.pi / 6,
+      _ => 5 * math.pi / 6,
+    };
+    final radius = 114 * scale;
+    final buttonSize = math.max(28, 40 * scale).toDouble();
+    final x = math.cos(angle) * radius;
+    final y = math.sin(angle) * radius;
+    final accent = _arcanaAccent(color);
+    return Positioned(
+      left: boardSize / 2 + x - buttonSize / 2,
+      top: boardSize / 2 + y - buttonSize / 2,
+      width: buttonSize,
+      height: buttonSize,
+      child: Semantics(
+        button: true,
+        label: '${_arcanaColorName(color)} arcana, $count of 10',
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
             alignment: Alignment.center,
             decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withValues(alpha: selected ? 0.92 : 0.58),
+              border: Border.all(
+                color: selected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.24),
+                width: selected ? 2.4 : 1.2,
+              ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.42),
+                        blurRadius: 14,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArcanaHexSlot extends StatelessWidget {
+  const _ArcanaHexSlot({
+    required this.rune,
+    required this.rotation,
+    required this.color,
+    required this.onTap,
+  });
+
+  final BuildRuneSummary? rune;
+  final double rotation;
+  final int color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _arcanaAccent(color);
+    return Tooltip(
+      message: rune == null ? 'Empty arcana slot' : 'Remove ${rune!.name}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Transform.rotate(
+          angle: rotation,
+          child: ClipPath(
+            clipper: const _ArcanaHexClipper(),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: rune == null
+                    ? accent.withValues(alpha: 0.07)
+                    : accent.withValues(alpha: 0.22),
+              ),
+              child: rune == null
+                  ? const SizedBox.expand()
+                  : Transform.rotate(
+                      angle: -rotation,
+                      child: Transform.scale(
+                        scale: 1.28,
+                        child: AppImage(
+                          url: rune!.iconUrl,
+                          fit: BoxFit.cover,
+                          borderRadius: 0,
+                          excludeFromSemantics: true,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArcanaSelectionHeader extends StatelessWidget {
+  const _ArcanaSelectionHeader({
+    required this.activeColor,
+    required this.selectedLevel,
+    required this.selectedCount,
+    required this.onLevelSelected,
+  });
+
+  final int activeColor;
+  final int selectedLevel;
+  final int selectedCount;
+  final ValueChanged<int> onLevelSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _arcanaAccent(activeColor);
+    return Container(
+      height: 42,
+      margin: const EdgeInsets.fromLTRB(12, 5, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: context.hokTheme.surfaceSlate,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: context.hokTheme.outlineSoft),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _arcanaColorName(activeColor),
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceStrong,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            height: 28,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
               color: context.hokTheme.backgroundDeep,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: context.hokTheme.outlineSoft),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
               children: [
-                Text(
-                  '${selectedIds.length * 5}',
-                  style: TextStyle(
-                    color: context.hokTheme.onSurfaceStrong,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
+                for (var level = 1; level <= 5; level++)
+                  InkWell(
+                    key: ValueKey('arcana-level-$level'),
+                    onTap: () => onLevelSelected(level),
+                    borderRadius: BorderRadius.circular(6),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 130),
+                      width: 30,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: selectedLevel == level
+                            ? const LinearGradient(
+                                colors: [Color(0xFFEF4444), Color(0xFF3B82F6)],
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'L$level',
+                        style: TextStyle(
+                          color: selectedLevel == level
+                              ? Colors.white
+                              : context.hokTheme.onSurfaceMuted,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                Text(
-                  'ARCANA',
-                  style: TextStyle(
-                    color: context.hokTheme.onSurfaceMuted,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
               ],
             ),
           ),
-          Positioned(
-            left: 14,
-            top: 34,
-            bottom: 22,
-            child: _ArcanaMatrixGroup(
-              runes: selected.where((rune) => rune.color == 2).toList(),
-              accent: _arcanaAccent(2),
-            ),
-          ),
-          Positioned(
-            right: 14,
-            top: 34,
-            bottom: 22,
-            child: _ArcanaMatrixGroup(
-              runes: selected.where((rune) => rune.color == 1).toList(),
-              accent: _arcanaAccent(1),
-            ),
-          ),
-          Positioned(
-            left: 82,
-            right: 82,
-            top: 8,
-            child: _ArcanaMatrixGroup(
-              runes: selected.where((rune) => rune.color == 3).toList(),
-              accent: _arcanaAccent(3),
-              horizontal: true,
+          const Spacer(),
+          Text(
+            '$selectedCount/10',
+            style: TextStyle(
+              color: context.hokTheme.onSurfaceStrong,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
@@ -1930,110 +2315,385 @@ class _ArcanaMatrixPreview extends StatelessWidget {
   }
 }
 
-class _ArcanaMatrixGroup extends StatelessWidget {
-  const _ArcanaMatrixGroup({
-    required this.runes,
-    required this.accent,
-    this.horizontal = false,
+class _ArcanaRuneRow extends StatelessWidget {
+  const _ArcanaRuneRow({
+    required this.rune,
+    required this.count,
+    required this.selectedLevel,
+    required this.canAdd,
+    required this.onDecrease,
+    required this.onIncrease,
   });
 
-  final List<BuildRuneSummary> runes;
-  final Color accent;
-  final bool horizontal;
+  final BuildRuneSummary rune;
+  final int count;
+  final int selectedLevel;
+  final bool canAdd;
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
 
   @override
   Widget build(BuildContext context) {
-    final icons = List<Widget>.generate(10, (index) {
-      final rune = index < runes.length ? runes[index] : null;
-      return Container(
-        width: 23,
-        height: 23,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: accent.withValues(alpha: rune == null ? 0.08 : 0.2),
-          border: Border.all(color: accent.withValues(alpha: 0.55)),
-        ),
-        child: rune == null
-            ? null
-            : AppImage(
+    final accent = _arcanaAccent(rune.color);
+    return Material(
+      color: count > 0
+          ? accent.withValues(alpha: 0.1)
+          : context.hokTheme.surfaceSlate,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onLongPress: () => _showArcanaDetails(context, rune, selectedLevel),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: count > 0
+                  ? accent.withValues(alpha: 0.42)
+                  : context.hokTheme.outlineSoft,
+            ),
+          ),
+          child: Row(
+            children: [
+              AppImage(
                 url: rune.iconUrl,
-                borderRadius: 999,
-                excludeFromSemantics: true,
+                width: 34,
+                height: 34,
+                borderRadius: 7,
+                semanticLabel: rune.name,
               ),
-      );
-    });
-    return SizedBox(
-      width: horizontal ? 130 : 60,
-      child: Wrap(
-        direction: horizontal ? Axis.horizontal : Axis.vertical,
-        spacing: 2,
-        runSpacing: 2,
-        alignment: WrapAlignment.center,
-        children: icons,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rune.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceStrong,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (rune.description.isNotEmpty)
+                      Text(
+                        rune.description.replaceAll('\n', ' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.hokTheme.onSurfaceMuted,
+                          fontSize: 8,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: context.hokTheme.backgroundDeep,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: context.hokTheme.outlineSoft),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      key: ValueKey('arcana-minus-${rune.id}'),
+                      onPressed: onDecrease,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 28,
+                        height: 28,
+                      ),
+                      icon: const Icon(Icons.remove, size: 15),
+                    ),
+                    SizedBox(
+                      width: 22,
+                      child: Text(
+                        '$count',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: context.hokTheme.onSurfaceStrong,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      key: ValueKey('arcana-plus-${rune.id}'),
+                      onPressed: canAdd ? onIncrease : null,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 28,
+                        height: 28,
+                      ),
+                      icon: const Icon(Icons.add, size: 15),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _ArcanaColorButton extends StatelessWidget {
-  const _ArcanaColorButton({
-    required this.color,
-    required this.selected,
-    required this.selectedCount,
-    required this.onTap,
+class _ArcanaOverview extends StatelessWidget {
+  const _ArcanaOverview({
+    required this.runes,
+    required this.selectedIds,
+    required this.selectedLevels,
   });
 
-  final int color;
-  final bool selected;
-  final int selectedCount;
-  final VoidCallback onTap;
+  final List<BuildRuneSummary> runes;
+  final List<int> selectedIds;
+  final Map<int, int> selectedLevels;
 
   @override
   Widget build(BuildContext context) {
-    final accent = _arcanaAccent(color);
-    final label = switch (color) {
-      1 => 'Red',
-      2 => 'Blue',
-      _ => 'Green',
-    };
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Ink(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? accent.withValues(alpha: 0.16)
-              : context.hokTheme.surfaceSlate,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? accent : context.hokTheme.outlineSoft,
+    final byId = {for (final rune in runes) rune.id: rune};
+    final stats = <int, _ArcanaStat>{};
+    var totalLevel = 0;
+    for (final id in selectedIds) {
+      final rune = byId[id];
+      if (rune == null) continue;
+      final level = selectedLevels[id] ?? rune.level;
+      totalLevel += level;
+      for (final effect in rune.effects) {
+        final current = stats[effect.effectType];
+        stats[effect.effectType] = _ArcanaStat(
+          value: (current?.value ?? 0) + effect.value * (level / 5),
+          valueType: effect.valueType == 0
+              ? (current?.valueType ?? 1)
+              : effect.valueType,
+        );
+      }
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 18),
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: context.hokTheme.surfaceSlate,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.hokTheme.outlineSoft),
+          ),
+          child: Column(
+            children: [
+              Text(
+                'Lv.$totalLevel',
+                style: TextStyle(
+                  color: context.hokTheme.onSurfaceStrong,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                '${selectedIds.length}/30 ARCANA',
+                style: const TextStyle(
+                  color: AppTheme.gold,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: context.hokTheme.onSurfaceStrong,
-                fontWeight: FontWeight.w800,
+        const SizedBox(height: 7),
+        if (stats.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Text(
+              'Add arcana to see the combined attributes.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.hokTheme.onSurfaceMuted),
+            ),
+          )
+        else
+          for (final entry in stats.entries) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: context.hokTheme.surfaceSlate,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: context.hokTheme.outlineSoft),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _arcanaEffectName(
+                        entry.key,
+                        Localizations.localeOf(context).languageCode,
+                      ),
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '+${_formatArcanaEffect(entry.value)}',
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              '$selectedCount/10',
-              style: TextStyle(
-                color: accent,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
+            const SizedBox(height: 5),
+          ],
+      ],
+    );
+  }
+}
+
+class _ArcanaStat {
+  const _ArcanaStat({required this.value, required this.valueType});
+
+  final double value;
+  final int valueType;
+}
+
+class _ArcanaHexClipper extends CustomClipper<Path> {
+  const _ArcanaHexClipper();
+
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..moveTo(size.width * 0.25, 0)
+      ..lineTo(size.width * 0.75, 0)
+      ..lineTo(size.width, size.height * 0.5)
+      ..lineTo(size.width * 0.75, size.height)
+      ..lineTo(size.width * 0.25, size.height)
+      ..lineTo(0, size.height * 0.5)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant _ArcanaHexClipper oldClipper) => false;
+}
+
+String _arcanaColorName(int color) {
+  return switch (color) {
+    1 => 'Red',
+    2 => 'Blue',
+    _ => 'Green',
+  };
+}
+
+String _arcanaEffectName(int type, String languageCode) {
+  const names = <int, ({String en, String zh, String id})>{
+    1: (en: 'Physical Attack', zh: '物理攻击', id: 'Serangan Fisik'),
+    2: (en: 'Magical Attack', zh: '法术攻击', id: 'Serangan Magis'),
+    3: (en: 'Physical Defense', zh: '物理防御', id: 'Pertahanan Fisik'),
+    4: (en: 'Magical Defense', zh: '法术防御', id: 'Pertahanan Magis'),
+    5: (en: 'Max Health', zh: '最大生命', id: 'HP Maks'),
+    6: (en: 'Critical Rate', zh: '暴击率', id: 'Critical Rate'),
+    7: (en: 'Physical Pierce', zh: '物理穿透', id: 'Penembusan Fisik'),
+    8: (en: 'Magical Pierce', zh: '法术穿透', id: 'Penembusan Magis'),
+    9: (en: 'Physical Lifesteal', zh: '物理吸血', id: 'Lifesteal Fisik'),
+    10: (en: 'Magical Lifesteal', zh: '法术吸血', id: 'Lifesteal Magis'),
+    12: (en: 'Critical Damage', zh: '暴击效果', id: 'Critical Damage'),
+    15: (en: 'Movement Speed', zh: '移速', id: 'Kecepatan Gerakan'),
+    16: (en: 'Health Recovery', zh: '每5秒回血', id: 'Pemulihan HP'),
+    18: (en: 'Attack Speed', zh: '攻速', id: 'Kecepatan Serangan'),
+    19: (en: 'Cooldown Reduction', zh: '冷却缩减', id: 'Reduksi Cooldown'),
+  };
+  final name = names[type];
+  if (name == null) return 'Effect $type';
+  if (languageCode == 'zh') return name.zh;
+  if (languageCode == 'id') return name.id;
+  return name.en;
+}
+
+String _formatArcanaEffect(_ArcanaStat stat) {
+  final value = switch (stat.valueType) {
+    2 => stat.value / 10000,
+    3 || 4 => stat.value / 100,
+    _ => stat.value,
+  };
+  final text = value == value.roundToDouble()
+      ? value.toStringAsFixed(0)
+      : value.toStringAsFixed(1);
+  return stat.valueType == 2 ? '$text%' : text;
+}
+
+Future<void> _showArcanaDetails(
+  BuildContext context,
+  BuildRuneSummary rune,
+  int selectedLevel,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: context.hokTheme.surfaceSlate,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppImage(
+              url: rune.iconUrl,
+              width: 54,
+              height: 54,
+              borderRadius: 10,
+              semanticLabel: rune.name,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rune.name,
+                    style: TextStyle(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Selected level: L$selectedLevel',
+                    style: const TextStyle(
+                      color: AppTheme.gold,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                  if (rune.description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      rune.description,
+                      style: TextStyle(
+                        color: context.hokTheme.onSurfaceMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _BuildSkillWorkspace extends StatelessWidget {
@@ -2057,22 +2717,34 @@ class _BuildSkillWorkspace extends StatelessWidget {
         message: 'Pull to refresh and try again.',
       );
     }
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 18,
-        childAspectRatio: 0.82,
-      ),
-      itemCount: skills.length,
-      itemBuilder: (context, index) {
-        final skill = skills[index];
-        return _BuildCatalogAsset(
-          label: skill.name,
-          imageUrl: skill.iconUrl,
-          selected: selectedId == skill.id,
-          onTap: () => onSelected(skill.id),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactLandscape =
+            constraints.maxWidth > constraints.maxHeight &&
+            constraints.maxHeight < 300;
+        return GridView.builder(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            compactLandscape ? 10 : 18,
+            16,
+            compactLandscape ? 12 : 24,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: compactLandscape ? 8 : 5,
+            crossAxisSpacing: compactLandscape ? 10 : 14,
+            mainAxisSpacing: compactLandscape ? 10 : 18,
+            childAspectRatio: compactLandscape ? 0.98 : 0.82,
+          ),
+          itemCount: skills.length,
+          itemBuilder: (context, index) {
+            final skill = skills[index];
+            return _BuildCatalogAsset(
+              label: skill.name,
+              imageUrl: skill.iconUrl,
+              selected: selectedId == skill.id,
+              onTap: () => onSelected(skill.id),
+            );
+          },
         );
       },
     );

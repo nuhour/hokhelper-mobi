@@ -159,7 +159,12 @@ class _FakeApiClient extends ApiClient {
               'rune_id': 201,
               'name': 'Fate',
               'color': 1,
+              'level': 5,
+              'description': 'Attack speed +1%',
               'icon': 'https://example.test/fate.png',
+              'rune_effects': [
+                {'effect_type': 18, 'value_type': 2, 'value': 100},
+              ],
             },
           ],
         },
@@ -337,7 +342,7 @@ void main() {
     expect(skills.single.name, 'Smite');
   });
 
-  test('loads level five runes with backend region filters', () async {
+  test('loads the complete rune catalog with backend region filter', () async {
     final apiClient = _FakeApiClient();
     final repository = BuildsRepository(apiClient: apiClient);
 
@@ -347,11 +352,16 @@ void main() {
     final body = apiClient.postBody as Map<String, dynamic>;
     expect(body['filterRules'], [
       {'field': 'region_id', 'op': 'eq', 'value': 2},
-      {'field': 'level', 'op': 'eq', 'value': 5},
     ]);
+    expect(body['pageSize'], 1000);
     expect(runes.single.id, 201);
     expect(runes.single.name, 'Fate');
     expect(runes.single.color, 1);
+    expect(runes.single.level, 5);
+    expect(runes.single.description, 'Attack speed +1%');
+    expect(runes.single.effects.single.effectType, 18);
+    expect(runes.single.effects.single.valueType, 2);
+    expect(runes.single.effects.single.value, 100);
   });
 
   test('creates a build scheme slot with editor payload', () async {

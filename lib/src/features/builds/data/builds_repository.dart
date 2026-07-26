@@ -112,10 +112,9 @@ class BuildsRepository {
       '/build/runes',
       body: {
         'page': 1,
-        'pageSize': 100,
+        'pageSize': 1000,
         'filterRules': [
           {'field': 'region_id', 'op': 'eq', 'value': regionId},
-          {'field': 'level', 'op': 'eq', 'value': 5},
         ],
       },
     );
