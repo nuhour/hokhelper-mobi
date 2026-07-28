@@ -6,10 +6,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../../core/widgets/app_video_player_sheet.dart';
 import '../../settings/presentation/settings_controller.dart';
+import '../data/content_repository.dart';
 import '../domain/cg_detail.dart';
 import '../domain/content_item_summary.dart';
 import 'content_screen.dart';
@@ -53,15 +55,17 @@ final cgDetailProvider = FutureProvider.family<CgDetail, int>((ref, cgId) {
   return ref.watch(contentRepositoryProvider).loadCgDetail(cgId);
 });
 
-final cgCommentsProvider =
-    FutureProvider.family<List<CgCommentSummary>, Object>((ref, query) {
-      final commentsQuery = query is CgCommentsQuery
-          ? query
-          : CgCommentsQuery(query as int);
-      return ref
-          .watch(contentRepositoryProvider)
-          .loadCgComments(commentsQuery.cgId, order: commentsQuery.order);
-    });
+final cgCommentsProvider = FutureProvider.family<CgCommentsPage, Object>((
+  ref,
+  query,
+) {
+  final commentsQuery = query is CgCommentsQuery
+      ? query
+      : CgCommentsQuery(query as int);
+  return ref
+      .watch(contentRepositoryProvider)
+      .loadCgComments(commentsQuery.cgId, order: commentsQuery.order);
+});
 
 class CgCommentsQuery {
   const CgCommentsQuery(this.cgId, {this.order = 'desc'});
@@ -189,8 +193,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: [
-            const AppSectionHeader(title: 'CG Center'),
-            const SizedBox(height: 14),
+            const SizedBox(height: 4),
             TextField(
               controller: _searchController,
               onChanged: (value) => setState(() {
@@ -276,6 +279,9 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                   );
                 }
 
+                final hasMoreCgs =
+                    _hasMoreCgs && items.length >= _cgGalleryPageSize;
+
                 return Column(
                   children: [
                     _HeroFilterDropdown(
@@ -301,23 +307,11 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
                         );
                       },
                     ),
-                    if (_hasMoreCgs && items.length >= _cgGalleryPageSize)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: FilledButton.icon(
-                          onPressed: _isLoadingMoreCgs ? null : _loadMoreCgs,
-                          icon: _isLoadingMoreCgs
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.expand_more),
-                          label: Text(
-                            _isLoadingMoreCgs ? 'Loading...' : 'Load more',
-                          ),
-                        ),
+                    if (hasMoreCgs || cgs.length > 10)
+                      AppListFooter(
+                        hasMore: hasMoreCgs,
+                        loading: _isLoadingMoreCgs,
+                        onLoadMore: _loadMoreCgs,
                       ),
                   ],
                 );
@@ -748,9 +742,12 @@ class _CgDetailSheet extends ConsumerStatefulWidget {
 
 class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
   final _commentController = TextEditingController();
+  final _extraComments = <CgCommentSummary>[];
   var _isPosting = false;
   var _isRating = false;
   var _commentOrder = 'desc';
+  var _commentsNextPage = 2;
+  var _isLoadingMoreComments = false;
   int? _viewCountOverride;
   double? _ratingOverride;
   int? _ratingCountOverride;
@@ -819,7 +816,10 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
             const SizedBox(height: 10),
             _CgCommentOrderSelector(
               order: _commentOrder,
-              onChanged: (order) => setState(() => _commentOrder = order),
+              onChanged: (order) => setState(() {
+                _commentOrder = order;
+                _resetCommentPages();
+              }),
             ),
             const SizedBox(height: 10),
             _CgCommentComposer(
@@ -828,10 +828,11 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
               onSubmit: _postComment,
             ),
             const SizedBox(height: 14),
-            AppAsyncView<List<CgCommentSummary>>(
+            AppAsyncView<CgCommentsPage>(
               value: commentsValue,
               retry: () => ref.invalidate(cgCommentsProvider(commentsQuery)),
-              data: (comments) {
+              data: (page) {
+                final comments = [...page.comments, ..._extraComments];
                 if (comments.isEmpty) {
                   return const AppEmptyState(
                     icon: Icons.chat_bubble_outline,
@@ -839,14 +840,25 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
                     message: 'Community comments will appear here.',
                   );
                 }
-                return ListView.separated(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: comments.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (context, index) =>
-                      _CgCommentCard(comment: comments[index]),
+                final hasMoreComments = comments.length < page.total;
+                return Column(
+                  children: [
+                    ListView.separated(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: comments.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
+                      itemBuilder: (context, index) =>
+                          _CgCommentCard(comment: comments[index]),
+                    ),
+                    if (hasMoreComments || comments.length > 10)
+                      AppListFooter(
+                        hasMore: hasMoreComments,
+                        loading: _isLoadingMoreComments,
+                        onLoadMore: _loadMoreComments,
+                      ),
+                  ],
                 );
               },
             ),
@@ -854,6 +866,46 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
         );
       },
     );
+  }
+
+  // 切换排序或重新拉首页后，丢弃已追加的增量页。
+  void _resetCommentPages() {
+    _extraComments.clear();
+    _commentsNextPage = 2;
+    _isLoadingMoreComments = false;
+  }
+
+  Future<void> _loadMoreComments() async {
+    if (_isLoadingMoreComments) {
+      return;
+    }
+    setState(() => _isLoadingMoreComments = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final page = await ref
+          .read(contentRepositoryProvider)
+          .loadCgComments(
+            widget.cgId,
+            order: _commentOrder,
+            page: _commentsNextPage,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _extraComments.addAll(page.comments);
+        _commentsNextPage += 1;
+        _isLoadingMoreComments = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isLoadingMoreComments = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to load more comments: $error')),
+      );
+    }
   }
 
   Future<void> _postComment() async {
@@ -870,6 +922,7 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
           .read(contentRepositoryProvider)
           .createCgComment(widget.cgId, content);
       _commentController.clear();
+      setState(_resetCommentPages);
       ref.invalidate(
         cgCommentsProvider(CgCommentsQuery(widget.cgId, order: _commentOrder)),
       );

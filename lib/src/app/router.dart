@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/i18n/app_localizations.dart';
 import '../features/activity/presentation/event_assistance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
@@ -680,6 +681,8 @@ GoRouter createAppRouter() {
         redirect: (context, state) => _cgGalleryRedirect(state.uri),
         builder: (context, state) => _standalonePage(
           fallbackRoute: '/?tab=skins',
+          title: 'CG Center',
+          showAppBarInLandscape: true,
           child: CgGalleryScreen(
             initialHeroId: int.tryParse(
               state.uri.queryParameters['hero_id'] ?? '',
@@ -693,6 +696,8 @@ GoRouter createAppRouter() {
             builder: (context, state) {
               return _standalonePage(
                 fallbackRoute: '/cg',
+                title: 'CG Center',
+                showAppBarInLandscape: true,
                 child: CgGalleryScreen(
                   initialCgId: int.tryParse(state.pathParameters['cgId'] ?? ''),
                   initialHeroId: int.tryParse(
@@ -1018,12 +1023,12 @@ GoRouter createAppRouter() {
                   ),
                   GoRoute(
                     path: 'cgs',
-                    builder: (context, state) => _standalonePage(
-                      fallbackRoute: '/?tab=skins',
-                      child: CgGalleryScreen(
-                        initialSearchQuery: state.uri.queryParameters['q'],
-                      ),
-                    ),
+                    redirect: (context, state) => Uri(
+                      path: '/cg',
+                      queryParameters: state.uri.queryParameters.isEmpty
+                          ? null
+                          : state.uri.queryParameters,
+                    ).toString(),
                   ),
                   GoRoute(
                     path: 'patch-notes',

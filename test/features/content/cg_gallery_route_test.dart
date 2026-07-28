@@ -53,15 +53,48 @@ class _RouteCgRepository extends ContentRepository {
   }
 
   @override
-  Future<List<CgCommentSummary>> loadCgComments(
+  Future<CgCommentsPage> loadCgComments(
     int cgId, {
     String order = 'desc',
+    int page = 1,
+    int pageSize = 50,
   }) async {
-    return const [];
+    return const CgCommentsPage(comments: [], total: 0);
   }
 }
 
 void main() {
+  testWidgets('menu cg route resolves to the standalone cg page', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/content/cgs?q=Lam');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          contentRepositoryProvider.overrideWithValue(
+            _RouteCgRepository(const []),
+          ),
+          cgGalleryRegionProvider.overrideWith((ref) async => 2),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/cg');
+    expect(
+      router.routeInformationProvider.value.uri.queryParameters['q'],
+      'Lam',
+    );
+    expect(find.text('CG Center'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('standalone-back-button')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('web cg gallery route preserves search query', (tester) async {
     final router = createAppRouter();
     router.go('/cg?q=Lam');

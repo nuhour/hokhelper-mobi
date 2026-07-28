@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/cg_detail.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
@@ -128,31 +129,39 @@ class _FakeContentRepository extends ContentRepository {
   }
 
   @override
-  Future<List<CgCommentSummary>> loadCgComments(
+  Future<CgCommentsPage> loadCgComments(
     int cgId, {
     String order = 'desc',
+    int page = 1,
+    int pageSize = 50,
   }) async {
     commentOrders.add(order);
     if (order == 'asc') {
-      return const [
-        CgCommentSummary(
-          id: 8,
-          authorName: 'oldest',
-          authorAvatarUrl: '',
-          content: 'First reaction.',
-          createdAt: '2026-07-02T08:30:00Z',
-        ),
-      ];
+      return const CgCommentsPage(
+        total: 1,
+        comments: [
+          CgCommentSummary(
+            id: 8,
+            authorName: 'oldest',
+            authorAvatarUrl: '',
+            content: 'First reaction.',
+            createdAt: '2026-07-02T08:30:00Z',
+          ),
+        ],
+      );
     }
-    return const [
-      CgCommentSummary(
-        id: 9,
-        authorName: 'coach',
-        authorAvatarUrl: '',
-        content: 'Great cinematic.',
-        createdAt: '2026-07-03T08:30:00Z',
-      ),
-    ];
+    return const CgCommentsPage(
+      total: 1,
+      comments: [
+        CgCommentSummary(
+          id: 9,
+          authorName: 'coach',
+          authorAvatarUrl: '',
+          content: 'Great cinematic.',
+          createdAt: '2026-07-03T08:30:00Z',
+        ),
+      ],
+    );
   }
 
   @override
@@ -249,15 +258,18 @@ void main() {
           cgCommentsProvider(const CgCommentsQuery(501)).overrideWith((
             ref,
           ) async {
-            return const [
-              CgCommentSummary(
-                id: 9,
-                authorName: 'coach',
-                authorAvatarUrl: '',
-                content: 'Great cinematic.',
-                createdAt: '2026-07-03T08:30:00Z',
-              ),
-            ];
+            return const CgCommentsPage(
+              total: 1,
+              comments: [
+                CgCommentSummary(
+                  id: 9,
+                  authorName: 'coach',
+                  authorAvatarUrl: '',
+                  content: 'Great cinematic.',
+                  createdAt: '2026-07-03T08:30:00Z',
+                ),
+              ],
+            );
           }),
         ],
         child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
@@ -265,7 +277,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('CG Center'), findsOneWidget);
     expect(find.text('Lam Cinematic'), findsOneWidget);
     expect(find.text('Angela Trailer'), findsOneWidget);
 
@@ -418,23 +429,25 @@ void main() {
         child: const MaterialApp(home: Scaffold(body: CgGalleryScreen())),
       ),
     );
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Paged CG 1'), findsOneWidget);
     expect(find.text('Paged CG 61'), findsNothing);
+    // 首页取满一整页时展示统一页脚，等待滚动触底自动加载。
+    expect(find.byType(AppListFooter), findsOneWidget);
+    expect(repository.requestedPages, [1]);
 
-    final loadMoreButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Load more'),
-    );
-    await tester.runAsync(() async {
-      loadMoreButton.onPressed!();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pump();
+    // 滚动到列表底部，页脚自动追加下一页，无需任何按钮。
+    final scrollPosition = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    scrollPosition.jumpTo(scrollPosition.maxScrollExtent);
+    await tester.pumpAndSettle();
 
     expect(repository.requestedPages, [1, 2]);
     expect(find.text('Paged CG 61'), findsOneWidget);
+    // 第二页不足一整页，页脚转为到底提示。
+    expect(find.text('No more content'), findsOneWidget);
   });
 
   testWidgets('posts comments from the cg detail sheet', (tester) async {
