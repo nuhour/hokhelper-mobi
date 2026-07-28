@@ -62,6 +62,34 @@ void main() {
     expect(malay.navHome, 'Utama');
   });
 
+  test('localizes tool controls and statistics headers in every pack', () {
+    const keys = [
+      'bpCreate',
+      'tierCreate',
+      'promptLanguage',
+      'teamSwap',
+      'buildEquipment',
+      'fortuneTry',
+      'statsWinRate',
+      'statsEquipmentCategory',
+    ];
+
+    for (final entry in appTranslationValues.entries) {
+      for (final key in keys) {
+        expect(
+          entry.value[key],
+          isNotNull,
+          reason: '${entry.key} must translate $key',
+        );
+      }
+    }
+
+    const spanish = AppLocalizations(Locale('es'));
+    const arabic = AppLocalizations(Locale('ar'));
+    expect(spanish.translate('statsWinRate'), 'Tasa de Victoria');
+    expect(arabic.translate('fortuneTry'), 'جرّب حظي');
+  });
+
   test('maps languages to the same content regions as hokx', () {
     expect(hokRegionFromLanguageCode('zh'), HokRegion.cn);
     expect(hokRegionFromLanguageCode('id'), HokRegion.id);

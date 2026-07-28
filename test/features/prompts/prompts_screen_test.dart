@@ -4,9 +4,23 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/prompts/data/prompts_repository.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
+
+class _TestAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async {
+    return const AuthUser(
+      id: 42,
+      username: 'tester',
+      email: 'tester@example.test',
+      displayName: 'Tester',
+    );
+  }
+}
 
 class _FakePromptsRepository extends PromptsRepository {
   _FakePromptsRepository({
@@ -170,6 +184,50 @@ class _FakePromptsRepository extends PromptsRepository {
   }
 }
 
+class _PagedPromptsRepository extends _FakePromptsRepository {
+  int? lastRequestedPage;
+  int? lastRequestedPageSize;
+
+  @override
+  Future<List<PromptSummary>> loadPrompts({
+    required PromptListAction action,
+    String search = '',
+    PromptListSort sort = PromptListSort.hot,
+  }) async {
+    return [for (var i = 1; i <= 30; i++) _pagedPrompt(i)];
+  }
+
+  @override
+  Future<PromptListPage> loadPromptPage({
+    required PromptListAction action,
+    String search = '',
+    PromptListSort sort = PromptListSort.hot,
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    lastRequestedPage = page;
+    lastRequestedPageSize = pageSize;
+    return PromptListPage(
+      prompts: [_pagedPrompt(31), _pagedPrompt(32)],
+      total: 32,
+    );
+  }
+}
+
+PromptSummary _pagedPrompt(int index) {
+  return PromptSummary(
+    id: '$index',
+    title: 'Prompt $index',
+    content: 'Prompt content $index.',
+    tags: const [],
+    imageUrl: '',
+    authorName: 'artist',
+    likeCount: index,
+    favoriteCount: index,
+    isPublic: true,
+  );
+}
+
 class _NoopApiClient extends ApiClient {
   _NoopApiClient()
     : super(
@@ -226,7 +284,7 @@ void main() {
     expect(find.text('12'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
     expect(find.text('Public'), findsNothing);
-    expect(find.byTooltip('Generate'), findsNothing);
+    expect(find.byTooltip('Generate image'), findsNothing);
   });
 
   testWidgets('opens a prompt viewer with its image comparison', (
@@ -260,7 +318,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('View prompt'));
+    // 卡片正文即查看入口（HOKX 对齐后不再有单独的 View 按钮）。
+    await tester.tap(
+      find.text('Transform this battlefield into a rainy scene.'),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(Dialog), findsOneWidget);
@@ -273,7 +334,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(InteractiveViewer), findsOneWidget);
-    expect(find.byTooltip('Close full screen image'), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
   });
 
   testWidgets('searches and sorts prompt explorer like the hokx portal', (
@@ -306,6 +367,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptListProvider(PromptListAction.favorites).overrideWith((
             ref,
           ) async {
@@ -494,6 +556,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
           promptListProvider(PromptListAction.explore).overrideWith((
             ref,
@@ -532,6 +595,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
           promptListProvider(PromptListAction.explore).overrideWith((
             ref,
@@ -570,6 +634,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
           promptListProvider(PromptListAction.explore).overrideWith((
             ref,
@@ -644,6 +709,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
           promptListProvider(PromptListAction.explore).overrideWith((
             ref,
@@ -695,6 +761,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
           promptListProvider(PromptListAction.myPrompts).overrideWith((
             ref,
@@ -782,6 +849,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
           promptListProvider(PromptListAction.myPrompts).overrideWith((
             ref,
@@ -828,8 +896,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
-          promptListProvider(PromptListAction.explore).overrideWith((
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
             ref,
           ) async {
             return const [
@@ -847,12 +916,16 @@ void main() {
             ];
           }),
         ],
-        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: PromptsScreen(initialAction: PromptListAction.myPrompts),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Generate'));
+    await tester.tap(find.byTooltip('Generate image'));
     await tester.pumpAndSettle();
 
     expect(find.text('Image generation'), findsOneWidget);
@@ -883,8 +956,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
-          promptListProvider(PromptListAction.explore).overrideWith((
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
             ref,
           ) async {
             return const [
@@ -902,12 +976,16 @@ void main() {
             ];
           }),
         ],
-        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: PromptsScreen(initialAction: PromptListAction.myPrompts),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Generate'));
+    await tester.tap(find.byTooltip('Generate image'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Image to image'));
     await tester.pumpAndSettle();
@@ -934,8 +1012,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
-          promptListProvider(PromptListAction.explore).overrideWith((
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
             ref,
           ) async {
             return const [
@@ -953,12 +1032,16 @@ void main() {
             ];
           }),
         ],
-        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: PromptsScreen(initialAction: PromptListAction.myPrompts),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Generate'));
+    await tester.tap(find.byTooltip('Generate image'));
     await tester.pumpAndSettle();
 
     expect(find.text('Image generation'), findsNothing);
@@ -974,8 +1057,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
-          promptListProvider(PromptListAction.explore).overrideWith((
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
             ref,
           ) async {
             return const [
@@ -993,12 +1077,16 @@ void main() {
             ];
           }),
         ],
-        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: PromptsScreen(initialAction: PromptListAction.myPrompts),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Generate'));
+    await tester.tap(find.byTooltip('Generate image'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Generate image'));
     await tester.pumpAndSettle();
@@ -1028,8 +1116,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptsRepositoryProvider.overrideWithValue(repository),
-          promptListProvider(PromptListAction.explore).overrideWith((
+          promptListProvider(PromptListAction.myPrompts).overrideWith((
             ref,
           ) async {
             return const [
@@ -1047,12 +1136,16 @@ void main() {
             ];
           }),
         ],
-        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: PromptsScreen(initialAction: PromptListAction.myPrompts),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Generate'));
+    await tester.tap(find.byTooltip('Generate image'));
     await tester.pumpAndSettle();
 
     expect(find.text('0 / 5 left'), findsOneWidget);
@@ -1067,5 +1160,45 @@ void main() {
     expect(repository.rechargePaymentMethod, 'card');
     expect(find.text('10 / 15 left'), findsOneWidget);
     expect(find.text('Quota recharged +10'), findsOneWidget);
+  });
+
+  testWidgets('auto-loads the next prompt page from the list footer', (
+    tester,
+  ) async {
+    final repository = _PagedPromptsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [promptsRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: Scaffold(body: PromptsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Prompt 1'), findsOneWidget);
+    expect(find.text('Prompt 31'), findsNothing);
+    expect(find.text('No more content'), findsNothing);
+    expect(repository.lastRequestedPage, isNull);
+
+    // 滚动接近底部后页脚自动请求下一页（无“加载更多”按钮）。
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -20000),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.lastRequestedPage, 2);
+    expect(repository.lastRequestedPageSize, 30);
+
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -2000),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Prompt 32'), findsOneWidget);
+    expect(find.text('No more content'), findsOneWidget);
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -178,6 +179,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final rankingValue = ref.watch(heroRankingProvider);
     final playerValue = ref.watch(playerRankingProvider);
     final equipValue = ref.watch(equipRankingProvider);
@@ -192,11 +194,11 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (widget.showPageHeader) ...[
-                const AppSectionHeader(title: 'Hero Rankings'),
+                AppSectionHeader(title: l10n.translate('rankingTitle')),
                 const SizedBox(height: 8),
               ],
               Text(
-                'Compare heroes, players, equipment, and tier data.',
+                l10n.toolSubtitle('/tools/rankings'),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: context.hokTheme.onSurfaceMuted,
                 ),
@@ -204,11 +206,11 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
               const SizedBox(height: 16),
               TabBar(
                 controller: _tabController,
-                tabs: const [
-                  Tab(text: 'Heroes'),
-                  Tab(text: 'Players'),
-                  Tab(text: 'Equips'),
-                  Tab(text: 'Tier'),
+                tabs: [
+                  Tab(text: l10n.translate('rankingTabHeroes')),
+                  Tab(text: l10n.translate('rankingTabPlayers')),
+                  Tab(text: l10n.translate('rankingTabEquipment')),
+                  Tab(text: l10n.translate('rankingTabTier')),
                 ],
               ),
             ],
@@ -269,12 +271,12 @@ class _HeroRankingTabState extends ConsumerState<_HeroRankingTab> {
                 ),
               ),
               if (entries.isEmpty)
-                const SliverFillRemaining(
+                SliverFillRemaining(
                   hasScrollBody: false,
                   child: AppEmptyState(
                     icon: Icons.leaderboard_outlined,
-                    title: 'No rankings found',
-                    message: 'Pull to refresh or switch region in settings.',
+                    title: AppLocalizations.of(context).noData,
+                    message: AppLocalizations.of(context).serviceSlow,
                   ),
                 )
               else
@@ -332,16 +334,15 @@ class _PlayerRankingTabState extends ConsumerState<_PlayerRankingTab> {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(playerRankingProvider.future),
           child: entries.isEmpty
-              ? const CustomScrollView(
-                  physics: AlwaysScrollableScrollPhysics(),
+              ? CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverFillRemaining(
                       hasScrollBody: false,
                       child: AppEmptyState(
                         icon: Icons.person_search_outlined,
-                        title: 'No players found',
-                        message:
-                            'Pull to refresh or switch region in settings.',
+                        title: AppLocalizations.of(context).noData,
+                        message: AppLocalizations.of(context).serviceSlow,
                       ),
                     ),
                   ],
@@ -396,16 +397,15 @@ class _EquipRankingTabState extends ConsumerState<_EquipRankingTab> {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(equipRankingProvider.future),
           child: entries.isEmpty
-              ? const CustomScrollView(
-                  physics: AlwaysScrollableScrollPhysics(),
+              ? CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverFillRemaining(
                       hasScrollBody: false,
                       child: AppEmptyState(
                         icon: Icons.inventory_2_outlined,
-                        title: 'No equipment found',
-                        message:
-                            'Pull to refresh once equipment stats are ready.',
+                        title: AppLocalizations.of(context).noData,
+                        message: AppLocalizations.of(context).serviceSlow,
                       ),
                     ),
                   ],
@@ -510,7 +510,9 @@ class _TierListTab extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Refresh',
+                    tooltip: AppLocalizations.of(
+                      context,
+                    ).translate('statsRefreshData'),
                     onPressed: () => ref.invalidate(tierRankingDisplayProvider),
                     icon: const Icon(Icons.refresh_rounded, size: 20),
                   ),
@@ -525,12 +527,12 @@ class _TierListTab extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               if (filteredEntries.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 360,
                   child: AppEmptyState(
                     icon: Icons.workspace_premium_outlined,
-                    title: 'No tier data found',
-                    message: 'Pull to refresh once tier snapshots are ready.',
+                    title: AppLocalizations.of(context).noData,
+                    message: AppLocalizations.of(context).serviceSlow,
                   ),
                 ),
               for (final tier in tiers) ...[
@@ -843,7 +845,7 @@ class _TierHistorySheet extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Close',
+                  tooltip: AppLocalizations.of(context).close,
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded),
                 ),
@@ -859,15 +861,15 @@ class _TierHistorySheet extends ConsumerWidget {
                     onPressed: () =>
                         ref.invalidate(tierHistoryProvider(entry.heroId)),
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Retry'),
+                    label: Text(AppLocalizations.of(context).retry),
                   ),
                 ),
                 data: (points) {
                   if (points.isEmpty) {
-                    return const AppEmptyState(
+                    return AppEmptyState(
                       icon: Icons.show_chart_rounded,
-                      title: 'No tier history',
-                      message: 'Historical snapshots are not available yet.',
+                      title: AppLocalizations.of(context).noData,
+                      message: AppLocalizations.of(context).serviceSlow,
                     );
                   }
                   return _TierHistoryChart(points: points);

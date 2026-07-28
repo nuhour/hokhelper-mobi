@@ -1,4 +1,7 @@
+import 'feature_translations.dart';
+
 const arTranslations = {
+  ...arFeatureTranslations,
   'appTitle': 'HOK Helper',
   'navHome': 'الرئيسية',
   'navStats': 'الإحصائيات',

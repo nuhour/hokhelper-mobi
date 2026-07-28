@@ -23,7 +23,7 @@ void main() {
                 heroId: '199',
                 name: 'Lam',
                 avatar: '',
-                title: 'Shark Blade',
+                title: '',
               ),
             ];
           }),
@@ -44,7 +44,8 @@ void main() {
 
     expect(find.text('Domain Records'), findsOneWidget);
     expect(find.text('Representative Heroes'), findsOneWidget);
-    expect(find.text('Shark Blade'), findsOneWidget);
+    expect(find.text('Lam'), findsOneWidget);
+    expect(find.text('Hero 199'), findsNothing);
   });
 
   testWidgets('opens focused region from initial hero id', (tester) async {
@@ -74,5 +75,6 @@ void main() {
     expect(find.text('Great River Basin'), findsWidgets);
     expect(find.text('Lam'), findsOneWidget);
     expect(find.text('Shark Blade'), findsOneWidget);
+    expect(find.text('Hero 199'), findsNothing);
   });
 }

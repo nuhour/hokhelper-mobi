@@ -1,4 +1,7 @@
+import 'feature_translations.dart';
+
 const filTranslations = {
+  ...filFeatureTranslations,
   'appTitle': 'HOK Helper',
   'navHome': 'Home',
   'navStats': 'Stats',

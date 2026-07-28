@@ -283,15 +283,49 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('trend-avatar-hero-199')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Hero preparation'), findsOneWidget);
+    expect(find.text('Hero'), findsWidgets);
     expect(find.text('Overview'), findsOneWidget);
     expect(find.text('Power'), findsWidgets);
     expect(find.text('Single Equip'), findsOneWidget);
     expect(find.text('Builds'), findsOneWidget);
     await tester.tap(find.text('Single Equip'));
     await tester.pumpAndSettle();
-    expect(find.text('Single equipment performance'), findsOneWidget);
-    expect(find.text('Venomous Staff'), findsOneWidget);
+    // HOKX 单件装备矩阵表：分组表头 + 排序列 + 槽位份额/胜率格。
+    expect(find.text('Slot Distribution'), findsOneWidget);
+    expect(find.text('Pick'), findsOneWidget);
+    expect(find.text('70.24%'), findsOneWidget);
+    expect(find.text('3790'), findsOneWidget);
+    expect(find.text('61.40%'), findsOneWidget);
+    expect(find.text('56.80%'), findsOneWidget);
+    // 100% 去小数避免 88px 格内截断。
+    expect(find.text('100%'), findsOneWidget);
+    // 行内最大值高亮：份额黄粗、胜率玫红粗。
+    final shareText = tester.widget<Text>(find.text('61.40%'));
+    expect(shareText.style?.color, const Color(0xFFFACC15));
+    expect(shareText.style?.fontWeight, FontWeight.w900);
+    final winText = tester.widget<Text>(find.text('56.80%'));
+    expect(winText.style?.color, const Color(0xFFF43F5E));
+    expect(winText.style?.fontWeight, FontWeight.w900);
+    expect(
+      tester
+          .widgetList<AppImage>(find.byType(AppImage))
+          .any((image) => image.semanticLabel == 'Venomous Staff'),
+      isTrue,
+    );
+
+    // HOKX 默认按出场率降序：Venomous Staff(场次 3790) 在 Boots(9999) 之上。
+    expect(
+      tester.getCenter(find.text('3790')).dy,
+      lessThan(tester.getCenter(find.text('9999')).dy),
+    );
+
+    // 点击 Count 表头切为按场次降序：Boots(9999) 升到最上。
+    await tester.tap(find.text('Count'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getCenter(find.text('9999')).dy,
+      lessThan(tester.getCenter(find.text('3790')).dy),
+    );
     await tester.drag(
       find.byKey(const ValueKey('hero-preparation-tabs')),
       const Offset(-500, 0),
@@ -333,7 +367,119 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Matchups'), findsOneWidget);
     expect(find.text('Single Equip'), findsNothing);
-    expect(find.text('Core trend'), findsOneWidget);
+    // HOKX「综合」tab：大图表 + 最新快照日期 + WR/P/B/BP 指标卡。
+    expect(find.text('BP'), findsWidgets);
+    expect(find.text('31.40%'), findsOneWidget);
+    expect(find.text('13.00%'), findsOneWidget);
+
+    // Matchups：适配/克制改用二级 tab 切换查看。
+    await tester.tap(find.text('Matchups'));
+    await tester.pumpAndSettle();
+    expect(find.text('Synergy (0)'), findsOneWidget);
+    expect(find.text('Counter (0)'), findsOneWidget);
+    expect(find.text('Synergy Picks'), findsOneWidget);
+    expect(find.text('Counter Picks'), findsNothing);
+    await tester.tap(find.text('Counter (0)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Counter Picks'), findsOneWidget);
+    expect(find.text('Synergy Picks'), findsNothing);
+  });
+
+  testWidgets('equip avatar opens the single equip matrix table', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleEquipStatsTrendTable(),
+          ),
+          heroTrendDetailProvider.overrideWith(
+            (ref, request) async => sampleEquipStatsTrendDetail(),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('trend-avatar-equip-12211')));
+    await tester.pumpAndSettle();
+
+    // 「趋势」tab：胜率/出场率双指标卡与双线图。
+    // 'Win Rate' 三处：背景主表表头 + 抽屉指标卡 + 图表图例。
+    expect(find.text('Trend'), findsOneWidget);
+    expect(find.text('Equipment details'), findsOneWidget);
+    expect(find.text('Win Rate'), findsNWidgets(3));
+    expect(find.text('Pick Rate'), findsNWidgets(3));
+    expect(find.text('54.20%'), findsNWidgets(2));
+    expect(find.text('70.24%'), findsNWidgets(2));
+    // HOKX 装备抽屉没有窗口天数切换。
+    expect(find.byKey(const ValueKey('trend-window-select')), findsNothing);
+
+    await tester.tap(find.text('Single Equip'));
+    await tester.pumpAndSettle();
+
+    // 「单件装备」tab：HOKX 槽位矩阵表，每行英雄头像 + 装备角标。
+    expect(find.text('Slot Distribution'), findsOneWidget);
+    expect(find.text('3790'), findsOneWidget);
+    expect(find.text('61.40%'), findsOneWidget);
+    expect(find.text('56.80%'), findsOneWidget);
+    final images = tester.widgetList<AppImage>(find.byType(AppImage));
+    expect(images.any((image) => image.semanticLabel == 'Lam'), isTrue);
+    expect(images.any((image) => image.semanticLabel == 'Yaria'), isTrue);
+    // 每行都带所选装备角标（主表识别列 1 处 + 抽屉两行角标 2 处）。
+    expect(
+      images
+          .where((image) => image.semanticLabel == 'Venomous Staff')
+          .length,
+      greaterThanOrEqualTo(2),
+    );
+
+    // 默认按出场率降序：Lam(场次 3790) 在 Yaria(9999) 之上。
+    expect(
+      tester.getCenter(find.text('3790')).dy,
+      lessThan(tester.getCenter(find.text('9999')).dy),
+    );
+  });
+
+  testWidgets('single equip table sorts the full list before truncation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleEquipStatsTrendTable(),
+          ),
+          heroTrendDetailProvider.overrideWith(
+            (ref, request) async => sampleWideEquipStatsTrendDetail(),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('trend-avatar-equip-12211')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Single Equip'));
+    await tester.pumpAndSettle();
+
+    bool hasHero(String label) => tester
+        .widgetList<AppImage>(find.byType(AppImage))
+        .any((image) => image.semanticLabel == label);
+
+    // 默认按出场率降序截断 30 行：pick 第 31 名不可见。
+    expect(hasHero('Hero1'), isTrue);
+    expect(hasHero('Hero31'), isFalse);
+
+    // 切到 Win 降序后应对全量行重排：胜率最高的 Hero31 必须换入。
+    await tester.tap(
+      find.ancestor(of: find.text('Win'), matching: find.byType(InkWell)),
+    );
+    await tester.pumpAndSettle();
+    expect(hasHero('Hero31'), isTrue);
   });
 }
 

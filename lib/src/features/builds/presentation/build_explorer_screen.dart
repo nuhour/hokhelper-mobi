@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_share_sheet.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/builds_repository.dart';
@@ -45,14 +46,81 @@ final publicBuildSchemesForHeroProvider =
           .loadPublicSchemes(regionId, sort: sort, heroId: heroId);
     });
 
-class BuildExplorerScreen extends ConsumerWidget {
+class BuildExplorerScreen extends ConsumerStatefulWidget {
   const BuildExplorerScreen({this.initialHeroId, super.key});
 
   final int? initialHeroId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final focusedHeroId = initialHeroId;
+  ConsumerState<BuildExplorerScreen> createState() =>
+      _BuildExplorerScreenState();
+}
+
+class _BuildExplorerScreenState extends ConsumerState<BuildExplorerScreen> {
+  static const _pageSize = 20;
+
+  // 第 1 页始终来自 provider；后续页在本地累积，provider 刷新后整体重置。
+  List<BuildSchemeSummary>? _pageOne;
+  final List<BuildSchemeSummary> _extraSchemes = [];
+  int _loadedPages = 1;
+  bool _loadingMore = false;
+  bool? _hasMoreOverride;
+
+  void _syncWithPageOne(List<BuildSchemeSummary> schemes) {
+    if (identical(_pageOne, schemes)) {
+      return;
+    }
+    _pageOne = schemes;
+    _extraSchemes.clear();
+    _loadedPages = 1;
+    _loadingMore = false;
+    _hasMoreOverride = null;
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore) {
+      return;
+    }
+    final pageOneAtRequest = _pageOne;
+    setState(() => _loadingMore = true);
+    try {
+      final regionId = await ref.read(publicBuildSchemesRegionProvider.future);
+      final sort = ref.read(publicBuildSchemeSortProvider);
+      final next = await ref
+          .read(buildsRepositoryProvider)
+          .loadPublicSchemesPage(
+            regionId,
+            sort: sort,
+            heroId: widget.initialHeroId,
+            page: _loadedPages + 1,
+            pageSize: _pageSize,
+          );
+      if (!mounted || !identical(pageOneAtRequest, _pageOne)) {
+        return;
+      }
+      setState(() {
+        _extraSchemes.addAll(next.schemes);
+        _loadedPages += 1;
+        _hasMoreOverride = next.hasMore && next.schemes.isNotEmpty;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted || !identical(pageOneAtRequest, _pageOne)) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to load more builds')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final focusedHeroId = widget.initialHeroId;
     final schemesValue = focusedHeroId == null
         ? ref.watch(publicBuildSchemesProvider)
         : ref.watch(publicBuildSchemesForHeroProvider(focusedHeroId));
@@ -75,6 +143,11 @@ class BuildExplorerScreen extends ConsumerWidget {
         }
       },
       data: (schemes) {
+        _syncWithPageOne(schemes);
+        final allSchemes = _extraSchemes.isEmpty
+            ? schemes
+            : [...schemes, ..._extraSchemes];
+        final hasMore = _hasMoreOverride ?? (schemes.length >= _pageSize);
         return RefreshIndicator(
           onRefresh: () => ref.refresh(refreshFuture),
           child: CustomScrollView(
@@ -111,7 +184,7 @@ class BuildExplorerScreen extends ConsumerWidget {
                         runSpacing: 8,
                         children: [
                           ChoiceChip(
-                            label: const Text('Popular'),
+                            label: Text(l10n.translate('commonPopular')),
                             selected: selectedSort == BuildSchemeSort.popular,
                             avatar: const Icon(Icons.trending_up, size: 16),
                             onSelected: (_) {
@@ -122,7 +195,7 @@ class BuildExplorerScreen extends ConsumerWidget {
                             },
                           ),
                           ChoiceChip(
-                            label: const Text('Latest'),
+                            label: Text(l10n.translate('commonLatest')),
                             selected: selectedSort == BuildSchemeSort.latest,
                             avatar: const Icon(Icons.schedule, size: 16),
                             onSelected: (_) {
@@ -138,27 +211,41 @@ class BuildExplorerScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (schemes.isEmpty)
-                const SliverFillRemaining(
+              if (allSchemes.isEmpty)
+                SliverFillRemaining(
                   hasScrollBody: false,
                   child: AppEmptyState(
                     icon: Icons.construction_outlined,
-                    title: 'No public builds',
-                    message: 'Pull to refresh or switch region in settings.',
+                    title: AppLocalizations.of(context).noData,
+                    message: AppLocalizations.of(context).serviceSlow,
                   ),
                 )
-              else
+              else ...[
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                   sliver: SliverList.separated(
-                    itemCount: schemes.length,
+                    itemCount: allSchemes.length,
                     itemBuilder: (context, index) {
-                      return BuildSchemeCard(scheme: schemes[index]);
+                      return BuildSchemeCard(scheme: allSchemes[index]);
                     },
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 12),
                   ),
                 ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  sliver: SliverToBoxAdapter(
+                    // 短列表不渲染到底提示，避免噪音；可翻页时才挂加载页脚。
+                    child: hasMore || allSchemes.length > 10
+                        ? AppListFooter(
+                            hasMore: hasMore,
+                            loading: _loadingMore,
+                            onLoadMore: _loadMore,
+                          )
+                        : const SizedBox(height: 12),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -309,12 +396,16 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
                           ? null
                           : () => _showCloneSheet(context),
                       icon: const Icon(Icons.copy_all_outlined, size: 16),
-                      label: const Text('Clone'),
+                      label: Text(
+                        AppLocalizations.of(context).translate('buildClone'),
+                      ),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => _shareScheme(context),
                       icon: const Icon(Icons.ios_share_outlined, size: 16),
-                      label: const Text('Share'),
+                      label: Text(
+                        AppLocalizations.of(context).translate('commonShare'),
+                      ),
                     ),
                   ],
                 ),

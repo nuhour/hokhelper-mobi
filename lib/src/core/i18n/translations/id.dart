@@ -1,4 +1,7 @@
+import 'feature_translations.dart';
+
 final idTranslations = {
+  ...idFeatureTranslations,
   'appTitle': 'HOK Helper',
   'navHome': 'Beranda',
   'navStats': 'Statistik',

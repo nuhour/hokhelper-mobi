@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_section_header.dart';
@@ -97,7 +98,11 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
               children: [
                 if (widget.showPageHeader) ...[
-                  const AppSectionHeader(title: 'BP Scheme'),
+                  AppSectionHeader(
+                    title: AppLocalizations.of(
+                      context,
+                    ).toolTitle('/tools/bp-simulator'),
+                  ),
                   const SizedBox(height: 8),
                 ],
                 Text(
@@ -310,12 +315,16 @@ class _BpSchemeDetailCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: isUpdating ? null : onDraftProgress,
                   icon: const Icon(Icons.timeline_outlined, size: 18),
-                  label: const Text('Draft Progress'),
+                  label: Text(
+                    AppLocalizations.of(context).translate('bpDraftProgress'),
+                  ),
                 ),
                 OutlinedButton.icon(
                   onPressed: isUpdating ? null : onEdit,
                   icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Edit'),
+                  label: Text(
+                    AppLocalizations.of(context).translate('commonEdit'),
+                  ),
                 ),
               ],
             ),
@@ -380,6 +389,7 @@ class _BpEditSheetState extends State<_BpEditSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(20, 18, 20, bottom + 20),
@@ -391,7 +401,7 @@ class _BpEditSheetState extends State<_BpEditSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Edit BP scheme',
+                  l10n.translate('bpEdit'),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
@@ -400,19 +410,26 @@ class _BpEditSheetState extends State<_BpEditSheet> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Scheme name'),
-                  validator: (value) =>
-                      (value ?? '').trim().isEmpty ? 'Enter a name' : null,
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('bpSchemeName'),
+                  ),
+                  validator: (value) => (value ?? '').trim().isEmpty
+                      ? l10n.translate('bpEnterName')
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _teamAController,
-                  decoration: const InputDecoration(labelText: 'Blue side'),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('bpBlueSide'),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _teamBController,
-                  decoration: const InputDecoration(labelText: 'Red side'),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('bpRedSide'),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 SegmentedButton<int>(
@@ -428,14 +445,20 @@ class _BpEditSheetState extends State<_BpEditSheet> {
                 ),
                 const SizedBox(height: 12),
                 SegmentedButton<String>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: 'loser_selects',
-                      label: Text('Loser selects'),
+                      label: Text(
+                        AppLocalizations.of(
+                          context,
+                        ).translate('bpLoserSelects'),
+                      ),
                     ),
                     ButtonSegment(
                       value: 'alternating',
-                      label: Text('Alternate'),
+                      label: Text(
+                        AppLocalizations.of(context).translate('bpAlternate'),
+                      ),
                     ),
                   ],
                   selected: {_sideSelectionRule},
@@ -449,14 +472,20 @@ class _BpEditSheetState extends State<_BpEditSheet> {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
+                        child: Text(
+                          AppLocalizations.of(
+                            context,
+                          ).translate('commonCancel'),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
                         onPressed: _submit,
-                        child: const Text('Save'),
+                        child: Text(
+                          AppLocalizations.of(context).translate('commonSave'),
+                        ),
                       ),
                     ),
                   ],
@@ -555,7 +584,7 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
               ),
               const SizedBox(height: 16),
               _ProgressStepper(
-                label: 'Game',
+                label: AppLocalizations.of(context).translate('bpGame'),
                 value: _gameNumber,
                 min: 1,
                 max: widget.scheme.boMode,
@@ -564,7 +593,7 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
                 onChanged: (value) => setState(() => _gameNumber = value),
               ),
               _ProgressStepper(
-                label: 'Step',
+                label: AppLocalizations.of(context).translate('bpStep'),
                 value: _currentStepIndex,
                 min: 0,
                 max: 20,
@@ -573,7 +602,7 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
                 onChanged: (value) => setState(() => _currentStepIndex = value),
               ),
               _ProgressStepper(
-                label: 'Blue bans',
+                label: AppLocalizations.of(context).translate('bpBlueBans'),
                 value: _blueBanCount,
                 min: 0,
                 max: 5,
@@ -582,7 +611,7 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
                 onChanged: (value) => setState(() => _blueBanCount = value),
               ),
               _ProgressStepper(
-                label: 'Red bans',
+                label: AppLocalizations.of(context).translate('bpRedBans'),
                 value: _redBanCount,
                 min: 0,
                 max: 5,
@@ -591,7 +620,7 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
                 onChanged: (value) => setState(() => _redBanCount = value),
               ),
               _ProgressStepper(
-                label: 'Blue picks',
+                label: AppLocalizations.of(context).translate('bpBluePicks'),
                 value: _bluePickCount,
                 min: 0,
                 max: 5,
@@ -600,7 +629,7 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
                 onChanged: (value) => setState(() => _bluePickCount = value),
               ),
               _ProgressStepper(
-                label: 'Red picks',
+                label: AppLocalizations.of(context).translate('bpRedPicks'),
                 value: _redPickCount,
                 min: 0,
                 max: 5,
@@ -614,14 +643,20 @@ class _BpDraftProgressSheetState extends State<_BpDraftProgressSheet> {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: Text(
+                        AppLocalizations.of(context).translate('commonCancel'),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
                       onPressed: _submit,
-                      child: const Text('Save Progress'),
+                      child: Text(
+                        AppLocalizations.of(
+                          context,
+                        ).translate('bpSaveProgress'),
+                      ),
                     ),
                   ),
                 ],
@@ -1659,12 +1694,13 @@ class _BpEditorTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SizedBox(
       height: 82,
       child: Row(
         children: [
           IconButton.filledTonal(
-            tooltip: 'Exit BP editor',
+            tooltip: l10n.back,
             onPressed: onBack,
             icon: const Icon(Icons.logout_rounded),
           ),
@@ -1755,7 +1791,7 @@ class _BpEditorTopBar extends StatelessWidget {
             ),
           ),
           IconButton.filledTonal(
-            tooltip: 'Save BP draft',
+            tooltip: l10n.translate('bpSaveProgress'),
             onPressed: isSaving ? null : onSave,
             icon: const Icon(Icons.save_outlined),
           ),
@@ -1786,6 +1822,7 @@ class _BpBanSlots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1881,6 +1918,7 @@ class _BpLaneBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SizedBox(
       height: 42,
       child: Stack(
@@ -1940,7 +1978,7 @@ class _BpLaneBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  tooltip: 'Show banned heroes',
+                  tooltip: l10n.translate('bpBlueBans'),
                   onPressed: onToggleBanned,
                   icon: Icon(
                     showBanned ? Icons.block_rounded : Icons.block_outlined,
@@ -1951,7 +1989,7 @@ class _BpLaneBar extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Show picked heroes',
+                  tooltip: l10n.translate('bpBluePicks'),
                   onPressed: onTogglePicked,
                   icon: Icon(
                     showPicked
@@ -2106,11 +2144,12 @@ class _BpFlowControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isHistoryMode) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton.filledTonal(
-          tooltip: 'Undo',
+          tooltip: l10n.translate('commonUndo'),
           onPressed: canUndo && !isSaved ? onUndo : null,
           icon: const Icon(Icons.undo_rounded, size: 18),
         ),
@@ -2133,7 +2172,7 @@ class _BpFlowControls extends StatelessWidget {
           FilledButton.icon(
             onPressed: onStart,
             icon: const Icon(Icons.play_arrow_rounded, size: 17),
-            label: const Text('开始 BP'),
+            label: Text(AppLocalizations.of(context).translate('bpStart')),
           )
         else if (!isFinished)
           FilledButton.icon(
@@ -2144,8 +2183,8 @@ class _BpFlowControls extends StatelessWidget {
             icon: const Icon(Icons.lock_rounded, size: 17),
             label: Text(
               currentStep?.type == _BpSlotType.ban && selectedHeroId == null
-                  ? '跳过禁用'
-                  : '锁定',
+                  ? l10n.translate('bpSkipBan')
+                  : l10n.translate('bpLockIn'),
             ),
           )
         else if (!isSaved)
@@ -2166,7 +2205,11 @@ class _BpFlowControls extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  '${blueTeamName.isEmpty ? 'Team A' : blueTeamName} wins',
+                  l10n.format('bpWins', {
+                    'team': blueTeamName.isEmpty
+                        ? l10n.translate('bpBlueSide')
+                        : blueTeamName,
+                  }),
                 ),
               ),
               const SizedBox(width: 6),
@@ -2184,14 +2227,20 @@ class _BpFlowControls extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  '${redTeamName.isEmpty ? 'Team B' : redTeamName} wins',
+                  l10n.format('bpWins', {
+                    'team': redTeamName.isEmpty
+                        ? l10n.translate('bpRedSide')
+                        : redTeamName,
+                  }),
                 ),
               ),
               const SizedBox(width: 6),
               FilledButton.icon(
                 onPressed: gameWinner == null ? null : onCompleteGame,
                 icon: const Icon(Icons.save_rounded, size: 17),
-                label: const Text('完成 BP'),
+                label: Text(
+                  AppLocalizations.of(context).translate('bpComplete'),
+                ),
               ),
             ],
           )
@@ -2199,7 +2248,7 @@ class _BpFlowControls extends StatelessWidget {
           FilledButton.icon(
             onPressed: isAdvancing ? null : onNextGame,
             icon: const Icon(Icons.emoji_events_outlined, size: 17),
-            label: const Text('结束系列赛'),
+            label: Text(AppLocalizations.of(context).translate('bpEndSeries')),
           )
         else
           Row(
@@ -2207,7 +2256,7 @@ class _BpFlowControls extends StatelessWidget {
             children: [
               if (sideSelectionRule == 'loser_selects') ...[
                 Text(
-                  '${loserTeamName.isEmpty ? '败方' : loserTeamName} 选边',
+                  '${loserTeamName.isEmpty ? l10n.translate('bpLoserSelects') : loserTeamName} · ${l10n.translate('bpLoserSelects')}',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,
@@ -2216,7 +2265,7 @@ class _BpFlowControls extends StatelessWidget {
                 ),
                 const SizedBox(width: 5),
                 IconButton.filledTonal(
-                  tooltip: 'Loser chooses blue side',
+                  tooltip: l10n.translate('bpBlueSide'),
                   onPressed: () => onNextGameLoserSide(_BpSide.blue),
                   icon: Icon(
                     Icons.circle,
@@ -2227,7 +2276,7 @@ class _BpFlowControls extends StatelessWidget {
                   ),
                 ),
                 IconButton.filledTonal(
-                  tooltip: 'Loser chooses red side',
+                  tooltip: l10n.translate('bpRedSide'),
                   onPressed: () => onNextGameLoserSide(_BpSide.red),
                   icon: Icon(
                     Icons.circle,
@@ -2242,19 +2291,23 @@ class _BpFlowControls extends StatelessWidget {
               FilledButton.icon(
                 onPressed: isAdvancing ? null : onNextGame,
                 icon: const Icon(Icons.skip_next_rounded, size: 17),
-                label: Text(isAdvancing ? '保存中' : '下一局'),
+                label: Text(
+                  isAdvancing
+                      ? l10n.translate('bpSaving')
+                      : l10n.translate('bpNextGame'),
+                ),
               ),
             ],
           ),
         const SizedBox(width: 8),
         IconButton.filledTonal(
-          tooltip: 'Redo',
+          tooltip: l10n.translate('commonRedo'),
           onPressed: canRedo && !isSaved ? onRedo : null,
           icon: const Icon(Icons.redo_rounded, size: 18),
         ),
         const SizedBox(width: 8),
         IconButton.filledTonal(
-          tooltip: 'Reset BP flow',
+          tooltip: l10n.translate('commonReset'),
           onPressed: onReset,
           icon: const Icon(Icons.restart_alt_rounded, size: 18),
         ),
@@ -2322,6 +2375,7 @@ class _BpSlotState extends State<_BpSlot> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final slot = Container(
       width: widget.size,
       height: widget.size,
@@ -2476,6 +2530,7 @@ class _CurrentBpBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: context.hokTheme.surfaceRaised,
@@ -2488,7 +2543,7 @@ class _CurrentBpBoard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Current BP Board',
+              l10n.translate('bpCurrentBoard'),
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
@@ -2496,22 +2551,22 @@ class _CurrentBpBoard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _BpHeroSlotGroup(
-              title: 'Blue ban slots',
+              title: l10n.translate('bpBlueBans'),
               heroIds: scheme.blueBanHeroIds,
               color: Colors.blueAccent,
             ),
             _BpHeroSlotGroup(
-              title: 'Red ban slots',
+              title: l10n.translate('bpRedBans'),
               heroIds: scheme.redBanHeroIds,
               color: Colors.redAccent,
             ),
             _BpHeroSlotGroup(
-              title: 'Blue pick slots',
+              title: l10n.translate('bpBluePicks'),
               heroIds: scheme.bluePickHeroIds,
               color: Colors.lightBlueAccent,
             ),
             _BpHeroSlotGroup(
-              title: 'Red pick slots',
+              title: l10n.translate('bpRedPicks'),
               heroIds: scheme.redPickHeroIds,
               color: Colors.deepOrangeAccent,
             ),

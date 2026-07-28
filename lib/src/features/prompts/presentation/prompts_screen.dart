@@ -6,12 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_share_sheet.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/prompts_repository.dart';
@@ -44,18 +45,20 @@ final promptListQueryProvider =
           );
     });
 
-extension PromptListActionLabel on PromptListAction {
-  String get label => switch (this) {
-    PromptListAction.explore => 'Explore',
-    PromptListAction.myPrompts => 'My Prompts',
-    PromptListAction.favorites => 'Favorites',
+String _promptActionLabel(BuildContext context, PromptListAction action) {
+  final l10n = AppLocalizations.of(context);
+  return switch (action) {
+    PromptListAction.explore => l10n.translate('promptExplore'),
+    PromptListAction.myPrompts => l10n.translate('promptMine'),
+    PromptListAction.favorites => l10n.translate('commonFavorites'),
   };
 }
 
-extension PromptListSortLabel on PromptListSort {
-  String get label => switch (this) {
-    PromptListSort.hot => 'Hot',
-    PromptListSort.latest => 'Latest',
+String _promptSortLabel(BuildContext context, PromptListSort sort) {
+  final l10n = AppLocalizations.of(context);
+  return switch (sort) {
+    PromptListSort.hot => l10n.translate('promptHot'),
+    PromptListSort.latest => l10n.translate('commonLatest'),
   };
 }
 
@@ -107,14 +110,22 @@ class PromptsScreen extends ConsumerStatefulWidget {
 }
 
 class _PromptsScreenState extends ConsumerState<PromptsScreen> {
+  static const _promptsPageSize = 30;
+
   late PromptListAction _action;
   late final TextEditingController _searchController;
   final _createdPrompts = <PromptSummary>[];
   final _updatedPrompts = <String, PromptSummary>{};
   final _deletedPromptIds = <String>{};
+  final _appendedPrompts = <PromptSummary>[];
   List<PromptSummary>? _lastResolvedPrompts;
   String _search = '';
   PromptListSort _sort = PromptListSort.hot;
+  PromptListQuery? _pagedQuery;
+  var _loadedPages = 1;
+  int? _promptsTotal;
+  var _lastPageFull = true;
+  var _loadingMore = false;
 
   @override
   void initState() {
@@ -131,6 +142,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isAuthenticated =
         ref.watch(authControllerProvider).valueOrNull != null;
     final activeAction = isAuthenticated ? _action : PromptListAction.explore;
@@ -139,6 +151,14 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       search: _search,
       sort: _sort,
     );
+    if (_pagedQuery != query) {
+      // 查询条件变化时重置分页累积（build 内直接赋值，随本帧渲染生效）。
+      _pagedQuery = query;
+      _appendedPrompts.clear();
+      _loadedPages = 1;
+      _promptsTotal = null;
+      _lastPageFull = true;
+    }
     final promptsValue = ref.watch(promptListQueryProvider(query));
     final freshPrompts = promptsValue.valueOrNull;
     if (freshPrompts != null) {
@@ -153,10 +173,28 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
         retry: () => ref.invalidate(promptListQueryProvider(query)),
         data: (prompts) {
           final visiblePrompts = _visiblePrompts(
-            _mergePromptChanges([..._createdPrompts, ...prompts]),
+            _mergePromptChanges([
+              ..._createdPrompts,
+              ...prompts,
+              ..._appendedPrompts,
+            ]),
           );
+          final loadedCount = prompts.length + _appendedPrompts.length;
+          final hasMorePrompts = _promptsTotal != null
+              ? loadedCount < _promptsTotal!
+              : (_appendedPrompts.isEmpty
+                    ? prompts.length >= _promptsPageSize
+                    : _lastPageFull);
           return RefreshIndicator(
-            onRefresh: () => ref.refresh(promptListQueryProvider(query).future),
+            onRefresh: () {
+              setState(() {
+                _appendedPrompts.clear();
+                _loadedPages = 1;
+                _promptsTotal = null;
+                _lastPageFull = true;
+              });
+              return ref.refresh(promptListQueryProvider(query).future);
+            },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -179,12 +217,12 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                               _openCreateSheet(context);
                             },
                             icon: const Icon(Icons.add),
-                            label: const Text('Create'),
+                            label: Text(l10n.translate('commonCreate')),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Explore public AI prompt templates from the community.',
+                          l10n.toolSubtitle('/tools/prompts'),
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: context.hokTheme.onSurfaceMuted,
@@ -199,7 +237,9 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                                   .map(
                                     (action) => ButtonSegment(
                                       value: action,
-                                      label: Text(action.label),
+                                      label: Text(
+                                        _promptActionLabel(context, action),
+                                      ),
                                     ),
                                   )
                                   .toList(growable: false),
@@ -215,7 +255,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                           controller: _searchController,
                           textInputAction: TextInputAction.search,
                           decoration: InputDecoration(
-                            labelText: 'Search prompts',
+                            labelText: l10n.translate('promptSearch'),
                             prefixIcon: const Icon(Icons.search),
                             suffixIcon: _search.isEmpty
                                 ? null
@@ -225,7 +265,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                                       setState(() => _search = '');
                                     },
                                     icon: const Icon(Icons.close),
-                                    tooltip: 'Clear search',
+                                    tooltip: l10n.close,
                                   ),
                           ),
                           onChanged: (value) {
@@ -245,7 +285,9 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                                           ? Icons.local_fire_department_outlined
                                           : Icons.schedule,
                                     ),
-                                    label: Text(sort.label),
+                                    label: Text(
+                                      _promptSortLabel(context, sort),
+                                    ),
                                   ),
                                 )
                                 .toList(growable: false),
@@ -260,12 +302,12 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                   ),
                 ),
                 if (visiblePrompts.isEmpty)
-                  const SliverFillRemaining(
+                  SliverFillRemaining(
                     hasScrollBody: false,
                     child: AppEmptyState(
                       icon: Icons.auto_awesome_outlined,
-                      title: 'No prompts found',
-                      message: 'Pull to refresh and try again.',
+                      title: AppLocalizations.of(context).noData,
+                      message: AppLocalizations.of(context).serviceSlow,
                     ),
                   )
                 else
@@ -301,12 +343,62 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
                           const SizedBox(height: 12),
                     ),
                   ),
+                if (visiblePrompts.isNotEmpty &&
+                    (hasMorePrompts || visiblePrompts.length > 10))
+                  SliverToBoxAdapter(
+                    child: AppListFooter(
+                      hasMore: hasMorePrompts,
+                      loading: _loadingMore,
+                      onLoadMore: () => _loadMorePrompts(query),
+                    ),
+                  ),
               ],
             ),
           );
         },
       ),
     );
+  }
+
+  Future<void> _loadMorePrompts(PromptListQuery query) async {
+    if (_loadingMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final nextPage = _loadedPages + 1;
+      final result = await ref
+          .read(promptsRepositoryProvider)
+          .loadPromptPage(
+            action: query.action,
+            search: query.search,
+            sort: query.sort,
+            page: nextPage,
+            pageSize: _promptsPageSize,
+          );
+      if (!mounted || _pagedQuery != query) {
+        return;
+      }
+      setState(() {
+        _loadedPages = nextPage;
+        _appendedPrompts.addAll(result.prompts);
+        _promptsTotal = result.total ?? _promptsTotal;
+        _lastPageFull = result.prompts.length >= _promptsPageSize;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to load more prompts')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingMore = false);
+      }
+    }
   }
 
   List<PromptSummary> _visiblePrompts(List<PromptSummary> prompts) {
@@ -407,16 +499,22 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete prompt?'),
+        title: Text(
+          AppLocalizations.of(dialogContext).translate('promptDeleteTitle'),
+        ),
         content: Text('Delete "${prompt.title}" from your prompt library.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(
+              AppLocalizations.of(dialogContext).translate('commonCancel'),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete'),
+            child: Text(
+              AppLocalizations.of(dialogContext).translate('commonDelete'),
+            ),
           ),
         ],
       ),
@@ -581,7 +679,7 @@ class _PromptGenerationSheetState
                         ? null
                         : () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
-                    tooltip: 'Close',
+                    tooltip: AppLocalizations.of(context).close,
                   ),
                 ],
               ),
@@ -607,16 +705,24 @@ class _PromptGenerationSheetState
                       ),
                       const SizedBox(height: 12),
                       SegmentedButton<_PromptGenerationMode>(
-                        segments: const [
+                        segments: [
                           ButtonSegment(
                             value: _PromptGenerationMode.text,
-                            icon: Icon(Icons.text_fields),
-                            label: Text('Text to image'),
+                            icon: const Icon(Icons.text_fields),
+                            label: Text(
+                              AppLocalizations.of(
+                                context,
+                              ).translate('promptTextToImage'),
+                            ),
                           ),
                           ButtonSegment(
                             value: _PromptGenerationMode.image,
-                            icon: Icon(Icons.layers_outlined),
-                            label: Text('Image to image'),
+                            icon: const Icon(Icons.layers_outlined),
+                            label: Text(
+                              AppLocalizations.of(
+                                context,
+                              ).translate('promptImageToImage'),
+                            ),
                           ),
                         ],
                         selected: {_mode},
@@ -631,8 +737,10 @@ class _PromptGenerationSheetState
                         controller: _contentController,
                         minLines: 4,
                         maxLines: 6,
-                        decoration: const InputDecoration(
-                          labelText: 'Prompt content',
+                        decoration: InputDecoration(
+                          labelText: AppLocalizations.of(
+                            context,
+                          ).translate('promptContent'),
                           alignLabelWithHint: true,
                         ),
                       ),
@@ -640,10 +748,12 @@ class _PromptGenerationSheetState
                         const SizedBox(height: 12),
                         TextField(
                           controller: _sourceImageController,
-                          decoration: const InputDecoration(
-                            labelText: 'Source image URL',
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(
+                              context,
+                            ).translate('promptSourceImageUrl'),
                             hintText: 'https://example.com/source.png',
-                            prefixIcon: Icon(Icons.image_search_outlined),
+                            prefixIcon: const Icon(Icons.image_search_outlined),
                           ),
                           keyboardType: TextInputType.url,
                           textInputAction: TextInputAction.done,
@@ -665,7 +775,11 @@ class _PromptGenerationSheetState
                                   ),
                                 )
                               : const Icon(Icons.auto_awesome),
-                          label: const Text('Generate image'),
+                          label: Text(
+                            AppLocalizations.of(
+                              context,
+                            ).translate('promptGenerate'),
+                          ),
                         ),
                       ),
                       SizedBox(height: 14),
@@ -745,7 +859,11 @@ class _PromptGenerationSheetState
                                             ),
                                           )
                                         : const Icon(Icons.image, size: 16),
-                                    label: const Text('Set cover'),
+                                    label: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      ).translate('promptSetCover'),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -883,7 +1001,9 @@ class _QuotaPanel extends StatelessWidget {
             TextButton.icon(
               onPressed: onRecharge,
               icon: const Icon(Icons.credit_card, size: 16),
-              label: const Text('Recharge'),
+              label: Text(
+                AppLocalizations.of(context).translate('promptRecharge'),
+              ),
             ),
           ],
         ),
@@ -941,7 +1061,7 @@ class _PromptRechargeSheetState extends ConsumerState<_PromptRechargeSheet> {
                 IconButton(
                   onPressed: _submitting ? null : () => Navigator.pop(context),
                   icon: const Icon(Icons.close),
-                  tooltip: 'Close',
+                  tooltip: AppLocalizations.of(context).close,
                 ),
               ],
             ),
@@ -1001,7 +1121,9 @@ class _PromptRechargeSheetState extends ConsumerState<_PromptRechargeSheet> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.lock_open),
-                label: const Text('Pay'),
+                label: Text(
+                  AppLocalizations.of(context).translate('promptPay'),
+                ),
               ),
             ),
           ],
@@ -1198,6 +1320,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final isEditing = widget.prompt != null;
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
@@ -1212,7 +1335,9 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        isEditing ? 'Edit prompt' : 'Create prompt',
+                        isEditing
+                            ? l10n.translate('promptEdit')
+                            : l10n.translate('promptCreate'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: context.hokTheme.onSurfaceStrong,
                           fontWeight: FontWeight.w900,
@@ -1224,14 +1349,16 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                           ? null
                           : () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
-                      tooltip: 'Close',
+                      tooltip: AppLocalizations.of(context).close,
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'Title'),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('promptTitle'),
+                  ),
                   textInputAction: TextInputAction.next,
                   validator: (value) {
                     final text = value?.trim() ?? '';
@@ -1241,8 +1368,8 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _contentController,
-                  decoration: const InputDecoration(
-                    labelText: 'Prompt content',
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('promptContent'),
                     alignLabelWithHint: true,
                   ),
                   minLines: 4,
@@ -1255,9 +1382,9 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<_PromptLanguage>(
                   initialValue: _language,
-                  decoration: const InputDecoration(
-                    labelText: 'Prompt language',
-                    prefixIcon: Icon(Icons.language_outlined),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('promptLanguage'),
+                    prefixIcon: const Icon(Icons.language_outlined),
                   ),
                   items: _PromptLanguage.values
                       .map(
@@ -1295,7 +1422,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                   builder: (context, constraints) {
                     final isWide = constraints.maxWidth >= 520;
                     final sourcePicker = _PromptImagePicker(
-                      label: 'Source image',
+                      label: l10n.translate('promptOriginal'),
                       localFile: _sourceImageFile,
                       imageUrl: _sourceImageUrl,
                       enabled: !_submitting,
@@ -1306,7 +1433,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                       }),
                     );
                     final effectPicker = _PromptImagePicker(
-                      label: 'Result image',
+                      label: l10n.translate('promptResult'),
                       localFile: _effectImageFile,
                       imageUrl: _effectImageUrl,
                       enabled: !_submitting,
@@ -1339,7 +1466,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                   onChanged: _submitting
                       ? null
                       : (value) => setState(() => _isPublic = value),
-                  title: const Text('Public'),
+                  title: Text(l10n.translate('promptPublic')),
                   subtitle: const Text('Visible in Explore after publishing'),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -1354,7 +1481,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.save_outlined),
-                    label: const Text('Save prompt'),
+                    label: Text(l10n.translate('promptSave')),
                   ),
                 ),
               ],
@@ -1472,7 +1599,7 @@ class _PromptTagsEditor extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Tags (optional)',
+          AppLocalizations.of(context).translate('promptTags'),
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: context.hokTheme.onSurfaceStrong,
             fontWeight: FontWeight.w800,
@@ -1511,9 +1638,13 @@ class _PromptTagsEditor extends StatelessWidget {
                 enabled: enabled,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _addCustomTag(),
-                decoration: const InputDecoration(
-                  labelText: 'Custom tag',
-                  hintText: 'Add a tag',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(
+                    context,
+                  ).translate('promptCustomTag'),
+                  hintText: AppLocalizations.of(
+                    context,
+                  ).translate('promptAddTag'),
                 ),
               ),
             ),
@@ -1521,7 +1652,7 @@ class _PromptTagsEditor extends StatelessWidget {
             IconButton.filledTonal(
               onPressed: enabled ? _addCustomTag : null,
               icon: const Icon(Icons.add),
-              tooltip: 'Add tag',
+              tooltip: AppLocalizations.of(context).translate('promptAddTag'),
             ),
           ],
         ),
@@ -1846,7 +1977,9 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                           const SizedBox(width: 4),
                           _PromptIconAction(
                             icon: Icons.ios_share_outlined,
-                            tooltip: 'Share',
+                            tooltip: AppLocalizations.of(
+                              context,
+                            ).translate('commonShare'),
                             onPressed: () => _sharePrompt(context),
                           ),
                         ],
@@ -1920,18 +2053,32 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
                     if (prompt.content.isNotEmpty)
                       _PromptIconAction(
                         icon: Icons.copy_outlined,
-                        tooltip: 'Copy',
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).translate('promptCopy'),
                         onPressed: () => _copyPrompt(context),
                       ),
                     if (widget.canManage) ...[
+                      if (widget.onGenerate != null)
+                        _PromptIconAction(
+                          icon: Icons.auto_awesome_outlined,
+                          tooltip: AppLocalizations.of(
+                            context,
+                          ).translate('promptGenerate'),
+                          onPressed: widget.onGenerate,
+                        ),
                       _PromptIconAction(
                         icon: Icons.edit_outlined,
-                        tooltip: 'Edit',
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).translate('commonEdit'),
                         onPressed: widget.onEdit,
                       ),
                       _PromptIconAction(
                         icon: Icons.delete_outline,
-                        tooltip: 'Delete',
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).translate('commonDelete'),
                         color: AppTheme.error,
                         onPressed: widget.onDelete,
                       ),
@@ -2101,12 +2248,14 @@ class _PromptViewerDialog extends StatelessWidget {
                     TextButton.icon(
                       onPressed: () => _copyPrompt(context),
                       icon: const Icon(Icons.copy_outlined, size: 19),
-                      label: const Text('Copy'),
+                      label: Text(
+                        AppLocalizations.of(context).translate('promptCopy'),
+                      ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
-                      tooltip: 'Close',
+                      tooltip: AppLocalizations.of(context).close,
                     ),
                   ],
                 ),
@@ -2294,7 +2443,7 @@ class _PromptFullscreenImage extends StatelessWidget {
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.close),
-          tooltip: 'Close full screen image',
+          tooltip: AppLocalizations.of(context).close,
         ),
       ),
       body: Center(

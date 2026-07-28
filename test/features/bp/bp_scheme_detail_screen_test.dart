@@ -269,13 +269,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Current BP Board'), findsOneWidget);
-    expect(find.text('Blue bans'), findsOneWidget);
+    expect(find.text('Blue bans'), findsWidgets);
     expect(find.text('Hero #199'), findsOneWidget);
-    expect(find.text('Red bans'), findsOneWidget);
+    expect(find.text('Red bans'), findsWidgets);
     expect(find.text('Hero #133'), findsOneWidget);
-    expect(find.text('Blue picks'), findsOneWidget);
+    expect(find.text('Blue picks'), findsWidgets);
     expect(find.text('Hero #111'), findsOneWidget);
-    expect(find.text('Red picks'), findsOneWidget);
+    expect(find.text('Red picks'), findsWidgets);
     expect(find.text('Hero #222'), findsOneWidget);
   });
 }

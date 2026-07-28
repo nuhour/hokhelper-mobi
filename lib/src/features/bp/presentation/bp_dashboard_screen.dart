@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
-import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../data/bp_repository.dart';
 import '../domain/bp_scheme_summary.dart';
 
@@ -27,21 +28,86 @@ class BpDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
+  static const _schemesPageSize = 20;
+
   List<BpSchemeSummary>? _localSchemes;
   var _isCreating = false;
+
+  // 第 2 页起追加的方案；第 1 页仍走既有 provider。
+  final List<BpSchemeSummary> _extraSchemes = [];
+  int _loadedPages = 1;
+  bool _loadingMore = false;
+  bool _reachedEnd = false;
+
+  void _resetPagination() {
+    _extraSchemes.clear();
+    _loadedPages = 1;
+    _loadingMore = false;
+    _reachedEnd = false;
+  }
+
+  // 本地增删以合并后的完整列表为基线，避免丢掉已追加的分页数据。
+  List<BpSchemeSummary> _mergedSchemes() {
+    final base =
+        _localSchemes ??
+        ref.read(bpSchemesProvider).valueOrNull ??
+        const <BpSchemeSummary>[];
+    final merged = [...base, ..._extraSchemes];
+    _extraSchemes.clear();
+    return merged;
+  }
+
+  Future<void> _loadMoreSchemes(int loadedCount) async {
+    if (_loadingMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final page = await ref
+          .read(bpRepositoryProvider)
+          .loadSchemesPage(page: _loadedPages + 1, pageSize: _schemesPageSize);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMore = false;
+        _loadedPages += 1;
+        _extraSchemes.addAll(page.schemes);
+        final total = page.total;
+        if (page.schemes.length < _schemesPageSize ||
+            (total != null && loadedCount + page.schemes.length >= total)) {
+          _reachedEnd = true;
+        }
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load more schemes')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(bpSchemesProvider);
+    final l10n = AppLocalizations.of(context);
 
     return AppAsyncView<List<BpSchemeSummary>>(
       value: value,
       retry: () => ref.invalidate(bpSchemesProvider),
       data: (schemes) {
-        final visibleSchemes = _localSchemes ?? schemes;
+        final visibleSchemes = [
+          ...(_localSchemes ?? schemes),
+          ..._extraSchemes,
+        ];
+        final hasMore = !_reachedEnd && schemes.length >= _schemesPageSize;
         return RefreshIndicator(
           onRefresh: () async {
             _localSchemes = null;
+            _resetPagination();
             await ref.refresh(bpSchemesProvider.future).then((_) {});
           },
           child: ListView(
@@ -53,12 +119,12 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
                 child: FilledButton.icon(
                   onPressed: _isCreating ? null : () => _openCreateSheet(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create BP'),
+                  label: Text(l10n.translate('bpCreate')),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Review saved pick/ban schemes and continue draft preparation.',
+                l10n.translate('bpDescription'),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: context.hokTheme.onSurfaceMuted,
                 ),
@@ -69,12 +135,11 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
                   height: 420,
                   child: AppEmptyState(
                     icon: Icons.account_tree_outlined,
-                    title: 'No BP schemes found',
-                    message:
-                        'Create schemes on the portal or sign in to sync drafts.',
+                    title: l10n.translate('bpEmpty'),
+                    message: l10n.translate('bpDescription'),
                   ),
                 )
-              else
+              else ...[
                 ...visibleSchemes.map(
                   (scheme) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -84,6 +149,13 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
                     ),
                   ),
                 ),
+                if (hasMore || visibleSchemes.length > 10)
+                  AppListFooter(
+                    hasMore: hasMore,
+                    loading: _loadingMore,
+                    onLoadMore: () => _loadMoreSchemes(visibleSchemes.length),
+                  ),
+              ],
             ],
           ),
         );
@@ -119,11 +191,7 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
         return;
       }
       setState(() {
-        final existing =
-            _localSchemes ??
-            ref.read(bpSchemesProvider).valueOrNull ??
-            const <BpSchemeSummary>[];
-        _localSchemes = [created, ...existing];
+        _localSchemes = [created, ..._mergedSchemes()];
         _isCreating = false;
       });
       final messenger = ScaffoldMessenger.of(context);
@@ -151,17 +219,18 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
+        final l10n = AppLocalizations.of(context);
         return AlertDialog(
-          title: const Text('Delete BP scheme?'),
+          title: Text(l10n.translate('bpDeleteTitle')),
           content: Text('Delete "${scheme.name}" from your BP schemes.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.translate('commonCancel')),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
+              child: Text(l10n.translate('commonDelete')),
             ),
           ],
         );
@@ -177,11 +246,7 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
         return;
       }
       setState(() {
-        final existing =
-            _localSchemes ??
-            ref.read(bpSchemesProvider).valueOrNull ??
-            const <BpSchemeSummary>[];
-        _localSchemes = existing
+        _localSchemes = _mergedSchemes()
             .where((item) => item.id != scheme.id)
             .toList(growable: false);
       });
@@ -254,6 +319,7 @@ class _BpCreateSheetState extends State<_BpCreateSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(20, 18, 20, bottom + 20),
@@ -265,7 +331,7 @@ class _BpCreateSheetState extends State<_BpCreateSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Create BP scheme',
+                  l10n.translate('bpCreate'),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: context.hokTheme.onSurfaceStrong,
                     fontWeight: FontWeight.w900,
@@ -274,19 +340,25 @@ class _BpCreateSheetState extends State<_BpCreateSheet> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Scheme name'),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('bpSchemeName'),
+                  ),
                   validator: (value) =>
                       (value ?? '').trim().isEmpty ? 'Enter a name' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _teamAController,
-                  decoration: const InputDecoration(labelText: 'Blue side'),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('bpBlueSide'),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _teamBController,
-                  decoration: const InputDecoration(labelText: 'Red side'),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('bpRedSide'),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 SegmentedButton<int>(
@@ -302,14 +374,14 @@ class _BpCreateSheetState extends State<_BpCreateSheet> {
                 ),
                 const SizedBox(height: 12),
                 SegmentedButton<String>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: 'loser_selects',
-                      label: Text('Loser selects'),
+                      label: Text(l10n.translate('bpLoserSelects')),
                     ),
                     ButtonSegment(
                       value: 'alternating',
-                      label: Text('Alternate'),
+                      label: Text(l10n.translate('bpAlternate')),
                     ),
                   ],
                   selected: {_sideSelectionRule},
@@ -323,14 +395,14 @@ class _BpCreateSheetState extends State<_BpCreateSheet> {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
+                        child: Text(l10n.translate('commonCancel')),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
                         onPressed: _submit,
-                        child: const Text('Create'),
+                        child: Text(l10n.translate('commonCreate')),
                       ),
                     ),
                   ],
@@ -426,7 +498,9 @@ class _BpSchemeCardState extends State<_BpSchemeCard> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Delete BP scheme',
+                      tooltip: AppLocalizations.of(
+                        context,
+                      ).translate('bpDeleteTitle'),
                       onPressed: widget.onDelete,
                       icon: const Icon(Icons.delete_outline, size: 17),
                       color: context.hokTheme.onSurfaceMuted,

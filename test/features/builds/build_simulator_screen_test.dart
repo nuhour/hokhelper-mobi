@@ -97,7 +97,8 @@ void main() {
 
       expect(find.text('Lam'), findsWidgets);
       expect(find.text('My Builds'), findsWidgets);
-      expect(find.text('BUILD 1'), findsOneWidget);
+      // 方案标题直接作为卡片头部展示，不再显示 "BUILD n" 占位标签。
+      expect(find.text('BUILD 1'), findsNothing);
       expect(find.text('My Lam build'), findsOneWidget);
       expect(find.text('Create Build 2'), findsOneWidget);
       await tester.drag(find.byType(ListView).first, const Offset(0, -720));
@@ -602,7 +603,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Like build'));
     await tester.tap(find.byTooltip('Favorite build'));
-    await tester.tap(find.byTooltip('Choose clone slot'));
+    await tester.tap(find.byTooltip('Clone'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save to Slot 1'));
     await tester.pumpAndSettle();

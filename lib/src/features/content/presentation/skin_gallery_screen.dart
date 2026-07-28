@@ -876,8 +876,6 @@ class _SkinDetailScreenState extends ConsumerState<SkinDetailScreen> {
           ),
           const SizedBox(height: 18),
         ],
-        const AppSectionHeader(title: 'Skin Detail'),
-        const SizedBox(height: 14),
         AppAsyncView<SkinDetail>(
           value: detailValue,
           retry: () => ref.invalidate(skinDetailProvider(widget.skinId)),

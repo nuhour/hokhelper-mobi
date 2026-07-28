@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
-import '../../../core/widgets/app_section_header.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../data/tierlist_tool_repository.dart';
 import '../domain/tierlist_scheme_summary.dart';
 
@@ -29,21 +30,86 @@ class TierListToolScreen extends ConsumerStatefulWidget {
 }
 
 class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
+  static const _schemesPageSize = 20;
+
   List<TierListSchemeSummary>? _localSchemes;
   var _isCreating = false;
+
+  // 第 2 页起追加的方案；第 1 页仍走既有 provider。
+  final List<TierListSchemeSummary> _extraSchemes = [];
+  int _loadedPages = 1;
+  bool _loadingMore = false;
+  bool _reachedEnd = false;
+
+  void _resetPagination() {
+    _extraSchemes.clear();
+    _loadedPages = 1;
+    _loadingMore = false;
+    _reachedEnd = false;
+  }
+
+  // 本地增删以合并后的完整列表为基线，避免丢掉已追加的分页数据。
+  List<TierListSchemeSummary> _mergedSchemes() {
+    final base =
+        _localSchemes ??
+        ref.read(tierListToolSchemesProvider).valueOrNull ??
+        const <TierListSchemeSummary>[];
+    final merged = [...base, ..._extraSchemes];
+    _extraSchemes.clear();
+    return merged;
+  }
+
+  Future<void> _loadMoreSchemes(int loadedCount) async {
+    if (_loadingMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final page = await ref
+          .read(tierListToolRepositoryProvider)
+          .loadSchemesPage(page: _loadedPages + 1, pageSize: _schemesPageSize);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingMore = false;
+        _loadedPages += 1;
+        _extraSchemes.addAll(page.schemes);
+        final total = page.total;
+        if (page.schemes.length < _schemesPageSize ||
+            (total != null && loadedCount + page.schemes.length >= total)) {
+          _reachedEnd = true;
+        }
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load more tier lists')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(tierListToolSchemesProvider);
+    final l10n = AppLocalizations.of(context);
 
     return AppAsyncView<List<TierListSchemeSummary>>(
       value: value,
       retry: () => ref.invalidate(tierListToolSchemesProvider),
       data: (schemes) {
-        final visibleSchemes = _localSchemes ?? schemes;
+        final visibleSchemes = [
+          ...(_localSchemes ?? schemes),
+          ..._extraSchemes,
+        ];
+        final hasMore = !_reachedEnd && schemes.length >= _schemesPageSize;
         return RefreshIndicator(
           onRefresh: () async {
             _localSchemes = null;
+            _resetPagination();
             await ref.refresh(tierListToolSchemesProvider.future).then((_) {});
           },
           child: ListView(
@@ -55,28 +121,27 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
                 child: FilledButton.icon(
                   onPressed: _isCreating ? null : () => _openCreateSheet(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create Tier List'),
+                  label: Text(l10n.translate('tierCreate')),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Review saved custom tier lists and hero placement rows.',
+                l10n.translate('tierDescription'),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: context.hokTheme.onSurfaceMuted,
                 ),
               ),
               const SizedBox(height: 18),
               if (visibleSchemes.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 420,
                   child: AppEmptyState(
                     icon: Icons.format_list_numbered_outlined,
-                    title: 'No tier lists found',
-                    message:
-                        'Create tier lists on the portal or sign in to sync them.',
+                    title: l10n.translate('tierEmpty'),
+                    message: l10n.translate('tierDescription'),
                   ),
                 )
-              else
+              else ...[
                 ...visibleSchemes.map(
                   (scheme) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -86,6 +151,13 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
                     ),
                   ),
                 ),
+                if (hasMore || visibleSchemes.length > 10)
+                  AppListFooter(
+                    hasMore: hasMore,
+                    loading: _loadingMore,
+                    onLoadMore: () => _loadMoreSchemes(visibleSchemes.length),
+                  ),
+              ],
             ],
           ),
         );
@@ -115,11 +187,7 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
         return;
       }
       setState(() {
-        final existing =
-            _localSchemes ??
-            ref.read(tierListToolSchemesProvider).valueOrNull ??
-            const <TierListSchemeSummary>[];
-        _localSchemes = [created, ...existing];
+        _localSchemes = [created, ..._mergedSchemes()];
         _isCreating = false;
       });
       final messenger = ScaffoldMessenger.of(context);
@@ -145,16 +213,22 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete tier list?'),
+        title: Text(
+          AppLocalizations.of(dialogContext).translate('tierDeleteTitle'),
+        ),
         content: Text('Delete "${scheme.name}" from your tier lists.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(
+              AppLocalizations.of(dialogContext).translate('commonCancel'),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete'),
+            child: Text(
+              AppLocalizations.of(dialogContext).translate('commonDelete'),
+            ),
           ),
         ],
       ),
@@ -168,11 +242,7 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
         return;
       }
       setState(() {
-        final existing =
-            _localSchemes ??
-            ref.read(tierListToolSchemesProvider).valueOrNull ??
-            const <TierListSchemeSummary>[];
-        _localSchemes = existing
+        _localSchemes = _mergedSchemes()
             .where((item) => item.id != scheme.id)
             .toList(growable: false);
       });
@@ -223,6 +293,7 @@ class _TierListCreateSheetState extends State<_TierListCreateSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(20, 18, 20, bottom + 20),
@@ -233,7 +304,7 @@ class _TierListCreateSheetState extends State<_TierListCreateSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Create tier list',
+                l10n.translate('tierCreate'),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w900,
@@ -242,7 +313,9 @@ class _TierListCreateSheetState extends State<_TierListCreateSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Tier list name'),
+                decoration: InputDecoration(
+                  labelText: l10n.translate('tierName'),
+                ),
                 validator: (value) =>
                     (value ?? '').trim().isEmpty ? 'Enter a name' : null,
               ),
@@ -252,14 +325,14 @@ class _TierListCreateSheetState extends State<_TierListCreateSheet> {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: Text(l10n.translate('commonCancel')),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
                       onPressed: _submit,
-                      child: const Text('Create'),
+                      child: Text(l10n.translate('commonCreate')),
                     ),
                   ),
                 ],
@@ -299,7 +372,7 @@ class _TierListSchemeCard extends StatelessWidget {
             border: Border.all(color: context.hokTheme.outlineSoft),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -308,55 +381,58 @@ class _TierListSchemeCard extends StatelessWidget {
                     const Icon(
                       Icons.format_list_numbered_outlined,
                       color: AppTheme.gold,
+                      size: 20,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        scheme.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: context.hokTheme.onSurfaceStrong,
-                              fontWeight: FontWeight.w900,
-                            ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            scheme.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: context.hokTheme.onSurfaceStrong,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                          Text(
+                            'Updated ${scheme.updatedDateText}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: context.hokTheme.onSurfaceMuted,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     _Badge(label: scheme.heroCountText, isPrimary: true),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Updated ${scheme.updatedDateText}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: context.hokTheme.onSurfaceMuted,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final row in scheme.rows.take(5))
-                      _Badge(label: '${row.label} · ${row.heroCount}'),
+                    IconButton(
+                      tooltip: AppLocalizations.of(
+                        context,
+                      ).translate('tierDeleteTitle'),
+                      onPressed: onDelete,
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
+                    ),
                   ],
                 ),
                 if (scheme.rows.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  _RowPreview(
-                    rows: scheme.rows.take(5).toList(growable: false),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: _RowPreview(
+                      rows: scheme.rows.take(5).toList(growable: false),
+                    ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('Delete'),
-                  ),
-                ),
               ],
             ),
           ),
@@ -399,6 +475,18 @@ class _RowPreview extends StatelessWidget {
                     value: row.heroCount <= 0 ? 0.04 : row.heroCount / 8,
                     color: tierListColor(row.label),
                     backgroundColor: Colors.white.withValues(alpha: 0.06),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 18,
+                child: Text(
+                  '${row.heroCount}',
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),

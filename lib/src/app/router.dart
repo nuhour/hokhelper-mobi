@@ -1108,7 +1108,9 @@ GoRouter createAppRouter() {
                     path: 'builds',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Explore Builds',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/builds'),
                       showAppBarInLandscape: true,
                       child: BuildExplorerScreen(
                         initialHeroId: int.tryParse(
@@ -1127,7 +1129,9 @@ GoRouter createAppRouter() {
                     },
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Build Simulator',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/build-sim'),
                       showAppBarInLandscape: true,
                       child: BuildSimulatorScreen(
                         initialHeroId: int.tryParse(
@@ -1154,7 +1158,9 @@ GoRouter createAppRouter() {
                     },
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'BP Simulator',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/bp-simulator'),
                       showAppBarInLandscape: true,
                       child: const BpDashboardScreen(),
                     ),
@@ -1172,7 +1178,9 @@ GoRouter createAppRouter() {
                         builder: (context, state) {
                           return _standalonePage(
                             fallbackRoute: '/tools/bp-simulator',
-                            title: 'BP Simulator',
+                            title: AppLocalizations.of(
+                              context,
+                            ).toolTitle('/tools/bp-simulator'),
                             child: BpSchemeDetailScreen(
                               schemeId: state.pathParameters['schemeId'] ?? '',
                               initialGameIndex: int.tryParse(
@@ -1197,7 +1205,9 @@ GoRouter createAppRouter() {
                     },
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Tier List Editor',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/tier-list'),
                       showAppBarInLandscape: true,
                       child: const TierListToolScreen(),
                     ),
@@ -1213,7 +1223,9 @@ GoRouter createAppRouter() {
                     path: 'game-assistant',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Game Assistant',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/game-assistant'),
                       showAppBarInLandscape: true,
                       child: GameAssistantScreen(
                         initialTrack: state.uri.queryParameters['track'],
@@ -1224,7 +1236,9 @@ GoRouter createAppRouter() {
                     path: 'rank-fortune',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Rank Fortune',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/rank-fortune'),
                       showAppBarInLandscape: true,
                       child: RankFortuneScreen(
                         initialDays: _rankFortuneDays(state.uri),
@@ -1235,7 +1249,9 @@ GoRouter createAppRouter() {
                     path: 'curiosity-lab',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Curiosity Lab',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/curiosity-lab'),
                       showAppBarInLandscape: true,
                       child: CuriosityLabScreen(
                         initialQuestion: state.uri.queryParameters['q'],
@@ -1246,7 +1262,9 @@ GoRouter createAppRouter() {
                     path: 'rankings',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Hero Rankings',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/rankings'),
                       showAppBarInLandscape: true,
                       child: HeroRankingScreen(
                         initialTabIndex: _rankingsTabIndex(state.uri),
@@ -1258,7 +1276,9 @@ GoRouter createAppRouter() {
                     path: 'leaderboard',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Leaderboard',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/leaderboard'),
                       showAppBarInLandscape: true,
                       child: PlayerLeaderboardScreen(
                         initialRankType: _playerLeaderboardRankType(state.uri),
@@ -1270,7 +1290,9 @@ GoRouter createAppRouter() {
                     path: 'team-builder',
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'Team Builder',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/team-builder'),
                       showAppBarInLandscape: true,
                       child: TeamBuilderScreen(
                         initialAllyHeroIds: _teamBuilderHeroIds(
@@ -1304,7 +1326,9 @@ GoRouter createAppRouter() {
                     },
                     builder: (context, state) => _standalonePage(
                       fallbackRoute: '/tools',
-                      title: 'AI Prompts',
+                      title: AppLocalizations.of(
+                        context,
+                      ).toolTitle('/tools/prompts'),
                       showAppBarInLandscape: true,
                       child: PromptsScreen(
                         initialAction: promptListActionFromRoute(

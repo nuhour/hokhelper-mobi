@@ -119,6 +119,7 @@ class StatsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     if (showPortalTabs) {
       return _StatsPortalTabs(
         key: ValueKey('stats-portal-${initialPortalTab ?? 'trends'}'),
@@ -143,27 +144,27 @@ class StatsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
             children: [
               if (showPageHeader) ...[
-                const AppSectionHeader(title: 'Stats Dashboard'),
+                AppSectionHeader(title: l10n.translate('statsDashboardTitle')),
                 const SizedBox(height: 8),
               ],
               Text(
-                'Hero, equipment, and combo trends from the HOK stats service.',
+                l10n.translate('statsDashboardDescription'),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: context.hokTheme.onSurfaceMuted,
                 ),
               ),
               const SizedBox(height: 18),
               if (dashboard.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 420,
                   child: AppEmptyState(
                     icon: Icons.query_stats_outlined,
-                    title: 'No stats found',
-                    message: 'Pull to refresh or switch region in settings.',
+                    title: l10n.noData,
+                    message: l10n.serviceSlow,
                   ),
                 )
               else ...[
-                ..._buildSections(dashboard),
+                ..._buildSections(context, dashboard),
                 if (_showsHeroDetail) ...[
                   const SizedBox(height: 18),
                   _HeroDetailSection(heroId: initialHeroId!),
@@ -182,10 +183,14 @@ class StatsScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildSections(StatsDashboard dashboard) {
+  List<Widget> _buildSections(BuildContext context, StatsDashboard dashboard) {
+    final l10n = AppLocalizations.of(context);
+    final heroTrendsTitle = l10n.translate('statsHeroTrends');
+    final equipmentTrendsTitle = l10n.translate('statsEquipmentTrends');
+    final playerRankingsTitle = l10n.translate('statsPlayerRankings');
     final sections = <_StatsSection>[
       _StatsSection(
-        title: 'Hero Trends',
+        title: heroTrendsTitle,
         icon: Icons.person_search_outlined,
         focusLabel: switch (initialEntry) {
           StatsEntry.homeCore => 'Focused home core stats',
@@ -198,7 +203,7 @@ class StatsScreen extends ConsumerWidget {
         ],
       ),
       _StatsSection(
-        title: 'Equipment Trends',
+        title: equipmentTrendsTitle,
         icon: Icons.inventory_2_outlined,
         focusLabel: initialEntry == StatsEntry.equipRank
             ? 'Focused equipment rank'
@@ -214,14 +219,14 @@ class StatsScreen extends ConsumerWidget {
         ],
       ),
       _StatsSection(
-        title: 'Hero Combos',
+        title: l10n.translate('statsHeroCombos'),
         icon: Icons.hub_outlined,
         children: [
           for (final combo in dashboard.combos) _ComboStatsCard(combo: combo),
         ],
       ),
       _StatsSection(
-        title: 'Player Rankings',
+        title: playerRankingsTitle,
         icon: Icons.emoji_events_outlined,
         focusLabel: initialEntry == StatsEntry.playerRank
             ? 'Focused player rank'
@@ -235,7 +240,7 @@ class StatsScreen extends ConsumerWidget {
 
     if (initialEntry == StatsEntry.equipRank) {
       final equipIndex = sections.indexWhere(
-        (section) => section.title == 'Equipment Trends',
+        (section) => section.title == equipmentTrendsTitle,
       );
       if (equipIndex > 0) {
         final equipSection = sections.removeAt(equipIndex);
@@ -244,7 +249,7 @@ class StatsScreen extends ConsumerWidget {
     }
     if (initialEntry == StatsEntry.playerRank) {
       final playerIndex = sections.indexWhere(
-        (section) => section.title == 'Player Rankings',
+        (section) => section.title == playerRankingsTitle,
       );
       if (playerIndex > 0) {
         final playerSection = sections.removeAt(playerIndex);

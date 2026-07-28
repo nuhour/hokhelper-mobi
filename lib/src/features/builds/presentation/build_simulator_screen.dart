@@ -3,16 +3,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_lane_icon.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_share_sheet.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../heroes/domain/hero_summary.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
+import '../data/builds_repository.dart';
 import '../domain/build_editor_asset.dart';
 import '../domain/build_scheme_summary.dart';
 import 'build_explorer_screen.dart';
@@ -190,10 +193,10 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
             children: [
               if (heroes.isEmpty)
-                const AppEmptyState(
+                AppEmptyState(
                   icon: Icons.person_search_outlined,
-                  title: 'No heroes available',
-                  message: 'Pull to refresh or switch region in settings.',
+                  title: AppLocalizations.of(context).noData,
+                  message: AppLocalizations.of(context).serviceSlow,
                 )
               else ...[
                 _HeroSelector(
@@ -361,8 +364,8 @@ class _HeroSelector extends StatelessWidget {
         onTap: onOpenPicker,
         borderRadius: BorderRadius.circular(24),
         child: Ink(
-          height: 214,
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          height: 132,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
             color: AppTheme.gold,
             borderRadius: BorderRadius.circular(24),
@@ -370,47 +373,60 @@ class _HeroSelector extends StatelessWidget {
           ),
           child: Row(
             children: [
-              AppImage(
-                url: selectedHero.avatar,
-                width: 112,
-                height: 112,
-                borderRadius: 999,
-                semanticLabel: selectedHero.name,
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    width: 2,
+                  ),
+                ),
+                child: AppImage(
+                  url: selectedHero.avatar,
+                  width: 76,
+                  height: 76,
+                  borderRadius: 999,
+                  semanticLabel: selectedHero.name,
+                ),
               ),
-              const SizedBox(width: 24),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       selectedHero.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       'Click to switch hero',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleMedium?.copyWith(color: Colors.white70),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               const CircleAvatar(
-                radius: 28,
+                radius: 20,
                 backgroundColor: Colors.white,
                 child: Icon(
                   Icons.chevron_right,
                   color: AppTheme.gold,
-                  size: 32,
+                  size: 24,
                 ),
               ),
             ],
@@ -490,7 +506,7 @@ class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
-                    tooltip: 'Close hero pool',
+                    tooltip: AppLocalizations.of(context).close,
                   ),
                 ],
               ),
@@ -498,9 +514,11 @@ class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
               TextField(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _search = value),
-                decoration: const InputDecoration(
-                  hintText: 'Search heroes',
-                  prefixIcon: Icon(Icons.search),
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(
+                    context,
+                  ).translate('buildSearchHeroes'),
+                  prefixIcon: const Icon(Icons.search),
                 ),
               ),
               const SizedBox(height: 12),
@@ -511,10 +529,10 @@ class _BuildHeroPoolSheetState extends State<_BuildHeroPoolSheet> {
               const SizedBox(height: 14),
               Expanded(
                 child: heroes.isEmpty
-                    ? const AppEmptyState(
+                    ? AppEmptyState(
                         icon: Icons.person_search_outlined,
-                        title: 'No matching heroes',
-                        message: 'Try a different lane or search term.',
+                        title: AppLocalizations.of(context).noData,
+                        message: AppLocalizations.of(context).serviceSlow,
                       )
                     : GridView.builder(
                         gridDelegate:
@@ -678,6 +696,7 @@ class _SlotsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -690,7 +709,7 @@ class _SlotsPanel extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Text(
-              'My Builds',
+              l10n.translate('buildMyBuilds'),
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
@@ -751,7 +770,10 @@ class _SlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = scheme?.title ?? 'Create Build $index';
+    final l10n = AppLocalizations.of(context);
+    final title =
+        scheme?.title ??
+        l10n.format('buildCreate', <String, String>{'index': '$index'});
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(20),
@@ -759,7 +781,7 @@ class _SlotCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          height: scheme == null ? 118 : 176,
+          height: scheme == null ? 118 : 142,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: context.hokTheme.surfaceSlate,
@@ -777,19 +799,21 @@ class _SlotCard extends StatelessWidget {
               if (scheme != null)
                 Row(
                   children: [
-                    Text(
-                      'BUILD $index',
-                      style: TextStyle(
-                        color: context.hokTheme.onSurfaceMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.hokTheme.onSurfaceStrong,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                    const Spacer(),
-                    Icon(
-                      scheme == null
-                          ? Icons.add_circle_outline
-                          : Icons.edit_outlined,
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.edit_outlined,
                       size: 17,
                       color: AppTheme.gold,
                     ),
@@ -832,7 +856,7 @@ class _SlotCard extends StatelessWidget {
                     ],
                   ),
                 )
-              else
+              else ...[
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -849,7 +873,6 @@ class _SlotCard extends StatelessWidget {
                       )
                       .toList(growable: false),
                 ),
-              if (scheme != null) ...[
                 const SizedBox(height: 6),
                 SizedBox(
                   height: 26,
@@ -860,17 +883,6 @@ class _SlotCard extends StatelessWidget {
                 ),
               ],
               const Spacer(),
-              if (scheme != null)
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.hokTheme.onSurfaceStrong,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
             ],
           ),
         ),
@@ -900,6 +912,7 @@ class _BuildCollectionTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       height: 74,
       padding: const EdgeInsets.all(8),
@@ -913,7 +926,7 @@ class _BuildCollectionTabs extends StatelessWidget {
           Expanded(
             child: _BuildCollectionTab(
               icon: Icons.person_outline,
-              label: 'My Builds',
+              label: l10n.translate('buildMyBuilds'),
               selected: selected == BuildSimCommunityFilter.explore,
               onTap: () => onSelected(BuildSimCommunityFilter.explore),
             ),
@@ -921,7 +934,7 @@ class _BuildCollectionTabs extends StatelessWidget {
           Expanded(
             child: _BuildCollectionTab(
               icon: Icons.star_border_rounded,
-              label: 'My Favorites',
+              label: l10n.translate('buildMyFavorites'),
               selected: selected == BuildSimCommunityFilter.favorites,
               onTap: () => onSelected(BuildSimCommunityFilter.favorites),
             ),
@@ -1017,6 +1030,8 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
   late List<int> _equipIds;
   late List<int> _runeIds;
   late Map<int, int> _runeLevels;
+  late int _equipSlotCount;
+  int? _equipTypeFilter;
   int? _summonerSkillId;
   _BuildEditorTab _activeTab = _BuildEditorTab.equipment;
   int _activeRuneColor = 1;
@@ -1035,6 +1050,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
     );
     _isPublic = scheme?.isPublic ?? false;
     _equipIds = [...(scheme?.equipmentIds ?? const [])];
+    _equipSlotCount = math.max(6, _equipIds.length);
     _runeIds = [...(scheme?.runeIds ?? const [])];
     _runeLevels = {for (final runeId in _runeIds) runeId: 5};
     _summonerSkillId = scheme?.summonerSkillId;
@@ -1109,9 +1125,14 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
         key: const ValueKey('equipment'),
         equips: catalog.equips,
         selectedIds: _equipIds,
+        slotCount: _equipSlotCount,
+        typeFilter: _equipTypeFilter,
         onToggle: _toggleEquip,
         onRemove: _removeEquip,
         onReorder: _reorderEquips,
+        onAddSlot: _addEquipSlot,
+        onTypeFilterChanged: (value) =>
+            setState(() => _equipTypeFilter = value),
         onCatalogTabSelected: _selectCatalogTab,
       ),
       _BuildEditorTab.arcana => _BuildArcanaWorkspace(
@@ -1141,10 +1162,16 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
     setState(() {
       if (_equipIds.contains(equipId)) {
         _equipIds = _equipIds.where((id) => id != equipId).toList();
-      } else if (_equipIds.length < 12) {
+      } else if (_equipIds.length < math.min(12, _equipSlotCount)) {
+        // 与 HOKX 一致：只有存在空槽位时才能加入新装备。
         _equipIds = [..._equipIds, equipId];
       }
     });
+  }
+
+  void _addEquipSlot() {
+    if (_equipSlotCount >= 12) return;
+    setState(() => _equipSlotCount++);
   }
 
   void _removeEquip(int equipId) {
@@ -1322,21 +1349,25 @@ class _BuildEditorToolbar extends StatelessWidget {
                         ),
                       IconButton(
                         onPressed: onClear,
-                        tooltip: 'Clear build',
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).translate('commonReset'),
                         icon: const Icon(Icons.delete_outline),
                         color: AppTheme.error,
                         visualDensity: VisualDensity.compact,
                       ),
                       IconButton(
                         onPressed: onClose,
-                        tooltip: 'Close editor',
+                        tooltip: AppLocalizations.of(context).close,
                         icon: const Icon(Icons.close),
                         visualDensity: VisualDensity.compact,
                       ),
                       if (!isTemporary)
                         IconButton(
                           onPressed: onSave,
-                          tooltip: 'Save build',
+                          tooltip: AppLocalizations.of(
+                            context,
+                          ).translate('buildSave'),
                           icon: saving
                               ? const SizedBox.square(
                                   dimension: 16,
@@ -1392,21 +1423,22 @@ class _BuildEditorTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const tabs = [
+    final l10n = AppLocalizations.of(context);
+    final tabs = [
       (
         tab: _BuildEditorTab.equipment,
         icon: Icons.flash_on_outlined,
-        label: 'Equipment',
+        label: l10n.translate('buildEquipment'),
       ),
       (
         tab: _BuildEditorTab.arcana,
         icon: Icons.hexagon_outlined,
-        label: 'Arcana',
+        label: l10n.translate('buildArcana'),
       ),
       (
         tab: _BuildEditorTab.skill,
         icon: Icons.auto_fix_high_outlined,
-        label: 'Spells',
+        label: l10n.translate('buildSpells'),
       ),
     ];
     return Container(
@@ -1479,29 +1511,40 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
     super.key,
     required this.equips,
     required this.selectedIds,
+    required this.slotCount,
+    required this.typeFilter,
     required this.onToggle,
     required this.onRemove,
     required this.onReorder,
+    required this.onAddSlot,
+    required this.onTypeFilterChanged,
     required this.onCatalogTabSelected,
   });
 
   final List<BuildEquipSummary> equips;
   final List<int> selectedIds;
+  final int slotCount;
+  final int? typeFilter;
   final ValueChanged<int> onToggle;
   final ValueChanged<int> onRemove;
   final void Function(int oldIndex, int newIndex) onReorder;
+  final VoidCallback onAddSlot;
+  final ValueChanged<int?> onTypeFilterChanged;
   final ValueChanged<_BuildCatalogTab> onCatalogTabSelected;
 
   @override
   Widget build(BuildContext context) {
     final equipById = {for (final equip in equips) equip.id: equip};
-    final compactViewport = MediaQuery.sizeOf(context).height < 700;
+    final visibleEquips = typeFilter == null
+        ? equips
+        : equips
+              .where((equip) => equip.category == '$typeFilter')
+              .toList(growable: false);
     return Column(
       children: [
         Container(
-          height: compactViewport ? 102 : 132,
           margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-          padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           decoration: BoxDecoration(
             color: context.hokTheme.surfaceSlate,
             borderRadius: BorderRadius.circular(22),
@@ -1510,6 +1553,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
             ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -1529,6 +1573,20 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  OutlinedButton(
+                    onPressed: slotCount >= 12 ? null : onAddSlot,
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      minimumSize: const Size(0, 28),
+                      textStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    child: const Text('+ Slot'),
+                  ),
+                  const SizedBox(width: 10),
                   Text(
                     '${selectedIds.length}/12',
                     style: TextStyle(
@@ -1540,69 +1598,85 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Expanded(
+              const SizedBox(height: 6),
+              // 槽位统一 48×48 且底对齐，填入/移除装备时其余槽位不发生位移。
+              SizedBox(
+                height: _BuildEquipmentSlots.itemHeight,
                 child: ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   buildDefaultDragHandles: false,
-                  itemCount: math.max(6, selectedIds.length),
+                  itemCount: math.max(slotCount, selectedIds.length),
                   onReorderItem: onReorder,
                   itemBuilder: (context, index) {
                     if (index >= selectedIds.length) {
-                      return Padding(
+                      return SizedBox(
                         key: ValueKey('empty-equipment-slot-$index'),
-                        padding: const EdgeInsets.only(right: 7),
-                        child: const _BuildEmptyEquipmentSlot(),
+                        width: _BuildEquipmentSlots.itemWidth,
+                        height: _BuildEquipmentSlots.itemHeight,
+                        child: const Align(
+                          alignment: Alignment.bottomLeft,
+                          child: _BuildEmptyEquipmentSlot(),
+                        ),
                       );
                     }
                     final equipId = selectedIds[index];
                     final equip = equipById[equipId];
-                    return Padding(
+                    return SizedBox(
                       key: ValueKey('selected-equip-$equipId'),
-                      padding: const EdgeInsets.only(right: 7),
+                      width: _BuildEquipmentSlots.itemWidth,
+                      height: _BuildEquipmentSlots.itemHeight,
+                      // 不包 Tooltip：长按手势要留给拖拽排序使用。
                       child: ReorderableDelayedDragStartListener(
                         index: index,
-                        child: Tooltip(
-                          message: equip?.name ?? 'Equipment $equipId',
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(4),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned(
+                              left: 0,
+                              bottom: 0,
+                              child: Container(
+                                width: _BuildEquipmentSlots.slotSize,
+                                height: _BuildEquipmentSlots.slotSize,
+                                padding: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
+                                  color: context.hokTheme.backgroundDeep
+                                      .withValues(alpha: 0.7),
                                   border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.14),
-                                    width: 2,
+                                    color: Colors.white.withValues(alpha: 0.16),
+                                    width: 1.4,
                                   ),
                                 ),
                                 child: AppImage(
                                   url: equip?.iconUrl,
-                                  width: 42,
-                                  height: 42,
                                   borderRadius: 999,
                                   semanticLabel: equip?.name,
                                 ),
                               ),
-                              Positioned(
-                                right: -5,
-                                top: -5,
-                                child: InkWell(
-                                  onTap: () => onRemove(equipId),
-                                  borderRadius: BorderRadius.circular(99),
-                                  child: const CircleAvatar(
-                                    radius: 9,
-                                    backgroundColor: AppTheme.error,
-                                    child: Icon(
-                                      Icons.close,
-                                      size: 12,
-                                      color: Colors.white,
-                                    ),
+                            ),
+                            Positioned(
+                              top: 0,
+                              left: _BuildEquipmentSlots.slotSize - 10,
+                              child: InkWell(
+                                onTap: () => onRemove(equipId),
+                                customBorder: const CircleBorder(),
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  alignment: Alignment.center,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppTheme.error,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 11,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -1616,13 +1690,16 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
           selected: _BuildCatalogTab.items,
           onSelected: onCatalogTabSelected,
         ),
-        if (!compactViewport) const _EquipmentFilterBar(),
+        _EquipmentFilterBar(
+          selected: typeFilter,
+          onChanged: onTypeFilterChanged,
+        ),
         Expanded(
-          child: equips.isEmpty
-              ? const AppEmptyState(
+          child: visibleEquips.isEmpty
+              ? AppEmptyState(
                   icon: Icons.inventory_2_outlined,
-                  title: 'No equipment available',
-                  message: 'Pull to refresh and try again.',
+                  title: AppLocalizations.of(context).noData,
+                  message: AppLocalizations.of(context).serviceSlow,
                 )
               : GridView.builder(
                   padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
@@ -1632,9 +1709,9 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                     mainAxisSpacing: 16,
                     childAspectRatio: 1,
                   ),
-                  itemCount: equips.length,
+                  itemCount: visibleEquips.length,
                   itemBuilder: (context, index) {
-                    final equip = equips[index];
+                    final equip = visibleEquips[index];
                     final selected = selectedIds.contains(equip.id);
                     return _BuildCatalogAsset(
                       label: equip.name,
@@ -1651,23 +1728,65 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
   }
 }
 
+// 装备槽尺寸常量：空槽与满槽保持一致，避免选中装备后槽位发生位移。
+abstract final class _BuildEquipmentSlots {
+  static const double slotSize = 48;
+  static const double itemWidth = 56;
+  static const double itemHeight = 52;
+}
+
 class _BuildEmptyEquipmentSlot extends StatelessWidget {
   const _BuildEmptyEquipmentSlot();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 52,
-      height: 52,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-        color: context.hokTheme.backgroundDeep,
+    return SizedBox(
+      width: _BuildEquipmentSlots.slotSize,
+      height: _BuildEquipmentSlots.slotSize,
+      child: CustomPaint(
+        painter: _DashedCirclePainter(
+          color: Colors.white.withValues(alpha: 0.22),
+        ),
+        child: Icon(
+          Icons.add,
+          size: 16,
+          color: context.hokTheme.onSurfaceMuted,
+        ),
       ),
-      child: Icon(Icons.add, size: 18, color: context.hokTheme.onSurfaceMuted),
     );
   }
+}
+
+class _DashedCirclePainter extends CustomPainter {
+  const _DashedCirclePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    final radius = (size.shortestSide - paint.strokeWidth) / 2;
+    final center = size.center(Offset.zero);
+    const dashCount = 12;
+    const step = 2 * math.pi / dashCount;
+    const sweep = step * 0.55;
+    for (var index = 0; index < dashCount; index++) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        index * step,
+        sweep,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _BuildCatalogTabs extends StatelessWidget {
@@ -1677,40 +1796,43 @@ class _BuildCatalogTabs extends StatelessWidget {
   final ValueChanged<_BuildCatalogTab> onSelected;
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 42,
-    margin: const EdgeInsets.only(top: 4),
-    decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      height: 42,
+      margin: const EdgeInsets.only(top: 4),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
       ),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: _CatalogTab(
-            label: 'ITEMS',
-            selected: selected == _BuildCatalogTab.items,
-            onTap: () => onSelected(_BuildCatalogTab.items),
+      child: Row(
+        children: [
+          Expanded(
+            child: _CatalogTab(
+              label: l10n.translate('buildItems').toUpperCase(),
+              selected: selected == _BuildCatalogTab.items,
+              onTap: () => onSelected(_BuildCatalogTab.items),
+            ),
           ),
-        ),
-        Expanded(
-          child: _CatalogTab(
-            label: 'ARCANA',
-            selected: selected == _BuildCatalogTab.arcana,
-            onTap: () => onSelected(_BuildCatalogTab.arcana),
+          Expanded(
+            child: _CatalogTab(
+              label: l10n.translate('buildArcana').toUpperCase(),
+              selected: selected == _BuildCatalogTab.arcana,
+              onTap: () => onSelected(_BuildCatalogTab.arcana),
+            ),
           ),
-        ),
-        Expanded(
-          child: _CatalogTab(
-            label: 'OVERVIEW',
-            selected: selected == _BuildCatalogTab.overview,
-            onTap: () => onSelected(_BuildCatalogTab.overview),
+          Expanded(
+            child: _CatalogTab(
+              label: l10n.translate('buildOverview').toUpperCase(),
+              selected: selected == _BuildCatalogTab.overview,
+              onTap: () => onSelected(_BuildCatalogTab.overview),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _CatalogTab extends StatelessWidget {
@@ -1748,47 +1870,78 @@ class _CatalogTab extends StatelessWidget {
 }
 
 class _EquipmentFilterBar extends StatelessWidget {
-  const _EquipmentFilterBar();
+  const _EquipmentFilterBar({required this.selected, required this.onChanged});
+
+  final int? selected;
+  final ValueChanged<int?> onChanged;
+
+  // HOKX equip_type 映射：物理 1 / 法术 2 / 防御 3 / 移动 4 / 打野 5 / 辅助 7。
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 46,
-    child: ListView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      children: const [
-        _EquipmentFilter(label: 'All', selected: true),
-        _EquipmentFilter(label: 'Attack'),
-        _EquipmentFilter(label: 'Magic'),
-        _EquipmentFilter(label: 'Defense'),
-        _EquipmentFilter(label: 'Move'),
-        _EquipmentFilter(label: 'Jungle'),
-        _EquipmentFilter(label: 'Support'),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final options = <({String label, int? value})>[
+      (label: l10n.translate('commonAll'), value: null),
+      (label: l10n.translate('buildAttack'), value: 1),
+      (label: l10n.translate('buildMagic'), value: 2),
+      (label: l10n.translate('buildDefense'), value: 3),
+      (label: l10n.translate('buildMove'), value: 4),
+      (label: l10n.translate('buildJungle'), value: 5),
+      (label: l10n.translate('buildSupport'), value: 7),
+    ];
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        children: [
+          for (final option in options)
+            _EquipmentFilter(
+              label: option.label,
+              selected: selected == option.value,
+              onTap: () => onChanged(option.value),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EquipmentFilter extends StatelessWidget {
-  const _EquipmentFilter({required this.label, this.selected = false});
+  const _EquipmentFilter({
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
+
   final String label;
   final bool selected;
+  final VoidCallback onTap;
+
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(right: 6),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: selected ? AppTheme.gold : context.hokTheme.backgroundDeep,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 6),
+    child: InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(999),
-      border: Border.all(
-        color: selected ? AppTheme.gold : Colors.white.withValues(alpha: 0.14),
-      ),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
-        fontWeight: FontWeight.w800,
-        fontSize: 11,
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.gold : context.hokTheme.backgroundDeep,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected
+                ? AppTheme.gold
+                : Colors.white.withValues(alpha: 0.14),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+          ),
+        ),
       ),
     ),
   );
@@ -1847,10 +2000,10 @@ class _BuildArcanaWorkspace extends StatelessWidget {
               ),
               Expanded(
                 child: colorRunes.isEmpty
-                    ? const AppEmptyState(
+                    ? AppEmptyState(
                         icon: Icons.hexagon_outlined,
-                        title: 'No arcana available',
-                        message: 'Pull to refresh and try again.',
+                        title: AppLocalizations.of(context).noData,
+                        message: AppLocalizations.of(context).serviceSlow,
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(12, 5, 12, 18),
@@ -2711,10 +2864,10 @@ class _BuildSkillWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (skills.isEmpty) {
-      return const AppEmptyState(
+      return AppEmptyState(
         icon: Icons.auto_fix_high_outlined,
-        title: 'No skills available',
-        message: 'Pull to refresh and try again.',
+        title: AppLocalizations.of(context).noData,
+        message: AppLocalizations.of(context).serviceSlow,
       );
     }
     return LayoutBuilder(
@@ -2757,7 +2910,6 @@ class _BuildCatalogAsset extends StatelessWidget {
     required this.imageUrl,
     required this.selected,
     required this.onTap,
-    this.accent = AppTheme.gold,
     this.showLabel = true,
   });
 
@@ -2765,7 +2917,6 @@ class _BuildCatalogAsset extends StatelessWidget {
   final String imageUrl;
   final bool selected;
   final VoidCallback onTap;
-  final Color accent;
   final bool showLabel;
 
   @override
@@ -2784,12 +2935,12 @@ class _BuildCatalogAsset extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: selected
-                      ? accent.withValues(alpha: 0.14)
+                      ? AppTheme.gold.withValues(alpha: 0.14)
                       : context.hokTheme.surfaceSlate,
                   border: Border.all(
                     width: selected ? 2 : 1,
                     color: selected
-                        ? accent
+                        ? AppTheme.gold
                         : Colors.white.withValues(alpha: 0.1),
                   ),
                 ),
@@ -2854,9 +3005,78 @@ class _CommunityBuilds extends ConsumerStatefulWidget {
 }
 
 class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
+  static const _schemePageSize = 20;
+
   String? _busyAction;
   bool _latestFirst = true;
   final Map<int, BuildSchemeSummary> _schemeOverrides = {};
+
+  // 第 1 页始终来自 provider；后续页在本地累积，provider 刷新/切换 tab 后重置。
+  List<BuildSchemeSummary>? _pageOne;
+  final List<BuildSchemeSummary> _extraSchemes = [];
+  int _loadedPages = 1;
+  bool _loadingMore = false;
+  bool? _hasMoreOverride;
+
+  void _syncWithPageOne(List<BuildSchemeSummary> schemes) {
+    if (identical(_pageOne, schemes)) {
+      return;
+    }
+    _pageOne = schemes;
+    _extraSchemes.clear();
+    _loadedPages = 1;
+    _loadingMore = false;
+    _hasMoreOverride = null;
+  }
+
+  Future<void> _loadMoreSchemes() async {
+    if (_loadingMore) {
+      return;
+    }
+    final pageOneAtRequest = _pageOne;
+    final filterAtRequest = widget.filter;
+    setState(() => _loadingMore = true);
+    try {
+      final repository = ref.read(buildsRepositoryProvider);
+      final BuildSchemePage next;
+      if (filterAtRequest == BuildSimCommunityFilter.favorites) {
+        next = await repository.loadFavoriteSchemesPage(
+          page: _loadedPages + 1,
+          pageSize: _schemePageSize,
+        );
+      } else {
+        final settings = await ref.read(appSettingsControllerProvider.future);
+        next = await repository.loadPublicSchemesPage(
+          settings.region.regionId,
+          page: _loadedPages + 1,
+          pageSize: _schemePageSize,
+        );
+      }
+      if (!mounted ||
+          !identical(pageOneAtRequest, _pageOne) ||
+          filterAtRequest != widget.filter) {
+        return;
+      }
+      setState(() {
+        _extraSchemes.addAll(next.schemes);
+        _loadedPages += 1;
+        _hasMoreOverride = next.hasMore && next.schemes.isNotEmpty;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted ||
+          !identical(pageOneAtRequest, _pageOne) ||
+          filterAtRequest != widget.filter) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Failed to load more builds')),
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2874,8 +3094,8 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
             Expanded(
               child: Text(
                 widget.filter == BuildSimCommunityFilter.favorites
-                    ? 'Favorite Builds'
-                    : 'Explore Builds',
+                    ? AppLocalizations.of(context).translate('buildFavorites')
+                    : AppLocalizations.of(context).translate('buildExplore'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -2892,7 +3112,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
             final sortButtons = [
               Expanded(
                 child: _ExploreSortButton(
-                  label: 'Latest',
+                  label: AppLocalizations.of(context).translate('commonLatest'),
                   icon: Icons.schedule_outlined,
                   selected: _latestFirst,
                   onTap: () => setState(() => _latestFirst = true),
@@ -2901,7 +3121,9 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
               SizedBox(width: 10),
               Expanded(
                 child: _ExploreSortButton(
-                  label: 'Popular',
+                  label: AppLocalizations.of(
+                    context,
+                  ).translate('commonPopular'),
                   icon: Icons.trending_up,
                   selected: !_latestFirst,
                   onTap: () => setState(() => _latestFirst = false),
@@ -2959,15 +3181,21 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
         const SizedBox(height: 22),
         widget.value.when(
           data: (schemes) {
+            _syncWithPageOne(schemes);
             if (schemes.isEmpty) {
-              return const AppEmptyState(
+              return AppEmptyState(
                 icon: Icons.construction_outlined,
-                title: 'No public builds',
-                message: 'Pull to refresh or switch region in settings.',
+                title: AppLocalizations.of(context).noData,
+                message: AppLocalizations.of(context).serviceSlow,
               );
             }
+            final allSchemes = _extraSchemes.isEmpty
+                ? schemes
+                : [...schemes, ..._extraSchemes];
+            final hasMore =
+                _hasMoreOverride ?? (schemes.length >= _schemePageSize);
             final visibleSchemes = _visibleSchemes(
-              schemes,
+              allSchemes,
             ).map((scheme) => _schemeOverrides[scheme.id] ?? scheme).toList();
             if (!_latestFirst) {
               visibleSchemes.sort(
@@ -2999,6 +3227,13 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
                   ),
                   const SizedBox(height: 18),
                 ],
+                // 短列表不渲染到底提示，避免噪音；可翻页时才挂加载页脚。
+                if (hasMore || visibleSchemes.length > 10)
+                  AppListFooter(
+                    hasMore: hasMore,
+                    loading: _loadingMore,
+                    onLoadMore: _loadMoreSchemes,
+                  ),
               ],
             );
           },
@@ -3015,19 +3250,19 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
   List<BuildSchemeSummary> _visibleSchemes(List<BuildSchemeSummary> schemes) {
     final focusedSchemeId = widget.focusedSchemeId;
     if (focusedSchemeId == null) {
-      return schemes.take(5).toList(growable: false);
+      return schemes;
     }
 
     final focusedIndex = schemes.indexWhere(
       (scheme) => scheme.id == focusedSchemeId,
     );
     if (focusedIndex < 0) {
-      return schemes.take(5).toList(growable: false);
+      return schemes;
     }
 
     final focused = schemes[focusedIndex];
     final rest = schemes.where((scheme) => scheme.id != focusedSchemeId);
-    return [focused, ...rest].take(5).toList(growable: false);
+    return [focused, ...rest].toList(growable: false);
   }
 
   HeroSummary? _heroFor(BuildSchemeSummary scheme) {
@@ -3331,7 +3566,7 @@ class _BuildCloneSheetState extends ConsumerState<_BuildCloneSheet> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  tooltip: 'Close clone slots',
+                  tooltip: AppLocalizations.of(context).close,
                   icon: const Icon(Icons.close),
                 ),
               ],
@@ -3471,7 +3706,7 @@ class _BuildCloneSheetState extends ConsumerState<_BuildCloneSheet> {
                 height: 160,
                 child: AppEmptyState(
                   icon: Icons.cloud_off_outlined,
-                  title: 'Unable to load slots',
+                  title: AppLocalizations.of(context).serviceSlow,
                   message: error.toString(),
                 ),
               ),
@@ -3585,7 +3820,9 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                       ),
                       _CompactBuildIconButton(
                         icon: Icons.ios_share_outlined,
-                        tooltip: 'Share build',
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).translate('commonShare'),
                         onTap: onShare,
                       ),
                     ],
@@ -3631,40 +3868,39 @@ class _SimulatorExploreBuildCard extends StatelessWidget {
                   child: SizedBox(
                     height: compact ? 34 : 36,
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Expanded(
-                          child: _CompactBuildAction(
-                            icon: scheme.isLiked
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            value: scheme.likeCount,
-                            tooltip: scheme.isLiked
-                                ? 'Unlike build'
-                                : 'Like build',
-                            onTap: disabled ? null : onLike,
-                          ),
+                        _CompactBuildAction(
+                          icon: scheme.isLiked
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          value: scheme.likeCount,
+                          active: scheme.isLiked,
+                          tooltip: scheme.isLiked
+                              ? 'Unlike build'
+                              : 'Like build',
+                          onTap: disabled ? null : onLike,
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _CompactBuildAction(
-                            icon: scheme.isFavorited
-                                ? Icons.star
-                                : Icons.star_border,
-                            value: scheme.favoriteCount,
-                            tooltip: scheme.isFavorited
-                                ? 'Unfavorite build'
-                                : 'Favorite build',
-                            onTap: disabled ? null : onFavorite,
-                          ),
+                        const SizedBox(width: 10),
+                        _CompactBuildAction(
+                          icon: scheme.isFavorited
+                              ? Icons.star
+                              : Icons.star_border,
+                          value: scheme.favoriteCount,
+                          active: scheme.isFavorited,
+                          tooltip: scheme.isFavorited
+                              ? 'Unfavorite build'
+                              : 'Favorite build',
+                          onTap: disabled ? null : onFavorite,
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _CompactBuildAction(
-                            icon: Icons.copy_outlined,
-                            value: scheme.cloneCount,
-                            tooltip: 'Choose clone slot',
-                            onTap: disabled ? null : onClone,
-                          ),
+                        const SizedBox(width: 10),
+                        _CompactBuildAction(
+                          icon: Icons.copy_outlined,
+                          value: scheme.cloneCount,
+                          tooltip: AppLocalizations.of(
+                            context,
+                          ).translate('buildClone'),
+                          onTap: disabled ? null : onClone,
                         ),
                       ],
                     ),
@@ -3810,51 +4046,49 @@ class _CompactBuildAction extends StatelessWidget {
     required this.tooltip,
     required this.onTap,
     this.value,
+    this.active = false,
   });
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
   final int? value;
+  final bool active;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: context.hokTheme.backgroundDeep,
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: context.hokTheme.outlineSoft),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 17, color: context.hokTheme.onSurfaceMuted),
-              if (value != null) ...[
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
+  Widget build(BuildContext context) {
+    final color = active ? AppTheme.gold : context.hokTheme.onSurfaceMuted;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(9),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: color),
+                if (value != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
                     '$value',
                     maxLines: 1,
-                    overflow: TextOverflow.fade,
                     style: TextStyle(
-                      color: context.hokTheme.onSurfaceMuted,
+                      color: color,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SharedBuildBadge extends StatelessWidget {

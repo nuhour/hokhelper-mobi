@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_stats_table.dart';
 import '../../../core/widgets/region_country_picker.dart';
 import '../domain/player_leaderboard_result.dart';
@@ -62,7 +64,11 @@ class PlayerLeaderboardScreen extends ConsumerStatefulWidget {
 
 class _PlayerLeaderboardScreenState
     extends ConsumerState<PlayerLeaderboardScreen> {
+  static const _initialRows = 100;
+  static const _rowBatch = 50;
+
   PlayerLeaderboardResult? _previousResult;
+  var _visibleRows = _initialRows;
 
   @override
   void initState() {
@@ -98,16 +104,17 @@ class _PlayerLeaderboardScreenState
         loadingStyle: AppAsyncLoadingStyle.dashboard,
         retry: () => ref.invalidate(playerLeaderboardProvider),
         data: (result) {
-          final players = result.players.take(100).toList(growable: false);
+          final allPlayers = result.players;
+          final players = allPlayers.take(_visibleRows).toList(growable: false);
           if (players.isEmpty) {
             return Column(
               children: [
                 _LeaderboardControls(result: result),
-                const Expanded(
+                Expanded(
                   child: AppEmptyState(
                     icon: Icons.emoji_events_outlined,
-                    title: 'No players found',
-                    message: 'Switch rank type, region, or retry.',
+                    title: AppLocalizations.of(context).noData,
+                    message: AppLocalizations.of(context).serviceSlow,
                   ),
                 ),
               ],
@@ -120,7 +127,15 @@ class _PlayerLeaderboardScreenState
               children: [
                 _LeaderboardControls(result: result),
                 const SizedBox(height: 8),
-                Expanded(child: _LeaderboardTable(players: players)),
+                Expanded(
+                  child: _LeaderboardTable(
+                    players: players,
+                    // 短名单不加页脚噪音，长名单滚动加载并提示到底。
+                    showFooter: allPlayers.length > 10,
+                    hasMore: _visibleRows < allPlayers.length,
+                    onLoadMore: () => setState(() => _visibleRows += _rowBatch),
+                  ),
+                ),
               ],
             ),
           );
@@ -193,7 +208,7 @@ class _LeaderboardControls extends ConsumerWidget {
             },
           ),
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: AppLocalizations.of(context).translate('statsRefreshData'),
             onPressed: () => ref.invalidate(playerLeaderboardProvider),
             icon: const Icon(Icons.refresh_rounded, size: 20),
           ),
@@ -233,30 +248,46 @@ void _syncLeaderboardRoute(
 }
 
 class _LeaderboardTable extends ConsumerWidget {
-  const _LeaderboardTable({required this.players});
+  const _LeaderboardTable({
+    required this.players,
+    this.showFooter = false,
+    this.hasMore = false,
+    this.onLoadMore,
+  });
 
   final List<PlayerRankingEntry> players;
+  final bool showFooter;
+  final bool hasMore;
+  final VoidCallback? onLoadMore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rankType = ref.watch(selectedPlayerLeaderboardRankTypeProvider);
+    final l10n = AppLocalizations.of(context);
     return AppStatsTable(
-      fixedHeader: const Text('Player'),
+      fixedHeader: Text(l10n.translate('statsPlayer')),
       fixedColumnWidth: 164,
       rowHeight: 66,
       fixedCells: [
         for (var index = 0; index < players.length; index++)
           _PlayerIdentityCell(player: players[index], rank: index + 1),
+        // 页脚借表格末行的固定列单元格挂进纵向滚动区，
+        // FittedBox 防止到底提示在窄列内溢出。
+        if (showFooter)
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: AppListFooter(hasMore: hasMore, onLoadMore: onLoadMore),
+          ),
       ],
       columns: [
         AppStatsTableColumn(
           label: rankType == PlayerLeaderboardRankType.ranked
-              ? 'Stars'
-              : 'Peak Score',
+              ? l10n.translate('statsStars')
+              : l10n.homePeakScore,
           header: rankType == PlayerLeaderboardRankType.ranked
-              ? const Tooltip(
-                  message: 'Stars',
-                  child: Icon(Icons.star_rounded, size: 19),
+              ? Tooltip(
+                  message: l10n.translate('statsStars'),
+                  child: const Icon(Icons.star_rounded, size: 19),
                 )
               : null,
           width: 92,
@@ -268,10 +299,11 @@ class _LeaderboardTable extends ConsumerWidget {
                       player.peakScore.toStringAsFixed(0),
                       highlight: true,
                     ),
+            if (showFooter) const SizedBox.shrink(),
           ],
         ),
         AppStatsTableColumn(
-          label: 'Win Rate',
+          label: l10n.translate('statsWinRate'),
           width: 88,
           cells: [
             for (final player in players)
@@ -280,10 +312,12 @@ class _LeaderboardTable extends ConsumerWidget {
                     ? '-'
                     : '${(player.winRate * 100).toStringAsFixed(2)}% win',
               ),
+            if (showFooter) const SizedBox.shrink(),
           ],
         ),
         AppStatsTableColumn(
-          label: 'Wins / Games',
+          label:
+              '${l10n.translate('statsWins')} / ${l10n.translate('statsMatches')}',
           width: 98,
           cells: [
             for (final player in players)
@@ -292,6 +326,7 @@ class _LeaderboardTable extends ConsumerWidget {
                     ? '- / ${player.playCount}'
                     : '${(player.playCount * player.winRate).round()} / ${player.playCount}',
               ),
+            if (showFooter) const SizedBox.shrink(),
           ],
         ),
         if (rankType == PlayerLeaderboardRankType.ranked)
@@ -300,6 +335,7 @@ class _LeaderboardTable extends ConsumerWidget {
             cells: [
               for (final player in players)
                 _MetricText(player.grade.toStringAsFixed(2)),
+              if (showFooter) const SizedBox.shrink(),
             ],
           ),
         AppStatsTableColumn(
@@ -307,6 +343,7 @@ class _LeaderboardTable extends ConsumerWidget {
           width: 72,
           cells: [
             for (final player in players) _MetricText('${player.mvpCount}'),
+            if (showFooter) const SizedBox.shrink(),
           ],
         ),
         AppStatsTableColumn(
@@ -315,6 +352,7 @@ class _LeaderboardTable extends ConsumerWidget {
           cells: [
             for (final player in players)
               _BestHeroesCell(heroes: player.bestHeroes),
+            if (showFooter) const SizedBox.shrink(),
           ],
         ),
       ],

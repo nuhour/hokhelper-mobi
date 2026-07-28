@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -193,7 +194,11 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            SnackBar(content: Text('Unable to draw fortune: $error')),
+            SnackBar(
+              content: Text(
+                '${AppLocalizations.of(context).translate('fortuneDrawFailed')}: $error',
+              ),
+            ),
           );
       }
     } finally {
@@ -319,6 +324,7 @@ class _DrawPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -358,10 +364,10 @@ class _DrawPrompt extends StatelessWidget {
                           color: Colors.white,
                         ),
                       )
-                    : const Text(
-                        'Try My Luck',
+                    : Text(
+                        l10n.translate('fortuneTry'),
                         key: ValueKey('ready'),
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Color(0xFF111827),
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
@@ -405,7 +411,7 @@ class _FortuneTrendPanelState extends State<_FortuneTrendPanel> {
       child: scores.isEmpty
           ? Center(
               child: Text(
-                'Draw a fortune to start the trend.',
+                AppLocalizations.of(context).translate('fortuneTrendEmpty'),
                 style: TextStyle(color: context.hokTheme.onSurfaceMuted),
               ),
             )
@@ -529,7 +535,7 @@ class _TodayFortune extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Text(
-                        'Fortune Value',
+                        AppLocalizations.of(context).translate('fortuneValue'),
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.62),
                           fontSize: 11,
@@ -555,7 +561,7 @@ class _TodayFortune extends StatelessWidget {
             right: 0,
             top: 0,
             child: IconButton(
-              tooltip: 'Share Fortune',
+              tooltip: AppLocalizations.of(context).translate('fortuneShare'),
               visualDensity: VisualDensity.compact,
               onPressed: () => _shareFortune(context, record, copy),
               icon: const Icon(

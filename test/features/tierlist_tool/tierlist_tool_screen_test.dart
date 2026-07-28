@@ -120,8 +120,11 @@ void main() {
     expect(find.text('Solo Queue Meta'), findsOneWidget);
     expect(find.text('3 heroes'), findsOneWidget);
     expect(find.text('Updated 2026-07-03'), findsOneWidget);
-    expect(find.text('T0 · 2'), findsOneWidget);
-    expect(find.text('T1 · 1'), findsOneWidget);
+    // 紧凑卡片：梯度行以"标签 + 进度条 + 数量"预览展示。
+    expect(find.text('T0'), findsOneWidget);
+    expect(find.text('T1'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
   });
 
   testWidgets('creates tier list schemes from the mobile tool screen', (
@@ -226,7 +229,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.tap(find.byTooltip('Delete tier list?'));
     await tester.pumpAndSettle();
 
     expect(find.text('Delete tier list?'), findsOneWidget);

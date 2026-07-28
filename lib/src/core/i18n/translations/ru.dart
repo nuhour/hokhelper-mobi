@@ -1,4 +1,7 @@
+import 'feature_translations.dart';
+
 const ruTranslations = {
+  ...ruFeatureTranslations,
   'appTitle': 'HOK Helper',
   'navHome': 'Главная',
   'navStats': 'Статистика',

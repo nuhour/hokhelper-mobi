@@ -6,6 +6,7 @@ import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/skin_detail.dart';
@@ -240,7 +241,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Skin Detail'), findsOneWidget);
+    expect(find.text('Skin Detail'), findsNothing);
+    expect(find.text('Crimson Hunter'), findsWidgets);
     expect(find.text('Hunter Series'), findsWidgets);
     expect(find.byIcon(Icons.star_rounded), findsWidgets);
     expect(find.text('12'), findsWidgets);
@@ -459,18 +461,21 @@ void main() {
 
     expect(find.text('Paged Skin 1'), findsOneWidget);
     expect(find.text('Paged Skin 61'), findsNothing);
+    // 首页取满一整页时展示统一页脚，等待滚动触底自动加载。
+    expect(find.byType(AppListFooter), findsOneWidget);
+    expect(repository.requestedPages, [1]);
 
-    final loadMoreButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Load more'),
-    );
-    await tester.runAsync(() async {
-      loadMoreButton.onPressed!();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pump();
+    // 滚动到列表底部，页脚自动追加下一页，无需任何按钮。
+    final scrollPosition = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    scrollPosition.jumpTo(scrollPosition.maxScrollExtent);
+    await tester.pumpAndSettle();
 
     expect(repository.requestedPages, [1, 2]);
     expect(find.text('Paged Skin 61'), findsOneWidget);
+    // 第二页不足一整页，页脚转为到底提示。
+    expect(find.text('No more content'), findsOneWidget);
   });
 
   testWidgets('rates skins from the detail sheet', (tester) async {
@@ -542,7 +547,7 @@ void main() {
     await tester.tap(find.text('Crimson Hunter'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Skin Detail'), findsOneWidget);
+    expect(find.text('Skin Detail'), findsNothing);
     expect(find.text('https://example.test/skin/1001'), findsOneWidget);
     final sourceButton = find.widgetWithText(
       FilledButton,

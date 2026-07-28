@@ -1,4 +1,7 @@
+import 'feature_translations.dart';
+
 const zhTranslations = {
+  ...zhFeatureTranslations,
   'appTitle': 'HOK 助手',
   'navHome': '首页',
   'navStats': '统计',

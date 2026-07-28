@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_lane_icon.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_stats_table.dart';
 import '../../../core/widgets/region_country_picker.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -197,7 +199,8 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                         autofocus: true,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          hintText: 'Filter ${identityColumn?.label ?? 'rows'}',
+                          hintText:
+                              '${AppLocalizations.of(context).search} ${identityColumn?.label ?? ''}',
                           prefixIcon: const Icon(
                             Icons.search_rounded,
                             size: 19,
@@ -205,7 +208,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                           suffixIcon: _searchController.text.isEmpty
                               ? null
                               : IconButton(
-                                  tooltip: 'Clear filter',
+                                  tooltip: AppLocalizations.of(context).close,
                                   onPressed: () {
                                     _searchController.clear();
                                     setState(() {});
@@ -226,10 +229,10 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
           const SizedBox(height: 7),
           Expanded(
             child: rows.isEmpty
-                ? const AppEmptyState(
+                ? AppEmptyState(
                     icon: Icons.query_stats_rounded,
-                    title: 'No matching data',
-                    message: 'Adjust the current filters and try again.',
+                    title: AppLocalizations.of(context).noData,
+                    message: AppLocalizations.of(context).serviceSlow,
                   )
                 : AppStatsTable(
                     fixedHeader: Text(
@@ -241,6 +244,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                     ),
                     fixedColumnWidth: fixedWidth,
                     rowHeight: 60,
+                    footer: rows.length > 10
+                        ? const AppListFooter(hasMore: false)
+                        : null,
                     fixedCells: [
                       for (var index = 0; index < rows.length; index++)
                         _TrendIdentityCell(
@@ -277,7 +283,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                         AppStatsTableColumn(
                           label: _columnLabel(context, column.id, column.label),
                           groupLabel: column.group.isEmpty
-                              ? 'Metrics'
+                              ? AppLocalizations.of(
+                                  context,
+                                ).translate('statsCore')
                               : _metricGroupLabel(context, column.group),
                           width: _columnWidth(column),
                           selected: _sortColumn == column.id,
@@ -333,12 +341,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   }
 
   void _openHeroPreparation(StatsTrendRow row, StatsTrendTable table) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _HeroPreparationSheet(
+    _showStatsDrawer(
+      context,
+      _HeroPreparationSheet(
         request: _detailRequest(row, table),
         showOverview: _query.dimension != 'power_rank',
       ),
@@ -346,13 +351,56 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   }
 
   void _openTrendDetail(StatsTrendRow row, StatsTrendTable table) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          _TrendDetailSheet(request: _detailRequest(row, table)),
+    _showStatsDrawer(
+      context,
+      _TrendDetailSheet(request: _detailRequest(row, table)),
+    );
+  }
+}
+
+/// HOKX 手机端样式：详情面板从右侧滑出的全高抽屉（340px 宽 + 半透明遮罩）。
+void _showStatsDrawer(BuildContext context, Widget child) {
+  showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'stats-drawer',
+    barrierColor: Colors.black45,
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return Align(alignment: Alignment.centerRight, child: child);
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      return SlideTransition(
+        position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        ),
+        child: child,
+      );
+    },
+  );
+}
+
+class _StatsDrawerShell extends StatelessWidget {
+  const _StatsDrawerShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final width = math.min(340.0, MediaQuery.sizeOf(context).width * 0.92);
+    return Material(
+      color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
+      shape: Border(
+        left: BorderSide(
+          color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+        ),
+      ),
+      child: SizedBox(
+        width: width,
+        height: double.infinity,
+        child: SafeArea(child: child),
+      ),
     );
   }
 }
@@ -479,12 +527,12 @@ class _FilterSummaryBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Search table',
+            tooltip: AppLocalizations.of(context).translate('statsSearchTable'),
             onPressed: onSearch,
             icon: const Icon(Icons.search_rounded, size: 19),
           ),
           IconButton(
-            tooltip: 'Refresh data',
+            tooltip: AppLocalizations.of(context).translate('statsRefreshData'),
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh_rounded, size: 19),
           ),
@@ -855,10 +903,12 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                       );
                     }),
                     icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                    label: const Text('Reset'),
+                    label: Text(
+                      AppLocalizations.of(context).translate('commonReset'),
+                    ),
                   ),
                   IconButton(
-                    tooltip: 'Close',
+                    tooltip: AppLocalizations.of(context).close,
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close_rounded),
                   ),
@@ -878,7 +928,11 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    _FilterLabel(label: 'Baseline'),
+                    _FilterLabel(
+                      label: AppLocalizations.of(
+                        context,
+                      ).translate('statsBaseline'),
+                    ),
                     DropdownButtonFormField<String>(
                       initialValue: baselines.contains(_draft.baseline)
                           ? _draft.baseline
@@ -908,7 +962,11 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                       },
                     ),
                     const SizedBox(height: 14),
-                    _FilterLabel(label: 'Snapshot'),
+                    _FilterLabel(
+                      label: AppLocalizations.of(
+                        context,
+                      ).translate('statsSnapshot'),
+                    ),
                     DropdownButtonFormField<String>(
                       initialValue: _draft.snapshotDate.isEmpty
                           ? ''
@@ -935,7 +993,11 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                       }),
                     ),
                     const SizedBox(height: 14),
-                    _FilterLabel(label: 'Window'),
+                    _FilterLabel(
+                      label: AppLocalizations.of(
+                        context,
+                      ).translate('statsWindow'),
+                    ),
                     Wrap(
                       spacing: 7,
                       runSpacing: 7,
@@ -953,7 +1015,11 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                     ),
                     if (canFilterLane) ...[
                       const SizedBox(height: 14),
-                      _FilterLabel(label: 'Lane'),
+                      _FilterLabel(
+                        label: AppLocalizations.of(
+                          context,
+                        ).translate('statsLane'),
+                      ),
                       _LaneFilter(
                         selected: _draft.lanePosition,
                         onChanged: (lane) => setState(() {
@@ -963,7 +1029,11 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                     ],
                     if (_draft.dimension == 'equip_rank') ...[
                       const SizedBox(height: 14),
-                      _FilterLabel(label: 'Equipment category'),
+                      _FilterLabel(
+                        label: AppLocalizations.of(
+                          context,
+                        ).translate('statsEquipmentCategory'),
+                      ),
                       DropdownButtonFormField<String>(
                         initialValue: _draft.equipType,
                         items: const [
@@ -985,7 +1055,11 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                       'power_rank',
                     }.contains(_draft.dimension)) ...[
                       const SizedBox(height: 14),
-                      _FilterLabel(label: 'Region'),
+                      _FilterLabel(
+                        label: AppLocalizations.of(
+                          context,
+                        ).translate('statsRegion'),
+                      ),
                       RegionCountryPicker(
                         value: int.tryParse(_draft.region) ?? 0,
                         options: widget.table.availableRegions,
@@ -1009,7 +1083,9 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                 child: FilledButton.icon(
                   onPressed: () => Navigator.pop(context, _draft),
                   icon: const Icon(Icons.check_rounded),
-                  label: const Text('Apply filters'),
+                  label: Text(
+                    AppLocalizations.of(context).translate('statsApplyFilters'),
+                  ),
                 ),
               ),
             ),
@@ -1116,50 +1192,29 @@ class _HeroPreparationSheetState extends ConsumerState<_HeroPreparationSheet> {
   @override
   Widget build(BuildContext context) {
     final row = widget.request.row;
-    final colors = Theme.of(context).extension<HokThemeColors>();
-    final tabs = <(String, String, IconData)>[
-      if (widget.showOverview)
-        ('overview', 'Overview', Icons.dashboard_outlined),
-      ('power', 'Power', Icons.bolt_rounded),
-      ('hero_equip', 'Single Equip', Icons.shield_outlined),
-      ('skill_equip', 'Builds', Icons.view_carousel_outlined),
-      ('master_build', 'Pro Builds', Icons.workspace_premium_outlined),
-      ('playstyle', 'Skill Flow', Icons.route_rounded),
-      ('bp', 'BP', Icons.compare_arrows_rounded),
+    final tabs = <(String, String)>[
+      if (widget.showOverview) ('overview', 'Overview'),
+      ('power', 'Power'),
+      ('hero_equip', 'Single Equip'),
+      ('skill_equip', 'Builds'),
+      ('master_build', 'Pro Builds'),
+      ('playstyle', 'Skill Flow'),
+      ('bp', 'BP'),
     ];
     final value = ref.watch(heroTrendDetailProvider(widget.request));
-    return Container(
-      height: MediaQuery.sizeOf(context).height * 0.92,
-      decoration: BoxDecoration(
-        color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      ),
+    return _StatsDrawerShell(
       child: Column(
         children: [
           _StatsDetailHeader(
             row: row,
-            subtitle: 'Hero preparation',
+            subtitle: AppLocalizations.of(context).translate('statsHero'),
             onClose: () => Navigator.pop(context),
           ),
-          SizedBox(
-            height: 42,
-            child: ListView.separated(
-              key: const ValueKey('hero-preparation-tabs'),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              scrollDirection: Axis.horizontal,
-              itemCount: tabs.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemBuilder: (context, index) {
-                final tab = tabs[index];
-                return ChoiceChip(
-                  selected: _tab == tab.$1,
-                  showCheckmark: false,
-                  avatar: Icon(tab.$3, size: 16),
-                  label: Text(tab.$2),
-                  onSelected: (_) => setState(() => _tab = tab.$1),
-                );
-              },
-            ),
+          _StatsDrawerTabs(
+            key: const ValueKey('hero-preparation-tabs'),
+            tabs: tabs,
+            selected: _tab,
+            onSelected: (tab) => setState(() => _tab = tab),
           ),
           const SizedBox(height: 6),
           Expanded(
@@ -1179,6 +1234,71 @@ class _HeroPreparationSheetState extends ConsumerState<_HeroPreparationSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatsDrawerTabs extends StatelessWidget {
+  const _StatsDrawerTabs({
+    super.key,
+    required this.tabs,
+    required this.selected,
+    required this.onSelected,
+    this.padding = const EdgeInsets.symmetric(horizontal: 12),
+  });
+
+  final List<(String, String)> tabs;
+  final String selected;
+  final ValueChanged<String> onSelected;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final primary = Theme.of(context).colorScheme.primary;
+    // HOKX 样式：纯文字胶囊 chips，超出时换行显示。
+    return Padding(
+      padding: padding,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final tab in tabs)
+              InkWell(
+                onTap: () => onSelected(tab.$1),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected == tab.$1 ? primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: selected == tab.$1
+                          ? primary
+                          : colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+                    ),
+                  ),
+                  child: Text(
+                    tab.$2,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: selected == tab.$1
+                          ? Colors.white
+                          : colors?.onSurfaceMuted ??
+                                context.hokTheme.onSurfaceMuted,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1231,7 +1351,7 @@ class _StatsDetailHeader extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Close details',
+            tooltip: AppLocalizations.of(context).close,
             onPressed: onClose,
             icon: const Icon(Icons.close_rounded),
           ),
@@ -1254,67 +1374,652 @@ class _HeroPreparationBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // HOKX 抽屉：装备/出装/技能流均以可排序横滚表格展现。
     return switch (tab) {
       'power' => _PowerDetail(detail: detail),
-      'hero_equip' => _PreparationEntityList(
-        title: 'Single equipment performance',
+      'hero_equip' => _HeroEquipTable(
+        heroRow: row,
         rows: detail.list('hero_equip_stats'),
-        identityKey: 'equip',
       ),
-      'skill_equip' => _BuildPreparationList(
-        title: 'Completed builds',
+      'skill_equip' => _SkillEquipTable(
+        heroRow: row,
         rows: detail.list('hero_skill_equip_stats'),
       ),
-      'master_build' => _BuildPreparationList(
-        title: 'Pro player builds',
+      'master_build' => _MasterBuildTable(
+        heroRow: row,
         rows: detail.list('hero_master_builds'),
-        showPlayer: true,
       ),
-      'playstyle' => _PreparationEntityList(
-        title: 'Skill and lane performance',
+      'playstyle' => _PlaystyleTable(
+        heroRow: row,
         rows: detail.list('hero_skill_position_stats'),
-        identityKey: 'skill',
-        showLane: true,
       ),
       'bp' => _BpPreparation(detail: detail),
-      _ => _PreparationOverview(row: row, detail: detail),
+      _ => _PreparationOverview(row: row),
     };
   }
 }
 
 class _PreparationOverview extends StatelessWidget {
-  const _PreparationOverview({required this.row, required this.detail});
+  const _PreparationOverview({required this.row});
 
   final StatsTrendRow row;
-  final StatsTrendDetail detail;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _DetailSection(
-          title: 'Current performance',
-          child: _MetricGrid(
-            items: [
-              ('Win Rate', _percent(row.raw['wr'])),
-              ('Pick Rate', _percent(row.raw['pick_rate'])),
-              ('Ban Rate', _percent(row.raw['ban_rate'])),
-              ('BP Rate', _percent(row.raw['bp_rate'])),
-              ('Average Rating', _compactNumber(row.raw['avg_grade_game'])),
-              ('MVP Rate', _percent(row.raw['mvp_rate'])),
+    // HOKX 英雄抽屉「综合」布局：8 张两列指标卡。
+    return _MetricGrid(
+      items: [
+        ('WR', _percent(row.raw['wr'])),
+        ('P', _percent(row.raw['pick_rate'])),
+        ('B', _percent(row.raw['ban_rate'])),
+        ('BP', _percent(row.raw['bp_rate'])),
+        ('Avg Rating', _compactNumber(row.raw['avg_grade_game'])),
+        ('MVP Rate', _percent(row.raw['mvp_rate'])),
+        ('Early Win', _percent(row.raw['early_win_rate'])),
+        ('Mid Win', _percent(row.raw['mid_win_rate'])),
+      ],
+    );
+  }
+}
+
+// ---- HOKX 风格抽屉表格框架：左列固定，表头与行体同步横向滚动，表头可排序 ----
+
+class _TableColumnSpec {
+  const _TableColumnSpec({
+    required this.id,
+    required this.label,
+    required this.width,
+    required this.cell,
+    this.group = '',
+    this.sortValue,
+    this.sortText,
+  });
+
+  final String id;
+  final String label;
+  final double width;
+  // HOKX 两行表头：相邻同 group 的列合并出一个跨列组头（如「槽位分布」「MVP」）。
+  final String group;
+  final Widget Function(BuildContext context, Map<String, dynamic> row) cell;
+  final num Function(Map<String, dynamic> row)? sortValue;
+  final String Function(Map<String, dynamic> row)? sortText;
+
+  bool get sortable => sortValue != null || sortText != null;
+}
+
+class _DrawerStatsTable extends StatefulWidget {
+  const _DrawerStatsTable({
+    required this.rows,
+    required this.leadingLabel,
+    required this.leadingCell,
+    required this.columns,
+    required this.initialSortId,
+    this.rowHeight = 48,
+    this.groupHeaders = const {},
+    this.leadingSortText,
+  });
+
+  final List<Map<String, dynamic>> rows;
+  final String leadingLabel;
+  final Widget Function(BuildContext context, Map<String, dynamic> row)
+  leadingCell;
+  final List<_TableColumnSpec> columns;
+  final String initialSortId;
+  // 固定左列宽度，与 HOKX sticky 首列一致。
+  final double leadingWidth = 56;
+  final double rowHeight;
+  // group id -> 自定义组头（缺省时直接渲染 group 文本）。
+  final Map<String, WidgetBuilder> groupHeaders;
+  // HOKX 首列（装备名/英雄名/技能名）也可排序；提供取值器即启用。
+  final String Function(Map<String, dynamic> row)? leadingSortText;
+
+  @override
+  State<_DrawerStatsTable> createState() => _DrawerStatsTableState();
+}
+
+class _DrawerStatsTableState extends State<_DrawerStatsTable> {
+  late String _sortId = widget.initialSortId;
+  bool _descending = true;
+
+  static const _leadingSortId = '__leading';
+  // 首屏 30 行，滚动到表尾自动追加（后端单表上限 ≤60）。
+  static const _pageRows = 30;
+
+  int _visibleRows = _pageRows;
+
+  List<Map<String, dynamic>> get _sortedRows {
+    // HOKX：先对全量行排序，再截断展示（否则切换排序换不进后段行）。
+    final rows = widget.rows.toList();
+    // 缺失字段的 NaN 与 HOKX toNum 一致按 0 参与排序，避免降序时置顶。
+    num finite(num value) => value.isFinite ? value : 0;
+    final leadingSortText = widget.leadingSortText;
+    if (_sortId == _leadingSortId && leadingSortText != null) {
+      rows.sort((left, right) {
+        final compare = leadingSortText(left).compareTo(leadingSortText(right));
+        return _descending ? -compare : compare;
+      });
+      return rows.take(_visibleRows).toList();
+    }
+    final column = widget.columns
+        .where((column) => column.id == _sortId && column.sortable)
+        .firstOrNull;
+    if (column == null) return rows.take(_visibleRows).toList();
+    rows.sort((left, right) {
+      int compare;
+      if (column.sortValue != null) {
+        compare = finite(
+          column.sortValue!(left),
+        ).compareTo(finite(column.sortValue!(right)));
+      } else {
+        compare = column.sortText!(left).compareTo(column.sortText!(right));
+      }
+      return _descending ? -compare : compare;
+    });
+    return rows.take(_visibleRows).toList();
+  }
+
+  void _toggleSortId(String id) {
+    setState(() {
+      if (_sortId == id) {
+        _descending = !_descending;
+      } else {
+        _sortId = id;
+        _descending = true;
+      }
+    });
+  }
+
+  void _toggleSort(_TableColumnSpec column) {
+    if (!column.sortable) return;
+    _toggleSortId(column.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final outline = colors?.outlineSoft ?? context.hokTheme.outlineSoft;
+    final headerColor = Theme.of(
+      context,
+    ).scaffoldBackgroundColor.withValues(alpha: 0.8);
+    final mutedStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontSize: 10,
+      fontWeight: FontWeight.w800,
+      color: colors?.onSurfaceMuted,
+    );
+    if (widget.rows.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: headerColor.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: outline),
+        ),
+        child: Text('No data', style: mutedStyle),
+      );
+    }
+    final rows = _sortedRows;
+    const headerHeight = 34.0;
+    const groupHeight = 22.0;
+    final hasGroups = widget.columns.any((column) => column.group.isNotEmpty);
+    final headerBlockHeight = hasGroups
+        ? headerHeight + groupHeight
+        : headerHeight;
+
+    // HOKX 两行表头：把相邻同 group 的列合并为一个跨列组头单元。
+    Widget groupRow() {
+      final cells = <Widget>[];
+      var index = 0;
+      while (index < widget.columns.length) {
+        final group = widget.columns[index].group;
+        var width = widget.columns[index].width;
+        var next = index + 1;
+        while (next < widget.columns.length &&
+            widget.columns[next].group == group) {
+          width += widget.columns[next].width;
+          next++;
+        }
+        cells.add(
+          Container(
+            width: width,
+            height: groupHeight,
+            alignment: Alignment.center,
+            color: headerColor,
+            child: group.isEmpty
+                ? null
+                : widget.groupHeaders[group]?.call(context) ??
+                      Text(
+                        group,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: mutedStyle,
+                      ),
+          ),
+        );
+        index = next;
+      }
+      return Row(children: cells);
+    }
+
+    Widget headerCell(_TableColumnSpec column) {
+      return InkWell(
+        onTap: column.sortable ? () => _toggleSort(column) : null,
+        child: Container(
+          width: column.width,
+          height: headerHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          alignment: Alignment.centerLeft,
+          color: headerColor,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  column.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: mutedStyle,
+                ),
+              ),
+              if (_sortId == column.id && column.sortable)
+                Icon(
+                  _descending
+                      ? Icons.arrow_drop_down_rounded
+                      : Icons.arrow_drop_up_rounded,
+                  size: 14,
+                  color: colors?.onSurfaceMuted,
+                ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        _DetailSection(
-          title: 'Matchup summary',
-          child: _MetricGrid(
-            items: [
-              ('Synergy', _percent(detail.raw['synergy_rank'])),
-              ('Counter', _percent(detail.raw['counter_rank'])),
-              ('Combo Matches', _compactNumber(detail.raw['combo_matches'])),
-              ('Early Win', _percent(row.raw['early_win_rate'])),
-            ],
+      );
+    }
+
+    final table = ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: outline),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Sticky 左列（有组头时纵向跨两行，等价 HOKX rowSpan=2）。
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: widget.leadingSortText == null
+                      ? null
+                      : () => _toggleSortId(_leadingSortId),
+                  child: Container(
+                    width: widget.leadingWidth,
+                    height: headerBlockHeight,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    alignment: Alignment.centerLeft,
+                    color: headerColor,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            widget.leadingLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: mutedStyle,
+                          ),
+                        ),
+                        if (_sortId == _leadingSortId &&
+                            widget.leadingSortText != null)
+                          Icon(
+                            _descending
+                                ? Icons.arrow_drop_down_rounded
+                                : Icons.arrow_drop_up_rounded,
+                            size: 14,
+                            color: colors?.onSurfaceMuted,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                for (final row in rows)
+                  Container(
+                    width: widget.leadingWidth,
+                    height: widget.rowHeight,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    alignment: Alignment.centerLeft,
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: outline)),
+                    ),
+                    child: widget.leadingCell(context, row),
+                  ),
+              ],
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasGroups) groupRow(),
+                    Row(
+                      children: [
+                        for (final column in widget.columns) headerCell(column),
+                      ],
+                    ),
+                    for (final row in rows)
+                      Row(
+                        children: [
+                          for (final column in widget.columns)
+                            Container(
+                              width: column.width,
+                              height: widget.rowHeight,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
+                              alignment: Alignment.centerLeft,
+                              decoration: BoxDecoration(
+                                border: Border(top: BorderSide(color: outline)),
+                              ),
+                              child: column.cell(context, row),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (widget.rows.length <= _pageRows) {
+      return table;
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        table,
+        AppListFooter(
+          hasMore: _visibleRows < widget.rows.length,
+          onLoadMore: () => setState(() => _visibleRows += _pageRows),
+        ),
+      ],
+    );
+  }
+}
+
+extension _FirstOrNullColumn on Iterable<_TableColumnSpec> {
+  _TableColumnSpec? get firstOrNull => isEmpty ? null : first;
+}
+
+Widget _tableText(
+  BuildContext context,
+  String value, {
+  Color? color,
+  double fontSize = 11,
+}) {
+  return Text(
+    value,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontSize: fontSize,
+      color: color,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    ),
+  );
+}
+
+_TableColumnSpec _metricColumn(
+  String id,
+  String label, {
+  double width = 62,
+  bool percent = true,
+  String group = '',
+}) {
+  return _TableColumnSpec(
+    id: id,
+    label: label,
+    width: width,
+    group: group,
+    sortValue: (row) => _double(row[id]),
+    cell: (context, row) => _tableText(
+      context,
+      percent ? _percent(row[id]) : _compactNumber(row[id]),
+    ),
+  );
+}
+
+// 左列固定单元：主头像 + 右下角标（HOKX sticky 首列样式）。
+Widget _avatarBadgeCell({
+  required String mainUrl,
+  required String badgeUrl,
+  String? mainLabel,
+  String? badgeLabel,
+}) {
+  return SizedBox(
+    width: 40,
+    height: 34,
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AppImage(
+          url: mainUrl,
+          width: 30,
+          height: 30,
+          borderRadius: 15,
+          semanticLabel: mainLabel,
+          excludeFromSemantics: mainLabel == null,
+        ),
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: AppImage(
+            url: badgeUrl,
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            semanticLabel: badgeLabel,
+            excludeFromSemantics: badgeLabel == null,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// 英雄抽屉左列：英雄头像 + 右下角标（装备或召唤师技能）。
+Widget _heroBadgeCell(
+  BuildContext context,
+  StatsTrendRow heroRow,
+  Map<String, dynamic> row,
+  String identityKey,
+) {
+  final entity = _map(row[identityKey]);
+  return _avatarBadgeCell(
+    mainUrl: heroRow.imageUrl,
+    badgeUrl: _trendAssetUrl(
+      entity,
+      identityKey == 'skill' ? 'summoner_skill' : 'equip',
+    ),
+    badgeLabel: entity['name']?.toString(),
+  );
+}
+
+/// 单件装备表：Pick/Win/常见槽位/平均槽位/场次 + S1-S6 槽位分布(份额/胜率)。
+/// HOKX 槽位分布组头：「Slot Distribution Share/Win」份额黄、胜率玫红图例。
+Widget _slotDistributionGroupHeader(BuildContext context) {
+  final colors = Theme.of(context).extension<HokThemeColors>();
+  TextStyle style(Color? color) => Theme.of(context).textTheme.labelSmall!
+      .copyWith(fontSize: 10, fontWeight: FontWeight.w800, color: color);
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text('Slot Distribution', style: style(colors?.onSurfaceMuted)),
+      const SizedBox(width: 4),
+      Text('Share', style: style(const Color(0xFFFACC15))),
+      Text(' / ', style: style(colors?.onSurfaceMuted)),
+      Text('Win', style: style(const Color(0xFFF43F5E))),
+    ],
+  );
+}
+
+/// 单件装备矩阵共用列：Pick/Win/常见槽位/平均槽位/场次 + S1-S6 份额胜率格。
+List<_TableColumnSpec> _equipSlotMatrixColumns() {
+  return [
+    _metricColumn('pick_rate', 'Pick'),
+    _metricColumn('win_rate', 'Win'),
+    _metricColumn('most_common_slot', 'Slot', width: 52, percent: false),
+    _metricColumn('avg_slot', 'Avg', width: 52, percent: false),
+    _metricColumn('quantity', 'Count', width: 58, percent: false),
+    for (var slot = 1; slot <= 6; slot++)
+      _TableColumnSpec(
+        id: 'slot${slot}_share',
+        label: 'S$slot',
+        width: 88,
+        group: 'slots',
+        sortValue: (row) => _double(row['slot${slot}_share']),
+        cell: (context, row) => _SlotMatrixCell(row: row, slot: slot),
+      ),
+  ];
+}
+
+class _HeroEquipTable extends StatelessWidget {
+  const _HeroEquipTable({required this.heroRow, required this.rows});
+
+  final StatsTrendRow heroRow;
+  final List<Map<String, dynamic>> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DrawerStatsTable(
+      rows: rows,
+      initialSortId: 'pick_rate',
+      leadingLabel: 'Hero',
+      rowHeight: 52,
+      leadingCell: (context, row) =>
+          _heroBadgeCell(context, heroRow, row, 'equip'),
+      leadingSortText: (row) => _map(row['equip'])['name']?.toString() ?? '',
+      groupHeaders: const {'slots': _slotDistributionGroupHeader},
+      columns: _equipSlotMatrixColumns(),
+    );
+  }
+}
+
+/// 装备抽屉「单件装备」表：每行英雄头像 + 该装备角标，同 HOKX 矩阵列。
+class _EquipHeroTable extends StatelessWidget {
+  const _EquipHeroTable({required this.equipRow, required this.rows});
+
+  final StatsTrendRow equipRow;
+  final List<Map<String, dynamic>> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DrawerStatsTable(
+      rows: rows,
+      initialSortId: 'pick_rate',
+      leadingLabel: 'Hero',
+      rowHeight: 52,
+      leadingCell: (context, row) {
+        final hero = _map(row['hero']);
+        return _avatarBadgeCell(
+          mainUrl: _trendAssetUrl(hero, 'hero'),
+          mainLabel: hero['name']?.toString(),
+          badgeUrl: equipRow.imageUrl,
+          badgeLabel: equipRow.name,
+        );
+      },
+      leadingSortText: (row) => _map(row['hero'])['name']?.toString() ?? '',
+      groupHeaders: const {'slots': _slotDistributionGroupHeader},
+      columns: _equipSlotMatrixColumns(),
+    );
+  }
+}
+
+/// S1-S6 槽位矩阵格：份额(黄)/胜率(玫红)并排 + 份额进度条，行内最大值高亮。
+class _SlotMatrixCell extends StatelessWidget {
+  const _SlotMatrixCell({required this.row, required this.slot});
+
+  final Map<String, dynamic> row;
+  final int slot;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    // HOKX getSlotMaxes：缺失槽位按 0 处理，防止 NaN 传播吃掉最大值高亮。
+    var maxShare = 0.0;
+    var maxWin = 0.0;
+    for (var index = 1; index <= 6; index++) {
+      final shareValue = _double(row['slot${index}_share']);
+      final winValue = _double(row['slot${index}_win_rate']);
+      if (shareValue.isFinite) maxShare = math.max(maxShare, shareValue);
+      if (winValue.isFinite) maxWin = math.max(maxWin, winValue);
+    }
+    final share = _double(row['slot${slot}_share']);
+    final win = _double(row['slot${slot}_win_rate']);
+    final isShareMax = share > 0 && share >= maxShare;
+    final isWinMax = win > 0 && win >= maxWin;
+    TextStyle style(Color? highlight, bool isMax, Color? fallback) =>
+        Theme.of(context).textTheme.labelSmall!.copyWith(
+          fontSize: 10,
+          color: isMax ? highlight : fallback,
+          fontWeight: isMax ? FontWeight.w900 : FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        );
+    final shareFraction = share.isFinite
+        ? (share / 100).clamp(0.0, 1.0).toDouble()
+        : 0.0;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _slotPercent(share),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: style(
+                  const Color(0xFFFACC15),
+                  isShareMax,
+                  Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            const SizedBox(width: 2),
+            Expanded(
+              child: Text(
+                _slotPercent(win),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: style(
+                  const Color(0xFFF43F5E),
+                  isWinMax,
+                  colors?.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: Container(
+            height: 4,
+            color: Theme.of(
+              context,
+            ).scaffoldBackgroundColor.withValues(alpha: 0.8),
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: shareFraction,
+              heightFactor: 1,
+              child: const ColoredBox(color: Color(0xB394A3B8)),
+            ),
           ),
         ),
       ],
@@ -1322,272 +2027,195 @@ class _PreparationOverview extends StatelessWidget {
   }
 }
 
-class _PreparationEntityList extends StatelessWidget {
-  const _PreparationEntityList({
-    required this.title,
-    required this.rows,
-    required this.identityKey,
-    this.showLane = false,
-  });
+/// 成型装备表：S1-S6 装备图标 + 场次/胜率/时长 + MVP 指标。
+class _SkillEquipTable extends StatelessWidget {
+  const _SkillEquipTable({required this.heroRow, required this.rows});
 
-  final String title;
+  final StatsTrendRow heroRow;
   final List<Map<String, dynamic>> rows;
-  final String identityKey;
-  final bool showLane;
 
   @override
   Widget build(BuildContext context) {
-    return _DetailSection(
-      title: title,
-      child: rows.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 22),
-              child: Center(child: Text('No data')),
-            )
-          : Column(
-              children: [
-                for (var index = 0; index < math.min(rows.length, 30); index++)
-                  _PreparationEntityRow(
-                    row: rows[index],
-                    identityKey: identityKey,
-                    showLane: showLane,
-                  ),
-              ],
-            ),
+    return _DrawerStatsTable(
+      rows: rows,
+      initialSortId: 'match_count',
+      leadingLabel: 'Hero',
+      rowHeight: 46,
+      leadingCell: (context, row) =>
+          _heroBadgeCell(context, heroRow, row, 'skill'),
+      leadingSortText: (row) => _map(row['skill'])['name']?.toString() ?? '',
+      columns: [
+        for (var slot = 0; slot < 6; slot++)
+          _TableColumnSpec(
+            id: 'equip_slot_$slot',
+            label: 'S${slot + 1}',
+            width: 38,
+            group: 'Equip Distribution',
+            cell: (context, row) {
+              final equips = _listOfMaps(row['equips']);
+              final equip = slot < equips.length ? equips[slot] : null;
+              if (equip == null) return _emptySlotPlaceholder(context, 24);
+              return AppImage(
+                url: _trendAssetUrl(equip, 'equip'),
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                semanticLabel: equip['name']?.toString(),
+              );
+            },
+          ),
+        _metricColumn('match_count', 'Matches', width: 62, percent: false),
+        _metricColumn('win_rate', 'Win'),
+        _TableColumnSpec(
+          id: 'avg_duration',
+          label: 'Time',
+          width: 54,
+          sortValue: (row) => _double(row['avg_duration']),
+          cell: (context, row) =>
+              _tableText(context, _formatDuration(row['avg_duration'])),
+        ),
+        _metricColumn('mvp_rate', 'MVP', width: 56, group: 'MVP'),
+        _metricColumn('mvp_rate_win', 'MVP W', width: 62, group: 'MVP'),
+        _metricColumn('mvp_rate_lose', 'MVP L', width: 62, group: 'MVP'),
+      ],
     );
   }
 }
 
-class _PreparationEntityRow extends StatelessWidget {
-  const _PreparationEntityRow({
-    required this.row,
-    required this.identityKey,
-    required this.showLane,
-  });
+/// 大神装备表：玩家 / 描述 / S1-S6 装备图标。
+class _MasterBuildTable extends StatelessWidget {
+  const _MasterBuildTable({required this.heroRow, required this.rows});
 
-  final Map<String, dynamic> row;
-  final String identityKey;
-  final bool showLane;
+  final StatsTrendRow heroRow;
+  final List<Map<String, dynamic>> rows;
 
   @override
   Widget build(BuildContext context) {
-    final entity = _map(row[identityKey]);
-    final url = _trendAssetUrl(
-      entity,
-      identityKey == 'skill' ? 'summoner_skill' : 'equip',
-    );
-    final name = entity['name']?.toString().trim();
-    final lane = (row['position_label'] ?? row['position_desc'])
-        ?.toString()
-        .trim();
-    final count = row['match_count'] ?? row['quantity'];
-    return Container(
-      constraints: const BoxConstraints(minHeight: 54),
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color:
-                Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                context.hokTheme.outlineSoft,
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    return _DrawerStatsTable(
+      rows: rows,
+      initialSortId: 'hot_score',
+      leadingLabel: 'Hero',
+      rowHeight: 46,
+      leadingCell: (context, row) =>
+          _heroBadgeCell(context, heroRow, row, 'skill'),
+      leadingSortText: (row) => _map(row['skill'])['name']?.toString() ?? '',
+      columns: [
+        _TableColumnSpec(
+          id: 'player_name',
+          label: 'Player',
+          width: 104,
+          sortText: (row) => row['player_name']?.toString() ?? '',
+          cell: (context, row) =>
+              _tableText(context, row['player_name']?.toString() ?? '-'),
+        ),
+        _TableColumnSpec(
+          id: 'desc',
+          label: 'Notes',
+          width: 150,
+          sortText: (row) => row['desc']?.toString() ?? '',
+          cell: (context, row) => _tableText(
+            context,
+            row['desc']?.toString() ?? '-',
+            color: colors?.onSurfaceMuted,
           ),
         ),
-      ),
-      child: Row(
-        children: [
-          AppImage(url: url, width: 34, height: 34, borderRadius: 17),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name == null || name.isEmpty ? '-' : name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                Text(
-                  [
-                    if (showLane && lane != null && lane.isNotEmpty) lane,
-                    if (count != null) '${_compactNumber(count)} matches',
-                  ].join(' · '),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).extension<HokThemeColors>()?.onSurfaceMuted,
-                  ),
-                ),
-              ],
-            ),
+        for (var slot = 0; slot < 6; slot++)
+          _TableColumnSpec(
+            id: 'equip_slot_$slot',
+            label: 'S${slot + 1}',
+            width: 38,
+            group: 'Equip Distribution',
+            cell: (context, row) {
+              final equips = _listOfMaps(row['equips']);
+              final equip = slot < equips.length ? equips[slot] : null;
+              if (equip == null) return _emptySlotPlaceholder(context, 22);
+              return AppImage(
+                url: _trendAssetUrl(equip, 'equip'),
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                semanticLabel: equip['name']?.toString(),
+              );
+            },
           ),
-          _CompactRate(
-            label: 'Pick',
-            value: row['pick_rate'] ?? row['style_share'],
-          ),
-          const SizedBox(width: 10),
-          _CompactRate(label: 'Win', value: row['win_rate']),
-        ],
-      ),
+      ],
     );
   }
 }
 
-class _CompactRate extends StatelessWidget {
-  const _CompactRate({required this.label, required this.value});
+/// 技能流表：分路 / 场次 / 占比 / 胜率 + MVP 指标。
+class _PlaystyleTable extends StatelessWidget {
+  const _PlaystyleTable({required this.heroRow, required this.rows});
 
-  final String label;
-  final Object? value;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 48,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Theme.of(
-                context,
-              ).extension<HokThemeColors>()?.onSurfaceMuted,
-            ),
-          ),
-          Text(
-            _percent(value),
-            maxLines: 1,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BuildPreparationList extends StatelessWidget {
-  const _BuildPreparationList({
-    required this.title,
-    required this.rows,
-    this.showPlayer = false,
-  });
-
-  final String title;
+  final StatsTrendRow heroRow;
   final List<Map<String, dynamic>> rows;
-  final bool showPlayer;
 
   @override
   Widget build(BuildContext context) {
-    return _DetailSection(
-      title: title,
-      child: rows.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 22),
-              child: Center(child: Text('No data')),
-            )
-          : Column(
-              children: [
-                for (var index = 0; index < math.min(rows.length, 30); index++)
-                  _BuildPreparationRow(
-                    row: rows[index],
-                    showPlayer: showPlayer,
-                  ),
-              ],
-            ),
+    return _DrawerStatsTable(
+      rows: rows,
+      initialSortId: 'style_share',
+      leadingLabel: 'Hero',
+      rowHeight: 46,
+      leadingCell: (context, row) =>
+          _heroBadgeCell(context, heroRow, row, 'skill'),
+      leadingSortText: (row) => _map(row['skill'])['name']?.toString() ?? '',
+      columns: [
+        _TableColumnSpec(
+          id: 'position_label',
+          label: 'Lane',
+          width: 74,
+          sortText: _playstyleLane,
+          cell: (context, row) {
+            final lane = _playstyleLane(row);
+            return _tableText(context, lane.isEmpty ? '-' : lane);
+          },
+        ),
+        _metricColumn('match_count', 'Matches', width: 62, percent: false),
+        _metricColumn('style_share', 'Share'),
+        _metricColumn('win_rate', 'Win'),
+        _metricColumn('mvp_rate', 'MVP', width: 56, group: 'MVP'),
+        _metricColumn('mvp_rate_win', 'MVP W', width: 62, group: 'MVP'),
+        _metricColumn('mvp_rate_lose', 'MVP L', width: 62, group: 'MVP'),
+      ],
     );
   }
 }
 
-class _BuildPreparationRow extends StatelessWidget {
-  const _BuildPreparationRow({required this.row, required this.showPlayer});
-
-  final Map<String, dynamic> row;
-  final bool showPlayer;
-
-  @override
-  Widget build(BuildContext context) {
-    final skill = _map(row['skill']);
-    final equips = _listOfMaps(row['equips']);
-    final player = row['player_name']?.toString().trim() ?? '';
-    final description = row['desc']?.toString().trim() ?? '';
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color:
-                Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                context.hokTheme.outlineSoft,
-          ),
-        ),
+// HOKX：残缺出装的空槽位显示描边空圆占位，而非留白。
+Widget _emptySlotPlaceholder(BuildContext context, double size) {
+  final colors = Theme.of(context).extension<HokThemeColors>();
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.6),
+      border: Border.all(
+        color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              AppImage(
-                url: _trendAssetUrl(skill, 'summoner_skill'),
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  showPlayer
-                      ? (player.isEmpty ? 'Pro build' : player)
-                      : (skill['name']?.toString() ?? 'Build'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
-              Text(
-                '${_compactNumber(row['match_count'])} · ${_percent(row['win_rate'])}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          if (description.isNotEmpty) ...[
-            const SizedBox(height: 5),
-            Text(
-              description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ],
-          const SizedBox(height: 7),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final equip in equips.take(12)) ...[
-                  AppImage(
-                    url: _trendAssetUrl(equip, 'equip'),
-                    width: 30,
-                    height: 30,
-                    borderRadius: 15,
-                  ),
-                  const SizedBox(width: 5),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
+
+// 技能流分路：优先后端文案字段，缺省时按 HOKX 位置码映射。
+String _playstyleLane(Map<String, dynamic> row) {
+  return _positionLabel(
+    row['position_label'] ??
+        row['position_desc'] ??
+        row['position'] ??
+        row['position_key'] ??
+        row['position_code'],
+  );
+}
+
+String _formatDuration(Object? value) {
+  final seconds = _double(value);
+  if (!seconds.isFinite || seconds <= 0) return '-';
+  final minutes = seconds ~/ 60;
+  final rest = (seconds % 60).round().toString().padLeft(2, '0');
+  return '$minutes:$rest';
 }
 
 class _BpPreparation extends StatelessWidget {
@@ -1599,7 +2227,7 @@ class _BpPreparation extends StatelessWidget {
   Widget build(BuildContext context) {
     final bp = detail.map('hero_bp_stats');
     return _DetailSection(
-      title: 'Ban / Pick position',
+      title: 'BP · ${AppLocalizations.of(context).translate('statsPosition')}',
       child: bp.isEmpty
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 22),
@@ -1641,12 +2269,22 @@ class _BpSideSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // HOKX BP tab：蓝/红方分块，每个 Pick 顺位一张「占比/胜率」小卡。
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontSize: 10,
+      color: color.withValues(alpha: 0.85),
+    );
+    final valueStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontSize: 10,
+      fontWeight: FontWeight.w800,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        border: Border.all(color: color.withValues(alpha: 0.36)),
-        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.32)),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
@@ -1655,45 +2293,84 @@ class _BpSideSummary extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: color,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
               Text(
-                'Pick ${_percent(data['${prefix}_pick_share'])} · Win ${_percent(data['${prefix}_win_rate'])}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                _percent(data['${prefix}_pick_share']),
+                style: valueStyle?.copyWith(color: color),
               ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Text('Win', style: labelStyle),
+              const Spacer(),
+              Text(_percent(data['${prefix}_win_rate']), style: valueStyle),
             ],
           ),
           const SizedBox(height: 8),
           for (var slot = 1; slot <= 5; slot++)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.only(bottom: 6),
+              // 不能用 CrossAxisAlignment.stretch：滚动容器内高度无界会导致布局崩溃、整个 tab 空白。
               child: Row(
                 children: [
-                  SizedBox(width: 28, child: Text('P$slot')),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value:
-                          (_double(data['${prefix}_slot${slot}_share']) / 100)
-                              .clamp(0.0, 1.0),
-                      minHeight: 5,
-                      color: color,
-                      backgroundColor: color.withValues(alpha: 0.12),
+                  SizedBox(
+                    width: 22,
+                    child: Center(
+                      child: Text(
+                        '$slot',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 92,
-                    child: Text(
-                      '${_percent(data['${prefix}_slot${slot}_share'])} / ${_percent(data['${prefix}_slot${slot}_win_rate'])}',
-                      textAlign: TextAlign.end,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        border: Border.all(color: color.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Text('Share', style: labelStyle),
+                              const Spacer(),
+                              Text(
+                                _percent(data['${prefix}_slot${slot}_share']),
+                                style: valueStyle,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Text('Win', style: labelStyle),
+                              const Spacer(),
+                              Text(
+                                _percent(
+                                  data['${prefix}_slot${slot}_win_rate'],
+                                ),
+                                style: valueStyle,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1717,18 +2394,23 @@ class _TrendDetailSheet extends ConsumerStatefulWidget {
 
 class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
   String _tab = 'overview';
+  late int _windowDays = widget.request.query.windowDays;
+
+  StatsTrendDetailRequest get _effectiveRequest =>
+      _windowDays == widget.request.query.windowDays
+      ? widget.request
+      : StatsTrendDetailRequest(
+          row: widget.request.row,
+          query: widget.request.query.copyWith(windowDays: _windowDays),
+        );
 
   @override
   Widget build(BuildContext context) {
-    final value = ref.watch(heroTrendDetailProvider(widget.request));
+    final request = _effectiveRequest;
+    final value = ref.watch(heroTrendDetailProvider(request));
     final row = widget.request.row;
     final colors = Theme.of(context).extension<HokThemeColors>();
-    return Container(
-      height: MediaQuery.sizeOf(context).height * 0.92,
-      decoration: BoxDecoration(
-        color: colors?.surfaceSlate ?? context.hokTheme.surfaceSlate,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      ),
+    return _StatsDrawerShell(
       child: Column(
         children: [
           Padding(
@@ -1737,9 +2419,9 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
               children: [
                 AppImage(
                   url: row.imageUrl,
-                  width: 40,
-                  height: 40,
-                  borderRadius: row.kind == 'equip' ? 9 : 20,
+                  width: 36,
+                  height: 36,
+                  borderRadius: row.kind == 'equip' ? 9 : 18,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1750,11 +2432,16 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
                         row.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w900),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                       Text(
-                        '${_baselineLabel(widget.request.query.baseline)} · ${_windowLabel(widget.request.query.windowDays)}',
+                        row.kind == 'equip'
+                            ? 'Equipment details'
+                            : 'Trend Chart · ${_baselineLabel(widget.request.query.baseline)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: colors?.onSurfaceMuted,
                         ),
@@ -1762,8 +2449,32 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
                     ],
                   ),
                 ),
+                // HOKX：窗口天数切换仅英雄趋势抽屉头部有，装备抽屉没有。
+                if (row.kind != 'equip')
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      key: const ValueKey('trend-window-select'),
+                      value: _windowDays,
+                      isDense: true,
+                      borderRadius: BorderRadius.circular(10),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      items: [
+                        for (final days in const [1, 7, 30, 999])
+                          DropdownMenuItem(
+                            value: days,
+                            child: Text(_windowLabel(days)),
+                          ),
+                      ],
+                      onChanged: (days) {
+                        if (days != null) setState(() => _windowDays = days);
+                      },
+                    ),
+                  ),
                 IconButton(
-                  tooltip: 'Close details',
+                  tooltip: AppLocalizations.of(context).close,
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded),
                 ),
@@ -1774,42 +2485,27 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
             child: AppAsyncView<StatsTrendDetail>(
               value: value,
               loadingStyle: AppAsyncLoadingStyle.dashboard,
-              retry: () =>
-                  ref.invalidate(heroTrendDetailProvider(widget.request)),
+              retry: () => ref.invalidate(heroTrendDetailProvider(request)),
               data: (detail) {
                 final tabs = row.kind == 'equip'
-                    ? const [
-                        ('overview', 'Trend', Icons.show_chart_rounded),
-                        ('heroes', 'Heroes', Icons.groups_rounded),
+                    ? const <(String, String)>[
+                        ('overview', 'Trend'),
+                        ('heroes', 'Single Equip'),
                       ]
-                    : const [
-                        ('overview', 'Overview', Icons.show_chart_rounded),
-                        ('power', 'Power', Icons.bolt_rounded),
-                        ('playstyle', 'Playstyle', Icons.route_rounded),
-                        ('equipment', 'Equipment', Icons.shield_outlined),
-                        ('matchups', 'Matchups', Icons.compare_arrows_rounded),
+                    : const <(String, String)>[
+                        ('overview', 'Overview'),
+                        ('power', 'Power'),
+                        ('playstyle', 'Playstyle'),
+                        ('equipment', 'Equipment'),
+                        ('matchups', 'Matchups'),
                       ];
                 return Column(
                   children: [
-                    SizedBox(
-                      height: 42,
-                      child: ListView.separated(
-                        key: const ValueKey('trend-detail-tabs'),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: tabs.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 6),
-                        itemBuilder: (context, index) {
-                          final tab = tabs[index];
-                          return ChoiceChip(
-                            selected: _tab == tab.$1,
-                            showCheckmark: false,
-                            avatar: Icon(tab.$3, size: 16),
-                            label: Text(tab.$2),
-                            onSelected: (_) => setState(() => _tab = tab.$1),
-                          );
-                        },
-                      ),
+                    _StatsDrawerTabs(
+                      key: const ValueKey('trend-detail-tabs'),
+                      tabs: tabs,
+                      selected: _tab,
+                      onSelected: (tab) => setState(() => _tab = tab),
                     ),
                     const SizedBox(height: 6),
                     Expanded(
@@ -1849,17 +2545,21 @@ class _DetailTabBody extends StatelessWidget {
     return switch (tab) {
       'power' => _PowerDetail(detail: detail),
       'playstyle' => _SeriesListDetail(
-        title: 'Skill and lane trends',
+        title: AppLocalizations.of(context).translate('statsTrend'),
         rows: detail.list('playstyle_trend_series'),
         identityKey: 'skill',
       ),
       'equipment' => _SeriesListDetail(
-        title: 'Equipment trends',
+        title: AppLocalizations.of(context).translate('statsEquipmentTrends'),
         rows: detail.list('equip_trend_series'),
         identityKey: 'equip',
+        toggleableLegend: true,
       ),
-      'matchups' => _MatchupDetail(detail: detail),
-      'heroes' => _EquipHeroDetail(detail: detail),
+      'matchups' => _MatchupDetail(row: row, detail: detail),
+      'heroes' => _EquipHeroTable(
+        equipRow: row,
+        rows: detail.list('hero_equip_stats'),
+      ),
       _ => _OverviewDetail(row: row, detail: detail),
     };
   }
@@ -1874,62 +2574,71 @@ class _OverviewDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (row.kind == 'equip') {
+      // HOKX 装备抽屉「趋势」tab：胜率/出场率双指标卡 + 双线趋势图。
       final points = detail.list('trend_points');
-      final source = points.isEmpty
-          ? row.sparkline.asMap().entries.map((entry) {
-              return <String, dynamic>{
-                'snapshot_date': '${entry.key + 1}',
-                'score': entry.value,
-              };
-            }).toList()
-          : points;
-      return _DetailSection(
-        title: 'Equipment performance',
-        child: _TrendChart(
-          series: [
-            _seriesFromMaps('Score', const Color(0xFF60A5FA), source, 'score'),
-          ],
-        ),
-      );
-    }
-
-    final points = row.coreTrendPoints;
-    final latest = points.isNotEmpty ? points.last : row.raw;
-    return Column(
-      children: [
-        _DetailSection(
-          title: 'Core trend',
-          child: _TrendChart(
-            series: [
-              _seriesFromMaps('Win', const Color(0xFF60A5FA), points, 'wr'),
+      final series = points.isEmpty
+          ? [_ChartSeries('Win Rate', const Color(0xFF3B82F6), row.sparkline)]
+          : [
               _seriesFromMaps(
-                'Pick',
-                const Color(0xFFFBBF24),
+                'Win Rate',
+                const Color(0xFF3B82F6),
+                points,
+                'win_rate',
+              ),
+              _seriesFromMaps(
+                'Pick Rate',
+                const Color(0xFFEF4444),
                 points,
                 'pick_rate',
               ),
-              _seriesFromMaps(
-                'Ban',
-                const Color(0xFF34D399),
-                points,
-                'ban_rate',
-              ),
-              _seriesFromMaps('BP', const Color(0xFFF472B6), points, 'bp_rate'),
+            ];
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _MetricGrid(
+            items: [
+              ('Win Rate', _percent(row.raw['win_rate'] ?? row.raw['wr'])),
+              ('Pick Rate', _percent(row.raw['pick_rate'])),
             ],
           ),
+          const SizedBox(height: 8),
+          _TrendChart(height: 250, series: series),
+        ],
+      );
+    }
+
+    // HOKX 趋势抽屉「综合」布局：大图表 → 最新快照日期 → 2×2 指标卡。
+    final points = row.coreTrendPoints;
+    final latest = points.isNotEmpty ? points.last : row.raw;
+    final snapshotDate = latest['snapshot_date']?.toString() ?? '-';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _TrendChart(
+          height: 250,
+          series: [
+            _seriesFromMaps('WR', const Color(0xFF60A5FA), points, 'wr'),
+            _seriesFromMaps('P', const Color(0xFFFBBF24), points, 'pick_rate'),
+            _seriesFromMaps('B', const Color(0xFF34D399), points, 'ban_rate'),
+            _seriesFromMaps('BP', const Color(0xFFF472B6), points, 'bp_rate'),
+          ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
+        Text(
+          snapshotDate,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Theme.of(
+              context,
+            ).extension<HokThemeColors>()?.onSurfaceMuted,
+          ),
+        ),
+        const SizedBox(height: 8),
         _MetricGrid(
           items: [
-            ('Win Rate', _percent(latest['wr'] ?? row.raw['wr'])),
-            (
-              'Pick Rate',
-              _percent(latest['pick_rate'] ?? row.raw['pick_rate']),
-            ),
-            ('Ban Rate', _percent(latest['ban_rate'] ?? row.raw['ban_rate'])),
-            ('BP Rate', _percent(latest['bp_rate'] ?? row.raw['bp_rate'])),
-            ('Synergy', _percent(detail.raw['synergy_rank'])),
-            ('Counter', _percent(detail.raw['counter_rank'])),
+            ('WR', _percent(latest['wr'] ?? row.raw['wr'])),
+            ('P', _percent(latest['pick_rate'] ?? row.raw['pick_rate'])),
+            ('B', _percent(latest['ban_rate'] ?? row.raw['ban_rate'])),
+            ('BP', _percent(latest['bp_rate'] ?? row.raw['bp_rate'])),
           ],
         ),
       ],
@@ -1944,43 +2653,32 @@ class _PowerDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // HOKX「战力」布局：Top1/10/50/100 折线图 + 2×2 最新值卡。
     final points = detail.list('power_trend_points');
     final latest = points.isEmpty ? const <String, dynamic>{} : points.last;
     return Column(
       children: [
-        _DetailSection(
-          title: 'Power rank history',
-          child: _TrendChart(
-            series: [
-              _seriesFromMaps('Top 1', const Color(0xFFEF4444), points, 'top1'),
-              _seriesFromMaps(
-                'Top 10',
-                const Color(0xFFF59E0B),
-                points,
-                'top10',
-              ),
-              _seriesFromMaps(
-                'Top 50',
-                const Color(0xFF22C55E),
-                points,
-                'top50',
-              ),
-              _seriesFromMaps(
-                'Top 100',
-                const Color(0xFF3B82F6),
-                points,
-                'top100',
-              ),
-            ],
-          ),
+        _TrendChart(
+          height: 250,
+          series: [
+            _seriesFromMaps('Top1', const Color(0xFFEF4444), points, 'top1'),
+            _seriesFromMaps('Top10', const Color(0xFFF59E0B), points, 'top10'),
+            _seriesFromMaps('Top50', const Color(0xFF22C55E), points, 'top50'),
+            _seriesFromMaps(
+              'Top100',
+              const Color(0xFF3B82F6),
+              points,
+              'top100',
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         _MetricGrid(
           items: [
-            ('Top 1', _compactNumber(latest['top1'])),
-            ('Top 10', _compactNumber(latest['top10'])),
-            ('Top 50', _compactNumber(latest['top50'])),
-            ('Top 100', _compactNumber(latest['top100'])),
+            ('Top1', _compactNumber(latest['top1'])),
+            ('Top10', _compactNumber(latest['top10'])),
+            ('Top50', _compactNumber(latest['top50'])),
+            ('Top100', _compactNumber(latest['top100'])),
           ],
         ),
       ],
@@ -1988,46 +2686,203 @@ class _PowerDetail extends StatelessWidget {
   }
 }
 
-class _SeriesListDetail extends StatelessWidget {
+/// HOKX 趋势抽屉「打法/装备」tab：多系列合并折线图（胜率实线 + 占比虚线同色）。
+class _SeriesListDetail extends StatefulWidget {
   const _SeriesListDetail({
     required this.title,
     required this.rows,
     required this.identityKey,
+    this.toggleableLegend = false,
   });
 
   final String title;
   final List<Map<String, dynamic>> rows;
   final String identityKey;
+  final bool toggleableLegend;
+
+  @override
+  State<_SeriesListDetail> createState() => _SeriesListDetailState();
+}
+
+class _SeriesListDetailState extends State<_SeriesListDetail> {
+  final Map<int, bool> _visible = {};
+
+  bool _isVisible(int index) => _visible[index] ?? index < 3;
 
   @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) {
-      return const AppEmptyState(
+    if (widget.rows.isEmpty) {
+      return AppEmptyState(
         icon: Icons.show_chart_rounded,
-        title: 'No trend history',
-        message: 'This dataset does not contain detail series.',
+        title: AppLocalizations.of(context).noData,
+        message: AppLocalizations.of(context).serviceSlow,
       );
     }
-    return _DetailSection(
-      title: title,
-      child: Column(
-        children: [
-          for (var index = 0; index < math.min(rows.length, 8); index++) ...[
-            _SeriesRow(
-              row: rows[index],
-              identityKey: identityKey,
-              color: _chartColors[index % _chartColors.length],
-            ),
-            if (index < math.min(rows.length, 8) - 1) const Divider(height: 16),
-          ],
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final rows = widget.rows.take(8).toList(growable: false);
+    final chartSeries = <_ChartSeries>[];
+    for (var index = 0; index < rows.length; index++) {
+      if (widget.toggleableLegend && !_isVisible(index)) continue;
+      final row = rows[index];
+      final color = _chartColors[index % _chartColors.length];
+      final points = _listOfMaps(row['points']);
+      final name = _seriesName(row);
+      chartSeries.add(_seriesFromMaps('$name Win', color, points, 'win_rate'));
+      chartSeries.add(
+        _ChartSeries('$name Share', color, [
+          for (final point in points)
+            _double(point['style_share'] ?? point['pick_rate']),
+        ], dashed: true),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.toggleableLegend) ...[
+          // HOKX 装备 tab：图例 chips 可开关系列（默认展示前 3 个）。
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (var index = 0; index < rows.length; index++)
+                _SeriesLegendChip(
+                  row: rows[index],
+                  identityKey: widget.identityKey,
+                  color: _chartColors[index % _chartColors.length],
+                  selected: _isVisible(index),
+                  onTap: () =>
+                      setState(() => _visible[index] = !_isVisible(index)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
         ],
+        _TrendChart(height: 250, showLegend: false, series: chartSeries),
+        const SizedBox(height: 8),
+        // 每个系列一张摘要卡：色点 + 名称 + 最新占比/胜率。
+        for (var index = 0; index < rows.length; index++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).scaffoldBackgroundColor.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+                ),
+              ),
+              child: _SeriesSummaryRow(
+                row: rows[index],
+                identityKey: widget.identityKey,
+                color: _chartColors[index % _chartColors.length],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _seriesName(Map<String, dynamic> row) =>
+      _seriesDisplayName(row, widget.identityKey);
+}
+
+// HOKX 系列名：打法系列为「技能名 · 分路」，装备系列仅名称。
+String _seriesDisplayName(Map<String, dynamic> row, String identityKey) {
+  final identity = _map(row[identityKey]);
+  final name = identity['name']?.toString().trim() ?? '';
+  final base = name.isEmpty ? '-' : name;
+  if (identityKey != 'skill') return base;
+  final lane = _positionLabel(
+    row['position'] ??
+        row['position_desc'] ??
+        row['position_key'] ??
+        row['position_code'],
+  );
+  return lane.isEmpty ? base : '$base · $lane';
+}
+
+class _SeriesLegendChip extends StatelessWidget {
+  const _SeriesLegendChip({
+    required this.row,
+    required this.identityKey,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Map<String, dynamic> row;
+  final String identityKey;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final primary = Theme.of(context).colorScheme.primary;
+    final identity = _map(row[identityKey]);
+    final name = _seriesDisplayName(row, identityKey);
+    final iconUrl = _trendAssetUrl(
+      identity,
+      identityKey == 'skill' ? 'summoner_skill' : 'equip',
+    );
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? primary.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected
+                ? primary.withValues(alpha: 0.7)
+                : colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+            if (iconUrl.isNotEmpty) ...[
+              AppImage(
+                url: iconUrl,
+                width: 14,
+                height: 14,
+                borderRadius: 7,
+                excludeFromSemantics: true,
+              ),
+              const SizedBox(width: 4),
+            ],
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 110),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                  color: selected ? null : colors?.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SeriesRow extends StatelessWidget {
-  const _SeriesRow({
+class _SeriesSummaryRow extends StatelessWidget {
+  const _SeriesSummaryRow({
     required this.row,
     required this.identityKey,
     required this.color,
@@ -2039,100 +2894,165 @@ class _SeriesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final identity = _map(row[identityKey]);
-    final name = identity['name']?.toString() ?? '-';
+    final colors = Theme.of(context).extension<HokThemeColors>();
+    final name = _seriesDisplayName(row, identityKey);
     final points = _listOfMaps(row['points']);
     final latest = points.isNotEmpty ? points.last : row;
-    final id = identity['id']?.toString() ?? '';
-    final imageUrl = identityKey == 'equip' && id.isNotEmpty
-        ? 'https://hokhelper.com/static/game/equip/$id.png'
-        : '';
     return Row(
       children: [
-        if (imageUrl.isNotEmpty) ...[
-          AppImage(url: imageUrl, width: 34, height: 34, borderRadius: 8),
-          const SizedBox(width: 8),
-        ],
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 5),
-              SizedBox(
-                height: 34,
-                child: _MiniSparkline(
-                  values: points
-                      .map((point) => _double(point['win_rate']))
-                      .where((value) => value.isFinite)
-                      .toList(),
-                  color: color,
-                ),
-              ),
-            ],
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+        ),
+        Text(
+          'Share ${_percent(latest['style_share'] ?? latest['pick_rate'])}',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: colors?.onSurfaceMuted,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              _percent(latest['win_rate']),
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            Text(
-              'Pick ${_percent(latest['pick_rate'])}',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(
-                  context,
-                ).extension<HokThemeColors>()?.onSurfaceMuted,
-              ),
-            ),
-          ],
+        Text(
+          'Win ${_percent(latest['win_rate'])}',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         ),
       ],
     );
   }
 }
 
-class _MatchupDetail extends StatelessWidget {
-  const _MatchupDetail({required this.detail});
+// HOKX getHeroLanePositions：position 词元 -> 分路编号（仅识别 0-4 与别名）。
+Set<int> _heroLanes(Map<String, dynamic> hero) {
+  const tokenToLane = {
+    '0': 0,
+    'clash': 0,
+    'solo': 0,
+    'top': 0,
+    '对抗': 0,
+    '对抗路': 0,
+    '1': 1,
+    'mid': 1,
+    'middle': 1,
+    '中': 1,
+    '中路': 1,
+    '2': 2,
+    'farm': 2,
+    'adc': 2,
+    'bot': 2,
+    'marksman': 2,
+    '发育': 2,
+    '发育路': 2,
+    '3': 3,
+    'jungle': 3,
+    'jg': 3,
+    '野': 3,
+    '打野': 3,
+    '4': 4,
+    'support': 4,
+    'sup': 4,
+    'roam': 4,
+    '辅助': 4,
+    '游走': 4,
+  };
+  final lanes = <int>{};
+  for (final key in const ['position', 'postion', 'lanePosition']) {
+    final tokens = (hero[key]?.toString() ?? '')
+        .replaceAll(RegExp(r'[|/，、;；]'), ',')
+        .split(',')
+        .map((token) => token.trim().toLowerCase());
+    for (final token in tokens) {
+      final lane = tokenToLane[token];
+      if (lane != null) lanes.add(lane);
+    }
+  }
+  return lanes;
+}
 
+bool _hasLaneConflict(
+  Map<String, dynamic> baseHero,
+  Map<String, dynamic> otherHero,
+) {
+  final baseLanes = _heroLanes(baseHero);
+  final otherLanes = _heroLanes(otherHero);
+  if (baseLanes.isEmpty || otherLanes.isEmpty) return false;
+  return otherLanes.any(baseLanes.contains);
+}
+
+class _MatchupDetail extends StatefulWidget {
+  const _MatchupDetail({required this.row, required this.detail});
+
+  final StatsTrendRow row;
   final StatsTrendDetail detail;
 
   @override
+  State<_MatchupDetail> createState() => _MatchupDetailState();
+}
+
+class _MatchupDetailState extends State<_MatchupDetail> {
+  String _tab = 'synergy';
+
+  @override
   Widget build(BuildContext context) {
+    // 搭配英雄过滤同分路冲突（同 HOKX）；两组列表较长，移动端用二级 tab 切换查看。
+    final synergyRows = widget.detail
+        .list('synergy_list')
+        .where((item) => !_hasLaneConflict(widget.row.hero, _map(item['hero'])))
+        .toList(growable: false);
+    final counterRows = widget.detail.list('counter_list');
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MatchupList(
-          title: 'Synergy heroes',
-          rows: detail.list('synergy_list'),
+        _StatsDrawerTabs(
+          key: const ValueKey('matchup-subtabs'),
+          padding: EdgeInsets.zero,
+          tabs: [
+            ('synergy', 'Synergy (${synergyRows.length})'),
+            ('counter', 'Counter (${counterRows.length})'),
+          ],
+          selected: _tab,
+          onSelected: (tab) => setState(() => _tab = tab),
         ),
-        const SizedBox(height: 10),
-        _MatchupList(
-          title: 'Counter heroes',
-          rows: detail.list('counter_list'),
-        ),
+        const SizedBox(height: 8),
+        if (_tab == 'synergy')
+          _MatchupList(
+            title: AppLocalizations.of(context).translate('teamSynergy'),
+            scoreLabel: 'Synergy',
+            rows: synergyRows,
+          )
+        else
+          _MatchupList(
+            title: AppLocalizations.of(context).translate('teamCounter'),
+            scoreLabel: 'Counter',
+            rows: counterRows,
+          ),
       ],
     );
   }
 }
 
 class _MatchupList extends StatelessWidget {
-  const _MatchupList({required this.title, required this.rows});
+  const _MatchupList({
+    required this.title,
+    required this.rows,
+    this.scoreLabel = 'Score',
+  });
 
   final String title;
   final List<Map<String, dynamic>> rows;
+  final String scoreLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -2140,8 +3060,16 @@ class _MatchupList extends StatelessWidget {
       title: title,
       child: Column(
         children: [
-          for (var index = 0; index < math.min(rows.length, 10); index++)
-            _CompactHeroStat(row: rows[index], rank: index + 1),
+          // HOKX 全量渲染（外层已有整页滚动）。
+          for (var index = 0; index < rows.length; index++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _CompactHeroStat(
+                row: rows[index],
+                rank: index + 1,
+                scoreLabel: scoreLabel,
+              ),
+            ),
           if (rows.isEmpty)
             const Padding(padding: EdgeInsets.all(20), child: Text('No data')),
         ],
@@ -2151,25 +3079,48 @@ class _MatchupList extends StatelessWidget {
 }
 
 class _CompactHeroStat extends StatelessWidget {
-  const _CompactHeroStat({required this.row, required this.rank});
+  const _CompactHeroStat({
+    required this.row,
+    required this.rank,
+    required this.scoreLabel,
+  });
 
   final Map<String, dynamic> row;
   final int rank;
+  final String scoreLabel;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
     final hero = _map(row['hero']);
     final id = hero['id'] ?? hero['heroId'] ?? '';
-    return SizedBox(
-      height: 48,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+        ),
+      ),
       child: Row(
         children: [
-          SizedBox(width: 22, child: Text('$rank')),
+          SizedBox(
+            width: 18,
+            child: Text(
+              '$rank',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: 10,
+                color: colors?.onSurfaceMuted,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
           AppImage(
             url: 'https://hokhelper.com/static/game/hero/$id.png',
-            width: 32,
-            height: 32,
-            borderRadius: 16,
+            width: 28,
+            height: 28,
+            borderRadius: 14,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -2177,43 +3128,30 @@ class _CompactHeroStat extends StatelessWidget {
               hero['name']?.toString() ?? '-',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.labelMedium,
             ),
           ),
-          Text(
-            '${_compactNumber(row['matches'])} · ${_percent(row['score'] ?? row['win_rate'])}',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Matches ${_compactNumber(row['matches'])}',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                  color: colors?.onSurfaceMuted,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              Text(
+                '$scoreLabel ${_percent(row['score'] ?? row['win_rate'])}',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EquipHeroDetail extends StatelessWidget {
-  const _EquipHeroDetail({required this.detail});
-
-  final StatsTrendDetail detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DetailSection(
-      title: 'Hero performance with this equipment',
-      child: Column(
-        children: [
-          for (
-            var index = 0;
-            index < math.min(detail.list('hero_equip_stats').length, 20);
-            index++
-          )
-            _CompactHeroStat(
-              row: detail.list('hero_equip_stats')[index],
-              rank: index + 1,
-            ),
         ],
       ),
     );
@@ -2256,6 +3194,7 @@ class _DetailSection extends StatelessWidget {
   }
 }
 
+// HOKX 抽屉指标卡：两列网格、深色底 + 描边圆角、小标签在上等宽数字在下。
 class _MetricGrid extends StatelessWidget {
   const _MetricGrid({required this.items});
 
@@ -2263,6 +3202,7 @@ class _MetricGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<HokThemeColors>();
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = (constraints.maxWidth - 8) / 2;
@@ -2273,10 +3213,15 @@ class _MetricGrid extends StatelessWidget {
             for (final item in items)
               Container(
                 width: width,
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: BorderRadius.circular(8),
+                  color: Theme.of(
+                    context,
+                  ).scaffoldBackgroundColor.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colors?.outlineSoft ?? context.hokTheme.outlineSoft,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2284,9 +3229,8 @@ class _MetricGrid extends StatelessWidget {
                     Text(
                       item.$1,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).extension<HokThemeColors>()?.onSurfaceMuted,
+                        fontSize: 10,
+                        color: colors?.onSurfaceMuted,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -2308,31 +3252,43 @@ class _MetricGrid extends StatelessWidget {
 }
 
 class _ChartSeries {
-  const _ChartSeries(this.label, this.color, this.values);
+  const _ChartSeries(
+    this.label,
+    this.color,
+    this.values, {
+    this.dashed = false,
+  });
 
   final String label;
   final Color color;
   final List<double> values;
+  final bool dashed;
 }
 
 class _TrendChart extends StatelessWidget {
-  const _TrendChart({required this.series});
+  const _TrendChart({
+    required this.series,
+    this.height = 190,
+    this.showLegend = true,
+  });
 
   final List<_ChartSeries> series;
+  final double height;
+  final bool showLegend;
 
   @override
   Widget build(BuildContext context) {
     final visible = series.where((item) => item.values.length > 1).toList();
     if (visible.isEmpty) {
-      return const SizedBox(
-        height: 170,
-        child: Center(child: Text('No trend history')),
+      return SizedBox(
+        height: height,
+        child: const Center(child: Text('No trend data')),
       );
     }
     return Column(
       children: [
         SizedBox(
-          height: 190,
+          height: height,
           width: double.infinity,
           child: CustomPaint(
             painter: _TrendChartPainter(
@@ -2343,32 +3299,36 @@ class _TrendChart extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          runSpacing: 6,
-          children: [
-            for (final item in visible)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: item.color,
-                      shape: BoxShape.circle,
+        if (showLegend) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              for (final item in visible)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: item.color,
+                        shape: item.dashed
+                            ? BoxShape.rectangle
+                            : BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    item.label,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ],
-              ),
-          ],
-        ),
+                    const SizedBox(width: 5),
+                    Text(
+                      item.label,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -2390,32 +3350,61 @@ class _TrendChartPainter extends CustomPainter {
       final y = chart.top + chart.height * index / 3;
       canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), grid);
     }
+    // HOKX recharts 单一共享 Y 轴：全部系列用同一个 min/max 归一化。
+    final allValues = [
+      for (final item in series)
+        ...item.values.where((value) => value.isFinite),
+    ];
+    if (allValues.length < 2) return;
+    final minValue = allValues.reduce(math.min);
+    final maxValue = allValues.reduce(math.max);
+    final spread = math.max(maxValue - minValue, 0.0001);
     for (final item in series) {
       final values = item.values.where((value) => value.isFinite).toList();
       if (values.length < 2) continue;
-      final minValue = values.reduce(math.min);
-      final maxValue = values.reduce(math.max);
-      final spread = math.max(maxValue - minValue, 0.0001);
-      final path = Path();
-      for (var index = 0; index < values.length; index++) {
-        final x = chart.left + chart.width * index / (values.length - 1);
-        final normalized = (values[index] - minValue) / spread;
-        final y = chart.bottom - normalized * chart.height;
-        if (index == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
+      final points = <Offset>[
+        for (var index = 0; index < values.length; index++)
+          Offset(
+            chart.left + chart.width * index / (values.length - 1),
+            chart.bottom - (values[index] - minValue) / spread * chart.height,
+          ),
+      ];
+      final paint = Paint()
+        ..color = item.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = item.dashed ? 1.6 : 2.2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      if (item.dashed) {
+        // HOKX 用虚线区分占比/份额系列。
+        for (var index = 0; index < points.length - 1; index++) {
+          _drawDashedSegment(canvas, points[index], points[index + 1], paint);
         }
+      } else {
+        final path = Path()..moveTo(points.first.dx, points.first.dy);
+        for (final point in points.skip(1)) {
+          path.lineTo(point.dx, point.dy);
+        }
+        canvas.drawPath(path, paint);
       }
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = item.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.2
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round,
+    }
+  }
+
+  void _drawDashedSegment(Canvas canvas, Offset from, Offset to, Paint paint) {
+    const dashLength = 4.0;
+    const gapLength = 3.0;
+    final distance = (to - from).distance;
+    if (distance <= 0) return;
+    final direction = (to - from) / distance;
+    var traveled = 0.0;
+    while (traveled < distance) {
+      final segmentEnd = math.min(traveled + dashLength, distance);
+      canvas.drawLine(
+        from + direction * traveled,
+        from + direction * segmentEnd,
+        paint,
       );
+      traveled = segmentEnd + gapLength;
     }
   }
 
@@ -2428,7 +3417,6 @@ class _TrendChartPainter extends CustomPainter {
 class _MiniSparkline extends StatelessWidget {
   const _MiniSparkline({
     required this.values,
-    this.color,
     this.badge = _TrendBadge.none,
     this.direction,
     this.showSignal = false,
@@ -2436,7 +3424,6 @@ class _MiniSparkline extends StatelessWidget {
   });
 
   final List<double> values;
-  final Color? color;
   final _TrendBadge badge;
   final _TrendDirection? direction;
   final bool showSignal;
@@ -2447,7 +3434,7 @@ class _MiniSparkline extends StatelessWidget {
       values: values,
       badge: badge,
       direction: direction ?? _resolveTrendDirection(values),
-      fallbackColor: color ?? Theme.of(context).colorScheme.primary,
+      fallbackColor: Theme.of(context).colorScheme.primary,
       useSignalPalette: showSignal,
     );
     return Semantics(
@@ -2716,13 +3703,16 @@ class _MiniSparklinePainter extends CustomPainter {
   }
 }
 
+// HOKX TREND_SERIES_COLORS：打法/装备趋势系列的 8 色循环。
 const _chartColors = [
   Color(0xFF60A5FA),
-  Color(0xFFFBBF24),
-  Color(0xFF34D399),
+  Color(0xFFF59E0B),
+  Color(0xFF22C55E),
   Color(0xFFF472B6),
   Color(0xFFA78BFA),
-  Color(0xFFFB7185),
+  Color(0xFF14B8A6),
+  Color(0xFFEF4444),
+  Color(0xFF38BDF8),
 ];
 
 _ChartSeries _seriesFromMaps(
@@ -2762,36 +3752,59 @@ String _formatTableValue(Object? value, String type) {
 }
 
 String _dimensionLabel(BuildContext context, _TrendDimension dimension) {
-  if (Localizations.localeOf(context).languageCode != 'zh') {
-    return dimension.label;
-  }
+  final l10n = AppLocalizations.of(context);
   return switch (dimension) {
-    _TrendDimension.hero => '英雄',
-    _TrendDimension.power => '战力',
-    _TrendDimension.player => '玩家',
-    _TrendDimension.equipment => '装备',
-    _TrendDimension.tier => '梯度',
+    _TrendDimension.hero => l10n.translate('statsHero'),
+    _TrendDimension.power => l10n.translate('statsPower'),
+    _TrendDimension.player => l10n.translate('statsPlayer'),
+    _TrendDimension.equipment => l10n.translate('statsEquipment'),
+    _TrendDimension.tier => l10n.translate('statsTier'),
   };
 }
 
 String _metricGroupLabel(BuildContext context, String group) {
-  if (Localizations.localeOf(context).languageCode == 'zh') return group;
-  return const {
-        '核心': 'Core',
-        '时段': 'Phases',
-        '时段(胜率/占比)': 'Phases (Win/Share)',
-        '评分': 'Rating',
-        '输出': 'Damage',
-        '承伤': 'Taken',
-        '经济': 'Economy',
-        '团队': 'Team',
-        '趋势': 'Trend',
-        '梯度': 'Tier',
-      }[group] ??
-      group;
+  final l10n = AppLocalizations.of(context);
+  final key = const {
+    '核心': 'statsCore',
+    '时段': 'statsPhases',
+    '时段(胜率/占比)': 'statsPhases',
+    '评分': 'statsRating',
+    '输出': 'statsDamage',
+    '承伤': 'statsTaken',
+    '经济': 'statsEconomy',
+    '团队': 'statsTeam',
+    '趋势': 'statsTrend',
+    '梯度': 'statsTier',
+  }[group];
+  return key == null ? group : l10n.translate(key);
 }
 
 String _columnLabel(BuildContext context, String id, String fallback) {
+  final l10n = AppLocalizations.of(context);
+  final localizedKey = const {
+    'hero': 'statsHero',
+    'player': 'statsPlayer',
+    'equip': 'statsEquipment',
+    'team': 'statsTeam',
+    'wr': 'statsWinRate',
+    'win_rate': 'statsWinRate',
+    'pick_rate': 'statsPickRate',
+    'ban_rate': 'statsBanRate',
+    'bp_rate': 'statsBpRate',
+    'avg_kills': 'statsKills',
+    'avg_deaths': 'statsDeaths',
+    'avg_assists': 'statsAssists',
+    'peak_score': 'homePeakScore',
+    'rank_stars': 'statsStars',
+    'play_cnt': 'statsMatches',
+    'avg_kda': 'statsKda',
+    'grade_score': 'statsRating',
+    'grade_rank': 'statsRank',
+    'tier': 'statsTier',
+    'score': 'statsScore',
+    'position': 'statsPosition',
+  }[id];
+  if (localizedKey != null) return l10n.translate(localizedKey);
   if (Localizations.localeOf(context).languageCode == 'zh') return fallback;
   final byId = const {
     'hero': 'Hero',
@@ -2961,6 +3974,34 @@ String _windowShortLabel(int days) => switch (days) {
 String _percent(Object? value) {
   final number = _double(value);
   return number.isFinite ? '${number.toStringAsFixed(2)}%' : '-';
+}
+
+// 88px 槽位格专用：三位整数（100%）去掉小数位，避免省略号截断。
+String _slotPercent(double number) {
+  if (!number.isFinite) return '-';
+  if (number >= 99.995) return '${number.round()}%';
+  return '${number.toStringAsFixed(2)}%';
+}
+
+// HOKX resolvePositionLabel：位置码 0-4 为打法分路，5-7 为兼容映射。
+String _positionLabel(Object? value) {
+  final normalized = value?.toString().trim() ?? '';
+  if (normalized.isEmpty) return '';
+  final code = int.tryParse(normalized);
+  if (code != null) {
+    return const {
+          0: 'Clash',
+          1: 'Mid',
+          2: 'Farm',
+          3: 'Jungle',
+          4: 'Support',
+          5: 'Jungle',
+          6: 'Clash',
+          7: 'Farm',
+        }[code] ??
+        '';
+  }
+  return normalized;
 }
 
 String _compactNumber(Object? value) {

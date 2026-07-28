@@ -16,9 +16,11 @@ import 'hero_gallery_screen.dart';
 
 final worldMapHeroesProvider = FutureProvider<List<HeroSummary>>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
+  // 区域阵营匹配依赖全量英雄（含早期英雄），默认 60 条会漏掉老英雄，
+  // 与 hero_relationships_screen 一致取 pageSize: 200。
   return ref
       .watch(heroesRepositoryProvider)
-      .loadHeroes(settings.region.regionId);
+      .loadHeroes(settings.region.regionId, pageSize: 200);
 });
 
 class WorldMapScreen extends ConsumerStatefulWidget {
@@ -229,6 +231,20 @@ class _WorldAtlasState extends State<_WorldAtlas>
     with TickerProviderStateMixin {
   static const _mapWidth = 1500.0;
   static const _mapHeight = 743.0;
+  // HOKX 源图坐标系（5279×2612）中的 region 边界线位置，渲染时按比例缩放。
+  static const _sourceMapWidth = 5279.0;
+  static const _sourceMapHeight = 2612.0;
+  static const _regionLineBounds = <int, Rect>{
+    6: Rect.fromLTWH(7, 1050, 1030, 1259),
+    9: Rect.fromLTWH(904, 997, 1664, 858),
+    2: Rect.fromLTWH(1685, 184, 1193, 1060),
+    7: Rect.fromLTWH(2247, 1150, 1373, 1390),
+    0: Rect.fromLTWH(2980, 900, 582, 489),
+    3: Rect.fromLTWH(3215, 1438, 631, 412),
+    1: Rect.fromLTWH(3310, 957, 952, 665),
+    4: Rect.fromLTWH(3397, 1441, 836, 743),
+    8: Rect.fromLTWH(4027, 1621, 535, 815),
+  };
   static const _regionAnchors = <String, Offset>{
     'riluohai': Offset(100, 445),
     'yunzhongmodi': Offset(496, 402),
@@ -349,6 +365,25 @@ class _WorldAtlasState extends State<_WorldAtlas>
                           ),
                         ),
                       ),
+                      // 与 HOKX 一致：用虚线边界图标出每个 region 的范围。
+                      for (final region in widget.regions)
+                        if (_regionLineBounds[region.areaId] case final bounds?)
+                          Positioned(
+                            left: bounds.left * _mapWidth / _sourceMapWidth,
+                            top: bounds.top * _mapHeight / _sourceMapHeight,
+                            width: bounds.width * _mapWidth / _sourceMapWidth,
+                            height:
+                                bounds.height * _mapHeight / _sourceMapHeight,
+                            child: IgnorePointer(
+                              child: Opacity(
+                                opacity: 0.62,
+                                child: Image.asset(
+                                  'assets/world/line_${region.areaId}.png',
+                                  fit: BoxFit.fill,
+                                ),
+                              ),
+                            ),
+                          ),
                       for (final region in widget.regions)
                         if (_regionAnchors[region.id] case final anchor?)
                           Positioned(
@@ -380,7 +415,6 @@ class _WorldAtlasState extends State<_WorldAtlas>
                               topFactor: 0.02,
                               opacity: 0.31,
                               scale: 1.36,
-                              reverse: true,
                             ),
                             _FloatingCloudBand(
                               progress: _cloudFrontController.value,
@@ -449,7 +483,6 @@ class _FloatingCloudBand extends StatelessWidget {
     required this.topFactor,
     required this.opacity,
     required this.scale,
-    this.reverse = false,
   });
 
   final double progress;
@@ -457,7 +490,6 @@ class _FloatingCloudBand extends StatelessWidget {
   final double topFactor;
   final double opacity;
   final double scale;
-  final bool reverse;
 
   @override
   Widget build(BuildContext context) {
@@ -466,9 +498,8 @@ class _FloatingCloudBand extends StatelessWidget {
         final width = constraints.maxWidth;
         final imageWidth = width * scale;
         final travel = width + imageWidth;
-        final start = reverse
-            ? progress * travel - imageWidth
-            : width - progress * travel;
+        // 与 HOKX 一致：所有云层统一从左往右漂移。
+        final start = progress * travel - imageWidth;
 
         return Stack(
           children: [
@@ -567,7 +598,7 @@ class _HeroDetailRow extends StatelessWidget {
           semanticLabel: '${hero.name} avatar',
         ),
         title: Text(hero.name),
-        subtitle: Text(hero.title.isEmpty ? 'Hero ${hero.heroId}' : hero.title),
+        subtitle: hero.title.isEmpty ? null : Text(hero.title),
       ),
     );
   }

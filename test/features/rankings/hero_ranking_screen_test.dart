@@ -119,7 +119,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Equips'));
+    await tester.tap(find.text('Equipment'));
     await tester.pumpAndSettle();
 
     expect(find.text('Doombringer'), findsOneWidget);

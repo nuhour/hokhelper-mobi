@@ -3,10 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_lane_icon.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/team_builder_repository.dart';
 import '../domain/team_build_hero.dart';
@@ -74,6 +76,8 @@ class TeamBuilderDraft {
 
   List<int> get allyIds => _heroIds(allyPicks);
   List<int> get enemyIds => _heroIds(enemyPicks);
+  List<int> get allyBanIds => _heroIds(allyBans);
+  List<int> get enemyBanIds => _heroIds(enemyBans);
   List<int> get banIds => _heroIds([...allyBans, ...enemyBans]);
   Set<int> get occupiedIds => {...allyIds, ...enemyIds, ...banIds};
 }
@@ -100,21 +104,44 @@ final teamRecommendationsProvider =
     FutureProvider.family<TeamRecommendationResult, int?>((ref, mainJob) async {
       final settings = await ref.watch(appSettingsControllerProvider.future);
       final draft = ref.watch(teamBuilderDraftProvider);
+      final repository = ref.watch(teamBuilderRepositoryProvider);
       final isAllyTarget = draft.activeSide == TeamBuilderSide.ally;
-      return ref
-          .watch(teamBuilderRepositoryProvider)
-          .loadRecommendations(
-            regionId: settings.region.regionId,
-            myPicks: isAllyTarget ? draft.allyIds : draft.enemyIds,
-            enemyPicks: isAllyTarget ? draft.enemyIds : draft.allyIds,
-            bans: draft.banIds,
-            mySide: isAllyTarget == draft.allyIsBlue ? 'blue' : 'red',
-            slotType: draft.activeSlotType.apiValue,
-            slotIndex: draft.activeIndex,
-            recommendType: draft.recommendType,
-            mainJob: mainJob,
-            limit: 50,
-          );
+      final isBanSlot = draft.activeSlotType == TeamBuilderSlotType.ban;
+      // HOKX 规则：ban 位推荐的上下文是双方已禁英雄，pick 位才用双方阵容。
+      final recommendationFuture = repository.loadRecommendations(
+        regionId: settings.region.regionId,
+        myPicks: isBanSlot
+            ? (isAllyTarget ? draft.allyBanIds : draft.enemyBanIds)
+            : (isAllyTarget ? draft.allyIds : draft.enemyIds),
+        enemyPicks: isBanSlot
+            ? (isAllyTarget ? draft.enemyBanIds : draft.allyBanIds)
+            : (isAllyTarget ? draft.enemyIds : draft.allyIds),
+        bans: draft.banIds,
+        mySide: isAllyTarget == draft.allyIsBlue ? 'blue' : 'red',
+        slotType: draft.activeSlotType.apiValue,
+        slotIndex: draft.activeIndex,
+        recommendType: draft.recommendType,
+        mainJob: mainJob,
+        limit: 50,
+      );
+      if (!isBanSlot) {
+        return recommendationFuture;
+      }
+      // HOKX 规则：ban 位时两侧胜率仍按双方已选阵容单独计算。
+      final sideRateFuture = repository.loadRecommendations(
+        regionId: settings.region.regionId,
+        myPicks: draft.allyIsBlue ? draft.allyIds : draft.enemyIds,
+        enemyPicks: draft.allyIsBlue ? draft.enemyIds : draft.allyIds,
+        bans: draft.banIds,
+        mySide: 'blue',
+        slotIndex: draft.activeIndex,
+        limit: 1,
+      );
+      final results = await Future.wait([recommendationFuture, sideRateFuture]);
+      return TeamRecommendationResult(
+        recommendations: results[0].recommendations,
+        sideWinRates: results[1].sideWinRates ?? results[0].sideWinRates,
+      );
     });
 
 class TeamBuilderScreen extends ConsumerStatefulWidget {
@@ -326,12 +353,12 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
                 ),
                 AsyncError() => _PoolMessage(
                   icon: Icons.error_outline,
-                  message: 'Failed to load hero pool',
+                  message: AppLocalizations.of(context).serviceSlow,
                   onRetry: () => ref.invalidate(teamBuilderHeroesProvider),
                 ),
-                _ => const _PoolMessage(
+                _ => _PoolMessage(
                   icon: Icons.hourglass_top_rounded,
-                  message: 'Loading hero pool',
+                  message: AppLocalizations.of(context).loading,
                 ),
               },
             ),
@@ -370,28 +397,31 @@ class _BuilderToolbar extends StatelessWidget {
   final VoidCallback onReset;
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 52,
-    padding: const EdgeInsets.symmetric(horizontal: 12),
-    decoration: BoxDecoration(
-      border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
-    ),
-    child: Row(
-      children: [
-        const Spacer(),
-        IconButton(
-          tooltip: 'Swap Red/Blue',
-          onPressed: onSwap,
-          icon: const Icon(Icons.swap_horiz_rounded, size: 20),
-        ),
-        IconButton(
-          tooltip: 'Reset',
-          onPressed: onReset,
-          icon: const Icon(Icons.refresh_rounded, size: 20),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
+      ),
+      child: Row(
+        children: [
+          const Spacer(),
+          IconButton(
+            tooltip: l10n.translate('teamSwap'),
+            onPressed: onSwap,
+            icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+          ),
+          IconButton(
+            tooltip: l10n.translate('commonReset'),
+            onPressed: onReset,
+            icon: const Icon(Icons.refresh_rounded, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _WinRateBar extends StatelessWidget {
@@ -401,6 +431,7 @@ class _WinRateBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final blue = rates?.blue ?? .5;
     final red = rates?.red ?? .5;
     final ally = allyIsBlue ? blue : red;
@@ -418,7 +449,7 @@ class _WinRateBar extends StatelessWidget {
         children: [
           Expanded(
             child: _RateLabel(
-              label: 'My Side',
+              label: l10n.translate('teamMySide'),
               color: allyIsBlue
                   ? const Color(0xFF4B8BFF)
                   : const Color(0xFFFF5A65),
@@ -427,7 +458,7 @@ class _WinRateBar extends StatelessWidget {
           ),
           Expanded(
             child: _RateLabel(
-              label: 'Opponent',
+              label: l10n.translate('teamOpponent'),
               textAlign: TextAlign.end,
               color: allyIsBlue
                   ? const Color(0xFFFF5A65)
@@ -586,6 +617,7 @@ class _DraftBoard extends StatelessWidget {
               )
               .firstOrNull,
           type: draft.recommendType,
+          slotType: draft.activeSlotType,
           mainJob: recommendJob,
           onTypeChanged: onRecommendationTypeChanged,
           onMainJobChanged: onRecommendationJobChanged,
@@ -882,6 +914,7 @@ class _RecommendationPanel extends StatelessWidget {
     required this.value,
     required this.heroForRecommendation,
     required this.type,
+    required this.slotType,
     required this.mainJob,
     required this.onTypeChanged,
     required this.onMainJobChanged,
@@ -891,6 +924,7 @@ class _RecommendationPanel extends StatelessWidget {
   final AsyncValue<TeamRecommendationResult> value;
   final TeamBuildHero? Function(TeamRecommendation) heroForRecommendation;
   final TeamRecommendType type;
+  final TeamBuilderSlotType slotType;
   final int? mainJob;
   final ValueChanged<TeamRecommendType> onTypeChanged;
   final ValueChanged<int?> onMainJobChanged;
@@ -898,11 +932,15 @@ class _RecommendationPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final result = value.valueOrNull;
+    final isBanSlot = slotType == TeamBuilderSlotType.ban;
+    // HOKX 网页端全量渲染推荐列表，移动端保持一致，不做条数截断。
     final items = (result?.recommendations ?? const <TeamRecommendation>[])
         .where((item) => mainJob == null || item.mainJob == mainJob)
-        .take(10)
         .toList(growable: false);
+    // 短列表不渲染到底提示，避免噪音。
+    final showEndFooter = items.length > 10;
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border.symmetric(
@@ -917,7 +955,10 @@ class _RecommendationPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: _RecTab(
-                    label: 'Synergy Picks',
+                    // HOKX 规则：ban 位展示禁用优先级推荐，pick 位展示适配阵容推荐。
+                    label: isBanSlot
+                        ? l10n.translate('teamPriorityBans')
+                        : l10n.translate('teamSynergy'),
                     selected: type != TeamRecommendType.counter,
                     onTap: () => onTypeChanged(TeamRecommendType.balanced),
                   ),
@@ -925,7 +966,9 @@ class _RecommendationPanel extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: _RecTab(
-                    label: 'Counter Picks',
+                    label: isBanSlot
+                        ? l10n.translate('teamCounterBans')
+                        : l10n.translate('teamCounter'),
                     selected: type == TeamRecommendType.counter,
                     onTap: () => onTypeChanged(TeamRecommendType.counter),
                   ),
@@ -954,16 +997,22 @@ class _RecommendationPanel extends StatelessWidget {
                   )
                 : ListView.separated(
                     padding: EdgeInsets.zero,
-                    itemCount: items.length,
+                    itemCount: items.length + (showEndFooter ? 1 : 0),
                     separatorBuilder: (_, _) => Divider(
                       height: 1,
                       color: Colors.white.withValues(alpha: .06),
                     ),
-                    itemBuilder: (context, index) => _RecommendationTile(
-                      item: items[index],
-                      hero: heroForRecommendation(items[index]),
-                      onTap: () => onTap(items[index]),
-                    ),
+                    itemBuilder: (context, index) {
+                      if (index == items.length) {
+                        return const AppListFooter(hasMore: false);
+                      }
+                      return _RecommendationTile(
+                        item: items[index],
+                        hero: heroForRecommendation(items[index]),
+                        isBanSlot: isBanSlot,
+                        onTap: () => onTap(items[index]),
+                      );
+                    },
                   ),
           ),
         ],
@@ -1009,10 +1058,12 @@ class _RecommendationTile extends StatelessWidget {
   const _RecommendationTile({
     required this.item,
     required this.hero,
+    required this.isBanSlot,
     required this.onTap,
   });
   final TeamRecommendation item;
   final TeamBuildHero? hero;
+  final bool isBanSlot;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
@@ -1070,7 +1121,10 @@ class _RecommendationTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Pick ${(item.pickRate * 100).toStringAsFixed(1)}% · Synergy ${(item.synergy * 100).toStringAsFixed(1)}%',
+                      // HOKX 规则：ban 位显示禁用率与克制度，pick 位显示登场率与协同。
+                      isBanSlot
+                          ? 'Ban ${(item.banRate * 100).toStringAsFixed(1)}% · Counter ${(item.counter * 100).toStringAsFixed(1)}%'
+                          : 'Pick ${(item.pickRate * 100).toStringAsFixed(1)}% · Synergy ${(item.synergy * 100).toStringAsFixed(1)}%',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1296,7 +1350,10 @@ class _PoolMessage extends StatelessWidget {
         const SizedBox(height: 8),
         Text(message, style: TextStyle(color: context.hokTheme.onSurfaceMuted)),
         if (onRetry != null)
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(AppLocalizations.of(context).retry),
+          ),
       ],
     ),
   );

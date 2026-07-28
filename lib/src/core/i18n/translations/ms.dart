@@ -1,4 +1,7 @@
+import 'feature_translations.dart';
+
 const msTranslations = {
+  ...msFeatureTranslations,
   'appTitle': 'HOK Helper',
   'navHome': 'Utama',
   'navStats': 'Statistik',
