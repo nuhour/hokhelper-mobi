@@ -325,7 +325,6 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
     final colors = _ProfileColors.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.profileAccountTitle)),
       body: SafeArea(
         child: AppAsyncView<AuthUser?>(
           value: authValue,

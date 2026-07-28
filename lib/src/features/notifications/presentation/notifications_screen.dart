@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters/app_time_formatter.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
@@ -55,23 +56,23 @@ class _SignedOutNotifications extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const AppSectionHeader(title: 'Notifications'),
+        AppSectionHeader(title: l10n.translate('notificationsTitle')),
         const SizedBox(height: 80),
-        const AppEmptyState(
+        AppEmptyState(
           icon: Icons.notifications_none_outlined,
-          title: 'Login to view notifications',
-          message:
-              'Your comments, follows, likes, and level updates live here.',
+          title: l10n.translate('notificationsLoginTitle'),
+          message: l10n.translate('notificationsLoginMessage'),
         ),
         const SizedBox(height: 12),
         Center(
           child: FilledButton.icon(
             onPressed: () => context.push('/login'),
             icon: const Icon(Icons.login),
-            label: const Text('Login'),
+            label: Text(l10n.translate('notificationsLogin')),
           ),
         ),
       ],
@@ -96,6 +97,7 @@ class _SignedInNotificationsState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final notificationsValue = ref.watch(notificationsProvider);
 
     return RefreshIndicator(
@@ -122,20 +124,24 @@ class _SignedInNotificationsState
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Expanded(
-                        child: AppSectionHeader(title: 'Notifications'),
+                      Expanded(
+                        child: AppSectionHeader(
+                          title: l10n.translate('notificationsTitle'),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
                         onPressed: notifications.isEmpty ? null : _markAllRead,
                         icon: const Icon(Icons.done_all, size: 18),
-                        label: const Text('Mark all read'),
+                        label: Text(l10n.translate('notificationsMarkAllRead')),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '$unreadCount unread',
+                    l10n.format('notificationsUnread', {
+                      'count': '$unreadCount',
+                    }),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: unreadCount == 0
                           ? context.hokTheme.onSurfaceMuted
@@ -145,11 +151,10 @@ class _SignedInNotificationsState
                   ),
                   const SizedBox(height: 18),
                   if (notifications.isEmpty)
-                    const AppEmptyState(
+                    AppEmptyState(
                       icon: Icons.notifications_none_outlined,
-                      title: 'No notifications yet',
-                      message:
-                          'Community and growth activity will appear here.',
+                      title: l10n.translate('notificationsEmptyTitle'),
+                      message: l10n.translate('notificationsEmptyMessage'),
                     )
                   else
                     ListView.separated(
@@ -183,7 +188,9 @@ class _SignedInNotificationsState
                               )
                             : const Icon(Icons.expand_more),
                         label: Text(
-                          _isLoadingMore ? 'Loading...' : 'Load more',
+                          _isLoadingMore
+                              ? l10n.translate('notificationsLoading')
+                              : l10n.translate('notificationsLoadMore'),
                         ),
                       ),
                     ),
@@ -191,7 +198,9 @@ class _SignedInNotificationsState
                   if (page.total > 0) ...[
                     const SizedBox(height: 14),
                     Text(
-                      '${page.total} notifications',
+                      l10n.format('notificationsCount', {
+                        'count': '${page.total}',
+                      }),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: context.hokTheme.onSurfaceMuted,
                       ),
@@ -275,7 +284,13 @@ class _SignedInNotificationsState
       }
       setState(() => _isLoadingMore = false);
       messenger.showSnackBar(
-        SnackBar(content: Text('Failed to load more notifications: $error')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).format('notificationsLoadMoreFailed', {
+              'error': error.toString(),
+            }),
+          ),
+        ),
       );
     }
   }
@@ -322,7 +337,8 @@ class _NotificationCard extends StatelessWidget {
       _ when notification.targetType.contains('follow') => Icons.person_add_alt,
       _ => Icons.chat_bubble_outline,
     };
-    final displayText = _resolveNotificationText(notification);
+    final l10n = AppLocalizations.of(context);
+    final displayText = _resolveNotificationText(notification, l10n);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -399,12 +415,12 @@ class _NotificationCard extends StatelessWidget {
                       if (notification.link.isNotEmpty)
                         TextButton(
                           onPressed: () => onView(context),
-                          child: const Text('View'),
+                          child: Text(l10n.translate('notificationsView')),
                         ),
                       if (!notification.isRead)
                         TextButton(
                           onPressed: onMarkRead,
-                          child: const Text('Mark read'),
+                          child: Text(l10n.translate('notificationsMarkRead')),
                         ),
                     ],
                   ),
@@ -479,10 +495,11 @@ class _NotificationDisplayText {
 
 _NotificationDisplayText _resolveNotificationText(
   NotificationSummary notification,
+  AppLocalizations l10n,
 ) {
   final actorName = notification.actorName.trim().isNotEmpty
       ? notification.actorName.trim()
-      : 'Someone';
+      : l10n.translate('notificationSomeone');
   final title = notification.title;
   final content = notification.content;
   final classifier = '${notification.targetType} $title $content'.toLowerCase();
@@ -497,10 +514,10 @@ _NotificationDisplayText _resolveNotificationText(
     ).firstMatch('$title $content');
     final level = levelMatch?.group(1) ?? levelMatch?.group(2);
     return _NotificationDisplayText(
-      title: 'Notification',
+      title: l10n.translate('notificationGenericTitle'),
       content: level == null
-          ? 'You reached a new level'
-          : 'You reached Lv.$level',
+          ? l10n.translate('notificationReachedNewLevel')
+          : l10n.format('notificationReachedLevel', {'level': level}),
     );
   }
 
@@ -509,8 +526,8 @@ _NotificationDisplayText _resolveNotificationText(
       _hasAny(classifier, const ['关注', 'follow', 'follower']);
   if (isFollow) {
     return _NotificationDisplayText(
-      title: 'Notification',
-      content: '$actorName followed you',
+      title: l10n.translate('notificationGenericTitle'),
+      content: l10n.format('notificationFollowedYou', {'actor': actorName}),
     );
   }
 
@@ -519,8 +536,8 @@ _NotificationDisplayText _resolveNotificationText(
       _hasAny(classifier, const ['评论', 'comment', 'reply', 'replied', '回复']);
   if (isComment) {
     return _NotificationDisplayText(
-      title: 'Notification',
-      content: '$actorName commented on your post',
+      title: l10n.translate('notificationGenericTitle'),
+      content: l10n.format('notificationCommentedOnPost', {'actor': actorName}),
     );
   }
 
@@ -528,10 +545,13 @@ _NotificationDisplayText _resolveNotificationText(
       sourceType.contains('favorite') ||
       _hasAny(classifier, const ['收藏', 'favorite', 'favourite', 'saved']);
   if (isFavorite) {
-    final item = _targetItemLabel(sourceType, link);
+    final item = _targetItemLabel(sourceType, link, l10n);
     return _NotificationDisplayText(
-      title: 'Notification',
-      content: '$actorName favorited your $item',
+      title: l10n.translate('notificationGenericTitle'),
+      content: l10n.format('notificationFavorited', {
+        'actor': actorName,
+        'item': item,
+      }),
     );
   }
 
@@ -539,19 +559,25 @@ _NotificationDisplayText _resolveNotificationText(
       sourceType.contains('like') ||
       _hasAny(classifier, const ['点赞', 'like', 'liked']);
   if (isLike) {
-    final item = _targetItemLabel(sourceType, link);
+    final item = _targetItemLabel(sourceType, link, l10n);
     return _NotificationDisplayText(
-      title: 'Notification',
-      content: '$actorName liked your $item',
+      title: l10n.translate('notificationGenericTitle'),
+      content: l10n.format('notificationLiked', {
+        'actor': actorName,
+        'item': item,
+      }),
     );
   }
 
   if (forceFallback) {
-    return const _NotificationDisplayText(title: 'Notification', content: '');
+    return _NotificationDisplayText(
+      title: l10n.translate('notificationGenericTitle'),
+      content: '',
+    );
   }
 
   return _NotificationDisplayText(
-    title: title.isEmpty ? 'Notification' : title,
+    title: title.isEmpty ? l10n.translate('notificationGenericTitle') : title,
     content: content,
   );
 }
@@ -564,15 +590,15 @@ bool _hasAny(String value, List<String> keywords) {
   return keywords.any(value.contains);
 }
 
-String _targetItemLabel(String sourceType, String link) {
+String _targetItemLabel(String sourceType, String link, AppLocalizations l10n) {
   if (sourceType.contains('build') || link.contains('/tools/build-sim')) {
-    return 'build';
+    return l10n.translate('notificationItemBuild');
   }
   if (sourceType.contains('prompt') || link.contains('/tools/prompts')) {
-    return 'prompt';
+    return l10n.translate('notificationItemPrompt');
   }
   if (sourceType.contains('post') || link.contains('/community/post/')) {
-    return 'post';
+    return l10n.translate('notificationItemPost');
   }
-  return 'content';
+  return l10n.translate('notificationItemContent');
 }

@@ -430,17 +430,25 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => _standalonePage(
-          fallbackRoute: '/me',
-          child: const SettingsScreen(),
-        ),
+        builder: (context, state) {
+          final l10n = AppLocalizations.of(context);
+          return _standalonePage(
+            fallbackRoute: '/me',
+            title: l10n.settingsTitle,
+            child: const SettingsScreen(),
+          );
+        },
       ),
       GoRoute(
         path: '/settings/profile',
-        builder: (context, state) => _standalonePage(
-          fallbackRoute: '/settings',
-          child: const ProfileAccountSettingsScreen(),
-        ),
+        builder: (context, state) {
+          final l10n = AppLocalizations.of(context);
+          return _standalonePage(
+            fallbackRoute: '/settings',
+            title: l10n.profileAccountTitle,
+            child: const ProfileAccountSettingsScreen(),
+          );
+        },
       ),
       GoRoute(
         path: '/search',

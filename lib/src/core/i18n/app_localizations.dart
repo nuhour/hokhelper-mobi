@@ -141,6 +141,14 @@ class AppLocalizations {
 
   String translate(String key) => _t(key);
 
+  String format(String key, [Map<String, String> values = const {}]) {
+    var value = _t(key);
+    for (final entry in values.entries) {
+      value = value.replaceAll('{${entry.key}}', entry.value);
+    }
+    return value;
+  }
+
   String _t(String key) {
     final languageCode = locale.languageCode;
     return appTranslationValues[languageCode]?[key] ??
