@@ -1,7 +1,4 @@
-import 'en.dart';
-
-final zhTranslations = {
-  ...enTranslations,
+const zhTranslations = {
   'appTitle': 'HOK 助手',
   'navHome': '首页',
   'navStats': '统计',

@@ -100,14 +100,14 @@ class SettingsScreen extends ConsumerWidget {
   static String _languageLabel(String languageCode) {
     return switch (languageCode) {
       'zh' => '中文',
-      'id' => 'ID',
+      'id' => 'Bahasa Indonesia',
       'fil' => 'Filipino',
-      'pt' => 'PT',
-      'es' => 'ES',
+      'pt' => 'Português',
+      'es' => 'Español',
       'ar' => 'العربية',
-      'ru' => 'RU',
-      'ms' => 'MS',
-      _ => 'EN',
+      'ru' => 'Русский',
+      'ms' => 'Bahasa Melayu',
+      _ => 'English',
     };
   }
 

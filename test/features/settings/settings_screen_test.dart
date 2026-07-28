@@ -59,7 +59,19 @@ void main() {
     expect(find.text('Clear Cache'), findsOneWidget);
     expect(find.text('Personal Information'), findsOneWidget);
     expect(find.byKey(const ValueKey('settings-profile-tile')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('settings-clear-cache-tile')));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('settings-clear-cache-tile')),
+      200,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
+    tester
+        .widget<ListTile>(
+          find.byKey(const ValueKey('settings-clear-cache-tile')),
+        )
+        .onTap!();
     await tester.pump();
     expect(find.text('Cache cleared'), findsOneWidget);
     ScaffoldMessenger.of(
