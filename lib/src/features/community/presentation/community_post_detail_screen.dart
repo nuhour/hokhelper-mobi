@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_markdown_content.dart';
 import '../../../core/widgets/app_share_sheet.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -122,35 +123,17 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
 
   @override
   Widget build(BuildContext context) {
-    final post = widget.detail.post;
     final commentTree = _buildCommentTree(_comments, _commentSort);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            IconButton(
-              tooltip: 'Back',
-              onPressed: () => context.canPop()
-                  ? context.pop()
-                  : context.go('/content/community'),
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-            ),
-            Expanded(
-              child: Text(
-                'Post',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: context.hokTheme.onSurfaceStrong,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: 'Share post',
-              onPressed: () => _sharePost(context),
-              icon: const Icon(Icons.ios_share_rounded, size: 21),
-            ),
-          ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            tooltip: 'Share post',
+            onPressed: () => _sharePost(context),
+            icon: const Icon(Icons.ios_share_rounded, size: 21),
+          ),
         ),
         const SizedBox(height: 8),
         _ArticleCard(
@@ -216,7 +199,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
             title: 'No comments yet',
             message: 'Be the first to join this discussion.',
           )
-        else
+        else ...[
           for (final node in commentTree)
             _CommentThread(
               node: node,
@@ -235,6 +218,9 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
               },
               onSubmitReply: () => _createReply(context),
             ),
+          // 后端一次性返回全部评论；长评论区滚到底需要到底提示，短列表不加噪音。
+          if (_comments.length > 10) const AppListFooter(hasMore: false),
+        ],
       ],
     );
   }

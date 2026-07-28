@@ -8,6 +8,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_lane_icon.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -99,6 +100,7 @@ class SkinGalleryScreen extends ConsumerStatefulWidget {
     this.initialSearchQuery,
     this.initialMinRating = 0,
     this.onSkinSelected,
+    this.showPageHeader = true,
     super.key,
   });
 
@@ -107,6 +109,7 @@ class SkinGalleryScreen extends ConsumerStatefulWidget {
   final String? initialSearchQuery;
   final double initialMinRating;
   final ValueChanged<int>? onSkinSelected;
+  final bool showPageHeader;
 
   @override
   ConsumerState<SkinGalleryScreen> createState() => _SkinGalleryScreenState();
@@ -178,7 +181,10 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
           children: [
             Row(
               children: [
-                const Expanded(child: AppSectionHeader(title: 'Skin Gallery')),
+                if (widget.showPageHeader)
+                  const Expanded(child: AppSectionHeader(title: 'Skin Gallery'))
+                else
+                  const Spacer(),
                 IconButton.filledTonal(
                   tooltip: 'CG Center',
                   onPressed: () => context.push('/cg'),
@@ -290,6 +296,9 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                   );
                 }
 
+                final hasMoreSkins =
+                    _hasMoreSkins && items.length >= _skinGalleryPageSize;
+
                 return Column(
                   children: [
                     GridView.builder(
@@ -317,25 +326,11 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
                         );
                       },
                     ),
-                    if (_hasMoreSkins && items.length >= _skinGalleryPageSize)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: FilledButton.icon(
-                          onPressed: _isLoadingMoreSkins
-                              ? null
-                              : _loadMoreSkins,
-                          icon: _isLoadingMoreSkins
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.expand_more),
-                          label: Text(
-                            _isLoadingMoreSkins ? 'Loading...' : 'Load more',
-                          ),
-                        ),
+                    if (hasMoreSkins || skins.length > 10)
+                      AppListFooter(
+                        hasMore: hasMoreSkins,
+                        loading: _isLoadingMoreSkins,
+                        onLoadMore: _loadMoreSkins,
                       ),
                   ],
                 );

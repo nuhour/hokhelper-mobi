@@ -8,7 +8,6 @@ import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
-import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/search_repository.dart';
 import '../domain/search_result.dart';
@@ -29,15 +28,23 @@ Future<void> showPortalSearchSheet(BuildContext context) {
 }
 
 class SearchScreen extends StatelessWidget {
-  const SearchScreen({this.initialQuery, super.key});
+  const SearchScreen({
+    this.initialQuery,
+    this.showPageHeader = true,
+    super.key,
+  });
 
   final String? initialQuery;
+  final bool showPageHeader;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: context.hokTheme.backgroundDeep,
-      child: _SearchContent(initialQuery: initialQuery),
+      child: _SearchContent(
+        initialQuery: initialQuery,
+        showPageHeader: showPageHeader,
+      ),
     );
   }
 }
@@ -123,6 +130,7 @@ class _SearchContent extends ConsumerStatefulWidget {
     this.compact = false,
     this.autofocus = false,
     this.closeBeforeOpening = false,
+    this.showPageHeader = true,
   });
 
   final String? initialQuery;
@@ -130,6 +138,7 @@ class _SearchContent extends ConsumerStatefulWidget {
   final bool compact;
   final bool autofocus;
   final bool closeBeforeOpening;
+  final bool showPageHeader;
 
   @override
   ConsumerState<_SearchContent> createState() => _SearchContentState();
@@ -192,9 +201,7 @@ class _SearchContentState extends ConsumerState<_SearchContent> {
           ? const EdgeInsets.fromLTRB(18, 12, 18, 28)
           : const EdgeInsets.fromLTRB(20, 20, 20, 28),
       children: [
-        if (!widget.compact) ...[
-          const AppSectionHeader(title: 'Global Search'),
-          const SizedBox(height: 8),
+        if (!widget.compact && widget.showPageHeader) ...[
           Text(
             'Search heroes, builds, guides, and community content from the HOK portal.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(

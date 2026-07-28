@@ -10,6 +10,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_lane_icon.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -39,25 +40,32 @@ final selectedHeroRankingSortProvider = StateProvider<HeroRankingSort>((ref) {
   return HeroRankingSort.winRate;
 });
 
+// 后端 /ranking/* 仅支持 limit（无 page/offset 分页），
+// 因此一次取满后端上限，UI 侧再按批增量渲染。
 final heroRankingProvider = FutureProvider<List<HeroRankingEntry>>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
   final sort = ref.watch(selectedHeroRankingSortProvider);
   return ref
       .watch(rankingsRepositoryProvider)
-      .loadHeroRanking(settings.region.regionId, sortBy: sort.apiValue);
+      .loadHeroRanking(
+        settings.region.regionId,
+        sortBy: sort.apiValue,
+        limit: 500,
+      );
 });
 
 final playerRankingProvider = FutureProvider<List<PlayerRankingEntry>>((
   ref,
 ) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
+  // 与 PlayerLeaderboardScreen 一致取 Top 200（后端上限 1000）。
   return ref
       .watch(rankingsRepositoryProvider)
-      .loadPlayerRanking(settings.region.regionId);
+      .loadPlayerRanking(settings.region.regionId, limit: 200);
 });
 
 final equipRankingProvider = FutureProvider<List<EquipRankingEntry>>((ref) {
-  return ref.watch(rankingsRepositoryProvider).loadEquipRanking();
+  return ref.watch(rankingsRepositoryProvider).loadEquipRanking(limit: 500);
 });
 
 final tierRankingProvider = FutureProvider<List<TierListEntry>>((ref) async {
@@ -135,9 +143,14 @@ class _TierRankingScreenState extends ConsumerState<TierRankingScreen> {
 }
 
 class HeroRankingScreen extends ConsumerStatefulWidget {
-  const HeroRankingScreen({super.key, this.initialTabIndex = 0});
+  const HeroRankingScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.showPageHeader = true,
+  });
 
   final int initialTabIndex;
+  final bool showPageHeader;
 
   @override
   ConsumerState<HeroRankingScreen> createState() => _HeroRankingScreenState();
@@ -178,8 +191,10 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const AppSectionHeader(title: 'Hero Rankings'),
-              const SizedBox(height: 8),
+              if (widget.showPageHeader) ...[
+                const AppSectionHeader(title: 'Hero Rankings'),
+                const SizedBox(height: 8),
+              ],
               Text(
                 'Compare heroes, players, equipment, and tier data.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -218,7 +233,7 @@ class _HeroRankingScreenState extends ConsumerState<HeroRankingScreen>
   }
 }
 
-class _HeroRankingTab extends ConsumerWidget {
+class _HeroRankingTab extends ConsumerStatefulWidget {
   const _HeroRankingTab({
     required this.rankingValue,
     required this.selectedSort,
@@ -228,137 +243,195 @@ class _HeroRankingTab extends ConsumerWidget {
   final HeroRankingSort selectedSort;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HeroRankingTab> createState() => _HeroRankingTabState();
+}
+
+class _HeroRankingTabState extends ConsumerState<_HeroRankingTab> {
+  static const _pageSize = 20;
+  var _visibleCount = _pageSize;
+
+  @override
+  Widget build(BuildContext context) {
     return AppAsyncView<List<HeroRankingEntry>>(
-      value: rankingValue,
+      value: widget.rankingValue,
       retry: () => ref.invalidate(heroRankingProvider),
-      data: (entries) => RefreshIndicator(
-        onRefresh: () => ref.refresh(heroRankingProvider.future),
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              sliver: SliverToBoxAdapter(
-                child: _SortSelector(selectedSort: selectedSort),
-              ),
-            ),
-            if (entries.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: AppEmptyState(
-                  icon: Icons.leaderboard_outlined,
-                  title: 'No rankings found',
-                  message: 'Pull to refresh or switch region in settings.',
-                ),
-              )
-            else
+      data: (entries) {
+        final visible = entries.take(_visibleCount).toList(growable: false);
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(heroRankingProvider.future),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                sliver: SliverList.separated(
-                  itemCount: entries.length,
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                sliver: SliverToBoxAdapter(
+                  child: _SortSelector(selectedSort: widget.selectedSort),
+                ),
+              ),
+              if (entries.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: AppEmptyState(
+                    icon: Icons.leaderboard_outlined,
+                    title: 'No rankings found',
+                    message: 'Pull to refresh or switch region in settings.',
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  sliver: SliverList.separated(
+                    itemCount: visible.length,
+                    itemBuilder: (context, index) {
+                      return _HeroRankingCard(
+                        entry: visible[index],
+                        rank: index + 1,
+                      );
+                    },
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
+                  ),
+                ),
+              if (entries.length > _pageSize)
+                SliverToBoxAdapter(
+                  child: AppListFooter(
+                    hasMore: _visibleCount < entries.length,
+                    onLoadMore: () =>
+                        setState(() => _visibleCount += _pageSize),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PlayerRankingTab extends ConsumerStatefulWidget {
+  const _PlayerRankingTab({required this.playerValue});
+
+  final AsyncValue<List<PlayerRankingEntry>> playerValue;
+
+  @override
+  ConsumerState<_PlayerRankingTab> createState() => _PlayerRankingTabState();
+}
+
+class _PlayerRankingTabState extends ConsumerState<_PlayerRankingTab> {
+  static const _pageSize = 20;
+  var _visibleCount = _pageSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppAsyncView<List<PlayerRankingEntry>>(
+      value: widget.playerValue,
+      retry: () => ref.invalidate(playerRankingProvider),
+      data: (entries) {
+        final showFooter = entries.length > _pageSize;
+        final visible = entries.take(_visibleCount).toList(growable: false);
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(playerRankingProvider.future),
+          child: entries.isEmpty
+              ? const CustomScrollView(
+                  physics: AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: AppEmptyState(
+                        icon: Icons.person_search_outlined,
+                        title: 'No players found',
+                        message:
+                            'Pull to refresh or switch region in settings.',
+                      ),
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  itemCount: visible.length + (showFooter ? 1 : 0),
                   itemBuilder: (context, index) {
-                    return _HeroRankingCard(
-                      entry: entries[index],
+                    if (index == visible.length) {
+                      return AppListFooter(
+                        hasMore: _visibleCount < entries.length,
+                        onLoadMore: () =>
+                            setState(() => _visibleCount += _pageSize),
+                      );
+                    }
+                    return _PlayerRankingCard(
+                      entry: visible[index],
                       rank: index + 1,
                     );
                   },
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 12),
                 ),
-              ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-class _PlayerRankingTab extends ConsumerWidget {
-  const _PlayerRankingTab({required this.playerValue});
-
-  final AsyncValue<List<PlayerRankingEntry>> playerValue;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AppAsyncView<List<PlayerRankingEntry>>(
-      value: playerValue,
-      retry: () => ref.invalidate(playerRankingProvider),
-      data: (entries) => RefreshIndicator(
-        onRefresh: () => ref.refresh(playerRankingProvider.future),
-        child: entries.isEmpty
-            ? const CustomScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: AppEmptyState(
-                      icon: Icons.person_search_outlined,
-                      title: 'No players found',
-                      message: 'Pull to refresh or switch region in settings.',
-                    ),
-                  ),
-                ],
-              )
-            : ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                itemCount: entries.length,
-                itemBuilder: (context, index) {
-                  return _PlayerRankingCard(
-                    entry: entries[index],
-                    rank: index + 1,
-                  );
-                },
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-              ),
-      ),
-    );
-  }
-}
-
-class _EquipRankingTab extends ConsumerWidget {
+class _EquipRankingTab extends ConsumerStatefulWidget {
   const _EquipRankingTab({required this.equipValue});
 
   final AsyncValue<List<EquipRankingEntry>> equipValue;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_EquipRankingTab> createState() => _EquipRankingTabState();
+}
+
+class _EquipRankingTabState extends ConsumerState<_EquipRankingTab> {
+  static const _pageSize = 20;
+  var _visibleCount = _pageSize;
+
+  @override
+  Widget build(BuildContext context) {
     return AppAsyncView<List<EquipRankingEntry>>(
-      value: equipValue,
+      value: widget.equipValue,
       retry: () => ref.invalidate(equipRankingProvider),
-      data: (entries) => RefreshIndicator(
-        onRefresh: () => ref.refresh(equipRankingProvider.future),
-        child: entries.isEmpty
-            ? const CustomScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: AppEmptyState(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'No equipment found',
-                      message:
-                          'Pull to refresh once equipment stats are ready.',
+      data: (entries) {
+        final showFooter = entries.length > _pageSize;
+        final visible = entries.take(_visibleCount).toList(growable: false);
+        return RefreshIndicator(
+          onRefresh: () => ref.refresh(equipRankingProvider.future),
+          child: entries.isEmpty
+              ? const CustomScrollView(
+                  physics: AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: AppEmptyState(
+                        icon: Icons.inventory_2_outlined,
+                        title: 'No equipment found',
+                        message:
+                            'Pull to refresh once equipment stats are ready.',
+                      ),
                     ),
-                  ),
-                ],
-              )
-            : ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                itemCount: entries.length,
-                itemBuilder: (context, index) {
-                  return _EquipRankingCard(
-                    entry: entries[index],
-                    rank: index + 1,
-                  );
-                },
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-              ),
-      ),
+                  ],
+                )
+              : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  itemCount: visible.length + (showFooter ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == visible.length) {
+                      return AppListFooter(
+                        hasMore: _visibleCount < entries.length,
+                        onLoadMore: () =>
+                            setState(() => _visibleCount += _pageSize),
+                      );
+                    }
+                    return _EquipRankingCard(
+                      entry: visible[index],
+                      rank: index + 1,
+                    );
+                  },
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                ),
+        );
+      },
     );
   }
 }

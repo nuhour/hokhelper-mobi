@@ -29,7 +29,9 @@ final notificationsProvider = FutureProvider<NotificationPage>((ref) {
 const _notificationsPageSize = 50;
 
 class NotificationsScreen extends ConsumerWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({this.showPageHeader = true, super.key});
+
+  final bool showPageHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,10 +43,10 @@ class NotificationsScreen extends ConsumerWidget {
         value: authValue,
         data: (user) {
           if (user == null) {
-            return const _SignedOutNotifications();
+            return _SignedOutNotifications(showPageHeader: showPageHeader);
           }
 
-          return const _SignedInNotifications();
+          return _SignedInNotifications(showPageHeader: showPageHeader);
         },
       ),
     );
@@ -52,7 +54,9 @@ class NotificationsScreen extends ConsumerWidget {
 }
 
 class _SignedOutNotifications extends StatelessWidget {
-  const _SignedOutNotifications();
+  const _SignedOutNotifications({required this.showPageHeader});
+
+  final bool showPageHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +64,7 @@ class _SignedOutNotifications extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        AppSectionHeader(title: l10n.translate('notificationsTitle')),
-        const SizedBox(height: 80),
+        if (showPageHeader) const SizedBox(height: 80),
         AppEmptyState(
           icon: Icons.notifications_none_outlined,
           title: l10n.translate('notificationsLoginTitle'),
@@ -81,7 +84,9 @@ class _SignedOutNotifications extends StatelessWidget {
 }
 
 class _SignedInNotifications extends ConsumerStatefulWidget {
-  const _SignedInNotifications();
+  const _SignedInNotifications({required this.showPageHeader});
+
+  final bool showPageHeader;
 
   @override
   ConsumerState<_SignedInNotifications> createState() =>
@@ -124,11 +129,14 @@ class _SignedInNotificationsState
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: AppSectionHeader(
-                          title: l10n.translate('notificationsTitle'),
-                        ),
-                      ),
+                      if (widget.showPageHeader)
+                        Expanded(
+                          child: AppSectionHeader(
+                            title: l10n.translate('notificationsTitle'),
+                          ),
+                        )
+                      else
+                        const Spacer(),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
                         onPressed: notifications.isEmpty ? null : _markAllRead,

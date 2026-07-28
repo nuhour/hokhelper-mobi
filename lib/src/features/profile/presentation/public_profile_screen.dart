@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../../core/widgets/app_share_sheet.dart';
 import '../../auth/presentation/auth_controller.dart';
@@ -21,11 +22,13 @@ class PublicProfileScreen extends ConsumerWidget {
   const PublicProfileScreen({
     required this.userId,
     this.initialFollowListType,
+    this.showPageHeader = true,
     super.key,
   });
 
   final int userId;
   final ProfileFollowListType? initialFollowListType;
+  final bool showPageHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,8 +45,8 @@ class PublicProfileScreen extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: [
-            const AppSectionHeader(title: 'Public Profile'),
-            const SizedBox(height: 16),
+            if (showPageHeader) const AppSectionHeader(title: 'Public Profile'),
+            if (showPageHeader) const SizedBox(height: 16),
             AppAsyncView<UserProfile>(
               value: profileValue,
               retry: () => ref.invalidate(publicUserProfileProvider(userId)),
@@ -397,19 +400,79 @@ class _FollowListSheet extends ConsumerStatefulWidget {
 }
 
 class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
-  late Future<ProfileFollowList> _future;
+  final List<ProfileFollowUser> _users = [];
+  var _page = 1;
+  var _hasMore = false;
+  var _loading = true;
+  var _loadingMore = false;
+  var _failed = false;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _loadFirstPage();
   }
 
-  Future<ProfileFollowList> _load() {
+  Future<ProfileFollowList> _fetchPage(int page) {
     final repository = ref.read(profileRepositoryProvider);
     return widget.type == ProfileFollowListType.following
-        ? repository.loadFollowing(userId: widget.userId)
-        : repository.loadFollowers(userId: widget.userId);
+        ? repository.loadFollowing(userId: widget.userId, page: page)
+        : repository.loadFollowers(userId: widget.userId, page: page);
+  }
+
+  Future<void> _loadFirstPage() async {
+    try {
+      final list = await _fetchPage(1);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _users
+          ..clear()
+          ..addAll(list.users);
+        _page = 1;
+        _hasMore = list.hasMore;
+        _loading = false;
+        _failed = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+        _failed = true;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final list = await _fetchPage(_page + 1);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _page += 1;
+        _users.addAll(list.users);
+        _hasMore = list.hasMore && list.users.isNotEmpty;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to load more users')),
+      );
+    }
   }
 
   @override
@@ -444,53 +507,55 @@ class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
                 ],
               ),
               const SizedBox(height: 12),
-              Expanded(
-                child: FutureBuilder<ProfileFollowList>(
-                  future: _future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Failed to load users',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: context.hokTheme.onSurfaceMuted,
-                              ),
-                        ),
-                      );
-                    }
-                    final users = snapshot.data?.users ?? const [];
-                    if (users.isEmpty) {
-                      return Center(
-                        child: Text(
-                          widget.type == ProfileFollowListType.following
-                              ? 'No following yet'
-                              : 'No followers yet',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: context.hokTheme.onSurfaceMuted,
-                              ),
-                        ),
-                      );
-                    }
-                    return ListView.separated(
-                      itemBuilder: (context, index) {
-                        return _FollowUserTile(user: users[index]);
-                      },
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 10),
-                      itemCount: users.length,
-                    );
-                  },
-                ),
-              ),
+              Expanded(child: _buildList(context)),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildList(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_failed) {
+      return Center(
+        child: Text(
+          'Failed to load users',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
+        ),
+      );
+    }
+    if (_users.isEmpty) {
+      return Center(
+        child: Text(
+          widget.type == ProfileFollowListType.following
+              ? 'No following yet'
+              : 'No followers yet',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
+        ),
+      );
+    }
+    // 页脚驱动滚动翻页；单页短列表读完时不加到底提示，避免噪音。
+    final showFooter = _hasMore || _users.length > 10;
+    return ListView.separated(
+      itemBuilder: (context, index) {
+        if (index >= _users.length) {
+          return AppListFooter(
+            hasMore: _hasMore,
+            loading: _loadingMore,
+            onLoadMore: _loadMore,
+          );
+        }
+        return _FollowUserTile(user: _users[index]);
+      },
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemCount: _users.length + (showFooter ? 1 : 0),
     );
   }
 }

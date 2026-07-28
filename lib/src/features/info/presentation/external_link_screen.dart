@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_section_header.dart';
 
 class ExternalLinkScreen extends StatelessWidget {
   const ExternalLinkScreen({required this.url, super.key});
@@ -14,13 +12,11 @@ class ExternalLinkScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalizedUrl = url.trim();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('External Link')),
-      body: ListView(
+    return Material(
+      color: context.hokTheme.backgroundDeep,
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
         children: [
-          const AppSectionHeader(title: 'External Link'),
-          const SizedBox(height: 10),
           Text(
             'This notification points outside HOK Helper. Review the URL before opening it in your browser.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -56,11 +52,6 @@ class ExternalLinkScreen extends StatelessWidget {
                     : () => _copyUrl(context, normalizedUrl),
                 icon: const Icon(Icons.copy),
                 label: const Text('Copy link'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Back'),
               ),
             ],
           ),

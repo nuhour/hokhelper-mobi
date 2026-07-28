@@ -20,7 +20,9 @@ final friendLinksProvider = FutureProvider<List<FriendLinkSummary>>((ref) {
 });
 
 class InfoCenterScreen extends ConsumerWidget {
-  const InfoCenterScreen({super.key});
+  const InfoCenterScreen({this.showPageHeader = true, super.key});
+
+  final bool showPageHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,8 +34,10 @@ class InfoCenterScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const AppSectionHeader(title: 'Info Center'),
-            const SizedBox(height: 8),
+            if (showPageHeader) ...[
+              const AppSectionHeader(title: 'Info Center'),
+              const SizedBox(height: 8),
+            ],
             Text(
               'HOK Helper platform information, support policies, and partner links.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -84,7 +88,7 @@ class InfoStaticPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Info')),
+      appBar: AppBar(title: Text(section.title)),
       body: RefreshIndicator(
         onRefresh: () {
           if (section == InfoStaticSection.links) {
@@ -131,10 +135,6 @@ class _StaticSectionBody extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (section != InfoStaticSection.links) ...[
-          AppSectionHeader(title: section.title),
-          const SizedBox(height: 12),
-        ],
         switch (section) {
           InfoStaticSection.about => _AboutDetail(
             highlightCommunity: highlightCommunity,
@@ -144,6 +144,7 @@ class _StaticSectionBody extends ConsumerWidget {
           InfoStaticSection.terms => const _TermsDetail(),
           InfoStaticSection.links => _FriendLinksSection(
             value: ref.watch(friendLinksProvider),
+            showHeader: false,
           ),
         },
       ],
@@ -216,15 +217,17 @@ class _FaqCard extends StatelessWidget {
 }
 
 class _FriendLinksSection extends ConsumerWidget {
-  const _FriendLinksSection({required this.value});
+  const _FriendLinksSection({required this.value, this.showHeader = true});
 
   final AsyncValue<List<FriendLinkSummary>> value;
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _InfoPanel(
       icon: Icons.link_outlined,
       title: 'Friend Links',
+      showHeader: showHeader,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -672,12 +675,14 @@ class _InfoPanel extends StatelessWidget {
     required this.title,
     required this.child,
     this.onTapRoute,
+    this.showHeader = true,
   });
 
   final IconData icon;
   final String title;
   final Widget child;
   final String? onTapRoute;
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -693,32 +698,34 @@ class _InfoPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(icon, color: AppTheme.gold),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: context.hokTheme.onSurfaceStrong,
-                      fontWeight: FontWeight.w900,
+            if (showHeader) ...[
+              Row(
+                children: [
+                  Icon(icon, color: AppTheme.gold),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: context.hokTheme.onSurfaceStrong,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
-                ),
-                if (route != null) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.chevron_right,
-                    color: context.hokTheme.onSurfaceMuted,
-                    size: 20,
-                  ),
+                  if (route != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_right,
+                      color: context.hokTheme.onSurfaceMuted,
+                      size: 20,
+                    ),
+                  ],
                 ],
-              ],
-            ),
-            const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 12),
+            ],
             child,
           ],
         ),

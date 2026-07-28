@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../rankings/presentation/hero_ranking_screen.dart';
 import '../../rankings/presentation/player_leaderboard_screen.dart';
@@ -105,6 +106,7 @@ class StatsScreen extends ConsumerWidget {
     this.initialHeroId,
     this.initialPortalTab,
     this.showPortalTabs = false,
+    this.showPageHeader = true,
     super.key,
   });
 
@@ -113,6 +115,7 @@ class StatsScreen extends ConsumerWidget {
   final String? initialHeroId;
   final String? initialPortalTab;
   final bool showPortalTabs;
+  final bool showPageHeader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -139,8 +142,10 @@ class StatsScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
             children: [
-              const AppSectionHeader(title: 'Stats Dashboard'),
-              const SizedBox(height: 8),
+              if (showPageHeader) ...[
+                const AppSectionHeader(title: 'Stats Dashboard'),
+                const SizedBox(height: 8),
+              ],
               Text(
                 'Hero, equipment, and combo trends from the HOK stats service.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -189,8 +194,7 @@ class StatsScreen extends ConsumerWidget {
           _ => '',
         },
         children: [
-          for (final hero in dashboard.heroes.take(10))
-            _HeroStatsCard(hero: hero),
+          for (final hero in dashboard.heroes) _HeroStatsCard(hero: hero),
         ],
       ),
       _StatsSection(
@@ -200,7 +204,7 @@ class StatsScreen extends ConsumerWidget {
             ? 'Focused equipment rank'
             : '',
         children: [
-          for (final equip in _prioritizeEquips(dashboard.equips).take(10))
+          for (final equip in _prioritizeEquips(dashboard.equips))
             _EquipStatsCard(
               equip: equip,
               isFocused:
@@ -213,8 +217,7 @@ class StatsScreen extends ConsumerWidget {
         title: 'Hero Combos',
         icon: Icons.hub_outlined,
         children: [
-          for (final combo in dashboard.combos.take(10))
-            _ComboStatsCard(combo: combo),
+          for (final combo in dashboard.combos) _ComboStatsCard(combo: combo),
         ],
       ),
       _StatsSection(
@@ -224,7 +227,7 @@ class StatsScreen extends ConsumerWidget {
             ? 'Focused player rank'
             : '',
         children: [
-          for (final player in dashboard.players.take(10))
+          for (final player in dashboard.players)
             _PlayerStatsCard(player: player),
         ],
       ),
@@ -475,8 +478,9 @@ class _HeroDetailSection extends ConsumerWidget {
           title: 'Hero Build Usage',
           icon: Icons.construction_outlined,
           focusLabel: detail.heroName,
+          initialVisible: 8,
           children: [
-            for (final equip in detail.equips.take(8))
+            for (final equip in detail.equips)
               _HeroEquipUsageCard(equip: equip),
           ],
         );
@@ -504,9 +508,9 @@ class _EquipDetailSection extends ConsumerWidget {
           title: 'Equipment Hero Usage',
           icon: Icons.groups_2_outlined,
           focusLabel: detail.equipName,
+          initialVisible: 8,
           children: [
-            for (final hero in detail.heroes.take(8))
-              _EquipHeroUsageCard(hero: hero),
+            for (final hero in detail.heroes) _EquipHeroUsageCard(hero: hero),
           ],
         );
       },
@@ -514,49 +518,78 @@ class _EquipDetailSection extends ConsumerWidget {
   }
 }
 
-class _StatsSection extends StatelessWidget {
+class _StatsSection extends StatefulWidget {
   const _StatsSection({
     required this.title,
     required this.icon,
     required this.children,
     this.focusLabel = '',
+    this.initialVisible = 10,
   });
 
   final String title;
   final IconData icon;
   final List<Widget> children;
   final String focusLabel;
+  final int initialVisible;
+
+  @override
+  State<_StatsSection> createState() => _StatsSectionState();
+}
+
+class _StatsSectionState extends State<_StatsSection> {
+  late int _visible = widget.initialVisible;
 
   @override
   Widget build(BuildContext context) {
+    final children = widget.children;
     if (children.isEmpty) {
       return const SizedBox.shrink();
     }
+    // 多区块仪表盘用手动展开而非滚动自动加载，避免把后面的区块越推越远。
+    final shown = children.take(_visible).toList(growable: false);
+    final remaining = children.length - shown.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, color: AppTheme.gold, size: 20),
+            Icon(widget.icon, color: AppTheme.gold, size: 20),
             const SizedBox(width: 8),
             Text(
-              title,
+              widget.title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: context.hokTheme.onSurfaceStrong,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            if (focusLabel.isNotEmpty) ...[
+            if (widget.focusLabel.isNotEmpty) ...[
               const SizedBox(width: 8),
               Flexible(
-                child: _MetricPill(label: focusLabel, color: AppTheme.gold),
+                child: _MetricPill(
+                  label: widget.focusLabel,
+                  color: AppTheme.gold,
+                ),
               ),
             ],
           ],
         ),
         const SizedBox(height: 10),
-        ...children.expand((child) => [child, const SizedBox(height: 10)]),
+        ...shown.expand((child) => [child, const SizedBox(height: 10)]),
+        if (remaining > 0)
+          Center(
+            child: TextButton.icon(
+              onPressed: () =>
+                  setState(() => _visible += widget.initialVisible),
+              icon: const Icon(Icons.expand_more_rounded, size: 18),
+              label: Text(
+                'Show ${remaining.clamp(1, widget.initialVisible)} more of $remaining',
+              ),
+            ),
+          )
+        else if (children.length > widget.initialVisible)
+          const AppListFooter(hasMore: false),
       ],
     );
   }

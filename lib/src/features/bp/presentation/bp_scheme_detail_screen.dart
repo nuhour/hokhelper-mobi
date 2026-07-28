@@ -29,12 +29,14 @@ class BpSchemeDetailScreen extends ConsumerStatefulWidget {
     required this.schemeId,
     this.initialGameIndex,
     this.enableLandscapeEditor = false,
+    this.showPageHeader = true,
     super.key,
   });
 
   final String schemeId;
   final int? initialGameIndex;
   final bool enableLandscapeEditor;
+  final bool showPageHeader;
 
   @override
   ConsumerState<BpSchemeDetailScreen> createState() =>
@@ -94,8 +96,10 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
               children: [
-                const AppSectionHeader(title: 'BP Scheme'),
-                const SizedBox(height: 8),
+                if (widget.showPageHeader) ...[
+                  const AppSectionHeader(title: 'BP Scheme'),
+                  const SizedBox(height: 8),
+                ],
                 Text(
                   'Review this pick/ban scheme from a shared portal link.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -731,7 +735,9 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   late bool _blueTeamIsA;
   late List<int> _peakUserPicks;
   late List<int> _peakEnemyPicks;
-  _BpSide _nextGameLoserSide = _BpSide.blue;
+  int? _historyIndex;
+  ({_BpSide side, _BpSlotType type, int index})? _editingSlot;
+  _BpSide _nextGameLoserSide = _BpSide.red;
   bool _peakRevealed = false;
   bool _isPeakGenerating = false;
   int? _selectedHeroId;
@@ -759,8 +765,10 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     _isPeakMode =
         !_isHistoryMode && widget.scheme.boMode == 7 && _gameNumber == 7;
     if (_isHistoryMode) {
+      _historyIndex = historyIndex;
       final game = widget.scheme.history[historyIndex!];
       _gameNumber = game.gameNumber;
+      _gameWinner = game.winner;
       _blueTeamIsA = game.blueTeamId.isEmpty
           ? _gameNumber.isOdd
           : game.blueTeamId == widget.scheme.teamAId;
@@ -839,8 +847,10 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   bool get _canAct =>
       _isStarted && !_isHistoryMode && !_isSaved && !_isFinished;
 
-  List<int?> _slotsFor(_BpStep step) {
-    return switch ((step.side, step.type)) {
+  List<int?> _slotsFor(_BpStep step) => _slotsAt(step.side, step.type);
+
+  List<int?> _slotsAt(_BpSide side, _BpSlotType type) {
+    return switch ((side, type)) {
       (_BpSide.blue, _BpSlotType.ban) => _blueBans,
       (_BpSide.red, _BpSlotType.ban) => _redBans,
       (_BpSide.blue, _BpSlotType.pick) => _bluePicks,
@@ -902,6 +912,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       _currentStepIndex = 0;
       _timeLeft = _timerDuration;
       _selectedHeroId = null;
+      _editingSlot = null;
       _isStarted = false;
       _isTimerRunning = false;
       _isSaved = false;
@@ -912,7 +923,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 
   void _toggleTimer() {
-    if (_isHistoryMode || _isSaved || _isFinished) return;
+    if (_isPeakMode || _isHistoryMode || _isSaved || _isFinished) return;
     if (!_isStarted) {
       _startBp();
       return;
@@ -935,7 +946,34 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       return;
     }
     if (!_canSelectHero(heroId)) return;
+    final editing = _editingSlot;
+    if (editing != null) {
+      // HOKX 规则：编辑槽位时点选英雄立即替换并退出编辑。
+      setState(() {
+        _slotsAt(editing.side, editing.type)[editing.index] = heroId;
+        _editingSlot = null;
+        _selectedHeroId = null;
+      });
+      return;
+    }
     setState(() => _selectedHeroId = heroId);
+  }
+
+  int? _editIndexFor(_BpSide side, _BpSlotType type) {
+    final editing = _editingSlot;
+    if (editing == null || editing.side != side || editing.type != type) {
+      return null;
+    }
+    return editing.index;
+  }
+
+  void _handleSlotTap(_BpSide side, _BpSlotType type, int index) {
+    // HOKX 规则：BP 全部结束且未保存时，点击任意槽位进入编辑模式。
+    if (!_isFinished || _isSaved || _isHistoryMode || _isPeakMode) return;
+    setState(() {
+      _editingSlot = (side: side, type: type, index: index);
+      _selectedHeroId = null;
+    });
   }
 
   void _commitSelection([int? heroOverride]) {
@@ -969,6 +1007,11 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
             const HeroSummary(id: '', name: '', avatar: '', title: ''),
       );
       heroId = int.tryParse(fallback.id);
+      if (heroId == null || heroId <= 0) {
+        // 无可选英雄时与 HOKX 一致：重置倒计时等待下一轮。
+        setState(() => _timeLeft = _timerDuration);
+        return;
+      }
     }
     _commitSelection(heroId);
   }
@@ -1002,9 +1045,21 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       _teamScore(false) >= _winThreshold ||
       _gameNumber >= widget.scheme.boMode;
 
+  // HOKX 规则：历史回放时比分只统计到所查看的那一局（含），
+  // 全局英雄池只统计该局之前的小局。
+  Iterable<BpHistoryGame> get _scoreHistory =>
+      _isHistoryMode && _historyIndex != null
+      ? _history.take(_historyIndex! + 1)
+      : _history;
+
+  Iterable<BpHistoryGame> get _poolHistory =>
+      _isHistoryMode && _historyIndex != null
+      ? _history.take(_historyIndex!)
+      : _history;
+
   int _teamScore(bool teamA) {
     var score = 0;
-    for (final game in _history) {
+    for (final game in _scoreHistory) {
       if (game.winner == null) continue;
       final blueIsA = game.blueTeamId.isEmpty
           ? game.gameNumber.isOdd
@@ -1026,7 +1081,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
 
   Set<int> _teamUsedHeroes(bool teamA) {
     final used = <int>{};
-    for (final game in _history) {
+    for (final game in _poolHistory) {
       final blueIsA = game.blueTeamId.isEmpty
           ? game.gameNumber.isOdd
           : game.blueTeamId == widget.scheme.teamAId;
@@ -1037,24 +1092,47 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   }
 
   bool _activeSideIsTeamA() {
-    final step = _currentStep;
-    if (step == null) return _isBlueTeamA();
-    return step.side == _BpSide.blue ? _isBlueTeamA() : !_isBlueTeamA();
+    final side = _editingSlot?.side ?? _currentStep?.side;
+    if (side == null) return _isBlueTeamA();
+    return side == _BpSide.blue ? _isBlueTeamA() : !_isBlueTeamA();
   }
+
+  _BpSlotType? get _activeSlotType => _editingSlot?.type ?? _currentStep?.type;
 
   bool _canSelectHero(int heroId) {
     if (_isPeakMode) {
       return !_isSaved && !_peakRevealed && heroId > 0;
     }
-    final step = _currentStep;
-    if (!_canAct || heroId <= 0 || step == null) return false;
+    if (heroId <= 0) return false;
     final inCurrentDraft = <int>{
       ..._blueBans.whereType<int>(),
       ..._redBans.whereType<int>(),
       ..._bluePicks.whereType<int>(),
       ..._redPicks.whereType<int>(),
     };
+    // HOKX 规则：BP 结束、保存前可编辑任意槽位。编辑时允许重选本槽英雄，
+    // pick 槽位仍受该方全局已用英雄限制，ban 槽位不受限制。
+    final editing = _editingSlot;
+    if (editing != null) {
+      final selfId = _slotsAt(editing.side, editing.type)[editing.index];
+      if (heroId != selfId && inCurrentDraft.contains(heroId)) return false;
+      if (editing.type == _BpSlotType.pick) {
+        final sideIsA = editing.side == _BpSide.blue
+            ? _isBlueTeamA()
+            : !_isBlueTeamA();
+        if (_teamUsedHeroes(sideIsA).contains(heroId)) return false;
+      }
+      return true;
+    }
+    final step = _currentStep;
+    if (!_canAct || step == null) return false;
     if (inCurrentDraft.contains(heroId)) return false;
+    // HOKX 全局 BP 规则：pick 阶段不能选择本队之前小局已用英雄；
+    // ban 阶段不受全局池限制（对方已用英雄仍可禁用）。
+    if (step.type == _BpSlotType.pick &&
+        _teamUsedHeroes(_activeSideIsTeamA()).contains(heroId)) {
+      return false;
+    }
     return true;
   }
 
@@ -1069,6 +1147,16 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     }
     if (_bluePicks.contains(heroId) || _redPicks.contains(heroId)) {
       return _BpHeroStatus.picked;
+    }
+    // HOKX 全局 BP 规则：ban 阶段标记敌方已用英雄（仍可禁用），
+    // 其余阶段标记本方已用英雄（不可再选）。
+    final activeIsA = _activeSideIsTeamA();
+    if (_activeSlotType == _BpSlotType.ban) {
+      if (_teamUsedHeroes(!activeIsA).contains(heroId)) {
+        return _BpHeroStatus.usedByOpponent;
+      }
+    } else if (_teamUsedHeroes(activeIsA).contains(heroId)) {
+      return _BpHeroStatus.usedByActiveTeam;
     }
     return _BpHeroStatus.available;
   }
@@ -1095,7 +1183,8 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       final byId = {for (final hero in heroes) int.tryParse(hero.id): hero};
       final picked = <int>[];
       final usedPositions = <int>{};
-      final excluded = <int>{};
+      // HOKX 规则：对手阵容不能包含玩家已选英雄。
+      final excluded = <int>{..._peakUserPicks};
       for (final recommendation in result.recommendations) {
         final id = recommendation.heroId;
         final hero = byId[id];
@@ -1112,34 +1201,14 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
         if (position != null && position > 0) usedPositions.add(position);
         if (picked.length == 5) break;
       }
-      for (final hero in heroes) {
-        final id = int.tryParse(hero.id) ?? 0;
-        if (picked.length == 5) break;
-        if (id <= 0 || excluded.contains(id) || picked.contains(id)) continue;
-        if (hero.position != null && usedPositions.contains(hero.position)) {
-          continue;
-        }
-        picked.add(id);
-        if (hero.position != null) usedPositions.add(hero.position!);
-      }
-      for (final hero in heroes) {
-        final id = int.tryParse(hero.id) ?? 0;
-        if (picked.length == 5) break;
-        if (id > 0 && !excluded.contains(id) && !picked.contains(id)) {
-          picked.add(id);
-        }
-      }
+      final filled = _randomPeakEnemyPicks(heroes, existing: picked);
       if (!mounted) return;
       setState(() {
-        _peakEnemyPicks = picked;
+        _peakEnemyPicks = filled;
         _peakRevealed = true;
       });
     } catch (_) {
-      final fallback = heroes
-          .map((hero) => int.tryParse(hero.id) ?? 0)
-          .where((id) => id > 0)
-          .take(5)
-          .toList(growable: false);
+      final fallback = _randomPeakEnemyPicks(heroes);
       if (mounted) {
         setState(() {
           _peakEnemyPicks = fallback;
@@ -1149,6 +1218,44 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
     } finally {
       if (mounted) setState(() => _isPeakGenerating = false);
     }
+  }
+
+  // 对齐 HOKX buildRandomPeakEnemyPicks：排除玩家已选英雄，
+  // 先按岗位不重复补齐，再放宽岗位限制补足 5 人。
+  List<int> _randomPeakEnemyPicks(
+    List<HeroSummary> heroes, {
+    List<int> existing = const [],
+  }) {
+    final picked = <int>[...existing];
+    final usedHeroes = <int>{..._peakUserPicks, ...picked};
+    final usedPositions = <int>{};
+    final byId = {for (final hero in heroes) int.tryParse(hero.id): hero};
+    for (final id in picked) {
+      final position = byId[id]?.position;
+      if (position != null && position > 0) usedPositions.add(position);
+    }
+    for (final hero in heroes) {
+      if (picked.length >= 5) break;
+      final id = int.tryParse(hero.id) ?? 0;
+      if (id <= 0 || usedHeroes.contains(id)) continue;
+      final position = hero.position;
+      if (position != null &&
+          position > 0 &&
+          usedPositions.contains(position)) {
+        continue;
+      }
+      picked.add(id);
+      usedHeroes.add(id);
+      if (position != null && position > 0) usedPositions.add(position);
+    }
+    for (final hero in heroes) {
+      if (picked.length >= 5) break;
+      final id = int.tryParse(hero.id) ?? 0;
+      if (id <= 0 || usedHeroes.contains(id)) continue;
+      picked.add(id);
+      usedHeroes.add(id);
+    }
+    return picked.take(5).toList(growable: false);
   }
 
   Future<void> _saveDraft() async {
@@ -1211,6 +1318,8 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       setState(() {
         _history = nextHistory;
         _isSaved = true;
+        _editingSlot = null;
+        _selectedHeroId = null;
       });
       ScaffoldMessenger.of(
         context,
@@ -1284,6 +1393,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
         _isTimerRunning = false;
         _isSaved = false;
         _selectedHeroId = null;
+        _editingSlot = null;
         _gameWinner = null;
         _undoStack.clear();
         _redoStack.clear();
@@ -1347,6 +1457,12 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
               onBack: () => Navigator.of(context).maybePop(),
               onSave: _saveDraft,
               onTimerTap: _isStarted ? _toggleTimer : _resumeTimer,
+              blueBanEditIndex: _editIndexFor(_BpSide.blue, _BpSlotType.ban),
+              redBanEditIndex: _editIndexFor(_BpSide.red, _BpSlotType.ban),
+              onBlueBanSlotTap: (index) =>
+                  _handleSlotTap(_BpSide.blue, _BpSlotType.ban, index),
+              onRedBanSlotTap: (index) =>
+                  _handleSlotTap(_BpSide.red, _BpSlotType.ban, index),
             ),
             _BpLaneBar(
               lanes: _lanes,
@@ -1370,6 +1486,9 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                         _currentStep?.type == _BpSlotType.pick,
                     activeSlotIndex: _activeSlotIndex,
                     selectedHeroId: _selectedHeroId,
+                    editIndex: _editIndexFor(_BpSide.blue, _BpSlotType.pick),
+                    onSlotTap: (index) =>
+                        _handleSlotTap(_BpSide.blue, _BpSlotType.pick, index),
                   ),
                   Expanded(
                     child: Stack(
@@ -1393,15 +1512,19 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                                 final hero = visibleHeroes[index];
                                 final heroId = int.tryParse(hero.id) ?? 0;
                                 final status = _heroStatus(heroId);
+                                final canTap = _isPeakMode
+                                    ? !_isHistoryMode &&
+                                          !_peakRevealed &&
+                                          !_isSaved &&
+                                          heroId > 0
+                                    : _canSelectHero(heroId);
                                 return _BpHeroPoolTile(
                                   hero: hero,
                                   status: status,
                                   selected: _selectedHeroId == heroId,
-                                  allowPickedTap:
-                                      _isPeakMode &&
-                                      !_peakRevealed &&
-                                      !_isSaved,
-                                  onTap: () => _setSelectedHero(heroId),
+                                  onTap: canTap
+                                      ? () => _setSelectedHero(heroId)
+                                      : null,
                                 );
                               },
                             );
@@ -1461,6 +1584,9 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
                         _currentStep?.type == _BpSlotType.pick,
                     activeSlotIndex: _activeSlotIndex,
                     selectedHeroId: _selectedHeroId,
+                    editIndex: _editIndexFor(_BpSide.red, _BpSlotType.pick),
+                    onSlotTap: (index) =>
+                        _handleSlotTap(_BpSide.red, _BpSlotType.pick, index),
                   ),
                 ],
               ),
@@ -1501,6 +1627,10 @@ class _BpEditorTopBar extends StatelessWidget {
     required this.onBack,
     required this.onSave,
     required this.onTimerTap,
+    this.blueBanEditIndex,
+    this.redBanEditIndex,
+    this.onBlueBanSlotTap,
+    this.onRedBanSlotTap,
   });
 
   final BpSchemeSummary scheme;
@@ -1522,6 +1652,10 @@ class _BpEditorTopBar extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onSave;
   final VoidCallback onTimerTap;
+  final int? blueBanEditIndex;
+  final int? redBanEditIndex;
+  final ValueChanged<int>? onBlueBanSlotTap;
+  final ValueChanged<int>? onRedBanSlotTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1546,6 +1680,8 @@ class _BpEditorTopBar extends StatelessWidget {
                       currentStep?.type == _BpSlotType.ban,
                   activeSlotIndex: activeSlotIndex,
                   selectedHeroId: selectedHeroId,
+                  editIndex: blueBanEditIndex,
+                  onSlotTap: onBlueBanSlotTap,
                 ),
                 const SizedBox(width: 6),
                 _BpScorePill(
@@ -1612,6 +1748,8 @@ class _BpEditorTopBar extends StatelessWidget {
                       currentStep?.type == _BpSlotType.ban,
                   activeSlotIndex: activeSlotIndex,
                   selectedHeroId: selectedHeroId,
+                  editIndex: redBanEditIndex,
+                  onSlotTap: onRedBanSlotTap,
                 ),
               ],
             ),
@@ -1634,6 +1772,8 @@ class _BpBanSlots extends StatelessWidget {
     required this.active,
     required this.activeSlotIndex,
     required this.selectedHeroId,
+    this.editIndex,
+    this.onSlotTap,
   });
 
   final Color color;
@@ -1641,6 +1781,8 @@ class _BpBanSlots extends StatelessWidget {
   final bool active;
   final int activeSlotIndex;
   final int? selectedHeroId;
+  final int? editIndex;
+  final ValueChanged<int>? onSlotTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1650,15 +1792,19 @@ class _BpBanSlots extends StatelessWidget {
         for (var index = 0; index < 5; index++)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: _BpSlot(
-              heroId: index < heroIds.length ? heroIds[index] : null,
-              color: color,
-              size: 28,
-              active: active && index == activeSlotIndex,
-              previewHeroId: active && index == activeSlotIndex
-                  ? selectedHeroId
-                  : null,
-              banned: true,
+            child: GestureDetector(
+              onTap: onSlotTap == null ? null : () => onSlotTap!(index),
+              child: _BpSlot(
+                heroId: index < heroIds.length ? heroIds[index] : null,
+                color: color,
+                size: 28,
+                active:
+                    (active && index == activeSlotIndex) || index == editIndex,
+                previewHeroId: active && index == activeSlotIndex
+                    ? selectedHeroId
+                    : null,
+                banned: true,
+              ),
             ),
           ),
       ],
@@ -1845,6 +1991,8 @@ class _BpTeamRail extends StatelessWidget {
     required this.active,
     required this.activeSlotIndex,
     required this.selectedHeroId,
+    this.editIndex,
+    this.onSlotTap,
   });
 
   final Color color;
@@ -1852,6 +2000,8 @@ class _BpTeamRail extends StatelessWidget {
   final bool active;
   final int activeSlotIndex;
   final int? selectedHeroId;
+  final int? editIndex;
+  final ValueChanged<int>? onSlotTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1866,14 +2016,19 @@ class _BpTeamRail extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               for (var index = 0; index < 5; index++)
-                _BpSlot(
-                  heroId: index < heroIds.length ? heroIds[index] : null,
-                  color: color,
-                  size: slotSize,
-                  active: active && index == activeSlotIndex,
-                  previewHeroId: active && index == activeSlotIndex
-                      ? selectedHeroId
-                      : null,
+                GestureDetector(
+                  onTap: onSlotTap == null ? null : () => onSlotTap!(index),
+                  child: _BpSlot(
+                    heroId: index < heroIds.length ? heroIds[index] : null,
+                    color: color,
+                    size: slotSize,
+                    active:
+                        (active && index == activeSlotIndex) ||
+                        index == editIndex,
+                    previewHeroId: active && index == activeSlotIndex
+                        ? selectedHeroId
+                        : null,
+                  ),
                 ),
             ],
           );
@@ -2233,22 +2388,17 @@ class _BpHeroPoolTile extends StatelessWidget {
     required this.hero,
     required this.status,
     required this.selected,
-    this.allowPickedTap = false,
     this.onTap,
   });
 
   final HeroSummary hero;
   final _BpHeroStatus status;
   final bool selected;
-  final bool allowPickedTap;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isInteractive =
-        onTap != null &&
-        (status == _BpHeroStatus.available ||
-            (allowPickedTap && status == _BpHeroStatus.picked));
+    final isInteractive = onTap != null;
     final heroId = hero.id.isEmpty ? hero.heroId : hero.id;
     final url = hero.avatar.isNotEmpty
         ? hero.avatar
