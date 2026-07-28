@@ -65,9 +65,12 @@ void main() {
   test('maps languages to the same content regions as hokx', () {
     expect(hokRegionFromLanguageCode('zh'), HokRegion.cn);
     expect(hokRegionFromLanguageCode('id'), HokRegion.id);
-
-    for (final code in ['en', 'fil', 'pt', 'es', 'ar', 'ru', 'ms']) {
-      expect(hokRegionFromLanguageCode(code), HokRegion.en);
-    }
+    expect(hokRegionFromLanguageCode('en'), HokRegion.en);
+    expect(hokRegionFromLanguageCode('fil'), HokRegion.fil);
+    expect(hokRegionFromLanguageCode('pt'), HokRegion.pt);
+    expect(hokRegionFromLanguageCode('es'), HokRegion.es);
+    expect(hokRegionFromLanguageCode('ar'), HokRegion.ar);
+    expect(hokRegionFromLanguageCode('ru'), HokRegion.ru);
+    expect(hokRegionFromLanguageCode('ms'), HokRegion.ms);
   });
 }
