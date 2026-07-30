@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
 import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
+import 'package:hok_helper_mobile/src/features/auth/data/native_apple_sign_in.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/native_google_sign_in.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/oauth_state_store.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
@@ -14,6 +16,7 @@ import 'package:hok_helper_mobile/src/features/auth/presentation/forgot_password
 import 'package:hok_helper_mobile/src/features/auth/presentation/login_screen.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/oauth_callback_screen.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/register_screen.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   _FakeAuthRepository({required this.tokenStore});
@@ -34,6 +37,9 @@ class _FakeAuthRepository implements AuthRepository {
   String? oauthCode;
   String? oauthRedirectUri;
   String? googleIdToken;
+  String? appleIdentityToken;
+  String? appleRawNonce;
+  String? appleName;
 
   @override
   Future<AuthUser> registerWithEmail({
@@ -90,6 +96,23 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> loginWithAppleIdentityToken({
+    required String identityToken,
+    required String rawNonce,
+    String? name,
+  }) async {
+    appleIdentityToken = identityToken;
+    appleRawNonce = rawNonce;
+    appleName = name;
+    return const AuthUser(
+      id: 29,
+      username: 'apple-user',
+      email: 'apple@example.test',
+      displayName: 'Apple User',
+    );
+  }
+
+  @override
   Future<String> getOAuthAuthorizationUrl({
     required String provider,
     required String redirectUri,
@@ -138,6 +161,30 @@ class _FakeNativeGoogleSignIn implements NativeGoogleSignIn {
   }) async {
     return result;
   }
+}
+
+class _RecordingNativeGoogleSignIn implements NativeGoogleSignIn {
+  _RecordingNativeGoogleSignIn(this.result);
+
+  final NativeGoogleSignInResult result;
+  String? serverClientId;
+
+  @override
+  Future<NativeGoogleSignInResult> authenticate({
+    required String serverClientId,
+  }) async {
+    this.serverClientId = serverClientId;
+    return result;
+  }
+}
+
+class _FakeNativeAppleSignIn implements NativeAppleSignIn {
+  const _FakeNativeAppleSignIn(this.result);
+
+  final NativeAppleSignInResult result;
+
+  @override
+  Future<NativeAppleSignInResult> authenticate() async => result;
 }
 
 class _NoopTokenStore extends SecureTokenStore {
@@ -386,6 +433,96 @@ void main() {
       startsWith('hokhelper-mobile.discord.'),
     );
     expect(openedUrls.last, contains('https://oauth.example.test/discord'));
+  });
+
+  testWidgets(
+    'native Google sign-in completes before requesting browser OAuth',
+    (tester) async {
+      final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+      final nativeGoogle = _RecordingNativeGoogleSignIn(
+        const NativeGoogleSignInResult.authenticated('native-google-token'),
+      );
+      final router = GoRouter(
+        initialLocation: '/login',
+        routes: [
+          GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+          GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+            authRepositoryProvider.overrideWithValue(repository),
+            oauthStateStoreProvider.overrideWithValue(_MemoryOAuthStateStore()),
+            nativeGoogleSignInProvider.overrideWithValue(nativeGoogle),
+            oauthUrlOpenerProvider.overrideWithValue(({
+              required provider,
+              required url,
+            }) async {
+              fail('Browser OAuth must not open after native authentication.');
+            }),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(
+        find.widgetWithText(OutlinedButton, 'Continue with Google'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(nativeGoogle.serverClientId, AppConfig.googleServerClientId);
+      expect(repository.googleIdToken, 'native-google-token');
+      expect(repository.requestedOAuthProvider, isEmpty);
+      expect(router.routerDelegate.currentConfiguration.uri.path, '/me');
+    },
+  );
+
+  testWidgets('iOS offers native Apple sign-in and completes in app', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final router = GoRouter(
+      initialLocation: '/login',
+      routes: [
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+          nativeAppleSignInProvider.overrideWithValue(
+            const _FakeNativeAppleSignIn(
+              NativeAppleSignInResult.authenticated(
+                identityToken: 'apple-identity-token',
+                rawNonce: 'apple-raw-nonce',
+                name: 'Arena Player',
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    debugDefaultTargetPlatformOverride = null;
+
+    await tester.tap(find.byType(SignInWithAppleButton));
+    await tester.pumpAndSettle();
+
+    expect(repository.appleIdentityToken, 'apple-identity-token');
+    expect(repository.appleRawNonce, 'apple-raw-nonce');
+    expect(repository.appleName, 'Arena Player');
+    expect(router.routerDelegate.currentConfiguration.uri.path, '/me');
   });
 
   testWidgets('register screen submits email registration', (tester) async {

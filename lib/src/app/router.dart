@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/i18n/app_localizations.dart';
-import '../features/activity/presentation/event_assistance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/oauth_callback_screen.dart';

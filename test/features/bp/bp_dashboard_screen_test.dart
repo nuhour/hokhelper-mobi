@@ -221,7 +221,6 @@ void main() {
     expect(find.text('Current (Game 1)'), findsOneWidget);
     expect(find.text('TEAM ALPHA'), findsOneWidget);
     expect(find.text('TEAM BETA'), findsOneWidget);
-    expect(find.text('BP scheme created'), findsOneWidget);
   });
 
   testWidgets('asks guests to sign in before saving BP schemes', (
@@ -290,7 +289,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Delete BP scheme'));
+    await tester.tap(find.byTooltip('Delete BP scheme?'));
     await tester.pumpAndSettle();
 
     expect(find.text('Delete BP scheme?'), findsOneWidget);

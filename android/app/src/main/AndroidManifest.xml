@@ -4,7 +4,13 @@
     <application
         android:label="HOK Helper"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:appCategory="game"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -13,6 +19,7 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
+            android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
@@ -30,22 +37,17 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data
-                    android:scheme="hokhelper"
-                    android:host="auth"/>
+                <data android:scheme="hokhelper"/>
+                <data android:host="auth"/>
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data
-                    android:scheme="https"
-                    android:host="hokhelper.com"
-                    android:pathPrefix="/auth/google/callback"/>
-                <data
-                    android:scheme="https"
-                    android:host="hokhelper.com"
-                    android:pathPrefix="/auth/discord/callback"/>
+                <data android:scheme="https"/>
+                <data android:host="hokhelper.com"/>
+                <data android:pathPrefix="/auth/google/callback"/>
+                <data android:pathPrefix="/auth/discord/callback"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

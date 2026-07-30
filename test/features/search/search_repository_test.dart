@@ -38,7 +38,8 @@ void main() {
     expect(apiClient.postBody, {
       'query': 'arthur',
       'region_id': 2,
-      'limit_per_type': 6,
+      // 后端 MAX_LIMIT=20，客户端按每类可得的最大条数请求。
+      'limit_per_type': 20,
     });
   });
 

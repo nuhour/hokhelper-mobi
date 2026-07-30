@@ -31,6 +31,7 @@ class AppStatsTable extends StatefulWidget {
     required this.columns,
     this.fixedColumnWidth = 148,
     this.rowHeight = 62,
+    this.footer,
     super.key,
   });
 
@@ -39,6 +40,9 @@ class AppStatsTable extends StatefulWidget {
   final List<AppStatsTableColumn> columns;
   final double fixedColumnWidth;
   final double rowHeight;
+
+  /// 渲染在行体末尾、随行体垂直滚动的跨全宽页脚（如到底提示）。
+  final Widget? footer;
 
   @override
   State<AppStatsTable> createState() => _AppStatsTableState();
@@ -205,72 +209,79 @@ class _AppStatsTableState extends State<AppStatsTable> {
                 child: SingleChildScrollView(
                   controller: _verticalController,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(
-                        width: widget.fixedColumnWidth,
-                        child: Column(
-                          children: [
-                            for (
-                              var index = 0;
-                              index < widget.fixedCells.length;
-                              index++
-                            )
-                              _BodyCell(
-                                height: widget.rowHeight,
-                                borderColor: outline,
-                                trailingBorder: true,
-                                child: widget.fixedCells[index],
-                              ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Scrollbar(
-                          controller: _bodyController,
-                          thumbVisibility: true,
-                          notificationPredicate: (notification) =>
-                              notification.metrics.axis == Axis.horizontal,
-                          child: SingleChildScrollView(
-                            controller: _bodyController,
-                            scrollDirection: Axis.horizontal,
-                            physics: const ClampingScrollPhysics(),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: widget.fixedColumnWidth,
+                            child: Column(
                               children: [
                                 for (
-                                  var columnIndex = 0;
-                                  columnIndex < widget.columns.length;
-                                  columnIndex++
+                                  var index = 0;
+                                  index < widget.fixedCells.length;
+                                  index++
                                 )
-                                  SizedBox(
-                                    width: widget.columns[columnIndex].width,
-                                    child: Column(
-                                      children: [
-                                        for (final cell
-                                            in widget
-                                                .columns[columnIndex]
-                                                .cells)
-                                          _BodyCell(
-                                            height: widget.rowHeight,
-                                            borderColor: outline,
-                                            trailingBorder:
-                                                hasGroupedHeader &&
-                                                _isGroupBoundary(
-                                                  widget.columns,
-                                                  columnIndex,
-                                                ),
-                                            child: cell,
-                                          ),
-                                      ],
-                                    ),
+                                  _BodyCell(
+                                    height: widget.rowHeight,
+                                    borderColor: outline,
+                                    trailingBorder: true,
+                                    child: widget.fixedCells[index],
                                   ),
                               ],
                             ),
                           ),
-                        ),
+                          Expanded(
+                            child: Scrollbar(
+                              controller: _bodyController,
+                              thumbVisibility: true,
+                              notificationPredicate: (notification) =>
+                                  notification.metrics.axis == Axis.horizontal,
+                              child: SingleChildScrollView(
+                                controller: _bodyController,
+                                scrollDirection: Axis.horizontal,
+                                physics: const ClampingScrollPhysics(),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (
+                                      var columnIndex = 0;
+                                      columnIndex < widget.columns.length;
+                                      columnIndex++
+                                    )
+                                      SizedBox(
+                                        width:
+                                            widget.columns[columnIndex].width,
+                                        child: Column(
+                                          children: [
+                                            for (final cell
+                                                in widget
+                                                    .columns[columnIndex]
+                                                    .cells)
+                                              _BodyCell(
+                                                height: widget.rowHeight,
+                                                borderColor: outline,
+                                                trailingBorder:
+                                                    hasGroupedHeader &&
+                                                    _isGroupBoundary(
+                                                      widget.columns,
+                                                      columnIndex,
+                                                    ),
+                                                child: cell,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      if (widget.footer != null) widget.footer!,
                     ],
                   ),
                 ),

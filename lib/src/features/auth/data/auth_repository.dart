@@ -49,6 +49,23 @@ class AuthRepository {
     return _readAuthResponse(json, fallbackMessage: 'Google login failed');
   }
 
+  Future<AuthUser> loginWithAppleIdentityToken({
+    required String identityToken,
+    required String rawNonce,
+    String? name,
+  }) async {
+    final json = await apiClient.postJson(
+      '/auth/apple/login',
+      body: {
+        'identity_token': identityToken,
+        'raw_nonce': rawNonce,
+        if (name != null && name.isNotEmpty) 'name': name,
+      },
+    );
+
+    return _readAuthResponse(json, fallbackMessage: 'Apple login failed');
+  }
+
   Future<String> getOAuthAuthorizationUrl({
     required String provider,
     required String redirectUri,

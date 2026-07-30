@@ -65,7 +65,7 @@ class ToolsScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       children: [
         AppSectionHeader(title: l10n.toolsTitle),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         LayoutBuilder(
           key: const ValueKey('tools-nine-grid'),
           builder: (context, constraints) {

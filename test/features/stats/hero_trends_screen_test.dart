@@ -329,6 +329,7 @@ void main() {
     await tester.drag(
       find.byKey(const ValueKey('hero-preparation-tabs')),
       const Offset(-500, 0),
+      warnIfMissed: false,
     );
     await tester.pumpAndSettle();
     expect(find.text('Pro Builds'), findsOneWidget);
@@ -430,9 +431,7 @@ void main() {
     expect(images.any((image) => image.semanticLabel == 'Yaria'), isTrue);
     // 每行都带所选装备角标（主表识别列 1 处 + 抽屉两行角标 2 处）。
     expect(
-      images
-          .where((image) => image.semanticLabel == 'Venomous Staff')
-          .length,
+      images.where((image) => image.semanticLabel == 'Venomous Staff').length,
       greaterThanOrEqualTo(2),
     );
 

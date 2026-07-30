@@ -1822,7 +1822,6 @@ class _BpBanSlots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2154,151 +2153,167 @@ class _BpFlowControls extends StatelessWidget {
           icon: const Icon(Icons.undo_rounded, size: 18),
         ),
         const SizedBox(width: 8),
-        if (isPeakMode && !isFinished)
-          FilledButton.icon(
-            onPressed: peakPickCount == 5 && !isPeakGenerating
-                ? onPeakShow
-                : null,
-            icon: const Icon(Icons.visibility_rounded, size: 17),
-            label: Text(
-              isPeakGenerating
-                  ? '生成对手阵容'
-                  : peakPickCount == 5
-                  ? '展示对手'
-                  : '还需选择 ${5 - peakPickCount} 人',
-            ),
-          )
-        else if (!isStarted && !isFinished)
-          FilledButton.icon(
-            onPressed: onStart,
-            icon: const Icon(Icons.play_arrow_rounded, size: 17),
-            label: Text(AppLocalizations.of(context).translate('bpStart')),
-          )
-        else if (!isFinished)
-          FilledButton.icon(
-            onPressed:
-                currentStep?.type == _BpSlotType.ban || selectedHeroId != null
-                ? onLockIn
-                : null,
-            icon: const Icon(Icons.lock_rounded, size: 17),
-            label: Text(
-              currentStep?.type == _BpSlotType.ban && selectedHeroId == null
-                  ? l10n.translate('bpSkipBan')
-                  : l10n.translate('bpLockIn'),
-            ),
-          )
-        else if (!isSaved)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OutlinedButton(
-                onPressed: () => onWinnerChanged('blue'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: gameWinner == 'blue'
-                      ? const Color(0xFF246BFF).withValues(alpha: 0.9)
-                      : const Color(0xFF102150),
-                  side: BorderSide(
-                    color: gameWinner == 'blue'
-                        ? const Color(0xFF246BFF)
-                        : Colors.white24,
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isPeakMode && !isFinished)
+                  FilledButton.icon(
+                    onPressed: peakPickCount == 5 && !isPeakGenerating
+                        ? onPeakShow
+                        : null,
+                    icon: const Icon(Icons.visibility_rounded, size: 17),
+                    label: Text(
+                      isPeakGenerating
+                          ? '生成对手阵容'
+                          : peakPickCount == 5
+                          ? '展示对手'
+                          : '还需选择 ${5 - peakPickCount} 人',
+                    ),
+                  )
+                else if (!isStarted && !isFinished)
+                  FilledButton.icon(
+                    onPressed: onStart,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 17),
+                    label: Text(
+                      AppLocalizations.of(context).translate('bpStart'),
+                    ),
+                  )
+                else if (!isFinished)
+                  FilledButton.icon(
+                    onPressed:
+                        currentStep?.type == _BpSlotType.ban ||
+                            selectedHeroId != null
+                        ? onLockIn
+                        : null,
+                    icon: const Icon(Icons.lock_rounded, size: 17),
+                    label: Text(
+                      currentStep?.type == _BpSlotType.ban &&
+                              selectedHeroId == null
+                          ? l10n.translate('bpSkipBan')
+                          : l10n.translate('bpLockIn'),
+                    ),
+                  )
+                else if (!isSaved)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => onWinnerChanged('blue'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: gameWinner == 'blue'
+                              ? const Color(0xFF246BFF).withValues(alpha: 0.9)
+                              : const Color(0xFF102150),
+                          side: BorderSide(
+                            color: gameWinner == 'blue'
+                                ? const Color(0xFF246BFF)
+                                : Colors.white24,
+                          ),
+                        ),
+                        child: Text(
+                          l10n.format('bpWins', {
+                            'team': blueTeamName.isEmpty
+                                ? l10n.translate('bpBlueSide')
+                                : blueTeamName,
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      OutlinedButton(
+                        onPressed: () => onWinnerChanged('red'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: gameWinner == 'red'
+                              ? const Color(0xFFE83B43).withValues(alpha: 0.9)
+                              : const Color(0xFF4B1118),
+                          side: BorderSide(
+                            color: gameWinner == 'red'
+                                ? AppTheme.error
+                                : Colors.white24,
+                          ),
+                        ),
+                        child: Text(
+                          l10n.format('bpWins', {
+                            'team': redTeamName.isEmpty
+                                ? l10n.translate('bpRedSide')
+                                : redTeamName,
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      FilledButton.icon(
+                        onPressed: gameWinner == null ? null : onCompleteGame,
+                        icon: const Icon(Icons.save_rounded, size: 17),
+                        label: Text(
+                          AppLocalizations.of(context).translate('bpComplete'),
+                        ),
+                      ),
+                    ],
+                  )
+                else if (isSeriesCompleted)
+                  FilledButton.icon(
+                    onPressed: isAdvancing ? null : onNextGame,
+                    icon: const Icon(Icons.emoji_events_outlined, size: 17),
+                    label: Text(
+                      AppLocalizations.of(context).translate('bpEndSeries'),
+                    ),
+                  )
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (sideSelectionRule == 'loser_selects') ...[
+                        Text(
+                          '${loserTeamName.isEmpty ? l10n.translate('bpLoserSelects') : loserTeamName} · ${l10n.translate('bpLoserSelects')}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        IconButton.filledTonal(
+                          tooltip: l10n.translate('bpBlueSide'),
+                          onPressed: () => onNextGameLoserSide(_BpSide.blue),
+                          icon: Icon(
+                            Icons.circle,
+                            size: 15,
+                            color: nextGameLoserSide == _BpSide.blue
+                                ? const Color(0xFF246BFF)
+                                : Colors.white54,
+                          ),
+                        ),
+                        IconButton.filledTonal(
+                          tooltip: l10n.translate('bpRedSide'),
+                          onPressed: () => onNextGameLoserSide(_BpSide.red),
+                          icon: Icon(
+                            Icons.circle,
+                            size: 15,
+                            color: nextGameLoserSide == _BpSide.red
+                                ? const Color(0xFFE83B43)
+                                : Colors.white54,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      FilledButton.icon(
+                        onPressed: isAdvancing ? null : onNextGame,
+                        icon: const Icon(Icons.skip_next_rounded, size: 17),
+                        label: Text(
+                          isAdvancing
+                              ? l10n.translate('bpSaving')
+                              : l10n.translate('bpNextGame'),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                child: Text(
-                  l10n.format('bpWins', {
-                    'team': blueTeamName.isEmpty
-                        ? l10n.translate('bpBlueSide')
-                        : blueTeamName,
-                  }),
-                ),
-              ),
-              const SizedBox(width: 6),
-              OutlinedButton(
-                onPressed: () => onWinnerChanged('red'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: gameWinner == 'red'
-                      ? const Color(0xFFE83B43).withValues(alpha: 0.9)
-                      : const Color(0xFF4B1118),
-                  side: BorderSide(
-                    color: gameWinner == 'red'
-                        ? AppTheme.error
-                        : Colors.white24,
-                  ),
-                ),
-                child: Text(
-                  l10n.format('bpWins', {
-                    'team': redTeamName.isEmpty
-                        ? l10n.translate('bpRedSide')
-                        : redTeamName,
-                  }),
-                ),
-              ),
-              const SizedBox(width: 6),
-              FilledButton.icon(
-                onPressed: gameWinner == null ? null : onCompleteGame,
-                icon: const Icon(Icons.save_rounded, size: 17),
-                label: Text(
-                  AppLocalizations.of(context).translate('bpComplete'),
-                ),
-              ),
-            ],
-          )
-        else if (isSeriesCompleted)
-          FilledButton.icon(
-            onPressed: isAdvancing ? null : onNextGame,
-            icon: const Icon(Icons.emoji_events_outlined, size: 17),
-            label: Text(AppLocalizations.of(context).translate('bpEndSeries')),
-          )
-        else
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (sideSelectionRule == 'loser_selects') ...[
-                Text(
-                  '${loserTeamName.isEmpty ? l10n.translate('bpLoserSelects') : loserTeamName} · ${l10n.translate('bpLoserSelects')}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                IconButton.filledTonal(
-                  tooltip: l10n.translate('bpBlueSide'),
-                  onPressed: () => onNextGameLoserSide(_BpSide.blue),
-                  icon: Icon(
-                    Icons.circle,
-                    size: 15,
-                    color: nextGameLoserSide == _BpSide.blue
-                        ? const Color(0xFF246BFF)
-                        : Colors.white54,
-                  ),
-                ),
-                IconButton.filledTonal(
-                  tooltip: l10n.translate('bpRedSide'),
-                  onPressed: () => onNextGameLoserSide(_BpSide.red),
-                  icon: Icon(
-                    Icons.circle,
-                    size: 15,
-                    color: nextGameLoserSide == _BpSide.red
-                        ? const Color(0xFFE83B43)
-                        : Colors.white54,
-                  ),
-                ),
-                const SizedBox(width: 5),
               ],
-              FilledButton.icon(
-                onPressed: isAdvancing ? null : onNextGame,
-                icon: const Icon(Icons.skip_next_rounded, size: 17),
-                label: Text(
-                  isAdvancing
-                      ? l10n.translate('bpSaving')
-                      : l10n.translate('bpNextGame'),
-                ),
-              ),
-            ],
+            ),
           ),
+        ),
         const SizedBox(width: 8),
         IconButton.filledTonal(
           tooltip: l10n.translate('commonRedo'),
@@ -2375,7 +2390,6 @@ class _BpSlotState extends State<_BpSlot> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final slot = Container(
       width: widget.size,
       height: widget.size,

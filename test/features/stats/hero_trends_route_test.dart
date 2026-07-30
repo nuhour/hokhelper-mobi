@@ -110,6 +110,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/trends');
-    expect(find.text('Core trend'), findsOneWidget);
+    // 趋势抽屉「综合」tab 的 WR/P/B/BP 最新指标卡。
+    expect(find.text('31.40%'), findsOneWidget);
   });
 }

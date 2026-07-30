@@ -43,6 +43,46 @@ void main() {
 
     expect(find.text('Hok World'), findsOneWidget);
     expect(find.text('HOK World Tier List'), findsOneWidget);
+    expect(find.text('No more content'), findsNothing);
+  });
+
+  testWidgets('topic hub shows the end footer when the article list is full', (
+    tester,
+  ) async {
+    final router = createAppRouter();
+    router.go('/topics/hok-world');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeStatsProvider.overrideWith((ref) async => _emptyHomeStats),
+          topicArticlesProvider(('hok-world', 12)).overrideWith((ref) async {
+            return [
+              for (var i = 0; i < 12; i++)
+                TopicArticleSummary(
+                  id: i + 1,
+                  slug: 'hok-world-article-$i',
+                  topicKey: 'hok-world',
+                  locale: 'en',
+                  title: 'HOK World Article $i',
+                  excerpt: '',
+                  seoDescription: '',
+                  coverImageUrl: '',
+                  tags: const [],
+                  sortOrder: null,
+                  publishedAt: '2026-07-01 10:00:00',
+                  updatedAt: '',
+                ),
+            ];
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('HOK World Article 0'), findsOneWidget);
+    expect(find.text('No more content'), findsOneWidget);
   });
 
   testWidgets('topics namespace opens a generic topic article detail', (

@@ -121,21 +121,20 @@ void main() {
       expect(skins.single.ratingCount, 18);
     });
 
-    test('loads CGs with region filter', () async {
+    test('loads CGs as global media without a region filter', () async {
       final apiClient = _FakeApiClient();
       final repository = ContentRepository(apiClient: apiClient);
 
       final cgs = await repository.loadCgs(3);
 
       expect(apiClient.postPath, '/cg/list');
+      // CG 是全局媒体，Django 模型没有 region_id 列，不下发区域过滤。
       expect(apiClient.postBody, {
         'page': 1,
         'pageSize': 20,
         'sort': 'updated_at',
         'order': 'desc',
-        'filterRules': [
-          {'field': 'region_id', 'op': 'eq', 'value': 3},
-        ],
+        'filterRules': isEmpty,
       });
       expect(cgs, hasLength(1));
       expect(cgs.single.id, 21);
@@ -155,10 +154,12 @@ void main() {
       final notes = await repository.loadPatchNotes(2);
 
       expect(apiClient.getPath, '/community/posts');
+      // 服务端 tag 过滤保证 pageSize 与返回条数语义一致，total 才能驱动分页。
       expect(apiClient.getQuery, {
         'page': 1,
         'pageSize': 120,
         'sort': 'new',
+        'tag': 'Update',
         'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
       });
       expect(notes, hasLength(1));

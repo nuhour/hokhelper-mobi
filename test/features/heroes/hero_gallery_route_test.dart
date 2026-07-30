@@ -146,7 +146,12 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Jungle tuning'),
       320,
-      scrollable: find.byType(Scrollable),
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('hero-detail-scroll-view')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     expect(find.text('Jungle tuning'), findsOneWidget);
   });

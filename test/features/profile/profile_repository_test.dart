@@ -194,6 +194,16 @@ void main() {
       });
     });
 
+    test('deletes the current account with explicit confirmation', () async {
+      final apiClient = _FakeApiClient({'success': true});
+      final repository = ProfileRepository(apiClient: apiClient);
+
+      await repository.deleteAccount();
+
+      expect(apiClient.postPath, '/user/account/delete');
+      expect(apiClient.postBody, {'confirmation': 'DELETE'});
+    });
+
     test('follows and unfollows users with hokx request fields', () async {
       final apiClient = _FakeApiClient({
         'success': true,

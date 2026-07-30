@@ -6,6 +6,7 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/event_assistance_repository.dart';
@@ -17,13 +18,14 @@ final eventAssistanceRepositoryProvider = Provider<EventAssistanceRepository>((
   return EventAssistanceRepository(apiClient: ref.watch(apiClientProvider));
 });
 
-final eventAssistanceRecordsProvider =
-    FutureProvider<List<EventAssistanceRecord>>((ref) async {
-      final settings = await ref.watch(appSettingsControllerProvider.future);
-      return ref
-          .watch(eventAssistanceRepositoryProvider)
-          .loadRecords(regionId: settings.region.regionId);
-    });
+final eventAssistanceRecordsProvider = FutureProvider<EventAssistancePage>((
+  ref,
+) async {
+  final settings = await ref.watch(appSettingsControllerProvider.future);
+  return ref
+      .watch(eventAssistanceRepositoryProvider)
+      .loadRecords(regionId: settings.region.regionId);
+});
 
 class EventAssistanceScreen extends ConsumerStatefulWidget {
   const EventAssistanceScreen({this.initialShareText, super.key});
@@ -37,18 +39,40 @@ class EventAssistanceScreen extends ConsumerStatefulWidget {
 
 class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
   var _didOpenInitialShareSheet = false;
+  // 第 1 页由 provider 管理，追加页保存在本地状态。
+  final List<EventAssistanceRecord> _extraRecords = [];
+  var _loadedPages = 1;
+  var _loadingMore = false;
+  int? _latestTotal;
 
   @override
   Widget build(BuildContext context) {
     final recordsValue = ref.watch(eventAssistanceRecordsProvider);
+    ref.listen(eventAssistanceRecordsProvider, (previous, next) {
+      // 首页数据刷新（下拉刷新/提交后失效重载）时重置已追加分页。
+      if (next.hasValue &&
+          !identical(previous?.valueOrNull, next.valueOrNull)) {
+        setState(() {
+          _extraRecords.clear();
+          _loadedPages = 1;
+          _loadingMore = false;
+          _latestTotal = null;
+        });
+      }
+    });
     _openInitialShareSheet();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AppAsyncView<List<EventAssistanceRecord>>(
+      body: AppAsyncView<EventAssistancePage>(
         value: recordsValue,
         retry: () => ref.invalidate(eventAssistanceRecordsProvider),
-        data: (records) {
+        data: (page) {
+          final records = [...page.records, ..._extraRecords];
+          final total = _latestTotal ?? page.total;
+          final hasMore = total > 0
+              ? records.length < total
+              : page.records.length >= eventAssistancePageSize;
           return RefreshIndicator(
             onRefresh: () => ref.refresh(eventAssistanceRecordsProvider.future),
             child: ListView(
@@ -83,19 +107,70 @@ class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
                     title: 'No assistance records yet',
                     message: 'Share the first event help text for the board.',
                   )
-                else
+                else ...[
                   ...records.map(
                     (record) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _RecordCard(record: record),
                     ),
                   ),
+                  // 短列表读完时不加到底提示，避免噪音。
+                  if (hasMore || records.length > 10)
+                    AppListFooter(
+                      hasMore: hasMore,
+                      loading: _loadingMore,
+                      onLoadMore: _loadMore,
+                    ),
+                ],
               ],
             ),
           );
         },
       ),
     );
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final settings = ref.read(appSettingsControllerProvider);
+      final next = await ref
+          .read(eventAssistanceRepositoryProvider)
+          .loadRecords(
+            regionId: settings.value?.region.regionId ?? 1,
+            page: _loadedPages + 1,
+          );
+      if (!mounted) {
+        return;
+      }
+      final firstPage = ref.read(eventAssistanceRecordsProvider).valueOrNull;
+      final seen = {
+        ...?firstPage?.records.map((record) => record.id),
+        ..._extraRecords.map((record) => record.id),
+      };
+      setState(() {
+        _loadedPages += 1;
+        _latestTotal = next.total > 0 ? next.total : _latestTotal;
+        // 新记录插入会使分页整体下移，按 id 去重避免重复卡片。
+        _extraRecords.addAll(
+          next.records.where((record) => !seen.contains(record.id)),
+        );
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to load more records')),
+      );
+    }
   }
 
   void _openInitialShareSheet() {

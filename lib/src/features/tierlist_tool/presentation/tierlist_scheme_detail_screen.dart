@@ -399,7 +399,6 @@ class _TierListSchemeDetailScreenState
   }
 
   void _reorderRows(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex--;
     final rows = [..._editedRows];
     final row = rows.removeAt(oldIndex);
     rows.insert(newIndex, row);
@@ -648,7 +647,6 @@ class _TierListEditorToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return DecoratedBox(
       key: const ValueKey('tier-editor-toolbar'),
       decoration: BoxDecoration(
@@ -933,7 +931,7 @@ class _TierBoardPanel extends StatelessWidget {
                   buildDefaultDragHandles: false,
                   padding: EdgeInsets.zero,
                   itemCount: scheme.rows.length,
-                  onReorder: onRowsReordered,
+                  onReorderItem: onRowsReordered,
                   itemBuilder: (context, index) {
                     final row = _rowFilteredByLane(scheme.rows[index]);
                     return ReorderableDelayedDragStartListener(

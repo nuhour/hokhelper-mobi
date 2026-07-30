@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_video_player_sheet.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -264,6 +265,8 @@ class _HeroDetailContent extends StatelessWidget {
             for (final item in history) _HistoryTile(item: _readMap(item)),
           ],
         ),
+        // 老英雄的调整历史可能很长，仅在条目多时给出到底提示。
+        if (history.length > 10) const AppListFooter(hasMore: false),
       ],
     );
   }

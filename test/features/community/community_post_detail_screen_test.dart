@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/community/data/community_repository.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_detail.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_summary.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_post_detail_screen.dart';
-import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
 import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
 import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
 
@@ -149,6 +149,56 @@ void main() {
     expect(find.text('Great route.'), findsOneWidget);
     expect(find.text('What if red buff is invaded?'), findsOneWidget);
     expect(find.text('Reply to Lam'), findsOneWidget);
+    expect(find.byType(AppListFooter), findsNothing);
+  });
+
+  testWidgets('shows the end footer under long comment threads', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          postDetailProvider('99').overrideWith((ref) async {
+            return CommunityPostDetail(
+              post: const CommunityPostSummary(
+                id: '99',
+                title: 'Best jungle rotation',
+                preview: 'Start blue, punish mid wave.',
+                authorName: 'coach',
+                authorAvatarUrl: '',
+                tags: ['Guide'],
+                createdAt: '2026-07-03T08:30:00Z',
+                viewCount: 230,
+                likeCount: 18,
+                commentCount: 12,
+              ),
+              content: 'Start blue, punish mid wave, then invade.',
+              isLiked: false,
+              comments: [
+                for (var i = 0; i < 12; i++)
+                  CommunityCommentSummary(
+                    id: 'c$i',
+                    content: 'Comment $i',
+                    authorName: 'Player $i',
+                    authorAvatarUrl: '',
+                    createdAt: '2026-07-03T09:00:00Z',
+                    likeCount: 0,
+                    parentId: '',
+                    parentAuthorName: '',
+                  ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityPostDetailScreen(postId: '99')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppListFooter), findsOneWidget);
+    expect(find.text('No more content'), findsOneWidget);
   });
 
   testWidgets('likes community post details through the backend', (

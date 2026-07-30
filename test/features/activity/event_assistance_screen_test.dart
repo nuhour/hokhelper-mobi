@@ -6,6 +6,7 @@ import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/activity/data/event_assistance_repository.dart';
 import 'package:hok_helper_mobile/src/features/activity/domain/event_assistance_record.dart';
 import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
@@ -25,6 +26,19 @@ class _FakeRepository extends EventAssistanceRepository {
   String? submittedText;
   int? submittedRegionId;
   String? reportedRecordId;
+  final requestedPages = <int>[];
+  List<EventAssistanceRecord> nextPageRecords = const [];
+  int nextPageTotal = 0;
+
+  @override
+  Future<EventAssistancePage> loadRecords({
+    required int regionId,
+    int page = 1,
+    int pageSize = eventAssistancePageSize,
+  }) async {
+    requestedPages.add(page);
+    return EventAssistancePage(records: nextPageRecords, total: nextPageTotal);
+  }
 
   @override
   Future<EventAssistanceRecord> submitText({
@@ -73,19 +87,22 @@ void main() {
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
           eventAssistanceRecordsProvider.overrideWith((ref) async {
-            return const [
-              EventAssistanceRecord(
-                id: '77',
-                regionId: 1,
-                content: 'Need one player for Friday event team.',
-                eventTime: '2026-07-03T12:00:00Z',
-                isReported: false,
-                rawText: 'Need one player for Friday event team.',
-                sharedBy: 'captain',
-                createdAt: '2026-07-03T12:00:00Z',
-                updatedAt: '2026-07-03T12:00:00Z',
-              ),
-            ];
+            return const EventAssistancePage(
+              total: 1,
+              records: [
+                EventAssistanceRecord(
+                  id: '77',
+                  regionId: 1,
+                  content: 'Need one player for Friday event team.',
+                  eventTime: '2026-07-03T12:00:00Z',
+                  isReported: false,
+                  rawText: 'Need one player for Friday event team.',
+                  sharedBy: 'captain',
+                  createdAt: '2026-07-03T12:00:00Z',
+                  updatedAt: '2026-07-03T12:00:00Z',
+                ),
+              ],
+            );
           }),
         ],
         child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
@@ -120,7 +137,10 @@ void main() {
       ProviderScope(
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
-          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+          eventAssistanceRecordsProvider.overrideWith(
+            (ref) async =>
+                const EventAssistancePage(records: [], total: 0),
+          ),
         ],
         child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
       ),
@@ -147,7 +167,10 @@ void main() {
       ProviderScope(
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
-          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+          eventAssistanceRecordsProvider.overrideWith(
+            (ref) async =>
+                const EventAssistancePage(records: [], total: 0),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -175,7 +198,10 @@ void main() {
       ProviderScope(
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
-          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+          eventAssistanceRecordsProvider.overrideWith(
+            (ref) async =>
+                const EventAssistancePage(records: [], total: 0),
+          ),
         ],
         child: HokHelperApp(router: router),
       ),
@@ -203,7 +229,10 @@ void main() {
       ProviderScope(
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
-          eventAssistanceRecordsProvider.overrideWith((ref) async => const []),
+          eventAssistanceRecordsProvider.overrideWith(
+            (ref) async =>
+                const EventAssistancePage(records: [], total: 0),
+          ),
         ],
         child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
       ),
@@ -236,19 +265,22 @@ void main() {
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
           eventAssistanceRecordsProvider.overrideWith((ref) async {
-            return const [
-              EventAssistanceRecord(
-                id: '77',
-                regionId: 1,
-                content: 'Need one player for Friday event team.',
-                eventTime: '2026-07-03T12:00:00Z',
-                isReported: false,
-                rawText: 'Need one player for Friday event team.',
-                sharedBy: 'captain',
-                createdAt: '2026-07-03T12:00:00Z',
-                updatedAt: '2026-07-03T12:00:00Z',
-              ),
-            ];
+            return const EventAssistancePage(
+              total: 1,
+              records: [
+                EventAssistanceRecord(
+                  id: '77',
+                  regionId: 1,
+                  content: 'Need one player for Friday event team.',
+                  eventTime: '2026-07-03T12:00:00Z',
+                  isReported: false,
+                  rawText: 'Need one player for Friday event team.',
+                  sharedBy: 'captain',
+                  createdAt: '2026-07-03T12:00:00Z',
+                  updatedAt: '2026-07-03T12:00:00Z',
+                ),
+              ],
+            );
           }),
         ],
         child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
@@ -284,19 +316,22 @@ void main() {
       ProviderScope(
         overrides: [
           eventAssistanceRecordsProvider.overrideWith((ref) async {
-            return [
-              EventAssistanceRecord(
-                id: '88',
-                regionId: 1,
-                content: 'Need help finishing the weekly task.',
-                eventTime: recentTime,
-                isReported: false,
-                rawText: 'Need help finishing the weekly task.',
-                sharedBy: 'teammate',
-                createdAt: recentTime,
-                updatedAt: recentTime,
-              ),
-            ];
+            return EventAssistancePage(
+              total: 1,
+              records: [
+                EventAssistanceRecord(
+                  id: '88',
+                  regionId: 1,
+                  content: 'Need help finishing the weekly task.',
+                  eventTime: recentTime,
+                  isReported: false,
+                  rawText: 'Need help finishing the weekly task.',
+                  sharedBy: 'teammate',
+                  createdAt: recentTime,
+                  updatedAt: recentTime,
+                ),
+              ],
+            );
           }),
         ],
         child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
@@ -306,5 +341,59 @@ void main() {
 
     expect(find.text('2 hr ago'), findsOneWidget);
     expect(find.text(recentTime), findsNothing);
+  });
+
+  testWidgets('auto-loads the next records page from the list footer', (
+    tester,
+  ) async {
+    final repository = _FakeRepository()
+      ..nextPageTotal = 2
+      ..nextPageRecords = const [
+        EventAssistanceRecord(
+          id: '79',
+          regionId: 1,
+          content: 'Second page helper record.',
+          eventTime: '2026-07-01T12:00:00Z',
+          isReported: false,
+          rawText: 'Second page helper record.',
+          sharedBy: 'scout',
+          createdAt: '2026-07-01T12:00:00Z',
+          updatedAt: '2026-07-01T12:00:00Z',
+        ),
+      ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          eventAssistanceRepositoryProvider.overrideWithValue(repository),
+          eventAssistanceRecordsProvider.overrideWith((ref) async {
+            return const EventAssistancePage(
+              total: 2,
+              records: [
+                EventAssistanceRecord(
+                  id: '77',
+                  regionId: 1,
+                  content: 'Need one player for Friday event team.',
+                  eventTime: '2026-07-03T12:00:00Z',
+                  isReported: false,
+                  rawText: 'Need one player for Friday event team.',
+                  sharedBy: 'captain',
+                  createdAt: '2026-07-03T12:00:00Z',
+                  updatedAt: '2026-07-03T12:00:00Z',
+                ),
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPages, [2]);
+    expect(find.text('Need one player for Friday event team.'), findsOneWidget);
+    expect(find.text('Second page helper record.'), findsOneWidget);
+    // 全部数据已加载且列表很短，页脚随之隐藏。
+    expect(find.byType(AppListFooter), findsNothing);
   });
 }

@@ -25,6 +25,17 @@ class AppConfig {
   // source-controlled defaults.
   static const loginEmail = String.fromEnvironment('HOK_LOGIN_EMAIL');
   static const loginPassword = String.fromEnvironment('HOK_LOGIN_PASSWORD');
+  static const allowExternalDigitalPayments = bool.fromEnvironment(
+    'HOK_ALLOW_EXTERNAL_DIGITAL_PAYMENTS',
+    defaultValue: false,
+  );
+  // OAuth client IDs are public identifiers. Supplying the backend web client
+  // ID at build time lets Google Play Services start before any API request.
+  static const googleServerClientId = String.fromEnvironment(
+    'HOK_GOOGLE_SERVER_CLIENT_ID',
+    defaultValue:
+        '623444676083-gdsoou9vr9ujsn0r1c7npohutjpakbd9.apps.googleusercontent.com',
+  );
 
   final String apiBaseUrl;
   final String apiPrefix;

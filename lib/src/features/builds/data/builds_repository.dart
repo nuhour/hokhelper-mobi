@@ -13,6 +13,19 @@ enum BuildSchemeSort {
   final String backendValue;
 }
 
+/// 方案列表的单页结果；`total` 缺失时 [hasMore] 退化为整页启发式判断。
+class BuildSchemePage {
+  const BuildSchemePage({
+    required this.schemes,
+    required this.hasMore,
+    this.total,
+  });
+
+  final List<BuildSchemeSummary> schemes;
+  final bool hasMore;
+  final int? total;
+}
+
 class BuildsRepository {
   const BuildsRepository({required this.apiClient});
 
@@ -23,6 +36,21 @@ class BuildsRepository {
     BuildSchemeSort sort = BuildSchemeSort.popular,
     int? heroId,
   }) async {
+    final page = await loadPublicSchemesPage(
+      regionId,
+      sort: sort,
+      heroId: heroId,
+    );
+    return page.schemes;
+  }
+
+  Future<BuildSchemePage> loadPublicSchemesPage(
+    int regionId, {
+    BuildSchemeSort sort = BuildSchemeSort.popular,
+    int? heroId,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final filterRules = [
       {'field': 'region_id', 'op': 'eq', 'value': regionId},
       if (heroId != null && heroId > 0)
@@ -32,26 +60,30 @@ class BuildsRepository {
       '/build/schemes',
       query: {
         'action': 'explore',
-        'page': 1,
-        'pageSize': 20,
+        'page': page,
+        'pageSize': pageSize,
         'sort': sort.backendValue,
         'order': 'desc',
         'filterRules': jsonEncode(filterRules),
       },
     );
-    return _readRows(
-      json,
-    ).map(BuildSchemeSummary.fromJson).toList(growable: false);
+    return _readSchemePage(json, page: page, pageSize: pageSize);
   }
 
   Future<List<BuildSchemeSummary>> loadFavoriteSchemes() async {
+    final page = await loadFavoriteSchemesPage();
+    return page.schemes;
+  }
+
+  Future<BuildSchemePage> loadFavoriteSchemesPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final json = await apiClient.postJson(
       '/build/schemes/my-favorites',
-      body: {'page': 1, 'pageSize': 20},
+      body: {'page': page, 'pageSize': pageSize},
     );
-    return _readRows(
-      json,
-    ).map(BuildSchemeSummary.fromJson).toList(growable: false);
+    return _readSchemePage(json, page: page, pageSize: pageSize);
   }
 
   Future<List<BuildSchemeSummary?>> loadUserHeroSlots({
@@ -172,6 +204,33 @@ class BuildsRepository {
         if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
       },
     );
+  }
+
+  BuildSchemePage _readSchemePage(
+    Map<String, dynamic> json, {
+    required int page,
+    required int pageSize,
+  }) {
+    final schemes = _readRows(
+      json,
+    ).map(BuildSchemeSummary.fromJson).toList(growable: false);
+    final total = _readTotal(json);
+    return BuildSchemePage(
+      schemes: schemes,
+      total: total,
+      hasMore: total != null
+          ? page * pageSize < total
+          : schemes.length >= pageSize,
+    );
+  }
+
+  int? _readTotal(Map<String, dynamic> json) {
+    final result = json['result'];
+    final total = result is Map ? result['total'] : json['total'];
+    if (total is num) {
+      return total.toInt();
+    }
+    return null;
   }
 
   List<Object?> _readRows(Map<String, dynamic> json) {

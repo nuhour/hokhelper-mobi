@@ -55,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ranked'), findsOneWidget);
-    expect(find.text('No players found'), findsOneWidget);
+    expect(find.text('No data'), findsOneWidget);
   });
 
   testWidgets('web leaderboard route preserves rank type and region query', (

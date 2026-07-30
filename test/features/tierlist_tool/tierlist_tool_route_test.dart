@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
@@ -568,16 +569,47 @@ void main() {
   testWidgets('tier list fullscreen editor exports the board image', (
     tester,
   ) async {
+    const mediaChannel = MethodChannel('hokhelper/media');
+    MethodCall? savedCall;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      mediaChannel,
+      (call) async {
+        savedCall = call;
+        return true;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        mediaChannel,
+        null,
+      );
+    });
+
     await _pumpEditableTierList(tester);
 
     final exportButton = find.byKey(const ValueKey('tier-list-download-image'));
     expect(exportButton, findsOneWidget);
     await tester.tap(exportButton);
+    final savedText = find.textContaining('Tier list image saved');
     for (var index = 0; index < 24; index++) {
       await tester.pump(const Duration(milliseconds: 100));
+      // toImage/toByteData resolve on the real event loop; let it turn.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      if (savedText.evaluate().isNotEmpty) {
+        break;
+      }
     }
 
-    expect(find.textContaining('Tier list image saved'), findsOneWidget);
+    expect(savedText, findsOneWidget);
+    expect(savedCall, isNotNull);
+    expect(savedCall!.method, 'saveImage');
+    final arguments = savedCall!.arguments as Map<Object?, Object?>;
+    expect(arguments['name'], 'Editable-Tier-List-42.png');
+    expect(arguments['mimeType'], 'image/png');
+    expect(arguments['bytes'], isA<Uint8List>());
+    expect((arguments['bytes'] as Uint8List), isNotEmpty);
   });
 
   testWidgets('tier list fullscreen editor filters board by lane', (

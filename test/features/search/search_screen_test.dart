@@ -166,7 +166,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/heroes/166');
-    expect(find.text('Hero #166'), findsOneWidget);
+    final detailScreen = tester.widget<HeroDetailScreen>(
+      find.byType(HeroDetailScreen),
+    );
+    expect(detailScreen.heroId, '166');
+    // 英雄详情页现在优先展示英雄名而非 “Hero #<id>” 兜底文案。
+    expect(find.text('Arthur'), findsOneWidget);
   });
 
   testWidgets('search route submits global query and renders grouped results', (

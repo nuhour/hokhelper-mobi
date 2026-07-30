@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters/app_time_formatter.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_markdown_content.dart';
 import '../../../core/widgets/app_share_sheet.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../domain/community_post_detail.dart';
 import '../domain/community_sticker.dart';
@@ -129,10 +131,51 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: IconButton(
-            tooltip: 'Share post',
-            onPressed: () => _sharePost(context),
-            icon: const Icon(Icons.ios_share_rounded, size: 21),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: AppLocalizations.of(
+                  context,
+                ).translate('communitySharePost'),
+                onPressed: () => _sharePost(context),
+                icon: const Icon(Icons.ios_share_rounded, size: 21),
+              ),
+              PopupMenuButton<_PostSafetyAction>(
+                tooltip: AppLocalizations.of(
+                  context,
+                ).translate('communitySafetyMenu'),
+                icon: const Icon(Icons.more_horiz_rounded),
+                onSelected: (action) => switch (action) {
+                  _PostSafetyAction.report => _reportPost(context),
+                  _PostSafetyAction.block => _blockAuthor(context),
+                },
+                itemBuilder: (context) {
+                  final l10n = AppLocalizations.of(context);
+                  return [
+                    PopupMenuItem(
+                      value: _PostSafetyAction.report,
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.flag_outlined),
+                        title: Text(l10n.translate('communityReportPost')),
+                      ),
+                    ),
+                    if (widget.detail.post.authorId > 0)
+                      PopupMenuItem(
+                        value: _PostSafetyAction.block,
+                        child: ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.block_rounded),
+                          title: Text(l10n.translate('communityBlockUser')),
+                        ),
+                      ),
+                  ];
+                },
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
@@ -217,6 +260,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
                 });
               },
               onSubmitReply: () => _createReply(context),
+              onReport: (comment) => _reportComment(context, comment),
             ),
           // 后端一次性返回全部评论；长评论区滚到底需要到底提示，短列表不加噪音。
           if (_comments.length > 10) const AppListFooter(hasMore: false),
@@ -332,6 +376,210 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
       url: 'https://hokhelper.com/community/post/${widget.detail.post.id}',
     );
   }
+
+  bool _ensureSignedIn(BuildContext context) {
+    if (ref.read(authControllerProvider).valueOrNull != null) return true;
+    context.push(
+      '/login?returnTo=${Uri.encodeComponent('/community/post/${widget.detail.post.id}')}',
+    );
+    return false;
+  }
+
+  Future<void> _reportPost(BuildContext context) async {
+    if (!_ensureSignedIn(context)) return;
+    final report = await _showReportDialog(context);
+    if (report == null || !mounted) return;
+    try {
+      await ref
+          .read(communityRepositoryProvider)
+          .reportPost(
+            widget.detail.post.id,
+            reason: report.reason,
+            details: report.details,
+          );
+      if (!context.mounted) return;
+      _showSafetyMessage(
+        context,
+        AppLocalizations.of(context).translate('communityReportSubmitted'),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      _showSafetyMessage(
+        context,
+        AppLocalizations.of(context).translate('communityReportFailed'),
+      );
+    }
+  }
+
+  Future<void> _reportComment(
+    BuildContext context,
+    CommunityCommentSummary comment,
+  ) async {
+    if (!_ensureSignedIn(context)) return;
+    final report = await _showReportDialog(context);
+    if (report == null || !mounted) return;
+    try {
+      await ref
+          .read(communityRepositoryProvider)
+          .reportComment(
+            comment.id,
+            reason: report.reason,
+            details: report.details,
+          );
+      if (!context.mounted) return;
+      _showSafetyMessage(
+        context,
+        AppLocalizations.of(context).translate('communityReportSubmitted'),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      _showSafetyMessage(
+        context,
+        AppLocalizations.of(context).translate('communityReportFailed'),
+      );
+    }
+  }
+
+  Future<void> _blockAuthor(BuildContext context) async {
+    if (!_ensureSignedIn(context)) return;
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.translate('communityBlockUser')),
+        content: Text(
+          l10n.format('communityBlockConfirm', {
+            'name': widget.detail.post.authorName,
+          }),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.translate('communityCancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.translate('communityBlock')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref
+          .read(communityRepositoryProvider)
+          .setUserBlocked(widget.detail.post.authorId, blocked: true);
+      ref.invalidate(communityPostsProvider);
+      if (!context.mounted) return;
+      _showSafetyMessage(context, l10n.translate('communityUserBlocked'));
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/content/community');
+      }
+    } catch (_) {
+      if (!context.mounted) return;
+      _showSafetyMessage(context, l10n.translate('communityBlockFailed'));
+    }
+  }
+}
+
+enum _PostSafetyAction { report, block }
+
+class _ReportPayload {
+  const _ReportPayload(this.reason, this.details);
+
+  final String reason;
+  final String details;
+}
+
+const _reportReasons = [
+  'spam',
+  'harassment',
+  'hate_speech',
+  'sexual_content',
+  'violence',
+  'misinformation',
+  'other',
+];
+
+Future<_ReportPayload?> _showReportDialog(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
+  final detailsController = TextEditingController();
+  var reason = _reportReasons.first;
+  final result = await showDialog<_ReportPayload>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(l10n.translate('communityReportContent')),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: reason,
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('communityReportReason'),
+                  ),
+                  items: _reportReasons
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(
+                            l10n.translate('communityReportReason:$value'),
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => reason = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: detailsController,
+                  maxLength: 500,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('communityReportDetails'),
+                    hintText: l10n.translate('communityReportDetailsHint'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.translate('communityCancel')),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              _ReportPayload(reason, detailsController.text.trim()),
+            ),
+            icon: const Icon(Icons.flag_outlined, size: 18),
+            label: Text(l10n.translate('communitySubmitReport')),
+          ),
+        ],
+      ),
+    ),
+  );
+  detailsController.dispose();
+  return result;
+}
+
+void _showSafetyMessage(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
 }
 
 class _ArticleCard extends StatelessWidget {
@@ -520,6 +768,7 @@ class _CommentThread extends StatelessWidget {
     required this.onLike,
     required this.onReply,
     required this.onSubmitReply,
+    required this.onReport,
   });
 
   final _CommentNode node;
@@ -532,6 +781,7 @@ class _CommentThread extends StatelessWidget {
   final ValueChanged<String> onLike;
   final ValueChanged<CommunityCommentSummary> onReply;
   final VoidCallback onSubmitReply;
+  final ValueChanged<CommunityCommentSummary> onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -595,6 +845,30 @@ class _CommentThread extends StatelessWidget {
                           color: context.hokTheme.onSurfaceMuted,
                         ),
                       ),
+                      PopupMenuButton<_CommentSafetyAction>(
+                        tooltip: AppLocalizations.of(
+                          context,
+                        ).translate('communitySafetyMenu'),
+                        icon: const Icon(Icons.more_vert_rounded, size: 18),
+                        padding: EdgeInsets.zero,
+                        onSelected: (_) => onReport(comment),
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: _CommentSafetyAction.report,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.flag_outlined, size: 18),
+                                const SizedBox(width: 10),
+                                Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  ).translate('communityReportComment'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   if (comment.parentAuthorName.isNotEmpty) ...[
@@ -655,6 +929,7 @@ class _CommentThread extends StatelessWidget {
                         onLike: onLike,
                         onReply: onReply,
                         onSubmitReply: onSubmitReply,
+                        onReport: onReport,
                       ),
                   ],
                 ],
@@ -666,6 +941,8 @@ class _CommentThread extends StatelessWidget {
     );
   }
 }
+
+enum _CommentSafetyAction { report }
 
 class _CommentComposer extends StatelessWidget {
   const _CommentComposer({

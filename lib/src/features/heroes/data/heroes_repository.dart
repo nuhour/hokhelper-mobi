@@ -2,12 +2,45 @@ import '../../../core/network/api_client.dart';
 import '../domain/hero_relationship.dart';
 import '../domain/hero_summary.dart';
 
+/// /hero/gallery 单页结果：分页 UI 需要 total 判断是否还有更多。
+class HeroGalleryPage {
+  const HeroGalleryPage({required this.heroes, this.total});
+
+  final List<HeroSummary> heroes;
+
+  /// 后端未返回 total 时为 null，调用方需回退到行数启发式。
+  final int? total;
+}
+
 class HeroesRepository {
   const HeroesRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
   Future<List<HeroSummary>> loadHeroes(
+    int regionId, {
+    int page = 1,
+    int pageSize = 60,
+    String sort = 'created_at',
+    String order = 'desc',
+    String search = '',
+    int? lanePosition,
+    double minRating = 0,
+  }) async {
+    final result = await loadHeroGalleryPage(
+      regionId,
+      page: page,
+      pageSize: pageSize,
+      sort: sort,
+      order: order,
+      search: search,
+      lanePosition: lanePosition,
+      minRating: minRating,
+    );
+    return result.heroes;
+  }
+
+  Future<HeroGalleryPage> loadHeroGalleryPage(
     int regionId, {
     int page = 1,
     int pageSize = 60,
@@ -38,11 +71,12 @@ class HeroesRepository {
       },
     );
 
-    return _readRows(json)
+    final heroes = _readRows(json)
         .whereType<Map>()
         .map((row) => HeroSummary.fromJson(Map<String, dynamic>.from(row)))
         .where((hero) => hero.hasValidId)
         .toList(growable: false);
+    return HeroGalleryPage(heroes: heroes, total: _readTotal(json));
   }
 
   Future<Map<String, dynamic>> loadHeroDetail(
@@ -79,6 +113,18 @@ class HeroesRepository {
               relationship.title.isNotEmpty;
         })
         .toList(growable: false);
+  }
+
+  int? _readTotal(Map<String, dynamic> json) {
+    final result = json['result'];
+    final total = result is Map ? result['total'] : json['total'];
+    if (total is num) {
+      return total.toInt();
+    }
+    if (total is String) {
+      return int.tryParse(total);
+    }
+    return null;
   }
 
   List<Object?> _readRows(Map<String, dynamic> json) {

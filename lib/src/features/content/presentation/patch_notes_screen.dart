@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_markdown_content.dart';
 import '../../../core/widgets/app_share_sheet.dart';
 import '../../heroes/data/heroes_repository.dart';
@@ -52,6 +53,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
   var _hasMoreNotes = true;
   var _isLoadingMoreNotes = false;
   var _hasOpenedInitialNote = false;
+  int? _totalNotes;
 
   @override
   void dispose() {
@@ -130,6 +132,13 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
                   );
                 }
 
+                final total = _totalNotes;
+                final hasMoreNotes =
+                    _hasMoreNotes &&
+                    (total != null
+                        ? allItems.length < total
+                        : items.length >= _patchNotesPageSize);
+
                 return Column(
                   children: [
                     ListView.separated(
@@ -146,25 +155,11 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
                         );
                       },
                     ),
-                    if (_hasMoreNotes && items.length >= _patchNotesPageSize)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: FilledButton.icon(
-                          onPressed: _isLoadingMoreNotes
-                              ? null
-                              : _loadMorePatchNotes,
-                          icon: _isLoadingMoreNotes
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.expand_more),
-                          label: Text(
-                            _isLoadingMoreNotes ? 'Loading...' : 'Load more',
-                          ),
-                        ),
+                    if (hasMoreNotes || filteredItems.length > 10)
+                      AppListFooter(
+                        hasMore: hasMoreNotes,
+                        loading: _isLoadingMoreNotes,
+                        onLoadMore: _loadMorePatchNotes,
                       ),
                   ],
                 );
@@ -231,6 +226,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
     _nextPage = 2;
     _hasMoreNotes = true;
     _isLoadingMoreNotes = false;
+    _totalNotes = null;
   }
 
   Future<void> _loadMorePatchNotes() async {
@@ -243,9 +239,9 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
 
     try {
       final regionId = await ref.read(patchNotesRegionProvider.future);
-      final nextItems = await ref
+      final result = await ref
           .read(contentRepositoryProvider)
-          .loadPatchNotes(
+          .loadPatchNotesPage(
             regionId,
             page: _nextPage,
             pageSize: _patchNotesPageSize,
@@ -257,8 +253,11 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
 
       setState(() {
         _nextPage += 1;
-        _extraNotes.addAll(nextItems);
-        _hasMoreNotes = nextItems.length >= _patchNotesPageSize;
+        _extraNotes.addAll(result.notes);
+        if (result.total > 0) {
+          _totalNotes = result.total;
+        }
+        _hasMoreNotes = result.notes.length >= _patchNotesPageSize;
         _isLoadingMoreNotes = false;
       });
     } catch (error) {
@@ -781,15 +780,10 @@ class _VersionPill extends StatelessWidget {
 }
 
 class _ChangeChip extends StatelessWidget {
-  const _ChangeChip({
-    required this.label,
-    required this.changeType,
-    this.route,
-  });
+  const _ChangeChip({required this.label, required this.changeType});
 
   final String label;
   final String changeType;
-  final String? route;
 
   @override
   Widget build(BuildContext context) {
@@ -819,15 +813,6 @@ class _ChangeChip extends StatelessWidget {
       ),
     );
 
-    final destination = route;
-    if (destination == null) {
-      return chip;
-    }
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => context.go(destination),
-      child: chip,
-    );
+    return chip;
   }
 }

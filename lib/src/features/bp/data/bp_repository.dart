@@ -2,37 +2,57 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../domain/bp_scheme_summary.dart';
 
+class BpSchemesPage {
+  const BpSchemesPage({required this.schemes, required this.total});
+
+  final List<BpSchemeSummary> schemes;
+  final int? total;
+}
+
 class BpRepository {
   const BpRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
   Future<List<BpSchemeSummary>> loadSchemes() async {
+    final page = await loadSchemesPage();
+    return page.schemes;
+  }
+
+  Future<BpSchemesPage> loadSchemesPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final Map<String, dynamic> json;
     try {
       json = await apiClient.postJson(
         '/bp/scheme',
-        body: const {
-          'page': 1,
-          'pageSize': 20,
+        body: {
+          'page': page,
+          'pageSize': pageSize,
           'sort': 'created_at',
           'order': 'desc',
         },
       );
     } on ApiError catch (error) {
       if (_isGuestReadableListError(error)) {
-        return const [];
+        return const BpSchemesPage(schemes: [], total: 0);
       }
       rethrow;
     }
 
     final result = json['result'];
     final schemes = result is Map ? result['schemes'] : json['schemes'];
+    final totalRaw = result is Map ? result['total'] : json['total'];
+    final total = totalRaw is num ? totalRaw.toInt() : null;
     if (schemes is! List) {
-      return const [];
+      return BpSchemesPage(schemes: const [], total: total);
     }
 
-    return schemes.map(BpSchemeSummary.fromJson).toList(growable: false);
+    return BpSchemesPage(
+      schemes: schemes.map(BpSchemeSummary.fromJson).toList(growable: false),
+      total: total,
+    );
   }
 
   Future<BpSchemeSummary> loadScheme(String schemeId) async {

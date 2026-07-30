@@ -213,6 +213,7 @@ class _LoadingListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    width: double.infinity,
     height: height,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(

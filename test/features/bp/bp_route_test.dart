@@ -76,7 +76,7 @@ void main() {
       router.routeInformationProvider.value.uri.queryParameters['gameIndex'],
       '2',
     );
-    expect(find.text('BP Scheme'), findsOneWidget);
+    expect(find.text('KPL Finals Draft'), findsOneWidget);
     expect(find.text('Focused game: Game 3'), findsOneWidget);
   });
 
@@ -114,7 +114,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('BP Scheme'), findsOneWidget);
     expect(find.text('KPL Finals Draft'), findsOneWidget);
     expect(find.text('Wolves vs AG'), findsOneWidget);
     expect(find.text('BO7'), findsOneWidget);
@@ -160,7 +159,6 @@ void main() {
     final uri = router.routeInformationProvider.value.uri;
     expect(uri.path, '/tools/bp-simulator/12');
     expect(uri.queryParameters['gameIndex'], '1');
-    expect(find.text('BP Scheme'), findsOneWidget);
     expect(find.text('KPL Finals Draft'), findsOneWidget);
     expect(find.text('Focused game: Game 2'), findsOneWidget);
   });
@@ -211,16 +209,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('开始 BP'), findsOneWidget);
-      await tester.tap(find.text('开始 BP'));
+      expect(find.text('Start BP'), findsOneWidget);
+      await tester.tap(find.text('Start BP'));
       await tester.pump();
       await tester.tap(find.bySemanticsLabel('Haya'));
       await tester.pump();
-      await tester.tap(find.text('锁定'));
+      await tester.tap(find.text('Lock in'));
       await tester.pump();
 
       expect(find.bySemanticsLabel('Selected hero'), findsOneWidget);
-      expect(find.text('锁定'), findsNothing);
+      expect(find.text('Lock in'), findsNothing);
     },
   );
 

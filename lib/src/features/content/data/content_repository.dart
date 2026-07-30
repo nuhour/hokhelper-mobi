@@ -86,26 +86,31 @@ class ContentRepository {
     return CgDetail.fromJson(json['result'] ?? json);
   }
 
-  Future<List<CgCommentSummary>> loadCgComments(
+  Future<CgCommentsPage> loadCgComments(
     int cgId, {
     String order = 'desc',
+    int page = 1,
+    int pageSize = 50,
   }) async {
     final normalizedOrder = order == 'asc' ? 'asc' : 'desc';
     final json = await apiClient.getJson(
       '/cg/$cgId/comments',
-      query: {'page': 1, 'pageSize': 50, 'order': normalizedOrder},
+      query: {'page': page, 'pageSize': pageSize, 'order': normalizedOrder},
     );
     final data = json['data'];
     final result = json['result'];
-    final rows = data is Map
-        ? data['rows']
+    final source = data is Map
+        ? data
         : result is Map
-        ? result['rows']
-        : json['rows'];
-    if (rows is! List) {
-      return const [];
-    }
-    return rows.map(CgCommentSummary.fromJson).toList(growable: false);
+        ? result
+        : json;
+    final rows = source['rows'];
+    return CgCommentsPage(
+      comments: rows is List
+          ? rows.map(CgCommentSummary.fromJson).toList(growable: false)
+          : const [],
+      total: _readInt(source['total']),
+    );
   }
 
   Future<void> createCgComment(int cgId, String content) async {
@@ -139,22 +144,43 @@ class ContentRepository {
     int page = 1,
     int pageSize = 120,
   }) async {
+    final result = await loadPatchNotesPage(
+      regionId,
+      page: page,
+      pageSize: pageSize,
+    );
+    return result.notes;
+  }
+
+  Future<PatchNotesPage> loadPatchNotesPage(
+    int regionId, {
+    int page = 1,
+    int pageSize = 120,
+  }) async {
     final json = await apiClient.getJson(
       '/community/posts',
       query: {
         'page': page,
         'pageSize': pageSize,
         'sort': 'new',
+        // 服务端 tag 过滤会同时命中『更新公告/Update/Patch Notes/Catatan Patch』
+        // 别名组,保证 pageSize 与返回条数语义一致,total 才能驱动分页。
+        'tag': 'Update',
         'filterRules': jsonEncode([
           {'field': 'region_id', 'op': 'eq', 'value': regionId},
         ]),
       },
     );
 
-    return _readRows(json)
-        .where(isPatchNotePost)
-        .map(PatchNoteSummary.fromJson)
-        .toList(growable: false);
+    final result = json['result'];
+    final source = result is Map ? result : json;
+    return PatchNotesPage(
+      notes: _readRows(json)
+          .where(isPatchNotePost)
+          .map(PatchNoteSummary.fromJson)
+          .toList(growable: false),
+      total: _readInt(source['total']),
+    );
   }
 
   Future<PatchNoteSummary> loadPatchNoteDetail(
@@ -227,6 +253,20 @@ class ContentRepository {
 
     return rows;
   }
+}
+
+class CgCommentsPage {
+  const CgCommentsPage({required this.comments, required this.total});
+
+  final List<CgCommentSummary> comments;
+  final int total;
+}
+
+class PatchNotesPage {
+  const PatchNotesPage({required this.notes, required this.total});
+
+  final List<PatchNoteSummary> notes;
+  final int total;
 }
 
 class CgRatingResult {

@@ -63,19 +63,32 @@ class _FakeApiClient extends ApiClient {
 }
 
 void main() {
-  test('loads event assistance records', () async {
+  test('loads event assistance records with total', () async {
     final apiClient = _FakeApiClient();
     final repository = EventAssistanceRepository(apiClient: apiClient);
 
-    final records = await repository.loadRecords(regionId: 2);
+    final page = await repository.loadRecords(regionId: 2);
 
     expect(apiClient.getPath, '/activity/records');
     expect(apiClient.getQuery, {'page': 1, 'pageSize': 80, 'region_id': 2});
-    expect(records, hasLength(1));
-    expect(records.single.id, '77');
-    expect(records.single.content, 'Need one player for Friday event team.');
-    expect(records.single.sharedBy, 'captain');
-    expect(records.single.reportedLabel, 'Active');
+    expect(page.total, 1);
+    expect(page.records, hasLength(1));
+    expect(page.records.single.id, '77');
+    expect(
+      page.records.single.content,
+      'Need one player for Friday event team.',
+    );
+    expect(page.records.single.sharedBy, 'captain');
+    expect(page.records.single.reportedLabel, 'Active');
+  });
+
+  test('loads later record pages with explicit page number', () async {
+    final apiClient = _FakeApiClient();
+    final repository = EventAssistanceRepository(apiClient: apiClient);
+
+    await repository.loadRecords(regionId: 2, page: 3);
+
+    expect(apiClient.getQuery, {'page': 3, 'pageSize': 80, 'region_id': 2});
   });
 
   test('submits assistance text with region id', () async {

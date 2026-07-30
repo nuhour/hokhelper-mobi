@@ -5,7 +5,19 @@ import 'package:go_router/go_router.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_image.dart';
+import '../../auth/presentation/auth_controller.dart';
+import '../../community/data/community_repository.dart';
 import 'settings_controller.dart';
+
+final blockedCommunityUsersProvider =
+    FutureProvider.autoDispose<List<CommunityBlockedUser>>((ref) async {
+      final authUser = await ref.watch(authControllerProvider.future);
+      if (authUser == null) {
+        return const [];
+      }
+      return ref.watch(communityRepositoryProvider).loadBlockedUsers();
+    });
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -13,15 +25,16 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsValue = ref.watch(appSettingsControllerProvider);
+    final isSignedIn = ref.watch(authControllerProvider).asData?.value != null;
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: SafeArea(
         child: AppAsyncView<AppSettings>(
           value: settingsValue,
           retry: () => ref.invalidate(appSettingsControllerProvider),
           data: (settings) {
+            final colors = _SettingsColors.of(context);
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -33,14 +46,14 @@ class SettingsScreen extends ConsumerWidget {
                   actionLabel: l10n.profileManage,
                   onTap: () => context.push('/settings/profile'),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _SettingsSegment<String>(
                   icon: Icons.language_outlined,
                   title: l10n.settingsLanguageTitle,
                   subtitle: l10n.settingsLanguageSubtitle,
                   selected: settings.languageCode,
                   values: AppLocalizations.supportedLanguageCodes,
-                  scrollable: true,
+                  dropdown: true,
                   labelBuilder: _languageLabel,
                   onChanged: (languageCode) {
                     ref
@@ -48,7 +61,7 @@ class SettingsScreen extends ConsumerWidget {
                         .setLanguageCode(languageCode);
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _SettingsSegment<AppThemeMode>(
                   icon: Icons.palette_outlined,
                   title: l10n.settingsThemeTitle,
@@ -62,32 +75,66 @@ class SettingsScreen extends ConsumerWidget {
                         .setTheme(mode);
                   },
                 ),
-                const SizedBox(height: 12),
-                _SettingsActionTile(
-                  tileKey: const ValueKey('settings-clear-cache-tile'),
-                  icon: Icons.cleaning_services_outlined,
-                  title: l10n.settingsClearCacheTitle,
-                  subtitle: l10n.settingsClearCacheSubtitle,
-                  actionLabel: l10n.settingsClearCacheAction,
-                  onTap: () => _clearCache(context, l10n),
-                ),
-                const SizedBox(height: 12),
-                _SettingsActionTile(
-                  tileKey: const ValueKey('settings-check-updates-tile'),
-                  icon: Icons.system_update_alt_outlined,
-                  title: l10n.settingsUpdatesTitle,
-                  subtitle: l10n.settingsUpdatesSubtitle,
-                  actionLabel: l10n.settingsCheckUpdatesAction,
-                  onTap: () => _checkUpdates(context, l10n),
-                ),
-                const SizedBox(height: 12),
-                _SettingsActionTile(
-                  tileKey: const ValueKey('settings-about-tile'),
-                  icon: Icons.info_outline,
-                  title: l10n.settingsAboutTitle,
-                  subtitle: l10n.settingsAboutSubtitle,
-                  actionLabel: l10n.settingsAboutAction,
-                  onTap: () => _showAbout(context, l10n),
+                const SizedBox(height: 10),
+                // 维护类操作合并为一张分组卡，提升信息密度。
+                Material(
+                  color: colors.panel,
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: colors.border),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      if (isSignedIn) ...[
+                        _SettingsActionTile(
+                          tileKey: const ValueKey(
+                            'settings-blocked-users-tile',
+                          ),
+                          icon: Icons.person_off_outlined,
+                          title: l10n.translate('settingsBlockedUsersTitle'),
+                          subtitle: l10n.translate(
+                            'settingsBlockedUsersSubtitle',
+                          ),
+                          actionLabel: l10n.translate(
+                            'settingsManageBlockedUsers',
+                          ),
+                          grouped: true,
+                          onTap: () => _showBlockedUsers(context),
+                        ),
+                        Divider(height: 1, color: colors.border),
+                      ],
+                      _SettingsActionTile(
+                        tileKey: const ValueKey('settings-clear-cache-tile'),
+                        icon: Icons.cleaning_services_outlined,
+                        title: l10n.settingsClearCacheTitle,
+                        subtitle: l10n.settingsClearCacheSubtitle,
+                        actionLabel: l10n.settingsClearCacheAction,
+                        grouped: true,
+                        onTap: () => _clearCache(context, l10n),
+                      ),
+                      Divider(height: 1, color: colors.border),
+                      _SettingsActionTile(
+                        tileKey: const ValueKey('settings-check-updates-tile'),
+                        icon: Icons.system_update_alt_outlined,
+                        title: l10n.settingsUpdatesTitle,
+                        subtitle: l10n.settingsUpdatesSubtitle,
+                        actionLabel: l10n.settingsCheckUpdatesAction,
+                        grouped: true,
+                        onTap: () => _checkUpdates(context, l10n),
+                      ),
+                      Divider(height: 1, color: colors.border),
+                      _SettingsActionTile(
+                        tileKey: const ValueKey('settings-about-tile'),
+                        icon: Icons.info_outline,
+                        title: l10n.settingsAboutTitle,
+                        subtitle: l10n.settingsAboutSubtitle,
+                        actionLabel: l10n.settingsAboutAction,
+                        grouped: true,
+                        onTap: () => _showAbout(context, l10n),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
@@ -132,6 +179,16 @@ class SettingsScreen extends ConsumerWidget {
       ..showSnackBar(SnackBar(content: Text(l10n.settingsLatestVersion)));
   }
 
+  static void _showBlockedUsers(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => const _BlockedUsersSheet(),
+    );
+  }
+
   static void _showAbout(BuildContext context, AppLocalizations l10n) {
     showDialog<void>(
       context: context,
@@ -151,6 +208,134 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+class _BlockedUsersSheet extends ConsumerWidget {
+  const _BlockedUsersSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final users = ref.watch(blockedCommunityUsersProvider);
+    final colors = _SettingsColors.of(context);
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.72,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.translate('settingsBlockedUsersTitle'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: colors.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l10n.close,
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colors.border),
+          Expanded(
+            child: users.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: FilledButton.icon(
+                    onPressed: () =>
+                        ref.invalidate(blockedCommunityUsersProvider),
+                    icon: const Icon(Icons.refresh),
+                    label: Text(l10n.retry),
+                  ),
+                ),
+              ),
+              data: (rows) {
+                if (rows.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        l10n.translate('settingsNoBlockedUsers'),
+                        style: TextStyle(color: colors.muted),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: rows.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: colors.border),
+                  itemBuilder: (context, index) {
+                    final user = rows[index];
+                    return ListTile(
+                      leading: AppImage(
+                        url: user.avatar,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        semanticLabel: user.username,
+                      ),
+                      title: Text(
+                        user.username,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: TextButton(
+                        onPressed: () => _unblock(context, ref, user),
+                        child: Text(l10n.translate('settingsUnblockUser')),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _unblock(
+    BuildContext context,
+    WidgetRef ref,
+    CommunityBlockedUser user,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(communityRepositoryProvider)
+          .setUserBlocked(user.id, blocked: false);
+      ref.invalidate(blockedCommunityUsersProvider);
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(l10n.translate('settingsUserUnblocked'))),
+        );
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(l10n.translate('settingsUnblockFailed'))),
+        );
+    }
+  }
+}
+
 class _SettingsSegment<T> extends StatelessWidget {
   const _SettingsSegment({
     required this.icon,
@@ -160,7 +345,7 @@ class _SettingsSegment<T> extends StatelessWidget {
     required this.values,
     required this.labelBuilder,
     required this.onChanged,
-    this.scrollable = false,
+    this.dropdown = false,
   });
 
   final IconData icon;
@@ -170,7 +355,7 @@ class _SettingsSegment<T> extends StatelessWidget {
   final List<T> values;
   final String Function(T value) labelBuilder;
   final ValueChanged<T> onChanged;
-  final bool scrollable;
+  final bool dropdown;
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +400,7 @@ class _SettingsSegment<T> extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             _segmentControl(colors),
           ],
         ),
@@ -224,6 +409,50 @@ class _SettingsSegment<T> extends StatelessWidget {
   }
 
   Widget _segmentControl(_SettingsColors colors) {
+    if (dropdown) {
+      return DropdownButtonFormField<T>(
+        key: const ValueKey('settings-language-dropdown'),
+        initialValue: selected,
+        isExpanded: true,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: colors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: colors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: colors.primary, width: 1.5),
+          ),
+        ),
+        dropdownColor: colors.panel,
+        style: TextStyle(color: colors.text, fontWeight: FontWeight.w700),
+        items: [
+          for (final value in values)
+            DropdownMenuItem<T>(
+              value: value,
+              child: Text(
+                labelBuilder(value),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+        onChanged: (value) {
+          if (value != null) {
+            onChanged(value);
+          }
+        },
+      );
+    }
+
     final control = SegmentedButton<T>(
       showSelectedIcon: false,
       segments: [
@@ -260,14 +489,7 @@ class _SettingsSegment<T> extends StatelessWidget {
       ),
     );
 
-    if (!scrollable) {
-      return SizedBox(width: double.infinity, child: control);
-    }
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(width: values.length * 76, child: control),
-    );
+    return SizedBox(width: double.infinity, child: control);
   }
 }
 
@@ -279,6 +501,7 @@ class _SettingsActionTile extends StatelessWidget {
     required this.subtitle,
     required this.actionLabel,
     required this.onTap,
+    this.grouped = false,
   });
 
   final Key tileKey;
@@ -287,35 +510,43 @@ class _SettingsActionTile extends StatelessWidget {
   final String subtitle;
   final String actionLabel;
   final VoidCallback onTap;
+  final bool grouped;
 
   @override
   Widget build(BuildContext context) {
     final colors = _SettingsColors.of(context);
+    final tile = ListTile(
+      key: tileKey,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: grouped ? 2 : 8,
+      ),
+      leading: Icon(icon, color: colors.primary),
+      title: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: colors.text, fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        subtitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: colors.muted),
+      ),
+      trailing: TextButton(onPressed: onTap, child: Text(actionLabel)),
+      onTap: onTap,
+    );
+    if (grouped) {
+      return tile;
+    }
     return Material(
       color: colors.panel,
       shape: RoundedRectangleBorder(
         side: BorderSide(color: colors.border),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: ListTile(
-        key: tileKey,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Icon(icon, color: colors.primary),
-        title: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: colors.text, fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(
-          subtitle,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: colors.muted),
-        ),
-        trailing: TextButton(onPressed: onTap, child: Text(actionLabel)),
-        onTap: onTap,
-      ),
+      child: tile,
     );
   }
 }

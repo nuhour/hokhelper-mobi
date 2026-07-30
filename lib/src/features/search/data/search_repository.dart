@@ -8,7 +8,8 @@ class SearchRepository {
   Future<Map<String, dynamic>> search(String keyword, int regionId) {
     return apiClient.postJson(
       '/search/global',
-      body: {'query': keyword, 'region_id': regionId, 'limit_per_type': 6},
+      // 后端 MAX_LIMIT=20：取到每类可得的最大条数。
+      body: {'query': keyword, 'region_id': regionId, 'limit_per_type': 20},
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/activity/data/event_assistance_repository.dart';
 import 'package:hok_helper_mobile/src/features/activity/domain/event_assistance_record.dart';
 import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
 import 'package:hok_helper_mobile/src/features/community/data/community_repository.dart';
@@ -182,19 +183,22 @@ void main() {
             ];
           }),
           eventAssistanceRecordsProvider.overrideWith((ref) async {
-            return const [
-              EventAssistanceRecord(
-                id: '1',
-                content: 'Join my activity code ABCD.',
-                eventTime: '2026-07-08T10:00:00Z',
-                isReported: false,
-                rawText: 'Help with weekly code ABCD.',
-                regionId: 2,
-                sharedBy: 'helper',
-                createdAt: '2026-07-08T10:00:00Z',
-                updatedAt: '2026-07-08T10:00:00Z',
-              ),
-            ];
+            return const EventAssistancePage(
+              total: 1,
+              records: [
+                EventAssistanceRecord(
+                  id: '1',
+                  content: 'Join my activity code ABCD.',
+                  eventTime: '2026-07-08T10:00:00Z',
+                  isReported: false,
+                  rawText: 'Help with weekly code ABCD.',
+                  regionId: 2,
+                  sharedBy: 'helper',
+                  createdAt: '2026-07-08T10:00:00Z',
+                  updatedAt: '2026-07-08T10:00:00Z',
+                ),
+              ],
+            );
           }),
         ],
         child: const MaterialApp(home: Scaffold(body: CommunityScreen())),

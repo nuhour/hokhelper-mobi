@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/profile/data/profile_repository.dart';
@@ -41,6 +42,7 @@ class _FakeProfileRepository extends ProfileRepository {
   Map<String, dynamic>? updatedSocialLinks;
   String? oldPassword;
   String? newPassword;
+  bool deleteAccountCalled = false;
   int? loadedFollowingUserId;
   int? loadedFollowersUserId;
 
@@ -93,6 +95,11 @@ class _FakeProfileRepository extends ProfileRepository {
   }
 
   @override
+  Future<void> deleteAccount() async {
+    deleteAccountCalled = true;
+  }
+
+  @override
   Future<ProfileFollowList> loadFollowing({int? userId, int page = 1}) async {
     loadedFollowingUserId = userId;
     return const ProfileFollowList(
@@ -120,6 +127,56 @@ class _FakeProfileRepository extends ProfileRepository {
     return const ProfileFollowList(
       total: 1,
       page: 1,
+      pageSize: 20,
+      hasMore: false,
+      users: [
+        ProfileFollowUser(
+          id: 88,
+          username: 'angela',
+          displayName: 'Angela',
+          avatar: '',
+          bio: 'Mid lane',
+          isFollowing: false,
+          isSelf: false,
+        ),
+      ],
+    );
+  }
+}
+
+class _PagedFollowRepository extends ProfileRepository {
+  _PagedFollowRepository() : super(apiClient: _NoopApiClient());
+
+  final requestedPages = <int>[];
+
+  @override
+  Future<UserProfile> loadProfile({int? userId}) async => _profile;
+
+  @override
+  Future<ProfileFollowList> loadFollowing({int? userId, int page = 1}) async {
+    requestedPages.add(page);
+    if (page == 1) {
+      return const ProfileFollowList(
+        total: 2,
+        page: 1,
+        pageSize: 20,
+        hasMore: true,
+        users: [
+          ProfileFollowUser(
+            id: 77,
+            username: 'arthur',
+            displayName: 'Arthur',
+            avatar: '',
+            bio: 'Clash lane',
+            isFollowing: true,
+            isSelf: false,
+          ),
+        ],
+      );
+    }
+    return const ProfileFollowList(
+      total: 2,
+      page: 2,
       pageSize: 20,
       hasMore: false,
       users: [
@@ -477,6 +534,35 @@ void main() {
     expect(find.text('Mid lane'), findsOneWidget);
   });
 
+  testWidgets('follow list sheet auto-loads the next page from its footer', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final repository = _PagedFollowRepository();
+
+    await tester.pumpWidget(_buildMeScreenWithRepository(user, repository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Following'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPages, [1, 2]);
+    expect(find.text('Arthur'), findsOneWidget);
+    expect(find.text('Angela'), findsOneWidget);
+    // 已读完且列表很短，页脚隐藏。
+    expect(find.byType(AppListFooter), findsNothing);
+  });
+
   testWidgets('signed-in profile follow list users open public profiles', (
     tester,
   ) async {
@@ -674,5 +760,31 @@ void main() {
 
     expect(repository.oldPassword, 'OldPass1!');
     expect(repository.newPassword, 'NewPass1!');
+  });
+
+  testWidgets('account settings requires confirmation before deletion', (
+    tester,
+  ) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final repository = _FakeProfileRepository(_profile);
+
+    await tester.pumpWidget(
+      _buildProfileSettingsWithRepository(user, repository),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('profile-delete-account-tile')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Permanently delete account?'), findsOneWidget);
+    expect(find.text('Delete permanently'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deleteAccountCalled, isFalse);
   });
 }

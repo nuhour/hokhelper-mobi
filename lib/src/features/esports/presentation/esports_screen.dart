@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/esports_repository.dart';
 import '../domain/esports_detail.dart';
@@ -287,10 +288,64 @@ class _MatchesTab extends ConsumerStatefulWidget {
 }
 
 class _MatchesTabState extends ConsumerState<_MatchesTab> {
+  // 与 EsportsRepository.loadMatchesPage 的默认 pageSize（后端上限）一致。
+  static const _matchesPageSize = 200;
+
   String _leagueFilter = 'all';
   bool _leagueSelectionTouched = false;
   String _statusFilter = 'all';
   String _dateFilter = '';
+
+  // 第 2 页起追加的比赛；第 1 页仍走既有 provider。
+  final List<EsportsMatchSummary> _extraMatches = [];
+  String? _extraDatasetKey;
+  int _loadedPages = 1;
+  bool _loadingMore = false;
+  bool _reachedEnd = false;
+
+  void _resetPagination() {
+    _extraMatches.clear();
+    _loadedPages = 1;
+    _loadingMore = false;
+    _reachedEnd = false;
+  }
+
+  Future<void> _loadMoreMatches({
+    required String datasetKey,
+    required String? league,
+    required int loadedCount,
+  }) async {
+    if (_loadingMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final result = await ref
+          .read(esportsRepositoryProvider)
+          .loadMatchesPage(league: league, page: _loadedPages + 1);
+      if (!mounted || _extraDatasetKey != datasetKey) {
+        return;
+      }
+      setState(() {
+        _loadingMore = false;
+        _loadedPages += 1;
+        _extraMatches.addAll(result.matches);
+        final total = result.total;
+        if (result.matches.length < _matchesPageSize ||
+            (total != null && loadedCount + result.matches.length >= total)) {
+          _reachedEnd = true;
+        }
+      });
+    } catch (_) {
+      if (!mounted || _extraDatasetKey != datasetKey) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load more matches')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -311,12 +366,21 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
     final activeValue = activeProvider == null
         ? widget.value
         : ref.watch(activeProvider);
+    // 追加页归属于当前数据源（基础列表或某联赛列表），切换后作废。
+    final datasetKey = activeProvider == null ? '' : leagueRequestValue;
+    if (_extraDatasetKey != datasetKey) {
+      _extraDatasetKey = datasetKey;
+      _resetPagination();
+    }
     return AppAsyncView<List<EsportsMatchSummary>>(
       value: activeValue,
       retry: () => activeProvider == null
           ? ref.invalidate(esportsMatchesProvider)
           : ref.invalidate(activeProvider),
-      data: (matches) {
+      data: (baseMatchRows) {
+        final matches = [...baseMatchRows, ..._extraMatches];
+        final hasMore =
+            !_reachedEnd && baseMatchRows.length >= _matchesPageSize;
         final leagueOptions = _leagueNames(
           meta,
           matches.map((match) => match.leagueName),
@@ -394,11 +458,24 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
             ],
           ),
           ...matchSections,
+          if (matches.isNotEmpty)
+            AppListFooter(
+              hasMore: hasMore,
+              loading: _loadingMore,
+              onLoadMore: () => _loadMoreMatches(
+                datasetKey: datasetKey,
+                league: activeProvider == null ? null : leagueRequestValue,
+                loadedCount: matches.length,
+              ),
+            ),
         ];
         return RefreshIndicator(
-          onRefresh: () => activeProvider == null
-              ? ref.refresh(esportsMatchesProvider.future)
-              : ref.refresh(activeProvider.future),
+          onRefresh: () {
+            setState(_resetPagination);
+            return activeProvider == null
+                ? ref.refresh(esportsMatchesProvider.future)
+                : ref.refresh(activeProvider.future);
+          },
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             itemBuilder: (context, index) => cards[index],
@@ -419,10 +496,71 @@ class _StatsTab extends ConsumerStatefulWidget {
 }
 
 class _StatsTabState extends ConsumerState<_StatsTab> {
+  // 与 EsportsRepository.loadStatsPage 的默认 pageSize（后端上限）一致。
+  static const _statsPageSize = 500;
+
   int _rankType = 1;
   String _leagueFilter = 'all';
   bool _leagueSelectionTouched = false;
   final Map<String, List<EsportsStatSummary>> _cachedStats = {};
+
+  // 第 2 页起追加的排行数据；第 1 页仍走既有 provider。
+  final List<EsportsStatSummary> _extraStats = [];
+  String? _extraStatsKey;
+  int _loadedPages = 1;
+  bool _loadingMore = false;
+  bool _reachedEnd = false;
+
+  void _resetPagination() {
+    _extraStats.clear();
+    _loadedPages = 1;
+    _loadingMore = false;
+    _reachedEnd = false;
+  }
+
+  Future<void> _loadMoreStats({
+    required String datasetKey,
+    required int rankType,
+    required String? league,
+    required int loadedCount,
+  }) async {
+    if (_loadingMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final settings = await ref.read(appSettingsControllerProvider.future);
+      final result = await ref
+          .read(esportsRepositoryProvider)
+          .loadStatsPage(
+            rankType: rankType,
+            league: league,
+            regionId: settings.region.regionId,
+            page: _loadedPages + 1,
+          );
+      if (!mounted || _extraStatsKey != datasetKey) {
+        return;
+      }
+      setState(() {
+        _loadingMore = false;
+        _loadedPages += 1;
+        _extraStats.addAll(result.stats);
+        final total = result.total;
+        if (result.stats.length < _statsPageSize ||
+            (total != null && loadedCount + result.stats.length >= total)) {
+          _reachedEnd = true;
+        }
+      });
+    } catch (_) {
+      if (!mounted || _extraStatsKey != datasetKey) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load more stats')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -454,11 +592,18 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
         ? ref.watch(esportsStatsByRankProvider(selectedRank))
         : ref.watch(statsProvider);
     final cacheKey = '$selectedRank:${leagueFilter.trim()}';
+    // 追加页归属于当前查询（榜单类型+联赛），切换后作废。
+    if (_extraStatsKey != cacheKey) {
+      _extraStatsKey = cacheKey;
+      _resetPagination();
+    }
     final freshStats = value.valueOrNull;
     if (freshStats != null) {
       _cachedStats[cacheKey] = freshStats;
     }
-    final stats = freshStats ?? _cachedStats[cacheKey] ?? const [];
+    final baseStats = freshStats ?? _cachedStats[cacheKey] ?? const [];
+    final stats = [...baseStats, ..._extraStats];
+    final hasMore = !_reachedEnd && baseStats.length >= _statsPageSize;
     final leagueNames = _leagueNames(
       meta,
       stats.map((stat) => stat.leagueName),
@@ -474,9 +619,12 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
         .toList(growable: false);
 
     return RefreshIndicator(
-      onRefresh: () => statsProvider == null
-          ? ref.refresh(esportsStatsByRankProvider(selectedRank).future)
-          : ref.refresh(statsProvider.future),
+      onRefresh: () {
+        setState(_resetPagination);
+        return statsProvider == null
+            ? ref.refresh(esportsStatsByRankProvider(selectedRank).future)
+            : ref.refresh(statsProvider.future);
+      },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -507,7 +655,7 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
             const LinearProgressIndicator(minHeight: 2),
           ],
           const SizedBox(height: 12),
-          if (visibleStats.isNotEmpty)
+          if (visibleStats.isNotEmpty) ...[
             _EsportsStatsTable(
               stats: visibleStats,
               rankType: selectedRank,
@@ -518,8 +666,18 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
                   _showPlayerDetailDialog(context, ref, id);
                 }
               },
-            )
-          else if (value.hasError)
+            ),
+            AppListFooter(
+              hasMore: hasMore,
+              loading: _loadingMore,
+              onLoadMore: () => _loadMoreStats(
+                datasetKey: cacheKey,
+                rankType: selectedRank,
+                league: statsProvider == null ? null : leagueRequestValue,
+                loadedCount: stats.length,
+              ),
+            ),
+          ] else if (value.hasError)
             AppEmptyState(
               icon: Icons.cloud_off_outlined,
               title: 'Stats unavailable',

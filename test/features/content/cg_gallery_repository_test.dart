@@ -124,8 +124,9 @@ void main() {
     expect(detail.playUrl, 'https://example.test/lam.mp4');
     expect(detail.coverUrl, 'https://example.test/lam-cover.jpg');
     expect(detail.rating, 4.8);
-    expect(comments.single.authorName, 'coach');
-    expect(comments.single.content, 'Great cinematic.');
+    expect(comments.total, 1);
+    expect(comments.comments.single.authorName, 'coach');
+    expect(comments.comments.single.content, 'Great cinematic.');
   });
 
   test('loads global cg gallery with compatible sort and order', () async {

@@ -2,11 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/prompts/data/prompts_repository.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
 import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
 import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
+
+class _TestAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async {
+    return const AuthUser(
+      id: 42,
+      username: 'tester',
+      email: 'tester@example.test',
+      displayName: 'Tester',
+    );
+  }
+}
 
 void main() {
   testWidgets('web prompts tab query opens the matching mobile tab', (
@@ -18,6 +32,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptListProvider(
             PromptListAction.explore,
           ).overrideWith((ref) async => const []),
@@ -108,6 +123,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
           promptListProvider(PromptListAction.favorites).overrideWith((
             ref,
           ) async {

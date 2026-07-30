@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/activity/data/event_assistance_repository.dart';
 import 'package:hok_helper_mobile/src/features/activity/presentation/event_assistance_screen.dart';
 import 'package:hok_helper_mobile/src/features/community/presentation/community_screen.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/skin_detail.dart';
@@ -303,7 +304,8 @@ void main() {
             communityPostsProvider.overrideWith((ref) async => const []),
             leakPostsProvider.overrideWith((ref) async => const []),
             eventAssistanceRecordsProvider.overrideWith(
-              (ref) async => const [],
+              (ref) async =>
+                  const EventAssistancePage(records: [], total: 0),
             ),
             patchNotesProvider.overrideWith((ref) async => const []),
             publicUserProfileProvider(42).overrideWith((ref) async {

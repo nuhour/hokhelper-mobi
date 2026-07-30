@@ -49,7 +49,7 @@ class TeamBuilderRepository {
         'region_id': regionId,
         'recommend_type': recommendType.apiValue,
         'limit': limit,
-        if (mainJob != null) 'main_job': mainJob,
+        'main_job': ?mainJob,
       },
     );
     final data = json['data'];

@@ -14,3 +14,7 @@ coverage/
 .env
 
 .worktrees/
+
+.DS_Store
+Output/
+android/key.properties

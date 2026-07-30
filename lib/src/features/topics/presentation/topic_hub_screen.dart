@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/topic_repository.dart';
@@ -87,18 +88,27 @@ class TopicHubScreen extends ConsumerWidget {
                   );
                 }
 
-                return ListView.separated(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemBuilder: (context, index) {
-                    return _TopicArticleCard(
-                      topicKey: normalizedTopicKey,
-                      article: articles[index],
-                    );
-                  },
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 14),
-                  itemCount: articles.length,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ListView.separated(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemBuilder: (context, index) {
+                        return _TopicArticleCard(
+                          topicKey: normalizedTopicKey,
+                          article: articles[index],
+                        );
+                      },
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 14),
+                      itemCount: articles.length,
+                    ),
+                    // 后端 /topic/articles 将 limit 硬钳制为 12 且不支持分页，
+                    // 无法加载更多；接近满载时显示到底提示，短列表不加噪音。
+                    if (articles.length > 10)
+                      const AppListFooter(hasMore: false),
+                  ],
                 );
               },
             ),

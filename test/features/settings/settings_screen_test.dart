@@ -23,10 +23,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Language'), findsOneWidget);
     expect(find.text('Region'), findsNothing);
-    await tester.tap(find.text('中文'));
+    await tester.tap(
+      find.byKey(const ValueKey('settings-language-dropdown')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('中文').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();

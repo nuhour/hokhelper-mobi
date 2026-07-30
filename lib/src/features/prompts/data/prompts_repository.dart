@@ -38,6 +38,21 @@ class PromptsRepository {
     String search = '',
     PromptListSort sort = PromptListSort.hot,
   }) async {
+    final result = await loadPromptPage(
+      action: action,
+      search: search,
+      sort: sort,
+    );
+    return result.prompts;
+  }
+
+  Future<PromptListPage> loadPromptPage({
+    required PromptListAction action,
+    String search = '',
+    PromptListSort sort = PromptListSort.hot,
+    int page = 1,
+    int pageSize = 30,
+  }) async {
     final searchValue = search.trim();
     final filterRules = action == PromptListAction.explore
         ? jsonEncode([
@@ -46,8 +61,8 @@ class PromptsRepository {
         : null;
     final query = <String, dynamic>{
       'action': action.backendValue,
-      'page': 1,
-      'pageSize': 30,
+      'page': page,
+      'pageSize': pageSize,
       if (searchValue.isNotEmpty) 'search': searchValue,
       'sort': sort.backendValue,
       'order': 'desc',
@@ -58,11 +73,14 @@ class PromptsRepository {
     final json = await apiClient.getJson('/prompt', query: query);
     final result = json['result'];
     final rows = result is Map ? result['prompts'] : json['prompts'];
-    if (rows is! List) {
-      return const [];
-    }
-
-    return rows.map(PromptSummary.fromJson).toList(growable: false);
+    final rawTotal = result is Map ? result['total'] : json['total'];
+    final total = rawTotal == null ? null : _readInt(rawTotal, fallback: -1);
+    return PromptListPage(
+      prompts: rows is List
+          ? rows.map(PromptSummary.fromJson).toList(growable: false)
+          : const <PromptSummary>[],
+      total: total == null || total < 0 ? null : total,
+    );
   }
 
   Future<PromptFavoriteResult> toggleFavorite(String promptId) async {
@@ -187,6 +205,15 @@ class PromptsRepository {
     final map = result is Map ? result : const <String, Object?>{};
     return PromptRechargeResult.fromJson(map);
   }
+}
+
+class PromptListPage {
+  const PromptListPage({required this.prompts, this.total});
+
+  final List<PromptSummary> prompts;
+
+  /// 后端返回的总条数；响应缺失该字段时为 null。
+  final int? total;
 }
 
 class PromptGenerationQuota {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_section_header.dart';
+import '../../settings/presentation/settings_controller.dart';
 import '../data/curiosity_repository.dart';
 import '../domain/curiosity.dart';
 
@@ -14,9 +17,15 @@ final curiosityRepositoryProvider = Provider<CuriosityRepository>((ref) {
 });
 
 final curiosityOptionsProvider = FutureProvider<CuriosityOptionResult>((ref) {
+  final settings = ref.watch(appSettingsControllerProvider).valueOrNull;
   return ref
       .watch(curiosityRepositoryProvider)
-      .searchOptions(query: '', regionId: 1);
+      // 后端钳制 5-50：默认取满上限，避免高级模式选项只见前 18 个。
+      .searchOptions(
+        query: '',
+        regionId: settings?.region.regionId ?? 2,
+        limit: 50,
+      );
 });
 
 class CuriosityLabScreen extends ConsumerStatefulWidget {
@@ -148,11 +157,16 @@ class _CuriosityLabScreenState extends ConsumerState<CuriosityLabScreen> {
     if (query.isEmpty) {
       return;
     }
+    final settings = ref.read(appSettingsControllerProvider).valueOrNull;
     setState(() => _asking = true);
     try {
       final result = await ref
           .read(curiosityRepositoryProvider)
-          .askQuestion(query: query, regionId: 1, lang: 'en');
+          .askQuestion(
+            query: query,
+            regionId: settings?.region.regionId ?? 2,
+            lang: settings?.languageCode ?? 'en',
+          );
       setState(() => _answer = result);
     } finally {
       if (mounted) {
@@ -177,11 +191,17 @@ class _CuriosityLabScreenState extends ConsumerState<CuriosityLabScreen> {
       return;
     }
 
+    final settings = ref.read(appSettingsControllerProvider).valueOrNull;
     setState(() => _querying = true);
     try {
       final result = await ref
           .read(curiosityRepositoryProvider)
-          .queryCase(source: source, target: target, verb: verb, regionId: 1);
+          .queryCase(
+            source: source,
+            target: target,
+            verb: verb,
+            regionId: settings?.region.regionId ?? 2,
+          );
       setState(() => _caseResult = result);
     } finally {
       if (mounted) {
@@ -386,8 +406,10 @@ class _AdvancedPanel extends StatelessWidget {
           children: [
             const _SmallLabel('Source'),
             const SizedBox(height: 8),
-            _EntityWrap(
-              options: options,
+            _EntitySearchPicker(
+              key: const ValueKey('curiosity-source-picker'),
+              hint: 'Search source entities',
+              defaultOptions: options,
               selected: selectedSource,
               onPicked: onSourcePicked,
             ),
@@ -411,8 +433,10 @@ class _AdvancedPanel extends StatelessWidget {
             const SizedBox(height: 14),
             const _SmallLabel('Target'),
             const SizedBox(height: 8),
-            _EntityWrap(
-              options: options,
+            _EntitySearchPicker(
+              key: const ValueKey('curiosity-target-picker'),
+              hint: 'Search target entities',
+              defaultOptions: options,
               selected: selectedTarget,
               onPicked: onTargetPicked,
             ),
@@ -464,6 +488,130 @@ class _EntityWrap extends StatelessWidget {
           onSelected: (_) => onPicked(entity),
         );
       }).toList(),
+    );
+  }
+}
+
+/// 带搜索框的实验对象选择器：空关键词时展示默认候选，
+/// 输入关键词后（防抖）调用 /curiosity/options 全量检索，对齐 hokx 网页端。
+class _EntitySearchPicker extends ConsumerStatefulWidget {
+  const _EntitySearchPicker({
+    required this.hint,
+    required this.defaultOptions,
+    required this.selected,
+    required this.onPicked,
+    super.key,
+  });
+
+  final String hint;
+  final List<CuriosityEntity> defaultOptions;
+  final CuriosityEntity? selected;
+  final ValueChanged<CuriosityEntity> onPicked;
+
+  @override
+  ConsumerState<_EntitySearchPicker> createState() =>
+      _EntitySearchPickerState();
+}
+
+class _EntitySearchPickerState extends ConsumerState<_EntitySearchPicker> {
+  final _searchController = TextEditingController();
+  Timer? _debounce;
+  List<CuriosityEntity>? _results;
+  var _searching = false;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    _debounce?.cancel();
+    final keyword = value.trim();
+    if (keyword.isEmpty) {
+      setState(() {
+        _results = null;
+        _searching = false;
+      });
+      return;
+    }
+    setState(() {});
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _search(keyword),
+    );
+  }
+
+  Future<void> _search(String keyword) async {
+    final settings = ref.read(appSettingsControllerProvider).valueOrNull;
+    setState(() => _searching = true);
+    try {
+      final result = await ref
+          .read(curiosityRepositoryProvider)
+          // limit 上限 50 由后端钳制（5-50）。
+          .searchOptions(
+            query: keyword,
+            regionId: settings?.region.regionId ?? 2,
+            limit: 50,
+          );
+      if (!mounted || _searchController.text.trim() != keyword) {
+        return;
+      }
+      setState(() {
+        _results = result.rows;
+        _searching = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _searching = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = _results ?? widget.defaultOptions;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _searchController,
+          onChanged: _onQueryChanged,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            isDense: true,
+            prefixIcon: const Icon(Icons.search_outlined),
+            suffixIcon: _searching
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : _searchController.text.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      _onQueryChanged('');
+                    },
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Clear entity search',
+                  ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _EntityWrap(
+          options: options,
+          selected: widget.selected,
+          onPicked: widget.onPicked,
+        ),
+      ],
     );
   }
 }

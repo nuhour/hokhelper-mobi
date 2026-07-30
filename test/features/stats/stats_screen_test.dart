@@ -155,7 +155,7 @@ void main() {
       find.byKey(const ValueKey('stats-top-tab-indicator-2')),
       findsOneWidget,
     );
-    expect(find.text('No tier data found'), findsOneWidget);
+    expect(find.text('No data'), findsOneWidget);
   });
 
   testWidgets('renders stats dashboard sections', (tester) async {

@@ -1,10 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/config/app_config.dart';
+import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/features/teambuild/data/team_builder_repository.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_build_hero.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_recommendation.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/presentation/team_builder_screen.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _NoopApiClient extends ApiClient {
+  _NoopApiClient()
+    : super(
+        config: const AppConfig(
+          apiBaseUrl: 'https://example.test',
+          apiPrefix: '',
+        ),
+      );
+}
+
+class _RecordingTeamBuilderRepository extends TeamBuilderRepository {
+  _RecordingTeamBuilderRepository() : super(apiClient: _NoopApiClient());
+
+  final calls = <Map<String, Object?>>[];
+
+  @override
+  Future<TeamRecommendationResult> loadRecommendations({
+    required int regionId,
+    List<int> myPicks = const [],
+    List<int> enemyPicks = const [],
+    List<int> bans = const [],
+    TeamRecommendType recommendType = TeamRecommendType.balanced,
+    String mySide = 'blue',
+    String slotType = 'pick',
+    int slotIndex = 0,
+    int limit = 10,
+    int? mainJob,
+  }) async {
+    calls.add({
+      'myPicks': myPicks,
+      'enemyPicks': enemyPicks,
+      'bans': bans,
+      'slotType': slotType,
+      'limit': limit,
+    });
+    return const TeamRecommendationResult(
+      recommendations: [],
+      sideWinRates: TeamSideWinRates(blue: .5, red: .5),
+    );
+  }
+}
 
 const _heroes = [
   TeamBuildHero(
@@ -95,6 +141,53 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('team-pool-42')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('team-ban-ally-0')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'ban slot switches recommendation labels and uses ban context',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = _RecordingTeamBuilderRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            teamBuilderHeroesProvider.overrideWith((ref) async => _heroes),
+            teamBuilderRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const MaterialApp(home: Scaffold(body: TeamBuilderScreen())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Synergy Picks'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('team-pool-42')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('team-ban-ally-0')));
+      await tester.pumpAndSettle();
+      expect(find.text('Priority Bans'), findsOneWidget);
+      expect(find.text('Counter Bans'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('team-pool-7')));
+      await tester.pumpAndSettle();
+
+      // 主请求：slot_type=ban，上下文为双方已 ban 列表。
+      final banCalls = repository.calls
+          .where((call) => call['slotType'] == 'ban')
+          .toList();
+      expect(banCalls, isNotEmpty);
+      expect(banCalls.last['myPicks'], [7]);
+      expect(banCalls.last['enemyPicks'], isEmpty);
+      expect(banCalls.last['bans'], [7]);
+      // 胜率请求：ban 位时仍按双方已选阵容单独计算。
+      final rateCalls = repository.calls
+          .where(
+            (call) => call['slotType'] == 'pick' && call['limit'] == 1,
+          )
+          .toList();
+      expect(rateCalls, isNotEmpty);
+      expect(rateCalls.last['myPicks'], [42]);
     },
   );
 

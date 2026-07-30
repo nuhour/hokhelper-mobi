@@ -4,16 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/bp/domain/bp_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/bp/presentation/bp_dashboard_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_simulator_screen.dart';
-import 'package:hok_helper_mobile/src/features/curiosity/presentation/curiosity_lab_screen.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
-import 'package:hok_helper_mobile/src/features/game_assistant/presentation/game_assistant_screen.dart';
 import 'package:hok_helper_mobile/src/features/prompts/data/prompts_repository.dart';
 import 'package:hok_helper_mobile/src/features/prompts/domain/prompt_summary.dart';
 import 'package:hok_helper_mobile/src/features/prompts/presentation/prompts_screen.dart';
@@ -21,7 +21,6 @@ import 'package:hok_helper_mobile/src/features/rank_fortune/domain/rank_fortune.
 import 'package:hok_helper_mobile/src/features/rank_fortune/presentation/rank_fortune_screen.dart';
 import 'package:hok_helper_mobile/src/features/rankings/domain/hero_ranking_entry.dart';
 import 'package:hok_helper_mobile/src/features/rankings/presentation/hero_ranking_screen.dart';
-import 'package:hok_helper_mobile/src/features/rankings/presentation/tools_screen.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/stats_screen.dart';
 import 'package:hok_helper_mobile/src/features/teambuild/domain/team_build_hero.dart';
@@ -30,14 +29,31 @@ import 'package:hok_helper_mobile/src/features/teambuild/presentation/team_build
 import 'package:hok_helper_mobile/src/features/tierlist_tool/domain/tierlist_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/tierlist_tool/presentation/tierlist_tool_screen.dart';
 
-Widget _toolRoutePage(Widget child) => Scaffold(body: child);
-
 GoRouter _buildRouter() {
   return createAppRouter()..go('/tools');
 }
 
+/// BP 模拟器 / 梯度榜编辑器 / 提示词入口要求登录态，测试默认以已登录身份进入。
+class _SignedInAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async {
+    return const AuthUser(
+      id: 42,
+      username: 'tools-tester',
+      email: 'tools@example.test',
+      displayName: 'Tools Tester',
+    );
+  }
+}
+
+class _SignedOutAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async => null;
+}
+
 List<Override> _emptyToolOverrides() {
   return [
+    authControllerProvider.overrideWith(_SignedInAuthController.new),
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
     buildSimHeroesProvider.overrideWith((ref) async => const []),
     buildSimPublicSchemesProvider.overrideWith((ref) async => const []),
@@ -77,6 +93,7 @@ List<Override> _toolOverrides({
   Future<StatsDashboard> Function(Ref, StatsDashboardEntry)? statsDashboard,
 }) {
   return [
+    authControllerProvider.overrideWith(_SignedInAuthController.new),
     publicBuildSchemesProvider.overrideWith((ref) async => const []),
     buildSimHeroesProvider.overrideWith((ref) async => const []),
     buildSimPublicSchemesProvider.overrideWith((ref) async => const []),
@@ -392,6 +409,29 @@ void main() {
     );
   });
 
+  testWidgets('gated tool tiles redirect signed-out users to login', (
+    tester,
+  ) async {
+    final router = _buildRouter();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_SignedOutAuthController.new),
+          ..._emptyToolOverrides().skip(1),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('BP Simulator'));
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/login');
+    expect(uri.queryParameters['returnTo'], '/tools/bp-simulator');
+  });
+
   testWidgets('prompts tile opens the prompts route', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -422,7 +462,7 @@ void main() {
     await tester.tap(find.text('Prompts'));
     await tester.pumpAndSettle();
 
-    expect(find.text('AI Prompts'), findsOneWidget);
+    expect(find.text('Cyber skin concept'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('standalone-back-button')),
       findsOneWidget,

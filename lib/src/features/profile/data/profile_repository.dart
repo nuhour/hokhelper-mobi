@@ -50,6 +50,14 @@ class ProfileRepository {
     _ensureSuccess(json, fallbackMessage: 'Failed to change password');
   }
 
+  Future<void> deleteAccount() async {
+    final json = await apiClient.postJson(
+      '/user/account/delete',
+      body: const {'confirmation': 'DELETE'},
+    );
+    _ensureSuccess(json, fallbackMessage: 'Failed to delete account');
+  }
+
   Future<ProfileFollowResult> followUser(int userId) async {
     final json = await apiClient.postJson(
       '/user/follow',

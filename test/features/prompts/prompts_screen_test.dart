@@ -1106,7 +1106,7 @@ void main() {
     expect(find.text('Prompt cover updated'), findsOneWidget);
   });
 
-  testWidgets('recharges prompt generation quota from the sheet', (
+  testWidgets('store build hides external prompt quota payments', (
     tester,
   ) async {
     final repository = _FakePromptsRepository(
@@ -1149,17 +1149,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('0 / 5 left'), findsOneWidget);
-    await tester.tap(find.widgetWithText(TextButton, 'Recharge'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Recharge quota'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Pay'));
-    await tester.pumpAndSettle();
-
-    expect(repository.rechargePlanId, 'standard');
-    expect(repository.rechargePaymentMethod, 'card');
-    expect(find.text('10 / 15 left'), findsOneWidget);
-    expect(find.text('Quota recharged +10'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Recharge'), findsNothing);
+    expect(repository.rechargePlanId, isNull);
+    expect(repository.rechargePaymentMethod, isNull);
   });
 
   testWidgets('auto-loads the next prompt page from the list footer', (

@@ -10,6 +10,7 @@ import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../data/info_repository.dart';
 import '../domain/friend_link_summary.dart';
+import '../domain/legal_content.dart';
 
 final infoRepositoryProvider = Provider<InfoRepository>((ref) {
   return InfoRepository(apiClient: ref.watch(apiClientProvider));
@@ -87,8 +88,14 @@ class InfoStaticPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final legalCopy = legalCopyFor(Localizations.localeOf(context));
+    final pageTitle = switch (section) {
+      InfoStaticSection.privacy => legalCopy.privacy.title,
+      InfoStaticSection.terms => legalCopy.terms.title,
+      _ => section.title,
+    };
     return Scaffold(
-      appBar: AppBar(title: Text(section.title)),
+      appBar: AppBar(title: Text(pageTitle)),
       body: RefreshIndicator(
         onRefresh: () {
           if (section == InfoStaticSection.links) {
@@ -1320,188 +1327,10 @@ class _PrivacyDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _InfoPanel(
-          icon: Icons.lock_outline,
-          title: 'Data use',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _BodyText(
-                'HOK Helper uses account identifiers, preferences, and interaction data to sync your mobile experience, protect sessions, and improve recommendations.',
-              ),
-              SizedBox(height: 12),
-              _BulletText(
-                'JWT sessions are used for authenticated app requests',
-              ),
-              _BulletText(
-                'Region and language preferences shape displayed data',
-              ),
-              _BulletText(
-                'Optional community and prompt actions remain user-driven',
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.storage_outlined,
-          title: '1. Data Harvesting & Usage',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _BodyText(
-                'HOK Helper collects minimal personal identifiers. We prioritize your privacy by only requesting email addresses for account synchronization.',
-              ),
-              SizedBox(height: 12),
-              _BulletText(
-                'In-Game IDs: Used solely to provide personalized match history and leaderboard tracking.',
-              ),
-              _BulletText(
-                'AI Interaction: When using the AI Prompt Library, your text inputs are processed via Google Gemini API. These inputs are anonymized and not stored alongside your personal identity.',
-              ),
-              _BulletText(
-                'Analytics: We track site usage patterns, such as most visited hero pages, to improve our UI/UX.',
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.cookie_outlined,
-          title: '2. Cookie Manifest',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _BodyText(
-                'We use cookies and similar technologies to maintain your session and preferences, such as your chosen language and theme.',
-              ),
-              SizedBox(height: 12),
-              _PrivacyMiniCard(
-                title: 'Essential Cookies',
-                description:
-                    'Required for logging in and keeping your profile synced across devices.',
-              ),
-              SizedBox(height: 10),
-              _PrivacyMiniCard(
-                title: 'Preference Cookies',
-                description:
-                    'Remembers your dark/light mode toggle and language selection.',
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.visibility_outlined,
-          title: '3. Third-Party Deployment',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _BodyText(
-                'We do not sell your data. We partner with secure providers for specific features:',
-              ),
-              SizedBox(height: 12),
-              _PrivacyPartnerRow(
-                partner: 'Google Cloud / Gemini',
-                function: 'AI Processing',
-              ),
-              SizedBox(height: 10),
-              _PrivacyPartnerRow(
-                partner: 'Vercel / Netlify',
-                function: 'Hosting & DNS',
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.update_outlined,
-          title: 'Policy update',
-          child: _BodyText(
-            'Last updated: April 2026. For data deletion requests, contact us via the Discord support channel.',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PrivacyMiniCard extends StatelessWidget {
-  const _PrivacyMiniCard({required this.title, required this.description});
-
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.hokTheme.outlineSoft),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: context.hokTheme.onSurfaceStrong,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 4),
-            _BodyText(description),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PrivacyPartnerRow extends StatelessWidget {
-  const _PrivacyPartnerRow({required this.partner, required this.function});
-
-  final String partner;
-  final String function;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.hokTheme.outlineSoft),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                partner,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: context.hokTheme.onSurfaceStrong,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              function,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppTheme.gold,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
+    final copy = legalCopyFor(Localizations.localeOf(context));
+    return _LegalDetail(
+      document: copy.privacy,
+      accountDeletionLink: copy.accountDeletionLink,
     );
   }
 }
@@ -1511,61 +1340,71 @@ class _TermsDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final copy = legalCopyFor(Localizations.localeOf(context));
+    return _LegalDetail(document: copy.terms);
+  }
+}
+
+class _LegalDetail extends StatelessWidget {
+  const _LegalDetail({required this.document, this.accountDeletionLink});
+
+  final LegalDocumentContent document;
+  final String? accountDeletionLink;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _InfoPanel(
-          icon: Icons.description_outlined,
-          title: 'Community conduct',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _BodyText(
-                'Use HOK Helper for lawful strategy research, community discussion, and personal gameplay planning. Shared content should remain respectful and accurate.',
-              ),
-              SizedBox(height: 12),
-              _BulletText(
-                'Do not upload abusive, illegal, or misleading content',
-              ),
-              _BulletText('AI and community tools should support fair play'),
-              _BulletText('HOK Helper is independent from the game publisher'),
-            ],
+        Text(
+          document.updated,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
           ),
         ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.check_circle_outline,
-          title: '1. Acceptance of Terms',
-          child: _BodyText(
-            'By accessing HOK Helper, you agree to comply with these terms. We provide strategic data for Honor of Kings. We are not responsible for any in-game outcomes based on our data.',
+        const SizedBox(height: 12),
+        for (var index = 0; index < document.sections.length; index++) ...[
+          _InfoPanel(
+            icon: _legalSectionIcon(index),
+            title: document.sections[index].title,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _BodyText(document.sections[index].body),
+                if (document.sections[index].bullets.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  for (final bullet in document.sections[index].bullets)
+                    _BulletText(bullet),
+                ],
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.auto_fix_high_outlined,
-          title: '2. Use of AI Tools',
-          child: _BodyText(
-            'Our AI Prompt Library is powered by external models. Users must not generate offensive or harmful content. Credits are non-refundable.',
+          const SizedBox(height: 12),
+        ],
+        if (accountDeletionLink != null)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.push('/settings/profile'),
+              icon: const Icon(Icons.person_remove_outlined),
+              label: Text(accountDeletionLink!),
+            ),
           ),
-        ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.groups_2_outlined,
-          title: '3. Community Conduct',
-          child: _BodyText(
-            'Treat fellow heroes with respect. Harassment, scamming, or spreading misinformation will result in account termination.',
-          ),
-        ),
-        SizedBox(height: 12),
-        _InfoPanel(
-          icon: Icons.update_outlined,
-          title: 'Terms update',
-          child: _BodyText('Last updated: April 2026.'),
-        ),
       ],
     );
   }
 }
+
+IconData _legalSectionIcon(int index) => switch (index) {
+  0 => Icons.inventory_2_outlined,
+  1 => Icons.tune_outlined,
+  2 => Icons.shield_outlined,
+  3 => Icons.hub_outlined,
+  4 => Icons.lock_clock_outlined,
+  5 => Icons.manage_accounts_outlined,
+  6 => Icons.public_outlined,
+  _ => Icons.update_outlined,
+};
 
 class _QuestionAnswer extends StatelessWidget {
   const _QuestionAnswer({required this.question, required this.answer});

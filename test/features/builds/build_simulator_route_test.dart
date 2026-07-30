@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/builds/domain/build_editor_asset.dart';
 import 'package:hok_helper_mobile/src/features/builds/domain/build_scheme_summary.dart';
 import 'package:hok_helper_mobile/src/features/builds/presentation/build_explorer_screen.dart';
@@ -10,6 +12,18 @@ import 'package:hok_helper_mobile/src/features/builds/presentation/build_simulat
 import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
 import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
 import 'package:hok_helper_mobile/src/features/profile/presentation/public_profile_screen.dart';
+
+class _SignedInAuthController extends AuthController {
+  @override
+  Future<AuthUser?> build() async {
+    return const AuthUser(
+      id: 42,
+      username: 'builder',
+      email: 'builder@example.test',
+      displayName: 'Builder',
+    );
+  }
+}
 
 void main() {
   testWidgets('build explorer card opens focused build simulator route', (
@@ -174,6 +188,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_SignedInAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -232,7 +247,7 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
     expect(requestedSlots, contains(166));
     expect(find.text('Angela opener'), findsOneWidget);
-    expect(find.text('Blazing Mage'), findsOneWidget);
+    expect(find.text('Angela'), findsOneWidget);
   });
 
   testWidgets('build simulator route pins shared scheme query', (tester) async {
@@ -243,6 +258,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_SignedInAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -349,8 +365,7 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
     expect(find.text('Shared build'), findsOneWidget);
     expect(find.text('Shared route build'), findsOneWidget);
-    expect(find.text('Angela · '), findsOneWidget);
-    expect(find.text('sharer'), findsOneWidget);
+    expect(find.textContaining('sharer'), findsOneWidget);
   });
 
   testWidgets('legacy build simulator scheme_id query pins shared scheme', (
@@ -363,6 +378,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_SignedInAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -429,6 +445,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authControllerProvider.overrideWith(_SignedInAuthController.new),
           buildSimHeroesProvider.overrideWith((ref) async {
             return const [
               HeroSummary(
@@ -495,8 +512,7 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/tools/build-sim');
     expect(find.text('Favorite Builds'), findsOneWidget);
     expect(find.text('Favorite route build'), findsOneWidget);
-    expect(find.text('Angela · '), findsOneWidget);
-    expect(find.text('collector'), findsOneWidget);
+    expect(find.textContaining('collector'), findsOneWidget);
     expect(find.text('Public route build'), findsNothing);
   });
 

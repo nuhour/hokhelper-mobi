@@ -133,6 +133,25 @@ StatsTrendDetail sampleStatsTrendDetail() {
         'quantity': 3790,
         'pick_rate': 70.24,
         'win_rate': 54.2,
+        'most_common_slot': 3,
+        'avg_slot': 2.6,
+        'slot1_share': 8.4,
+        'slot1_win_rate': 50.1,
+        'slot2_share': 30.2,
+        'slot2_win_rate': 53.3,
+        'slot3_share': 61.4,
+        'slot3_win_rate': 56.8,
+      },
+      // pick_rate 与 quantity 排序结果相反，用于钉住默认排序列。
+      {
+        'equip': {'id': 12345, 'name': 'Boots of Speed'},
+        'quantity': 9999,
+        'pick_rate': 45.1,
+        'win_rate': 60.0,
+        'most_common_slot': 1,
+        'avg_slot': 1.2,
+        'slot1_share': 100.0,
+        'slot1_win_rate': 60.0,
       },
     ],
     'hero_skill_equip_stats': const [
@@ -155,5 +174,90 @@ StatsTrendDetail sampleStatsTrendDetail() {
     },
     'synergy_list': const [],
     'counter_list': const [],
+  });
+}
+
+StatsTrendTable sampleEquipStatsTrendTable() {
+  return sampleStatsTrendTable(
+    dimension: 'equip_rank',
+    view: 'main',
+    columns: const [
+      {'id': 'equip', 'label': 'Equipment', 'type': 'equip', 'sortable': true},
+      {
+        'id': 'win_rate',
+        'label': 'Win Rate',
+        'type': 'percent',
+        'sortable': true,
+      },
+      {
+        'id': 'pick_rate',
+        'label': 'Pick Rate',
+        'type': 'percent',
+        'sortable': true,
+      },
+      {'id': 'trend_smoothed', 'label': 'Trend', 'type': 'sparkline'},
+    ],
+    rows: const [
+      {
+        'equip': {'id': 12211, 'name': 'Venomous Staff'},
+        'win_rate': 54.2,
+        'pick_rate': 70.24,
+        'trend_smoothed': [52.0, 53.1, 54.2],
+      },
+    ],
+  );
+}
+
+StatsTrendDetail sampleEquipStatsTrendDetail() {
+  return StatsTrendDetail.fromJson({
+    'equip': const {'id': 12211, 'name': 'Venomous Staff'},
+    'trend_points': const [
+      {'snapshot_date': '2026-07-14', 'win_rate': 53.4, 'pick_rate': 69.8},
+      {'snapshot_date': '2026-07-15', 'win_rate': 54.2, 'pick_rate': 70.24},
+    ],
+    'hero_equip_stats': const [
+      {
+        'hero': {'id': 199, 'heroId': '199', 'name': 'Lam'},
+        'quantity': 3790,
+        'pick_rate': 70.24,
+        'win_rate': 54.2,
+        'most_common_slot': 3,
+        'avg_slot': 2.6,
+        'slot1_share': 8.4,
+        'slot1_win_rate': 50.1,
+        'slot2_share': 30.2,
+        'slot2_win_rate': 53.3,
+        'slot3_share': 61.4,
+        'slot3_win_rate': 56.8,
+      },
+      // pick_rate 与 quantity 排序结果相反，用于钉住默认排序列。
+      {
+        'hero': {'id': 166, 'heroId': '166', 'name': 'Yaria'},
+        'quantity': 9999,
+        'pick_rate': 45.1,
+        'win_rate': 60.0,
+        'most_common_slot': 1,
+        'avg_slot': 1.2,
+        'slot1_share': 100.0,
+        'slot1_win_rate': 60.0,
+      },
+    ],
+  });
+}
+
+/// 31 行英雄数据：pick_rate 递减、Hero31 胜率最高，用于验证「先全量排序再截断」。
+StatsTrendDetail sampleWideEquipStatsTrendDetail() {
+  return StatsTrendDetail.fromJson({
+    'equip': const {'id': 12211, 'name': 'Venomous Staff'},
+    'trend_points': const [],
+    'hero_equip_stats': [
+      for (var index = 1; index <= 31; index++)
+        {
+          'hero': {'id': 1000 + index, 'name': 'Hero$index'},
+          'quantity': index,
+          'pick_rate': 100.0 - index,
+          'win_rate': index == 31 ? 99.0 : 50.0,
+        },
+    ],
   });
 }

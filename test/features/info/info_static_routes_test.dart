@@ -108,29 +108,25 @@ void main() {
     router.go('/privacy');
     await tester.pumpAndSettle();
     expect(find.text('Privacy Policy'), findsOneWidget);
-    expect(find.text('Data use'), findsOneWidget);
-    expect(find.text('1. Data Harvesting & Usage'), findsOneWidget);
-    expect(find.text('2. Cookie Manifest'), findsOneWidget);
-    expect(find.text('3. Third-Party Deployment'), findsOneWidget);
-    expect(find.text('Essential Cookies'), findsOneWidget);
-    expect(find.text('Preference Cookies'), findsOneWidget);
-    expect(find.text('Google Cloud / Gemini'), findsOneWidget);
-    expect(find.text('Vercel / Netlify'), findsOneWidget);
+    expect(find.text('Effective July 31, 2026.'), findsOneWidget);
+    expect(find.text('1. Information we collect'), findsOneWidget);
+    expect(find.text('2. How we use information'), findsOneWidget);
+    expect(find.text('3. Public content and community safety'), findsOneWidget);
+    expect(find.text('4. Service providers and disclosures'), findsOneWidget);
+    expect(find.text('6. Your choices and rights'), findsOneWidget);
     expect(
-      find.text(
-        'Last updated: April 2026. For data deletion requests, contact us via the Discord support channel.',
-      ),
+      find.text('Delete your HOK Helper account and associated data'),
       findsOneWidget,
     );
 
     router.go('/terms');
     await tester.pumpAndSettle();
     expect(find.text('Terms of Service'), findsOneWidget);
-    expect(find.text('Community conduct'), findsOneWidget);
-    expect(find.text('1. Acceptance of Terms'), findsOneWidget);
-    expect(find.text('2. Use of AI Tools'), findsOneWidget);
-    expect(find.text('3. Community Conduct'), findsOneWidget);
-    expect(find.text('Last updated: April 2026.'), findsOneWidget);
+    expect(find.text('Effective July 31, 2026.'), findsOneWidget);
+    expect(find.text('1. Acceptance and eligibility'), findsOneWidget);
+    expect(find.text('2. Acceptable use'), findsOneWidget);
+    expect(find.text('3. User-generated content'), findsOneWidget);
+    expect(find.text('6. Digital features and store billing'), findsOneWidget);
 
     router.go('/links');
     await tester.pumpAndSettle();
@@ -189,7 +185,7 @@ void main() {
     await tester.ensureVisible(find.text('Privacy Policy').first);
     await tester.tap(find.text('Privacy Policy').first);
     await tester.pumpAndSettle();
-    expect(find.text('Data use'), findsOneWidget);
+    expect(find.text('1. Information we collect'), findsOneWidget);
   });
 
   testWidgets('info center exposes hokx footer portal directory', (

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/content/data/content_repository.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/patch_note_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/content_screen.dart';
@@ -24,8 +25,9 @@ class _PagedPatchRepository extends ContentRepository {
   final requestedPages = <int>[];
   int? requestedDetailId;
 
+  // 覆写分页入口即可：loadPatchNotes 会委托到这里，加载更多也直接走这里。
   @override
-  Future<List<PatchNoteSummary>> loadPatchNotes(
+  Future<PatchNotesPage> loadPatchNotesPage(
     int regionId, {
     int page = 1,
     int pageSize = 120,
@@ -33,7 +35,7 @@ class _PagedPatchRepository extends ContentRepository {
     requestedPages.add(page);
     final startId = (page - 1) * pageSize + 1;
     final count = page == 1 ? pageSize : 1;
-    return List.generate(count, (index) {
+    final notes = List.generate(count, (index) {
       final id = startId + index;
       return PatchNoteSummary(
         id: id,
@@ -54,6 +56,8 @@ class _PagedPatchRepository extends ContentRepository {
         ],
       );
     }, growable: false);
+    // total 驱动 hasMore：两页共 121 条。
+    return PatchNotesPage(notes: notes, total: 121);
   }
 
   @override
@@ -247,23 +251,25 @@ void main() {
         child: const MaterialApp(home: Scaffold(body: PatchNotesScreen())),
       ),
     );
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Version 1.2.1 Patch Notes'), findsOneWidget);
     expect(find.text('Version 1.2.121 Patch Notes'), findsNothing);
+    // 首页取满一整页时展示统一页脚，等待滚动触底自动加载。
+    expect(find.byType(AppListFooter), findsOneWidget);
+    expect(repository.requestedPages, [1]);
 
-    final loadMoreButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Load more'),
-    );
-    await tester.runAsync(() async {
-      loadMoreButton.onPressed!();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pump();
+    // 滚动到时间线底部，页脚自动追加下一页，无需任何按钮。
+    final scrollPosition = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    scrollPosition.jumpTo(scrollPosition.maxScrollExtent);
+    await tester.pumpAndSettle();
 
     expect(repository.requestedPages, [1, 2]);
     expect(find.text('Version 1.2.121 Patch Notes'), findsOneWidget);
+    // 121 条全部加载完毕（total 驱动），页脚转为到底提示。
+    expect(find.text('No more content'), findsOneWidget);
   });
 
   testWidgets('loads full patch note body when opening detail', (tester) async {

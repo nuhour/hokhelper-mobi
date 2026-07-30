@@ -1,0 +1,5 @@
+#include "Generated.xcconfig"
+GOOGLE_IOS_CLIENT_ID = com.googleusercontent.apps.unconfigured
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.unconfigured
+#include? "OAuth.xcconfig"
+#include? "Signing.xcconfig"

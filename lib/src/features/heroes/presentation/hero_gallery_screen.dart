@@ -8,6 +8,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_lane_icon.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/widgets/app_rating_stars.dart';
 import '../../../core/widgets/app_section_header.dart';
 import '../../settings/presentation/settings_controller.dart';
@@ -89,11 +90,21 @@ class HeroGalleryScreen extends ConsumerStatefulWidget {
 }
 
 class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
+  // 与 HeroesRepository.loadHeroes 的默认 pageSize 保持一致。
+  static const _galleryPageSize = 60;
+
   final _searchController = TextEditingController();
   String _query = '';
   _HeroSort _sort = _HeroSort.release;
   int? _lanePosition;
   List<HeroSummary>? _previousHeroes;
+
+  // 第 2 页起追加的英雄；第 1 页仍走 heroGalleryQueryProvider。
+  final List<HeroSummary> _extraHeroes = [];
+  _HeroGalleryQuery? _extraQuery;
+  int _loadedPages = 1;
+  bool _loadingMore = false;
+  bool _reachedEnd = false;
 
   @override
   void initState() {
@@ -111,6 +122,54 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
     super.dispose();
   }
 
+  void _resetPagination() {
+    _extraHeroes.clear();
+    _loadedPages = 1;
+    _loadingMore = false;
+    _reachedEnd = false;
+  }
+
+  Future<void> _loadMoreHeroes(_HeroGalleryQuery query, int loadedCount) async {
+    if (_loadingMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final regionId = await ref.read(heroGalleryRegionProvider.future);
+      final result = await ref
+          .read(heroesRepositoryProvider)
+          .loadHeroGalleryPage(
+            regionId,
+            page: _loadedPages + 1,
+            sort: query.sort.apiValue,
+            order: query.sort.order,
+            search: query.search,
+            lanePosition: query.lanePosition,
+          );
+      if (!mounted || _extraQuery != query) {
+        return;
+      }
+      setState(() {
+        _loadingMore = false;
+        _loadedPages += 1;
+        _extraHeroes.addAll(result.heroes);
+        final total = result.total;
+        if (result.heroes.length < _galleryPageSize ||
+            (total != null && loadedCount + result.heroes.length >= total)) {
+          _reachedEnd = true;
+        }
+      });
+    } catch (_) {
+      if (!mounted || _extraQuery != query) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load more heroes')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final galleryQuery = _HeroGalleryQuery(
@@ -118,6 +177,11 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
       search: _query,
       lanePosition: _lanePosition,
     );
+    if (_extraQuery != galleryQuery) {
+      // 查询条件变化后，已追加的分页数据不再适用。
+      _extraQuery = galleryQuery;
+      _resetPagination();
+    }
     final heroesValue = ref.watch(heroGalleryQueryProvider(galleryQuery));
     final loadedHeroes = heroesValue.valueOrNull;
     if (loadedHeroes != null) {
@@ -132,10 +196,14 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
         previousData: _previousHeroes,
         loadingStyle: AppAsyncLoadingStyle.gallery,
         data: (heroes) {
-          final visibleHeroes = _filterHeroes(heroes);
+          final allHeroes = [...heroes, ..._extraHeroes];
+          final visibleHeroes = _filterHeroes(allHeroes);
+          final hasMore = !_reachedEnd && heroes.length >= _galleryPageSize;
           return RefreshIndicator(
-            onRefresh: () =>
-                ref.refresh(heroGalleryQueryProvider(galleryQuery).future),
+            onRefresh: () {
+              setState(_resetPagination);
+              return ref.refresh(heroGalleryQueryProvider(galleryQuery).future);
+            },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -238,9 +306,9 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                           : 'Try another hero name or title.',
                     ),
                   )
-                else
+                else ...[
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                     sliver: SliverGrid.builder(
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
@@ -258,6 +326,18 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
                       },
                     ),
                   ),
+                  SliverPadding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    sliver: SliverToBoxAdapter(
+                      child: AppListFooter(
+                        hasMore: hasMore,
+                        loading: _loadingMore,
+                        onLoadMore: () =>
+                            _loadMoreHeroes(galleryQuery, allHeroes.length),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           );

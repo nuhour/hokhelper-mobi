@@ -79,6 +79,16 @@ class _FakeApiClient extends ApiClient {
           ],
         },
       },
+      '/community/blocked-users' => const {
+        'rows': [
+          {
+            'id': 42,
+            'username': 'MutedPlayer',
+            'avatar': '/media/avatar.png',
+            'blocked_at': '2026-07-30T09:15:00Z',
+          },
+        ],
+      },
       _ => throw StateError('Unexpected path $path'),
     };
   }
@@ -222,6 +232,53 @@ void main() {
       'tag': 'Update',
       'filterRules': '[{"field":"region_id","op":"eq","value":2}]',
     });
+  });
+
+  test('submits post and comment safety reports', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    await repository.reportPost(
+      '101',
+      reason: 'harassment',
+      details: 'Repeated personal attacks',
+    );
+    expect(apiClient.postPath, '/community/posts/101/report');
+    expect(apiClient.postBody, {
+      'reason': 'harassment',
+      'details': 'Repeated personal attacks',
+    });
+
+    await repository.reportComment('c9', reason: 'spam');
+    expect(apiClient.postPath, '/community/comments/c9/report');
+    expect(apiClient.postBody, {'reason': 'spam', 'details': ''});
+  });
+
+  test('blocks and unblocks community users', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    await repository.setUserBlocked(42, blocked: true);
+    expect(apiClient.postPath, '/community/users/42/block');
+    expect(apiClient.postBody, {'blocked': true});
+
+    await repository.setUserBlocked(42, blocked: false);
+    expect(apiClient.postPath, '/community/users/42/block');
+    expect(apiClient.postBody, {'blocked': false});
+  });
+
+  test('loads blocked users for settings management', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final users = await repository.loadBlockedUsers();
+
+    expect(apiClient.getQueries, contains('/community/blocked-users'));
+    expect(users, hasLength(1));
+    expect(users.single.id, 42);
+    expect(users.single.username, 'MutedPlayer');
+    expect(users.single.avatar, '/media/avatar.png');
+    expect(users.single.blockedAt, DateTime.utc(2026, 7, 30, 9, 15));
   });
 
   test('loads leak posts with region and all-category query', () async {

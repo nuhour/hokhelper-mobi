@@ -1,10 +1,17 @@
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/network/api_client.dart';
+import '../../../core/providers/core_providers.dart';
 import '../domain/community_post_detail.dart';
 import '../domain/community_post_summary.dart';
 import '../domain/community_sticker.dart';
 import '../domain/leak_post_summary.dart';
+
+final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
+  return CommunityRepository(apiClient: ref.watch(apiClientProvider));
+});
 
 enum CommunityPostSort {
   newest('new'),
@@ -158,6 +165,44 @@ class CommunityRepository {
     return CommunityLikeResult.fromJson(_unwrapResult(json));
   }
 
+  Future<void> reportPost(
+    String postId, {
+    required String reason,
+    String details = '',
+  }) async {
+    await apiClient.postJson(
+      '/community/posts/$postId/report',
+      body: {'reason': reason, 'details': details.trim()},
+    );
+  }
+
+  Future<void> reportComment(
+    String commentId, {
+    required String reason,
+    String details = '',
+  }) async {
+    await apiClient.postJson(
+      '/community/comments/$commentId/report',
+      body: {'reason': reason, 'details': details.trim()},
+    );
+  }
+
+  Future<void> setUserBlocked(int userId, {required bool blocked}) async {
+    await apiClient.postJson(
+      '/community/users/$userId/block',
+      body: {'blocked': blocked},
+    );
+  }
+
+  Future<List<CommunityBlockedUser>> loadBlockedUsers() async {
+    final json = await apiClient.getJson('/community/blocked-users');
+    return _readRows(json)
+        .whereType<Map>()
+        .map((row) => CommunityBlockedUser.fromJson(row))
+        .where((user) => user.id > 0)
+        .toList(growable: false);
+  }
+
   Future<CommunityCommentSummary> createComment(
     String postId, {
     required String content,
@@ -187,6 +232,31 @@ class CommunityRepository {
       return const [];
     }
     return rows;
+  }
+}
+
+class CommunityBlockedUser {
+  const CommunityBlockedUser({
+    required this.id,
+    required this.username,
+    required this.avatar,
+    required this.blockedAt,
+  });
+
+  final int id;
+  final String username;
+  final String avatar;
+  final DateTime? blockedAt;
+
+  factory CommunityBlockedUser.fromJson(Map<dynamic, dynamic> json) {
+    return CommunityBlockedUser(
+      id: _readInt(json['id']),
+      username: (json['username'] ?? '').toString().trim(),
+      avatar: (json['avatar'] ?? '').toString().trim(),
+      blockedAt: DateTime.tryParse(
+        (json['blocked_at'] ?? json['blockedAt'] ?? '').toString(),
+      ),
+    );
   }
 }
 

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
+import '../data/native_apple_sign_in.dart';
 import '../data/native_google_sign_in.dart';
 import 'auth_page_scaffold.dart';
 import 'auth_controller.dart';
@@ -15,12 +19,29 @@ typedef OAuthUrlOpener =
 
 final oauthUrlOpenerProvider = Provider<OAuthUrlOpener>((ref) {
   return ({required provider, required url}) async {
-    const channel = MethodChannel('hokhelper/open_url');
-    final launched = await channel.invokeMethod<bool>('openOAuthUrl', {
-      'provider': provider,
-      'url': url,
-    });
-    if (launched != true) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) {
+      throw StateError('Invalid OAuth authorization URL.');
+    }
+
+    var launched = false;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        const channel = MethodChannel('hokhelper/open_url');
+        launched =
+            await channel.invokeMethod<bool>('openOAuthUrl', {
+              'provider': provider,
+              'url': url,
+            }) ??
+            false;
+      } on MissingPluginException {
+        launched = false;
+      }
+    }
+    if (!launched) {
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    if (!launched) {
       throw StateError('Unable to open OAuth authorization URL.');
     }
   };
@@ -28,6 +49,10 @@ final oauthUrlOpenerProvider = Provider<OAuthUrlOpener>((ref) {
 
 final nativeGoogleSignInProvider = Provider<NativeGoogleSignIn>((ref) {
   return GoogleFrameworkSignIn();
+});
+
+final nativeAppleSignInProvider = Provider<NativeAppleSignIn>((ref) {
+  return AppleFrameworkSignIn();
 });
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -123,6 +148,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                         ),
                         const SizedBox(height: 14),
+                        if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                          IgnorePointer(
+                            ignoring: isLoading || isOAuthLoading,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 160),
+                              opacity: isLoading || isOAuthLoading ? 0.55 : 1,
+                              child: SignInWithAppleButton(
+                                onPressed: () => _startOAuth('apple'),
+                                style:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? SignInWithAppleButtonStyle.white
+                                    : SignInWithAppleButtonStyle.black,
+                                height: 54,
+                                borderRadius: const BorderRadius.all(
+                                  Radius.circular(6),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                         _OAuthButton(
                           provider: 'google',
                           label: 'Continue with Google',
@@ -265,6 +312,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final repository = ref.read(authRepositoryProvider);
+      if (provider == 'apple') {
+        final result = await ref.read(nativeAppleSignInProvider).authenticate();
+        if (result.status == NativeAppleSignInStatus.cancelled) {
+          return;
+        }
+        if (result.status != NativeAppleSignInStatus.authenticated ||
+            result.identityToken == null ||
+            result.rawNonce == null) {
+          throw StateError(
+            result.error ?? 'Sign in with Apple is unavailable.',
+          );
+        }
+        await repository.loginWithAppleIdentityToken(
+          identityToken: result.identityToken!,
+          rawNonce: result.rawNonce!,
+          name: result.name,
+        );
+        ref.invalidate(authControllerProvider);
+        if (mounted) {
+          context.go(_safeReturnRoute(widget.returnTo));
+        }
+        return;
+      }
+      if (provider == 'google') {
+        final nativeResult = await _tryNativeGoogleSignIn(
+          repository: repository,
+          serverClientId: AppConfig.googleServerClientId,
+        );
+        if (nativeResult == NativeGoogleSignInStatus.authenticated) {
+          if (mounted) {
+            context.go(_safeReturnRoute(widget.returnTo));
+          }
+          return;
+        }
+        if (nativeResult == NativeGoogleSignInStatus.cancelled) {
+          return;
+        }
+      }
+
       final stateStore = ref.read(oauthStateStoreProvider);
       final state = await stateStore.create(provider);
       final redirectUri = AppConfig.current.oauthRedirectUri(provider);
@@ -273,23 +359,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         redirectUri: redirectUri,
         state: state,
       );
-      if (provider == 'google') {
-        final nativeResult = await _tryNativeGoogleSignIn(
-          repository: repository,
-          authUrl: authUrl,
-        );
-        if (nativeResult == NativeGoogleSignInStatus.authenticated) {
-          await stateStore.clear(provider);
-          if (mounted) {
-            context.go(_safeReturnRoute(widget.returnTo));
-          }
-          return;
-        }
-        if (nativeResult == NativeGoogleSignInStatus.cancelled) {
-          await stateStore.clear(provider);
-          return;
-        }
-      }
 
       await ref.read(oauthUrlOpenerProvider)(provider: provider, url: authUrl);
     } catch (error) {
@@ -310,10 +379,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<NativeGoogleSignInStatus> _tryNativeGoogleSignIn({
     required AuthRepository repository,
-    required String authUrl,
+    required String serverClientId,
   }) async {
-    final serverClientId =
-        Uri.tryParse(authUrl)?.queryParameters['client_id']?.trim() ?? '';
     final result = await ref
         .read(nativeGoogleSignInProvider)
         .authenticate(serverClientId: serverClientId);

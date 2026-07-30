@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../auth/domain/auth_user.dart';
@@ -203,32 +204,13 @@ class _ProfileOverview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          height: 108,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  ProfileAvatar(
-                    avatarUrl: profile?.avatar ?? '',
-                    fallback: avatarInitial,
-                  ),
-                  if (profile != null)
-                    Positioned(
-                      left: constraints.maxWidth / 2 + 58,
-                      top: 23,
-                      child: _LikesButton(
-                        count: profile!.stats.likes,
-                        onTap: () => context.go('/content/community?tab=likes'),
-                      ),
-                    ),
-                ],
-              );
-            },
+        Center(
+          child: ProfileAvatar(
+            avatarUrl: profile?.avatar ?? '',
+            fallback: avatarInitial,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Text(
           displayName,
           maxLines: 1,
@@ -239,7 +221,7 @@ class _ProfileOverview extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           '@$username',
           maxLines: 1,
@@ -250,7 +232,7 @@ class _ProfileOverview extends StatelessWidget {
           ).textTheme.bodyMedium?.copyWith(color: colors.muted),
         ),
         if (profile != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             profile!.bio.isEmpty
                 ? AppLocalizations.of(context).profileNoSignature
@@ -263,9 +245,9 @@ class _ProfileOverview extends StatelessWidget {
               height: 1.45,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           ProfileSocialLinksDropdown(links: profile!.socialLinks),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -279,7 +261,7 @@ class _ProfileOverview extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           _AutoOpenMeFollowList(
             profile: profile!,
             initialFollowListType: initialFollowListType,
@@ -296,9 +278,11 @@ class _ProfileOverview extends StatelessWidget {
                 userId: profile!.id,
                 type: _MeFollowListType.followers,
               ),
+              showLikes: true,
+              onLikesTap: () => context.go('/content/community?tab=likes'),
             ),
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 20),
           const _MySchemeShortcuts(),
         ],
       ],
@@ -381,6 +365,21 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
                               subtitle: l10n.profilePasswordSubtitle,
                               onTap: () => _showChangePasswordSheet(context),
                             ),
+                            Divider(height: 1, color: colors.border),
+                            _AccountActionTile(
+                              key: const ValueKey(
+                                'profile-delete-account-tile',
+                              ),
+                              icon: Icons.person_remove_outlined,
+                              title: l10n.translate(
+                                'profileDeleteAccountTitle',
+                              ),
+                              subtitle: l10n.translate(
+                                'profileDeleteAccountSubtitle',
+                              ),
+                              iconColor: Theme.of(context).colorScheme.error,
+                              onTap: () => _deleteAccount(context, ref),
+                            ),
                           ],
                         ),
                       ),
@@ -431,6 +430,60 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
       useSafeArea: true,
       builder: (_) => const _ChangePasswordSheet(),
     );
+  }
+
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.translate('profileDeleteAccountDialogTitle')),
+        content: Text(l10n.translate('profileDeleteAccountDialogBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.translate('commonCancel')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.translate('profileDeleteAccountConfirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(profileRepositoryProvider).deleteAccount();
+      await ref.read(authControllerProvider.notifier).logout();
+      if (context.mounted) {
+        context.go('/me');
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(l10n.translate('profileDeleteAccountSuccess')),
+            ),
+          );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(l10n.translate('profileDeleteAccountFailed')),
+            ),
+          );
+      }
+    }
   }
 }
 
@@ -504,12 +557,14 @@ class _AccountActionTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.iconColor,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -517,7 +572,7 @@ class _AccountActionTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: Icon(icon, color: colors.primary),
+      leading: Icon(icon, color: iconColor ?? colors.primary),
       title: Text(
         title,
         style: TextStyle(color: colors.text, fontWeight: FontWeight.w700),
@@ -580,50 +635,6 @@ class ProfileAvatar extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => fallbackWidget,
                 ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LikesButton extends StatelessWidget {
-  const _LikesButton({required this.count, required this.onTap});
-
-  final int count;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    final foreground = isLight ? AppTheme.lightText : Colors.white;
-    return Material(
-      color: Colors.white.withValues(alpha: isLight ? 0.72 : 0.12),
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        key: const ValueKey('profile-likes-button'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 56, maxWidth: 82),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.favorite_rounded, size: 19, color: foreground),
-                const SizedBox(height: 3),
-                Text(
-                  _formatNumber(count),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -928,19 +939,79 @@ class _MeFollowListSheet extends ConsumerStatefulWidget {
 }
 
 class _MeFollowListSheetState extends ConsumerState<_MeFollowListSheet> {
-  late Future<ProfileFollowList> _future;
+  final List<ProfileFollowUser> _users = [];
+  var _page = 1;
+  var _hasMore = false;
+  var _loading = true;
+  var _loadingMore = false;
+  var _failed = false;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _loadFirstPage();
   }
 
-  Future<ProfileFollowList> _load() {
+  Future<ProfileFollowList> _fetchPage(int page) {
     final repository = ref.read(profileRepositoryProvider);
     return widget.type == _MeFollowListType.following
-        ? repository.loadFollowing(userId: widget.userId)
-        : repository.loadFollowers(userId: widget.userId);
+        ? repository.loadFollowing(userId: widget.userId, page: page)
+        : repository.loadFollowers(userId: widget.userId, page: page);
+  }
+
+  Future<void> _loadFirstPage() async {
+    try {
+      final list = await _fetchPage(1);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _users
+          ..clear()
+          ..addAll(list.users);
+        _page = 1;
+        _hasMore = list.hasMore;
+        _loading = false;
+        _failed = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+        _failed = true;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) {
+      return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final list = await _fetchPage(_page + 1);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _page += 1;
+        _users.addAll(list.users);
+        _hasMore = list.hasMore && list.users.isNotEmpty;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _loadingMore = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to load more users')),
+      );
+    }
   }
 
   @override
@@ -975,52 +1046,55 @@ class _MeFollowListSheetState extends ConsumerState<_MeFollowListSheet> {
                 ],
               ),
               const SizedBox(height: 12),
-              Expanded(
-                child: FutureBuilder<ProfileFollowList>(
-                  future: _future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Failed to load users',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: context.hokTheme.onSurfaceMuted,
-                              ),
-                        ),
-                      );
-                    }
-                    final users = snapshot.data?.users ?? const [];
-                    if (users.isEmpty) {
-                      return Center(
-                        child: Text(
-                          widget.type == _MeFollowListType.following
-                              ? 'No following yet'
-                              : 'No followers yet',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: context.hokTheme.onSurfaceMuted,
-                              ),
-                        ),
-                      );
-                    }
-                    return ListView.separated(
-                      itemBuilder: (context, index) =>
-                          _MeFollowUserTile(user: users[index]),
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 10),
-                      itemCount: users.length,
-                    );
-                  },
-                ),
-              ),
+              Expanded(child: _buildList(context)),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildList(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_failed) {
+      return Center(
+        child: Text(
+          'Failed to load users',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
+        ),
+      );
+    }
+    if (_users.isEmpty) {
+      return Center(
+        child: Text(
+          widget.type == _MeFollowListType.following
+              ? 'No following yet'
+              : 'No followers yet',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: context.hokTheme.onSurfaceMuted,
+          ),
+        ),
+      );
+    }
+    // 页脚驱动滚动翻页；单页短列表读完时不加到底提示，避免噪音。
+    final showFooter = _hasMore || _users.length > 10;
+    return ListView.separated(
+      itemBuilder: (context, index) {
+        if (index >= _users.length) {
+          return AppListFooter(
+            hasMore: _hasMore,
+            loading: _loadingMore,
+            onLoadMore: _loadMore,
+          );
+        }
+        return _MeFollowUserTile(user: _users[index]);
+      },
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemCount: _users.length + (showFooter ? 1 : 0),
     );
   }
 }
@@ -1149,61 +1223,59 @@ class _MySchemeShortcuts extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
+        // 四个方案入口合并为一张 2×2 卡片，更整体紧凑。
         DecoratedBox(
           decoration: BoxDecoration(
             color: colors.panel,
             border: Border.all(color: colors.border),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: _SchemeShortcutTile(
-                  icon: Icons.bolt_outlined,
-                  label: l10n.profileBuildSchemes,
-                  route: '/tools/build-sim',
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SchemeShortcutTile(
+                      icon: Icons.bolt_outlined,
+                      label: l10n.profileBuildSchemes,
+                      route: '/tools/build-sim',
+                    ),
+                  ),
+                  SizedBox(
+                    height: 64,
+                    child: VerticalDivider(color: colors.border),
+                  ),
+                  Expanded(
+                    child: _SchemeShortcutTile(
+                      icon: Icons.format_list_numbered_rounded,
+                      label: l10n.profileTierSchemes,
+                      route: '/tools/tier-list',
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(
-                height: 64,
-                child: VerticalDivider(color: colors.border),
-              ),
-              Expanded(
-                child: _SchemeShortcutTile(
-                  icon: Icons.format_list_numbered_rounded,
-                  label: l10n.profileTierSchemes,
-                  route: '/tools/tier-list',
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.panel,
-            border: Border.all(color: colors.border),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _SchemeShortcutTile(
-                  icon: Icons.account_tree_outlined,
-                  label: l10n.profileBpSchemes,
-                  route: '/tools/bp-simulator',
-                ),
-              ),
-              SizedBox(
-                height: 64,
-                child: VerticalDivider(color: colors.border),
-              ),
-              Expanded(
-                child: _SchemeShortcutTile(
-                  icon: Icons.auto_awesome_outlined,
-                  label: l10n.profilePromptSchemes,
-                  route: '/tools/prompts?tab=myPrompts',
-                ),
+              Divider(height: 1, color: colors.border),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SchemeShortcutTile(
+                      icon: Icons.account_tree_outlined,
+                      label: l10n.profileBpSchemes,
+                      route: '/tools/bp-simulator',
+                    ),
+                  ),
+                  SizedBox(
+                    height: 64,
+                    child: VerticalDivider(color: colors.border),
+                  ),
+                  Expanded(
+                    child: _SchemeShortcutTile(
+                      icon: Icons.auto_awesome_outlined,
+                      label: l10n.profilePromptSchemes,
+                      route: '/tools/prompts?tab=myPrompts',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1778,6 +1850,8 @@ class ProfileStatsRow extends StatelessWidget {
     this.onPostsTap,
     this.onFollowingTap,
     this.onFollowersTap,
+    this.onLikesTap,
+    this.showLikes = false,
     super.key,
   });
 
@@ -1785,6 +1859,8 @@ class ProfileStatsRow extends StatelessWidget {
   final VoidCallback? onPostsTap;
   final VoidCallback? onFollowingTap;
   final VoidCallback? onFollowersTap;
+  final VoidCallback? onLikesTap;
+  final bool showLikes;
 
   @override
   Widget build(BuildContext context) {
@@ -1821,6 +1897,17 @@ class ProfileStatsRow extends StatelessWidget {
               onTap: onFollowersTap,
             ),
           ),
+          if (showLikes) ...[
+            SizedBox(height: 44, child: VerticalDivider(color: colors.border)),
+            Expanded(
+              child: _StatTile(
+                key: const ValueKey('profile-likes-button'),
+                labelIcon: Icons.favorite_rounded,
+                value: stats.likes,
+                onTap: onLikesTap,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1828,9 +1915,16 @@ class ProfileStatsRow extends StatelessWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, this.onTap});
+  const _StatTile({
+    super.key,
+    this.label,
+    this.labelIcon,
+    required this.value,
+    this.onTap,
+  });
 
-  final String label;
+  final String? label;
+  final IconData? labelIcon;
   final int value;
   final VoidCallback? onTap;
 
@@ -1852,14 +1946,21 @@ class _StatTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: colors.muted),
-          ),
+          if (label != null)
+            Text(
+              label!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.muted),
+            )
+          else
+            Icon(
+              labelIcon ?? Icons.favorite_rounded,
+              size: 15,
+              color: const Color(0xFFF43F5E),
+            ),
         ],
       ),
     );

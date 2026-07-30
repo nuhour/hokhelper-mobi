@@ -1,19 +1,36 @@
 import '../../../core/network/api_client.dart';
 import '../domain/event_assistance_record.dart';
 
+/// 与网页端 EventAssistancePage 一致的每页条数。
+const eventAssistancePageSize = 80;
+
+class EventAssistancePage {
+  const EventAssistancePage({required this.records, required this.total});
+
+  final List<EventAssistanceRecord> records;
+  final int total;
+}
+
 class EventAssistanceRepository {
   const EventAssistanceRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
-  Future<List<EventAssistanceRecord>> loadRecords({
+  Future<EventAssistancePage> loadRecords({
     required int regionId,
+    int page = 1,
+    int pageSize = eventAssistancePageSize,
   }) async {
     final json = await apiClient.getJson(
       '/activity/records',
-      query: {'page': 1, 'pageSize': 80, 'region_id': regionId},
+      query: {'page': page, 'pageSize': pageSize, 'region_id': regionId},
     );
-    return _readRows(json).map(EventAssistanceRecord.fromJson).toList();
+    return EventAssistancePage(
+      records: _readRows(
+        json,
+      ).map(EventAssistanceRecord.fromJson).toList(growable: false),
+      total: _readTotal(json),
+    );
   }
 
   Future<EventAssistanceRecord> submitText({
@@ -41,5 +58,14 @@ class EventAssistanceRepository {
       return const [];
     }
     return rows;
+  }
+
+  int _readTotal(Map<String, dynamic> json) {
+    final result = json['result'];
+    final total = result is Map ? result['total'] : json['total'];
+    if (total is int) {
+      return total;
+    }
+    return int.tryParse(total?.toString() ?? '') ?? 0;
   }
 }

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -699,7 +700,9 @@ class _PromptGenerationSheetState
                           _quota = quota;
                           return _QuotaPanel(
                             quota: quota,
-                            onRecharge: _openRechargeSheet,
+                            onRecharge: AppConfig.allowExternalDigitalPayments
+                                ? _openRechargeSheet
+                                : null,
                           );
                         },
                       ),
@@ -998,13 +1001,14 @@ class _QuotaPanel extends StatelessWidget {
                 ),
               ),
             ),
-            TextButton.icon(
-              onPressed: onRecharge,
-              icon: const Icon(Icons.credit_card, size: 16),
-              label: Text(
-                AppLocalizations.of(context).translate('promptRecharge'),
+            if (onRecharge != null)
+              TextButton.icon(
+                onPressed: onRecharge,
+                icon: const Icon(Icons.credit_card, size: 16),
+                label: Text(
+                  AppLocalizations.of(context).translate('promptRecharge'),
+                ),
               ),
-            ),
           ],
         ),
       ),

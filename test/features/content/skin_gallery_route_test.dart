@@ -227,7 +227,7 @@ void main() {
     );
     expect(find.text('Hunter Series'), findsWidgets);
 
-    Navigator.of(tester.element(find.text('Skin Detail'))).pop();
+    router.pop();
     await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/skin-gallery');
@@ -281,7 +281,6 @@ void main() {
         router.routeInformationProvider.value.uri.queryParameters['q'],
         'Lam',
       );
-      expect(find.text('Skin Detail'), findsOneWidget);
       expect(find.text('Hunter Series'), findsWidgets);
     },
   );

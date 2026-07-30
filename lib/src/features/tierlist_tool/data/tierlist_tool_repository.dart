@@ -2,37 +2,59 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../domain/tierlist_scheme_summary.dart';
 
+class TierListSchemesPage {
+  const TierListSchemesPage({required this.schemes, required this.total});
+
+  final List<TierListSchemeSummary> schemes;
+  final int? total;
+}
+
 class TierListToolRepository {
   const TierListToolRepository({required this.apiClient});
 
   final ApiClient apiClient;
 
   Future<List<TierListSchemeSummary>> loadSchemes() async {
+    final page = await loadSchemesPage();
+    return page.schemes;
+  }
+
+  Future<TierListSchemesPage> loadSchemesPage({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
     final Map<String, dynamic> json;
     try {
       json = await apiClient.postJson(
         '/tierlist/schemes',
-        body: const {
-          'page': 1,
-          'pageSize': 20,
+        body: {
+          'page': page,
+          'pageSize': pageSize,
           'sort': 'created_at',
           'order': 'desc',
         },
       );
     } on ApiError catch (error) {
       if (_isGuestReadableListError(error)) {
-        return const [];
+        return const TierListSchemesPage(schemes: [], total: 0);
       }
       rethrow;
     }
 
     final result = json['result'];
     final schemes = result is Map ? result['schemes'] : json['schemes'];
+    final totalRaw = result is Map ? result['total'] : json['total'];
+    final total = totalRaw is num ? totalRaw.toInt() : null;
     if (schemes is! List) {
-      return const [];
+      return TierListSchemesPage(schemes: const [], total: total);
     }
 
-    return schemes.map(TierListSchemeSummary.fromJson).toList(growable: false);
+    return TierListSchemesPage(
+      schemes: schemes
+          .map(TierListSchemeSummary.fromJson)
+          .toList(growable: false),
+      total: total,
+    );
   }
 
   Future<TierListSchemeSummary> loadScheme(String schemeId) async {

@@ -20,9 +20,7 @@ import '../domain/leak_post_summary.dart';
 import '../domain/community_sticker.dart';
 import 'community_composer_assets.dart';
 
-final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
-  return CommunityRepository(apiClient: ref.watch(apiClientProvider));
-});
+export '../data/community_repository.dart' show communityRepositoryProvider;
 
 const _communityPostsPageSize = 30;
 const _leakPostsPageSize = 30;

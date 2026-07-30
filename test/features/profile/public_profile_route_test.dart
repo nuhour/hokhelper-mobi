@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/app/hok_helper_app.dart';
 import 'package:hok_helper_mobile/src/app/router.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
@@ -88,6 +89,53 @@ class _FakeProfileRepository extends ProfileRepository {
       page: 1,
       pageSize: 20,
       hasMore: false,
+    );
+  }
+}
+
+class _PagedFollowProfileRepository extends ProfileRepository {
+  _PagedFollowProfileRepository() : super(apiClient: _NoopApiClient());
+
+  final requestedPages = <int>[];
+
+  @override
+  Future<ProfileFollowList> loadFollowing({int? userId, int page = 1}) async {
+    requestedPages.add(page);
+    if (page == 1) {
+      return const ProfileFollowList(
+        total: 2,
+        page: 1,
+        pageSize: 20,
+        hasMore: true,
+        users: [
+          ProfileFollowUser(
+            id: 77,
+            username: 'arthur',
+            displayName: 'Arthur',
+            avatar: '',
+            bio: 'Clash lane',
+            isFollowing: true,
+            isSelf: false,
+          ),
+        ],
+      );
+    }
+    return const ProfileFollowList(
+      total: 2,
+      page: 2,
+      pageSize: 20,
+      hasMore: false,
+      users: [
+        ProfileFollowUser(
+          id: 88,
+          username: 'angela',
+          displayName: 'Angela',
+          avatar: '',
+          bio: 'Mid mage',
+          isFollowing: false,
+          isSelf: false,
+        ),
+      ],
     );
   }
 }
@@ -360,6 +408,66 @@ void main() {
     expect(find.text('Followers'), findsWidgets);
     expect(find.text('Angela'), findsOneWidget);
     expect(find.text('Mid mage'), findsOneWidget);
+  });
+
+  testWidgets('public follow list sheet auto-loads the next page', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = createAppRouter();
+    router.go('/profile/42');
+    final repository = _PagedFollowProfileRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController()),
+          profileRepositoryProvider.overrideWithValue(repository),
+          publicUserProfileProvider(42).overrideWith((ref) async {
+            return const UserProfile(
+              id: 42,
+              username: 'lam',
+              displayName: 'Lam',
+              email: 'lam@example.test',
+              avatar: '',
+              level: 7,
+              points: 1200,
+              xpTotal: 1400,
+              xpCurrentLevel: 260,
+              xpToNextLevel: 740,
+              levelProgress: 26,
+              levelCap: false,
+              bio: 'Jungle main',
+              socialLinks: {},
+              stats: ProfileStats(
+                posts: 3,
+                following: 4,
+                followers: 5,
+                likes: 6,
+              ),
+              isFollowing: false,
+              isLiked: false,
+              isSelf: false,
+            );
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Following'));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedPages, [1, 2]);
+    expect(find.text('Arthur'), findsOneWidget);
+    expect(find.text('Angela'), findsOneWidget);
+    // 已读完且列表很短，页脚隐藏。
+    expect(find.byType(AppListFooter), findsNothing);
   });
 
   testWidgets('profile followers tab query opens followers list', (
