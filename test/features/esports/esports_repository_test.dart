@@ -277,6 +277,35 @@ void main() {
     expect(match.statusLabel, 'Finished');
   });
 
+  test('promotes an upcoming match to live while it is in progress', () {
+    final now = DateTime.now().toUtc();
+    final match = EsportsMatchSummary.fromJson({
+      'id': 13,
+      'status_key': 'upcoming',
+      'start_time': now.subtract(const Duration(minutes: 30)).toIso8601String(),
+      'end_time': now.add(const Duration(minutes: 30)).toIso8601String(),
+      'team_a': {'name': 'Wolves'},
+      'team_b': {'name': 'AG'},
+    });
+
+    expect(match.statusKey, 'live');
+    expect(match.statusLabel, 'Live');
+  });
+
+  test('marks an upcoming match finished after its interval', () {
+    final now = DateTime.now().toUtc();
+    final match = EsportsMatchSummary.fromJson({
+      'id': 14,
+      'status_key': 'upcoming',
+      'start_time': now.subtract(const Duration(hours: 2)).toIso8601String(),
+      'end_time': now.subtract(const Duration(minutes: 10)).toIso8601String(),
+      'team_a': {'name': 'Wolves'},
+      'team_b': {'name': 'AG'},
+    });
+
+    expect(match.statusKey, 'finished');
+  });
+
   test('loads esports teams sorted by win rate', () async {
     final apiClient = _FakeApiClient();
     final repository = EsportsRepository(apiClient: apiClient);

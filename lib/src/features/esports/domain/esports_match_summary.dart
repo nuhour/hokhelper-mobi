@@ -145,15 +145,23 @@ String _normalizeStatusKey(
   if (normalized != 'upcoming') {
     return normalized;
   }
-  if (endTime.trim().isNotEmpty) {
-    return 'finished';
-  }
   final scheduledAt = DateTime.tryParse(startTime.trim());
-  if (scheduledAt != null &&
-      scheduledAt.isBefore(DateTime.now().subtract(const Duration(hours: 8)))) {
-    return 'finished';
+  if (scheduledAt == null) {
+    return normalized;
   }
-  return normalized;
+
+  final now = DateTime.now();
+  final endedAt = DateTime.tryParse(endTime.trim());
+  if (now.isBefore(scheduledAt)) {
+    return normalized;
+  }
+  if (endedAt != null) {
+    return now.isBefore(endedAt) ? 'live' : 'finished';
+  }
+
+  // 爬取结果没有结束时间时，沿用旧逻辑以 8 小时作为比赛最长展示区间。
+  final fallbackEndedAt = scheduledAt.add(const Duration(hours: 8));
+  return now.isBefore(fallbackEndedAt) ? 'live' : 'finished';
 }
 
 String _titleCase(String value) {
