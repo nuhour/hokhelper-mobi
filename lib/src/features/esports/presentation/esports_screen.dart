@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
@@ -1823,9 +1824,7 @@ class _StatsTableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final metrics = {
-      for (final metric in stat.metrics) metric.label: metric.value,
-    };
+    final metrics = {for (final metric in stat.metrics) metric.label: metric};
     return Container(
       height: 58,
       decoration: BoxDecoration(
@@ -1861,7 +1860,7 @@ class _StatsTableRow extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  metrics[column] ?? '--',
+                  _formatEsportsMetricValue(context, metrics[column]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -1875,6 +1874,32 @@ class _StatsTableRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatEsportsMetricValue(
+  BuildContext context,
+  EsportsStatMetric? metric,
+) {
+  if (metric == null) {
+    return '--';
+  }
+  final milliseconds = metric.durationMilliseconds;
+  if (milliseconds == null) {
+    return metric.value;
+  }
+  final totalSeconds = (milliseconds / 1000).round();
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+  return switch (AppLocalizations.of(context).locale.languageCode) {
+    'zh' => '${minutes}分${seconds}秒',
+    'id' => '${minutes} mnt ${seconds} dtk',
+    'fil' => '${minutes} min ${seconds} seg',
+    'pt' || 'es' => '${minutes} min ${seconds} s',
+    'ar' => '${minutes} د ${seconds} ث',
+    'ru' => '${minutes} мин ${seconds} с',
+    'ms' => '${minutes} min ${seconds} saat',
+    _ => '${minutes}m ${seconds}s',
+  };
 }
 
 class _StatsIdentityCell extends StatelessWidget {

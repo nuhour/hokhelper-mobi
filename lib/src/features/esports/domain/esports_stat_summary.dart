@@ -91,10 +91,17 @@ class EsportsStatSummary {
 }
 
 class EsportsStatMetric {
-  const EsportsStatMetric({required this.label, required this.value});
+  const EsportsStatMetric({
+    required this.label,
+    required this.value,
+    this.key = '',
+    this.durationMilliseconds,
+  });
 
   final String label;
   final String value;
+  final String key;
+  final int? durationMilliseconds;
 }
 
 List<EsportsStatMetric> _readMetrics(
@@ -113,14 +120,76 @@ List<EsportsStatMetric> _readMetrics(
     if (key == 'rank' || key == 'rank_num' || !seen.add(key)) {
       continue;
     }
-    final raw = display[key] ?? stats[key];
-    final value = _formatMetricValue(key, raw);
+    final raw = _isDurationMetric(key)
+        ? (stats[key] ?? display[key])
+        : (display[key] ?? stats[key]);
+    final durationMilliseconds = _isDurationMetric(key)
+        ? _parseDurationMilliseconds(raw)
+        : null;
+    final value = durationMilliseconds == null
+        ? _formatMetricValue(key, raw)
+        : _formatDurationValue(durationMilliseconds);
     if (value.isEmpty) {
       continue;
     }
-    metrics.add(EsportsStatMetric(label: _metricLabel(key), value: value));
+    metrics.add(
+      EsportsStatMetric(
+        label: _metricLabel(key),
+        value: value,
+        key: key,
+        durationMilliseconds: durationMilliseconds,
+      ),
+    );
   }
   return metrics;
+}
+
+bool _isDurationMetric(String key) {
+  final normalized = key.replaceAll('_', '').toLowerCase();
+  return normalized.contains('duration');
+}
+
+int? _parseDurationMilliseconds(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is num) {
+    return value.round();
+  }
+  final text = value.toString().trim();
+  if (text.isEmpty) {
+    return null;
+  }
+  final numeric = double.tryParse(text);
+  if (numeric != null) {
+    return numeric.round();
+  }
+
+  final chinese = RegExp(r'^(\d+)\s*分\s*(\d+)\s*秒$').firstMatch(text);
+  if (chinese != null) {
+    final minutes = int.parse(chinese.group(1)!);
+    final seconds = int.parse(chinese.group(2)!);
+    return (minutes * 60 + seconds) * 1000;
+  }
+
+  final compact = RegExp(
+    r'^(?:(\d+)\s*(?:h|hr|hour)s?\s*)?(\d+)\s*(?:m|min|minute)s?\s*(\d+)\s*(?:s|sec|second)s?$',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (compact != null) {
+    final hours = int.tryParse(compact.group(1) ?? '0') ?? 0;
+    final minutes = int.tryParse(compact.group(2) ?? '0') ?? 0;
+    final seconds = int.tryParse(compact.group(3) ?? '0') ?? 0;
+    return (hours * 3600 + minutes * 60 + seconds) * 1000;
+  }
+  return null;
+}
+
+String _formatDurationValue(int milliseconds) {
+  final totalSeconds = (milliseconds / 1000).round();
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+  return '${minutes}m ${seconds}s';
 }
 
 String _formatMetricValue(String key, Object? value) {

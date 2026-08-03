@@ -4,6 +4,7 @@ import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/esports/data/esports_repository.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_meta.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_stat_summary.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -305,6 +306,21 @@ void main() {
 
     expect(match.statusKey, 'finished');
   });
+
+  test(
+    'normalizes backend Chinese duration display without losing its value',
+    () {
+      final stat = EsportsStatSummary.fromJson(const {
+        'id': 'duration-stat',
+        'stats_keys': ['avgGameDuration'],
+        'stats_display': {'avgGameDuration': '14分20秒'},
+        'stats': <String, Object?>{},
+      });
+
+      expect(stat.metrics.single.value, '14m 20s');
+      expect(stat.metrics.single.durationMilliseconds, 860000);
+    },
+  );
 
   test('loads esports teams sorted by win rate', () async {
     final apiClient = _FakeApiClient();
