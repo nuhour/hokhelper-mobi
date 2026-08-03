@@ -22,20 +22,34 @@ class EsportsLeague {
     required this.id,
     required this.name,
     this.sourceId = '',
+    this.sourceName = '',
     this.startTime = '',
   });
 
   final String id;
   final String name;
   final String sourceId;
+  final String sourceName;
   final String startTime;
+
+  /// 与 HOKX 一致，接口筛选优先使用上游联赛 ID，没有上游 ID 时回退到本地 ID。
+  String get value {
+    final upstreamId = sourceId.trim();
+    return upstreamId.isNotEmpty ? upstreamId : id.trim();
+  }
+
+  String get displayName {
+    final trimmedName = name.trim();
+    return trimmedName.isNotEmpty ? trimmedName : value;
+  }
 
   factory EsportsLeague.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     return EsportsLeague(
       id: (map['id'] ?? '').toString(),
       name: (map['name_edit'] ?? map['name'] ?? '').toString(),
-      sourceId: (map['source_id'] ?? map['cc_league_id'] ?? '').toString(),
+      sourceId: (map['source_id'] ?? '').toString(),
+      sourceName: (map['name'] ?? map['name_edit'] ?? '').toString(),
       startTime: (map['start_time'] ?? '').toString(),
     );
   }

@@ -2,6 +2,7 @@ class EsportsMatchSummary {
   const EsportsMatchSummary({
     required this.id,
     required this.leagueName,
+    this.leagueValue = '',
     required this.stageName,
     required this.teamAName,
     required this.teamALogoUrl,
@@ -23,6 +24,7 @@ class EsportsMatchSummary {
 
   final String id;
   final String leagueName;
+  final String leagueValue;
   final String stageName;
   final String teamAName;
   final String teamALogoUrl;
@@ -100,6 +102,7 @@ class EsportsMatchSummary {
     return EsportsMatchSummary(
       id: _readString(map['id']),
       leagueName: _readString(map['league_name']),
+      leagueValue: _readString(map['league_source_id'] ?? map['league_id']),
       stageName: _readString(map['stage_name']),
       teamAId: _readString(teamA['id']),
       teamAName: _readString(

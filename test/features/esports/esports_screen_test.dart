@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_meta.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
@@ -385,6 +386,137 @@ void main() {
 
     expect(find.text('KPL Spring'), findsNothing);
     expect(find.text('Nova'), findsOneWidget);
+  });
+
+  testWidgets('keeps a newly added league visible when display names differ', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMetaProvider.overrideWith((ref) async {
+            return const EsportsMeta(
+              leagues: [
+                EsportsLeague(
+                  id: '10',
+                  sourceId: '20263022',
+                  name: 'KWC2026',
+                  sourceName: 'KWC at EWC2026',
+                  startTime: '2026-07-09T00:00:00+08:00',
+                ),
+              ],
+              rankTypes: [],
+            );
+          }),
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: '10',
+                leagueName: 'KWC at EWC2026',
+                leagueValue: '20263022',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 4,
+                scoreB: 3,
+                statusKey: 'finished',
+                startTime: '2026-07-09T11:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('KWC at EWC2026'), findsOneWidget);
+    expect(find.text('Wolves'), findsOneWidget);
+  });
+
+  testWidgets('sorts live and upcoming matches by start time ascending', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: 'late-live',
+                leagueName: 'KPL Spring',
+                stageName: 'Live',
+                teamAName: 'Late Live',
+                teamALogoUrl: '',
+                teamBName: 'Team B',
+                teamBLogoUrl: '',
+                scoreA: null,
+                scoreB: null,
+                statusKey: 'live',
+                startTime: '2026-08-03T12:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: 'early-live',
+                leagueName: 'KPL Spring',
+                stageName: 'Live',
+                teamAName: 'Early Live',
+                teamALogoUrl: '',
+                teamBName: 'Team A',
+                teamBLogoUrl: '',
+                scoreA: null,
+                scoreB: null,
+                statusKey: 'live',
+                startTime: '2026-08-03T10:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: 'late-upcoming',
+                leagueName: 'KPL Spring',
+                stageName: 'Upcoming',
+                teamAName: 'Late Upcoming',
+                teamALogoUrl: '',
+                teamBName: 'Team D',
+                teamBLogoUrl: '',
+                scoreA: null,
+                scoreB: null,
+                statusKey: 'upcoming',
+                startTime: '2026-12-02T12:00:00Z',
+              ),
+              EsportsMatchSummary(
+                id: 'early-upcoming',
+                leagueName: 'KPL Spring',
+                stageName: 'Upcoming',
+                teamAName: 'Early Upcoming',
+                teamALogoUrl: '',
+                teamBName: 'Team C',
+                teamBLogoUrl: '',
+                scoreA: null,
+                scoreB: null,
+                statusKey: 'upcoming',
+                startTime: '2026-12-01T12:00:00Z',
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.text('Early Live')).dy,
+      lessThan(tester.getTopLeft(find.text('Late Live')).dy),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Early Upcoming'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      tester.getTopLeft(find.text('Early Upcoming')).dy,
+      lessThan(tester.getTopLeft(find.text('Late Upcoming')).dy),
+    );
   });
 
   testWidgets('filters esports matches by status like the hokx portal', (

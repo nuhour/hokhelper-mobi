@@ -6,6 +6,7 @@ class EsportsStatSummary {
     required this.subtitle,
     required this.imageUrl,
     required this.leagueName,
+    this.leagueValue = '',
     required this.metrics,
     this.rankType = 1,
     this.heroId = '',
@@ -25,6 +26,7 @@ class EsportsStatSummary {
   final String subtitle;
   final String imageUrl;
   final String leagueName;
+  final String leagueValue;
   final List<EsportsStatMetric> metrics;
   final int rankType;
   final String heroId;
@@ -70,6 +72,7 @@ class EsportsStatSummary {
         _readString(team['logo_url']),
       ]),
       leagueName: _readString(map['league_name']),
+      leagueValue: _readString(map['league_source_id'] ?? map['league_id']),
       metrics: _readMetrics(map, stats, display),
       rankType: _readInt(map['rank_type'], fallback: 1),
       heroId: _readString(hero['hero_id'] ?? hero['id']),

@@ -3,6 +3,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/esports/data/esports_repository.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_meta.dart';
 
 class _FakeApiClient extends ApiClient {
   _FakeApiClient()
@@ -220,6 +221,31 @@ void main() {
     expect(matches.single.bestOf, 7);
     expect(matches.single.boText, 'BO7');
     expect(matches.single.winnerSide, 'a');
+  });
+
+  test('uses the upstream league value and keeps both league names', () {
+    final league = EsportsLeague.fromJson(const {
+      'id': 10,
+      'source_id': '20263022',
+      'name': 'KWC at EWC2026',
+      'name_edit': 'KWC2026',
+    });
+    final match = EsportsMatchSummary.fromJson(const {
+      'id': 10,
+      'league_id': 10,
+      'league_source_id': '20263022',
+      'league_name': 'KWC at EWC2026',
+      'stage_name': 'Playoffs',
+      'status_key': 'finished',
+      'start_time': '2026-07-09T11:00:00Z',
+      'team_a': {'name': 'Wolves'},
+      'team_b': {'name': 'AG'},
+    });
+
+    expect(league.value, '20263022');
+    expect(league.displayName, 'KWC2026');
+    expect(league.sourceName, 'KWC at EWC2026');
+    expect(match.leagueValue, '20263022');
   });
 
   test('uses win camp before scores when resolving match winner side', () {

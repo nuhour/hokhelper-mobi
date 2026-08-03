@@ -358,7 +358,12 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
     final leagueRequestValue = _leagueRequestValue(meta, leagueFilter);
     final baseMatches = widget.value.valueOrNull ?? const [];
     final hasLeagueInBase = baseMatches.any(
-      (match) => match.leagueName == leagueFilter,
+      (match) => _isLeagueRowSelected(
+        selected: leagueFilter,
+        rowValue: match.leagueValue,
+        rowName: match.leagueName,
+        meta: meta,
+      ),
     );
     final activeProvider = leagueFilter == 'all' || hasLeagueInBase
         ? null
@@ -381,11 +386,12 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
         final matches = [...baseMatchRows, ..._extraMatches];
         final hasMore =
             !_reachedEnd && baseMatchRows.length >= _matchesPageSize;
-        final leagueOptions = _leagueNames(
+        final leagueOptions = _leagueOptions(
           meta,
           matches.map((match) => match.leagueName),
         );
-        final selectedLeague = leagueOptions.contains(leagueFilter)
+        final selectedLeague =
+            leagueOptions.any((option) => option.value == leagueFilter)
             ? leagueFilter
             : 'all';
         final statusOptions = _matchStatusOptions(matches);
@@ -394,9 +400,12 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
             ? _statusFilter
             : 'all';
         final filteredMatches = matches.where((match) {
-          final matchesLeague =
-              selectedLeague == 'all' ||
-              match.leagueName.trim() == selectedLeague;
+          final matchesLeague = _isLeagueRowSelected(
+            selected: selectedLeague,
+            rowValue: match.leagueValue,
+            rowName: match.leagueName,
+            meta: meta,
+          );
           final matchesStatus =
               selectedStatus == 'all' ||
               _normalizedMatchStatus(match.statusKey) == selectedStatus;
@@ -426,7 +435,7 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
                 width: 180,
                 value: selectedLeague,
                 fallbackLabel: 'Select League',
-                options: _textFilterOptions(leagueOptions),
+                options: leagueOptions,
                 includeAll: false,
                 onChanged: (value) {
                   setState(() {
@@ -604,17 +613,22 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
     final baseStats = freshStats ?? _cachedStats[cacheKey] ?? const [];
     final stats = [...baseStats, ..._extraStats];
     final hasMore = !_reachedEnd && baseStats.length >= _statsPageSize;
-    final leagueNames = _leagueNames(
+    final leagueOptions = _leagueOptions(
       meta,
       stats.map((stat) => stat.leagueName),
     );
-    final selectedLeague = leagueNames.contains(leagueFilter)
+    final selectedLeague =
+        leagueOptions.any((option) => option.value == leagueFilter)
         ? leagueFilter
         : 'all';
     final visibleStats = stats
         .where(
-          (stat) =>
-              selectedLeague == 'all' || stat.leagueName == selectedLeague,
+          (stat) => _isLeagueRowSelected(
+            selected: selectedLeague,
+            rowValue: stat.leagueValue,
+            rowName: stat.leagueName,
+            meta: meta,
+          ),
         )
         .toList(growable: false);
 
@@ -641,7 +655,7 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
                 width: 220,
                 value: selectedLeague,
                 fallbackLabel: 'Select League',
-                options: _textFilterOptions(leagueNames),
+                options: leagueOptions,
                 includeAll: false,
                 onChanged: (league) => setState(() {
                   _leagueFilter = league;
@@ -724,7 +738,12 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
     final leagueRequestValue = _leagueRequestValue(meta, leagueFilter);
     final baseTeams = widget.value.valueOrNull ?? const [];
     final hasLeagueInBase = baseTeams.any(
-      (team) => team.leagueName == leagueFilter,
+      (team) => _isLeagueRowSelected(
+        selected: leagueFilter,
+        rowValue: team.leagueValue,
+        rowName: team.leagueName,
+        meta: meta,
+      ),
     );
     final activeProvider = leagueFilter == 'all' || hasLeagueInBase
         ? null
@@ -745,17 +764,22 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
             message: 'Pull to refresh and try again.',
           );
         }
-        final leagues = _leagueNames(
+        final leagueOptions = _leagueOptions(
           meta,
           teams.map((team) => team.leagueName),
         );
-        final selectedLeague = leagues.contains(leagueFilter)
+        final selectedLeague =
+            leagueOptions.any((option) => option.value == leagueFilter)
             ? leagueFilter
             : 'all';
         final visibleTeams = teams
             .where(
-              (team) =>
-                  selectedLeague == 'all' || team.leagueName == selectedLeague,
+              (team) => _isLeagueRowSelected(
+                selected: selectedLeague,
+                rowValue: team.leagueValue,
+                rowName: team.leagueName,
+                meta: meta,
+              ),
             )
             .toList();
         final cards = [
@@ -765,7 +789,7 @@ class _TeamsTabState extends ConsumerState<_TeamsTab> {
                 width: 220,
                 value: selectedLeague,
                 fallbackLabel: 'Select League',
-                options: _textFilterOptions(leagues),
+                options: leagueOptions,
                 includeAll: false,
                 onChanged: (league) => setState(() {
                   _leagueFilter = league;
@@ -843,7 +867,12 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
     final leagueRequestValue = _leagueRequestValue(meta, leagueFilter);
     final basePlayers = widget.value.valueOrNull ?? const [];
     final hasLeagueInBase = basePlayers.any(
-      (player) => player.leagueName == leagueFilter,
+      (player) => _isLeagueRowSelected(
+        selected: leagueFilter,
+        rowValue: player.leagueValue,
+        rowName: player.leagueName,
+        meta: meta,
+      ),
     );
     final activeProvider = leagueFilter == 'all' || hasLeagueInBase
         ? null
@@ -865,7 +894,7 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
           );
         }
         final teamOptions = _playerTeamOptions(players);
-        final leagueOptions = _leagueNames(
+        final leagueOptions = _leagueOptions(
           meta,
           players.map((player) => player.leagueName),
         );
@@ -873,7 +902,8 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
         final selectedTeam = teamOptions.contains(_teamFilter)
             ? _teamFilter
             : 'all';
-        final selectedLeague = leagueOptions.contains(leagueFilter)
+        final selectedLeague =
+            leagueOptions.any((option) => option.value == leagueFilter)
             ? leagueFilter
             : 'all';
         final selectedRole = roleOptions.contains(_roleFilter)
@@ -882,9 +912,12 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
         final filteredPlayers = players.where((player) {
           final matchesTeam =
               selectedTeam == 'all' || player.teamName.trim() == selectedTeam;
-          final matchesLeague =
-              selectedLeague == 'all' ||
-              player.leagueName.trim() == selectedLeague;
+          final matchesLeague = _isLeagueRowSelected(
+            selected: selectedLeague,
+            rowValue: player.leagueValue,
+            rowName: player.leagueName,
+            meta: meta,
+          );
           final matchesRole =
               selectedRole == 'all' || player.roleLabel == selectedRole;
           return matchesLeague && matchesTeam && matchesRole;
@@ -897,7 +930,7 @@ class _PlayersTabState extends ConsumerState<_PlayersTab> {
                 width: 180,
                 value: selectedLeague,
                 fallbackLabel: 'Select League',
-                options: _textFilterOptions(leagueOptions),
+                options: leagueOptions,
                 includeAll: false,
                 onChanged: (value) {
                   setState(() {
@@ -3553,27 +3586,48 @@ EsportsPlayerSummary? _findPlayer(
   return null;
 }
 
-List<String> _leagueNames(EsportsMeta? meta, Iterable<String> fallback) {
+List<_FilterOption> _leagueOptions(
+  EsportsMeta? meta,
+  Iterable<String> fallback,
+) {
   final leagues = [...?meta?.leagues]
     ..sort((a, b) {
       final aTime = DateTime.tryParse(a.startTime)?.millisecondsSinceEpoch ?? 0;
       final bTime = DateTime.tryParse(b.startTime)?.millisecondsSinceEpoch ?? 0;
-      return bTime.compareTo(aTime);
+      final timeOrder = bTime.compareTo(aTime);
+      if (timeOrder != 0) {
+        return timeOrder;
+      }
+      return _leagueIdSortValue(b.id).compareTo(_leagueIdSortValue(a.id));
     });
-  final names = <String>[];
+  final options = <_FilterOption>[];
+  final seenValues = <String>{};
+  final knownNames = <String>{};
   for (final league in leagues) {
-    final name = league.name.trim();
-    if (name.isNotEmpty && !names.contains(name)) {
-      names.add(name);
+    final value = league.value;
+    final label = league.displayName;
+    if (label.isNotEmpty) {
+      knownNames.add(label);
+    }
+    final sourceName = league.sourceName.trim();
+    if (sourceName.isNotEmpty) {
+      knownNames.add(sourceName);
+    }
+    if (value.isNotEmpty && seenValues.add(value)) {
+      options.add(_FilterOption(value: value, label: label));
     }
   }
   for (final rawName in fallback) {
     final name = rawName.trim();
-    if (name.isNotEmpty && !names.contains(name)) {
-      names.add(name);
+    if (name.isNotEmpty && !knownNames.contains(name) && seenValues.add(name)) {
+      options.add(_FilterOption(value: name, label: name));
     }
   }
-  return names;
+  return options;
+}
+
+int _leagueIdSortValue(String value) {
+  return int.tryParse(value.trim()) ?? 0;
 }
 
 String _effectiveLeagueFilter(
@@ -3588,28 +3642,70 @@ String _effectiveLeagueFilter(
     ..sort((a, b) {
       final aTime = DateTime.tryParse(a.startTime)?.millisecondsSinceEpoch ?? 0;
       final bTime = DateTime.tryParse(b.startTime)?.millisecondsSinceEpoch ?? 0;
-      return bTime.compareTo(aTime);
+      final timeOrder = bTime.compareTo(aTime);
+      if (timeOrder != 0) {
+        return timeOrder;
+      }
+      return _leagueIdSortValue(b.id).compareTo(_leagueIdSortValue(a.id));
     });
   for (final league in leagues) {
-    if (league.name.trim().isNotEmpty) {
-      return league.name.trim();
+    if (league.value.isNotEmpty) {
+      return league.value;
     }
   }
   return selected;
 }
 
-String _leagueRequestValue(EsportsMeta? meta, String leagueName) {
+String _leagueRequestValue(EsportsMeta? meta, String leagueValue) {
+  final requested = leagueValue.trim();
   for (final league in meta?.leagues ?? const <EsportsLeague>[]) {
-    if (league.name.trim() == leagueName.trim()) {
-      if (league.sourceId.trim().isNotEmpty) {
-        return league.sourceId.trim();
-      }
-      if (league.id.trim().isNotEmpty) {
-        return league.id.trim();
-      }
+    final matchesRequested = <String>{
+      league.value,
+      league.id.trim(),
+      league.sourceId.trim(),
+      league.displayName,
+      league.sourceName.trim(),
+    }.contains(requested);
+    if (matchesRequested) {
+      return league.value;
     }
   }
-  return leagueName;
+  return requested;
+}
+
+bool _isLeagueRowSelected({
+  required String selected,
+  required String rowValue,
+  required String rowName,
+  required EsportsMeta? meta,
+}) {
+  final selectedValue = selected.trim();
+  if (selectedValue.isEmpty || selectedValue == 'all') {
+    return true;
+  }
+  if (rowValue.trim() == selectedValue) {
+    return true;
+  }
+  EsportsLeague? selectedLeague;
+  for (final league in meta?.leagues ?? const <EsportsLeague>[]) {
+    if (<String>{
+      league.value,
+      league.id.trim(),
+      league.sourceId.trim(),
+      league.displayName,
+      league.sourceName.trim(),
+    }.contains(selectedValue)) {
+      selectedLeague = league;
+      break;
+    }
+  }
+  if (selectedLeague == null) {
+    return rowName.trim() == selectedValue;
+  }
+  final rowLabel = rowName.trim();
+  return rowLabel == selectedLeague.displayName ||
+      rowLabel == selectedLeague.sourceName.trim() ||
+      rowLabel == selectedValue;
 }
 
 List<_FilterOption> _matchStatusOptions(List<EsportsMatchSummary> matches) {
@@ -3647,7 +3743,27 @@ Map<String, List<EsportsMatchSummary>> _groupMatchesByStatus(
     final status = _normalizedMatchStatus(match.statusKey);
     grouped.putIfAbsent(status, () => []).add(match);
   }
+  for (final status in const ['live', 'upcoming']) {
+    final rows = grouped[status];
+    if (rows == null || rows.length < 2) {
+      continue;
+    }
+    rows.sort((a, b) {
+      final timeOrder = _matchStartSortValue(
+        a,
+      ).compareTo(_matchStartSortValue(b));
+      if (timeOrder != 0) {
+        return timeOrder;
+      }
+      return a.id.compareTo(b.id);
+    });
+  }
   return grouped;
+}
+
+int _matchStartSortValue(EsportsMatchSummary match) {
+  return DateTime.tryParse(match.startTime.trim())?.millisecondsSinceEpoch ??
+      0x7fffffffffffffff;
 }
 
 String _normalizedMatchStatus(String value) {

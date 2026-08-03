@@ -7,6 +7,7 @@ class EsportsPlayerSummary {
     required this.teamName,
     required this.teamLogoUrl,
     this.leagueName = '',
+    this.leagueValue = '',
     this.teamId = '',
     required this.role,
     this.roleKey = '',
@@ -23,6 +24,7 @@ class EsportsPlayerSummary {
   final String teamName;
   final String teamLogoUrl;
   final String leagueName;
+  final String leagueValue;
   final String teamId;
   final String role;
   final String roleKey;
@@ -53,6 +55,7 @@ class EsportsPlayerSummary {
       teamName: _readString(map['team_name']),
       teamLogoUrl: _readString(map['team_logo_url']),
       leagueName: _readString(map['league_name']),
+      leagueValue: _readString(map['league_source_id'] ?? map['league_id']),
       teamId: _readString(map['team_id']),
       role: _readString(map['role'] ?? map['role_key']),
       roleKey: _readString(map['role_key']),

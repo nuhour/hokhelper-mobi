@@ -5,6 +5,7 @@ class EsportsTeamSummary {
     required this.shortName,
     required this.logoUrl,
     required this.leagueName,
+    this.leagueValue = '',
     required this.club,
     required this.wins,
     required this.losses,
@@ -16,6 +17,7 @@ class EsportsTeamSummary {
   final String shortName;
   final String logoUrl;
   final String leagueName;
+  final String leagueValue;
   final String club;
   final int wins;
   final int losses;
@@ -39,6 +41,7 @@ class EsportsTeamSummary {
       shortName: _readString(map['short_name']),
       logoUrl: _readString(map['logo_url']),
       leagueName: _readString(map['league_name']),
+      leagueValue: _readString(map['league_source_id'] ?? map['league_id']),
       club: _readString(map['club']),
       wins: _readInt(map['wins'] ?? rankStat['victoryBattleCount']),
       losses: _readInt(map['losses'] ?? rankStat['defeatedBattleCount']),
