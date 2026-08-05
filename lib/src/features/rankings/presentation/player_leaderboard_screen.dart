@@ -436,6 +436,7 @@ class _PlayerIdentityCell extends StatelessWidget {
                     maxLines: 1,
                     softWrap: false,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: _playerNameFontSize(player.playerName),
                       color: colors?.onSurfaceStrong,
                       fontWeight: FontWeight.w800,
                     ),
@@ -535,36 +536,24 @@ class _BestHeroesCell extends StatelessWidget {
                 children: [
                   AppImage(
                     url: hero.avatarUrl,
-                    width: 30,
-                    height: 30,
-                    borderRadius: 15,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
                     semanticLabel: hero.heroName,
                   ),
                   if (hero.topFight case final power? when power > 0) ...[
                     const SizedBox(height: 2),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.bolt_rounded,
-                          size: 10,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        Text(
-                          _formatHeroPower(power),
-                          maxLines: 1,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                fontSize: 9,
-                                height: 1,
-                                fontWeight: FontWeight.w800,
-                                color: Theme.of(context).colorScheme.primary,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                        ),
-                      ],
+                    Text(
+                      _formatHeroPower(power),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 8,
+                        height: 1,
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ],
@@ -576,11 +565,16 @@ class _BestHeroesCell extends StatelessWidget {
   }
 }
 
+double _playerNameFontSize(String name) {
+  final length = name.runes.length;
+  if (length <= 10) return 14;
+  if (length <= 14) return 13;
+  if (length <= 18) return 12;
+  if (length <= 24) return 11;
+  return 10;
+}
+
 String _formatHeroPower(double value) {
-  if (value >= 1000) {
-    final compact = value / 1000;
-    return '${compact.toStringAsFixed(compact >= 10 ? 0 : 1)}k';
-  }
   return value == value.roundToDouble()
       ? value.toStringAsFixed(0)
       : value.toStringAsFixed(1);

@@ -39,8 +39,23 @@ void main() {
                     ),
                   ],
                 ),
+                PlayerRankingEntry(
+                  playerId: 'p-101',
+                  playerName: 'VeryLongPlayerNicknameWithoutEllipsis',
+                  avatarUrl: '',
+                  peakScore: 2010,
+                  rankStars: 80,
+                  winRate: 0.5,
+                  avgKda: 4,
+                  playCount: 100,
+                  grade: 12,
+                  mvpCount: 10,
+                  region: 62,
+                  playerTypeLabel: '',
+                  bestHeroes: [],
+                ),
               ],
-              total: 1,
+              total: 2,
               regionId: 0,
               rankType: 'rank',
               regionOptions: [44, 62],
@@ -56,13 +71,18 @@ void main() {
     expect(find.text('Ranked'), findsAtLeastNWidgets(1));
     expect(find.text('Peak'), findsOneWidget);
     expect(find.text('Top Mid'), findsOneWidget);
+    final longName = tester.widget<Text>(
+      find.text('VeryLongPlayerNicknameWithoutEllipsis'),
+    );
+    expect(longName.style?.fontSize, lessThan(14));
     expect(find.text('112'), findsOneWidget);
     expect(find.text('68.40% win'), findsOneWidget);
     expect(find.text('Pro'), findsOneWidget);
     expect(find.text('Favorite Heroes'), findsOneWidget);
     expect(find.text('KDA'), findsNothing);
-    expect(find.byTooltip('Diaochan · Power · 1.2k'), findsOneWidget);
-    expect(find.text('1.2k'), findsOneWidget);
+    expect(find.byTooltip('Diaochan · Power · 1200'), findsOneWidget);
+    expect(find.text('1200'), findsOneWidget);
+    expect(find.byIcon(Icons.bolt_rounded), findsNothing);
     expect(find.text('99.1'), findsNothing);
 
     await tester.tap(find.text('Peak'));
