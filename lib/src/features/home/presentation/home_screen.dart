@@ -887,12 +887,12 @@ class _HomeMainHeroContent extends StatelessWidget {
       buttons: [
         _HomeHeroButton(
           label: l10n.homeCoreStats,
-          icon: Icons.bar_chart_rounded,
+          icon: const Icon(Icons.bar_chart_rounded, size: 18),
           onTap: () => context.go('/stats-home'),
         ),
         _HomeHeroButton(
           label: l10n.homeTierList,
-          icon: Icons.leaderboard_rounded,
+          icon: const _HomeTierBarIcon(),
           onTap: () => context.go('/stats-home?tab=tier'),
         ),
       ],
@@ -912,7 +912,7 @@ class _HomeWorldHeroContent extends StatelessWidget {
       buttons: [
         _HomeHeroButton(
           label: l10n.homeEnterWorld,
-          icon: Icons.public_rounded,
+          icon: const Icon(Icons.public_rounded, size: 18),
           onTap: () => context.go('/hok-world'),
         ),
       ],
@@ -975,14 +975,14 @@ class _HomeHeroButton extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final Widget icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return FilledButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 18),
+      icon: icon,
       label: Text(label),
       style: FilledButton.styleFrom(
         foregroundColor: Colors.white,
@@ -990,6 +990,41 @@ class _HomeHeroButton extends StatelessWidget {
         minimumSize: const Size(0, 42),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+}
+
+class _HomeTierBarIcon extends StatelessWidget {
+  const _HomeTierBarIcon();
+
+  static const _colors = [
+    Color(0xFFEF4444),
+    Color(0xFFF97316),
+    Color(0xFFEAB308),
+    Color(0xFF22C55E),
+    Color(0xFF94A3B8),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < _colors.length; index++)
+            Container(
+              width: 18 - index * 2.5,
+              height: 2.5,
+              decoration: BoxDecoration(
+                color: _colors[index],
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+        ],
       ),
     );
   }
