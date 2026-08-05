@@ -34,6 +34,7 @@ void main() {
                       heroName: 'Diaochan',
                       avatarUrl: 'https://example.test/diaochan.png',
                       playCount: 72,
+                      topFight: 1200,
                       score: 99.1,
                     ),
                   ],
@@ -60,8 +61,9 @@ void main() {
     expect(find.text('Pro'), findsOneWidget);
     expect(find.text('Favorite Heroes'), findsOneWidget);
     expect(find.text('KDA'), findsNothing);
-    expect(find.byTooltip('Diaochan · 99.1'), findsOneWidget);
-    expect(find.text('99.1'), findsOneWidget);
+    expect(find.byTooltip('Diaochan · Power · 1.2k'), findsOneWidget);
+    expect(find.text('1.2k'), findsOneWidget);
+    expect(find.text('99.1'), findsNothing);
 
     await tester.tap(find.text('Peak'));
     await tester.pumpAndSettle();

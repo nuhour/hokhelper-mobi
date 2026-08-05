@@ -266,6 +266,7 @@ class _LeaderboardTable extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     return AppStatsTable(
       fixedHeader: Text(l10n.translate('statsPlayer')),
+      // 首列固定，横向滚动时玩家身份列保持可见。
       fixedColumnWidth: 164,
       rowHeight: 66,
       fixedCells: [
@@ -424,13 +425,21 @@ class _PlayerIdentityCell extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                player.playerName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: colors?.onSurfaceStrong,
-                  fontWeight: FontWeight.w800,
+              SizedBox(
+                width: double.infinity,
+                height: 18,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    player.playerName,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colors?.onSurfaceStrong,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
               Row(
@@ -516,9 +525,11 @@ class _BestHeroesCell extends StatelessWidget {
         for (final hero in heroes.take(3))
           Expanded(
             child: Tooltip(
-              message: hero.score > 0
-                  ? '${hero.heroName} · ${_formatHeroPower(hero.score)}'
-                  : hero.heroName,
+              message: [
+                if (hero.heroName.isNotEmpty) hero.heroName,
+                if (hero.topFight case final power? when power > 0)
+                  'Power · ${_formatHeroPower(power)}',
+              ].join(' · '),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -529,27 +540,33 @@ class _BestHeroesCell extends StatelessWidget {
                     borderRadius: 15,
                     semanticLabel: hero.heroName,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.bolt_rounded,
-                        size: 10,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      Text(
-                        hero.score > 0 ? _formatHeroPower(hero.score) : '-',
-                        maxLines: 1,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontSize: 9,
-                          height: 1,
-                          fontWeight: FontWeight.w800,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                  if (hero.topFight case final power? when power > 0) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.bolt_rounded,
+                          size: 10,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
-                      ),
-                    ],
-                  ),
+                        Text(
+                          _formatHeroPower(power),
+                          maxLines: 1,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                fontSize: 9,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

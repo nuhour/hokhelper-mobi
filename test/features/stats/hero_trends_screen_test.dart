@@ -140,7 +140,7 @@ void main() {
                     'avatar_url': 'https://example.test/player.png',
                   },
                   'best_heroes': [
-                    {'hero_id': 522},
+                    {'hero_id': 522, 'top_fight': 1234},
                     {
                       'hero_id': 150,
                       'avatar_url': 'https://example.test/han-xin.png',
@@ -166,6 +166,7 @@ void main() {
         .toList(growable: false);
     expect(mainHeroImages, contains('https://img.nourhr.cc/heroes/522.png'));
     expect(mainHeroImages, contains('https://example.test/han-xin.png'));
+    expect(find.text('1234'), findsOneWidget);
   });
 
   testWidgets('marks only the two largest seven-day rises and falls', (

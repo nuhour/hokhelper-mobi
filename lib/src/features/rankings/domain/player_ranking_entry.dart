@@ -4,6 +4,7 @@ class PlayerBestHero {
     this.heroName = '',
     this.avatarUrl = '',
     required this.playCount,
+    this.topFight,
     required this.score,
   });
 
@@ -11,6 +12,8 @@ class PlayerBestHero {
   final String heroName;
   final String avatarUrl;
   final int playCount;
+  final double? topFight;
+  // 保留后端评分字段供兼容旧数据，但列表展示不再把它当作战力。
   final double score;
 
   factory PlayerBestHero.fromJson(Object? json) {
@@ -28,6 +31,14 @@ class PlayerBestHero {
             : '',
       ),
       playCount: _readInt(map['play_cnt'] ?? map['playCount']),
+      topFight: _readOptionalDouble(map, const [
+        'top_fight',
+        'topFight',
+        'power',
+        'power_value',
+        'powerValue',
+        'fight_power',
+      ]),
       score: _readDouble(map['score']),
     );
   }
@@ -113,4 +124,12 @@ int _readInt(Object? value) {
 String _readString(Object? value, {String fallback = ''}) {
   final text = value?.toString() ?? '';
   return text.isEmpty ? fallback : text;
+}
+
+double? _readOptionalDouble(Map<dynamic, dynamic> map, List<String> keys) {
+  for (final key in keys) {
+    final value = _readDouble(map[key]);
+    if (value.isFinite && value > 0) return value;
+  }
+  return null;
 }

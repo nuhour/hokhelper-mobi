@@ -777,19 +777,12 @@ class _TrendValueCell extends StatelessWidget {
   Widget build(BuildContext context) {
     if (column.type == 'hero_list') {
       final rows = value is List ? List<Object?>.from(value as List) : const [];
+      if (rows.isEmpty) return const SizedBox.shrink();
       return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           for (final item in rows.take(3))
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 1),
-              child: AppImage(
-                url: _trendHeroListImageUrl(item),
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-              ),
-            ),
+            Expanded(child: _TrendMainHeroCell(item: item)),
         ],
       );
     }
@@ -804,6 +797,74 @@ class _TrendValueCell extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 玩家统计的 Main Heroes：头像下显示真实战力（top_fight），不再把评分当作战力。
+class _TrendMainHeroCell extends StatelessWidget {
+  const _TrendMainHeroCell({required this.item});
+
+  final Object? item;
+
+  @override
+  Widget build(BuildContext context) {
+    final hero = _map(item);
+    final nestedHero = _map(hero['hero']);
+    final power = _heroPowerValue(hero) ?? _heroPowerValue(nestedHero);
+    final name = (hero['name'] ?? nestedHero['name'])?.toString().trim() ?? '';
+    return Tooltip(
+      message: [
+        if (name.isNotEmpty) name,
+        if (power != null) 'Power ${_formatPowerValue(power)}',
+      ].join(' · '),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppImage(
+            url: _trendHeroListImageUrl(item),
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            semanticLabel: name.isEmpty ? null : name,
+          ),
+          if (power != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              _formatPowerValue(power),
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: 8,
+                height: 1,
+                fontWeight: FontWeight.w800,
+                color: Theme.of(context).colorScheme.primary,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+double? _heroPowerValue(Map<String, dynamic> hero) {
+  for (final key in const [
+    'top_fight',
+    'topFight',
+    'power',
+    'power_value',
+    'powerValue',
+    'fight_power',
+  ]) {
+    final value = _double(hero[key]);
+    if (value.isFinite && value > 0) return value;
+  }
+  return null;
+}
+
+String _formatPowerValue(double value) {
+  if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+  return value.toStringAsFixed(1);
 }
 
 String _trendHeroListImageUrl(Object? value) {

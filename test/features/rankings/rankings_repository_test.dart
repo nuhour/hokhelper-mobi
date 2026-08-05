@@ -54,7 +54,13 @@ class _FakeApiClient extends ApiClient {
               'player_type_label': '职业',
               'rank_type': 'peak',
               'best_heroes': [
-                {'id': 2618, 'hero_id': 199, 'play_cnt': 80, 'score': 99.5},
+                {
+                  'id': 2618,
+                  'hero_id': 199,
+                  'play_cnt': 80,
+                  'top_fight': 1860,
+                  'score': 99.5,
+                },
               ],
             },
           ],
@@ -184,6 +190,7 @@ void main() {
       'https://hokhelper.com/static/game/hero/2618.png',
     );
     expect(entries.single.bestHeroes.single.playCount, 80);
+    expect(entries.single.bestHeroes.single.topFight, 1860);
     expect(entries.single.bestHeroes.single.score, 99.5);
   });
 
