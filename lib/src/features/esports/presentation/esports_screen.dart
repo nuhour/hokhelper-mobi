@@ -11,6 +11,7 @@ import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/app_list_footer.dart';
+import '../../../core/widgets/app_responsive.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../data/esports_repository.dart';
 import '../domain/esports_detail.dart';
@@ -1088,45 +1089,48 @@ class _FilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.hokTheme.outlineSoft),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              dropdownColor: context.hokTheme.surfaceSlate,
-              iconEnabledColor: AppTheme.gold,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: context.hokTheme.onSurfaceStrong,
-                fontWeight: FontWeight.w800,
-              ),
-              items: [
-                if (includeAll || value == 'all')
-                  DropdownMenuItem(value: 'all', child: Text(fallbackLabel)),
-                ...options.map(
-                  (option) => DropdownMenuItem(
-                    value: option.value,
-                    child: Text(
-                      option.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width),
+      child: SizedBox(
+        width: double.infinity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.hokTheme.outlineSoft),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                dropdownColor: context.hokTheme.surfaceSlate,
+                iconEnabledColor: AppTheme.gold,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: context.hokTheme.onSurfaceStrong,
+                  fontWeight: FontWeight.w800,
+                ),
+                items: [
+                  if (includeAll || value == 'all')
+                    DropdownMenuItem(value: 'all', child: Text(fallbackLabel)),
+                  ...options.map(
+                    (option) => DropdownMenuItem(
+                      value: option.value,
+                      child: Text(
+                        option.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                ),
-              ],
-              onChanged: (nextValue) {
-                if (nextValue != null) {
-                  onChanged(nextValue);
-                }
-              },
+                ],
+                onChanged: (nextValue) {
+                  if (nextValue != null) {
+                    onChanged(nextValue);
+                  }
+                },
+              ),
             ),
           ),
         ),
@@ -1148,79 +1152,82 @@ class _DateFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: 48,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.hokTheme.outlineSoft),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () async {
-                  final initialDate =
-                      DateTime.tryParse(value) ?? DateTime.now();
-                  final selected = await showDatePicker(
-                    context: context,
-                    initialDate: initialDate,
-                    firstDate: DateTime(2023),
-                    lastDate: DateTime.now().add(const Duration(days: 730)),
-                  );
-                  if (selected == null) {
-                    return;
-                  }
-                  onChanged(
-                    '${selected.year.toString().padLeft(4, '0')}-'
-                    '${selected.month.toString().padLeft(2, '0')}-'
-                    '${selected.day.toString().padLeft(2, '0')}',
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 11),
-                  child: Row(
-                    children: [
-                      Icon(
-                        value.isEmpty
-                            ? Icons.calendar_month_outlined
-                            : Icons.event_available,
-                        color: value.isEmpty
-                            ? context.hokTheme.onSurfaceMuted
-                            : AppTheme.gold,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Text(
-                          value.isEmpty ? 'Match Date' : value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: value.isEmpty
-                                    ? context.hokTheme.onSurfaceMuted
-                                    : context.hokTheme.onSurfaceStrong,
-                                fontWeight: FontWeight.w800,
-                              ),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width, minHeight: 48),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.hokTheme.outlineSoft),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () async {
+                    final initialDate =
+                        DateTime.tryParse(value) ?? DateTime.now();
+                    final selected = await showDatePicker(
+                      context: context,
+                      initialDate: initialDate,
+                      firstDate: DateTime(2023),
+                      lastDate: DateTime.now().add(const Duration(days: 730)),
+                    );
+                    if (selected == null) {
+                      return;
+                    }
+                    onChanged(
+                      '${selected.year.toString().padLeft(4, '0')}-'
+                      '${selected.month.toString().padLeft(2, '0')}-'
+                      '${selected.day.toString().padLeft(2, '0')}',
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 11),
+                    child: Row(
+                      children: [
+                        Icon(
+                          value.isEmpty
+                              ? Icons.calendar_month_outlined
+                              : Icons.event_available,
+                          color: value.isEmpty
+                              ? context.hokTheme.onSurfaceMuted
+                              : AppTheme.gold,
+                          size: 18,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            value.isEmpty ? 'Match Date' : value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: value.isEmpty
+                                      ? context.hokTheme.onSurfaceMuted
+                                      : context.hokTheme.onSurfaceStrong,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (value.isNotEmpty)
-              IconButton(
-                tooltip: 'Clear date',
-                onPressed: () => onChanged(''),
-                icon: const Icon(Icons.close, size: 17),
-                color: context.hokTheme.onSurfaceMuted,
-              ),
-          ],
+              if (value.isNotEmpty)
+                IconButton(
+                  tooltip: 'Clear date',
+                  onPressed: () => onChanged(''),
+                  icon: const Icon(Icons.close, size: 17),
+                  color: context.hokTheme.onSurfaceMuted,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -2619,7 +2626,11 @@ class _EsportsDetailFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.sizeOf(context).height * 0.88;
+    final viewportHeight = MediaQuery.sizeOf(context).height;
+    final height = math.min(
+      viewportHeight * 0.88,
+      math.max(0.0, viewportHeight - 48),
+    );
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
       backgroundColor: context.hokTheme.surfaceSlate,
@@ -2629,7 +2640,7 @@ class _EsportsDetailFrame extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: SizedBox(
-        width: 560,
+        width: AppResponsive.dialogWidth(context),
         height: height,
         child: Column(
           children: [
@@ -3467,33 +3478,40 @@ class _TeamIdentity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = AppResponsive.isCompact(context);
+    final avatarSize = compact ? 28.0 : 38.0;
+    final gap = compact ? 4.0 : 8.0;
     final children = [
       AppImage(
         url: logoUrl,
-        width: 38,
-        height: 38,
-        borderRadius: 10,
+        width: avatarSize,
+        height: avatarSize,
+        borderRadius: compact ? 8 : 10,
         semanticLabel: name,
       ),
-      const SizedBox(width: 8),
+      SizedBox(width: gap),
       Flexible(
         child: Text(
           name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: alignEnd ? TextAlign.end : TextAlign.start,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: highlightColor ?? context.hokTheme.onSurfaceStrong,
-            fontWeight: FontWeight.w800,
-          ),
+          style:
+              (compact
+                      ? Theme.of(context).textTheme.labelSmall
+                      : Theme.of(context).textTheme.labelLarge)
+                  ?.copyWith(
+                    color: highlightColor ?? context.hokTheme.onSurfaceStrong,
+                    fontWeight: FontWeight.w800,
+                  ),
         ),
       ),
       if (showChampionIcon) ...[
-        const SizedBox(width: 4),
+        SizedBox(width: compact ? 3 : 4),
         const Icon(
           Icons.emoji_events,
           color: AppTheme.gold,
-          size: 16,
+          size: 14,
           semanticLabel: 'Champion winner',
         ),
       ],

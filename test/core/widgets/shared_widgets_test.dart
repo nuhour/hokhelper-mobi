@@ -6,6 +6,7 @@ import 'package:hok_helper_mobile/src/core/widgets/app_empty_state.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_error_state.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_section_header.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_stats_table.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(home: Scaffold(body: child));
@@ -189,6 +190,37 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(AppImage), findsOneWidget);
+  });
+
+  testWidgets('stats table stays overflow-free on a narrow phone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _wrap(
+        AppStatsTable(
+          fixedHeader: const Text('Hero'),
+          fixedCells: [
+            for (var index = 0; index < 6; index++) Text('Hero $index'),
+          ],
+          columns: [
+            AppStatsTableColumn(
+              label: 'Win Rate',
+              cells: [
+                for (var index = 0; index < 6; index++) Text('${50 + index}%'),
+              ],
+              width: 92,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('AppImage derives width from height inside horizontal lists', (

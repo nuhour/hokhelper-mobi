@@ -43,12 +43,17 @@ class StandalonePageShell extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back_ios_new_rounded),
                   onPressed: () => _goBack(context),
                 ),
-                title: title == null ? null : Text(title!),
+                title: title == null
+                    ? null
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(title!, maxLines: 1),
+                      ),
                 centerTitle: true,
                 backgroundColor: context.hokTheme.backgroundDeep,
                 surfaceTintColor: Colors.transparent,
               ),
-        body: child,
+        body: SafeArea(top: false, child: child),
       ),
     );
   }

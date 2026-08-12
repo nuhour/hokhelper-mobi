@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_error_state.dart';
 import '../i18n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import 'app_responsive.dart';
 
 class AppAsyncView<T> extends StatelessWidget {
   const AppAsyncView({
@@ -67,7 +68,7 @@ class _AppAsyncLoadingSurface extends StatelessWidget {
       builder: (context, constraints) {
         final minHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
-            : 0.0;
+            : AppResponsive.height(context) * 0.72;
         return ColoredBox(
           key: const ValueKey('app-async-loading-surface'),
           color: context.hokTheme.backgroundDeep,

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -101,6 +103,10 @@ class _AppStatsTableState extends State<AppStatsTable> {
     final hasGroupedHeader = widget.columns.any(
       (column) => column.groupLabel.isNotEmpty,
     );
+    final fixedColumnWidth = math.min(
+      widget.fixedColumnWidth,
+      math.max(132.0, MediaQuery.sizeOf(context).width * 0.42),
+    );
     final headerHeight = hasGroupedHeader ? 64.0 : 44.0;
     final totalScrollableWidth = widget.columns.fold<double>(
       0,
@@ -127,7 +133,7 @@ class _AppStatsTableState extends State<AppStatsTable> {
                 child: Row(
                   children: [
                     _FixedCell(
-                      width: widget.fixedColumnWidth,
+                      width: fixedColumnWidth,
                       borderColor: outline,
                       child: hasGroupedHeader
                           ? Column(
@@ -216,7 +222,7 @@ class _AppStatsTableState extends State<AppStatsTable> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(
-                            width: widget.fixedColumnWidth,
+                            width: fixedColumnWidth,
                             child: Column(
                               children: [
                                 for (

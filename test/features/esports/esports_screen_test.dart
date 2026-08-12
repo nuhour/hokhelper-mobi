@@ -4,10 +4,64 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_meta.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_player_summary.dart';
+import 'package:hok_helper_mobile/src/features/esports/domain/esports_stat_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_team_summary.dart';
 import 'package:hok_helper_mobile/src/features/esports/presentation/esports_screen.dart';
 
 void main() {
+  testWidgets('keeps the matches filters inside a compact phone viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          esportsMatchesProvider.overrideWith((ref) async {
+            return const [
+              EsportsMatchSummary(
+                id: 'compact-match',
+                leagueName: 'KPL Spring',
+                stageName: 'Playoffs',
+                teamAName: 'Wolves',
+                teamALogoUrl: '',
+                teamBName: 'AG',
+                teamBLogoUrl: '',
+                scoreA: 1,
+                scoreB: 0,
+                statusKey: 'finished',
+                startTime: '2026-06-28T11:00:00Z',
+              ),
+            ];
+          }),
+          esportsMetaProvider.overrideWith((ref) async {
+            return const EsportsMeta(
+              leagues: [EsportsLeague(id: 'kpl', name: 'KPL Spring')],
+              rankTypes: [],
+            );
+          }),
+          esportsTeamsProvider.overrideWith(
+            (ref) async => const <EsportsTeamSummary>[],
+          ),
+          esportsPlayersProvider.overrideWith(
+            (ref) async => const <EsportsPlayerSummary>[],
+          ),
+          esportsStatsProvider.overrideWith(
+            (ref) async => const <EsportsStatSummary>[],
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('KPL Spring'), findsAtLeastNWidgets(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('renders matches, teams, and players tabs', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -576,11 +630,16 @@ void main() {
   testWidgets('filters esports matches by date like the hokx portal', (
     tester,
   ) async {
+    final today = DateTime.now();
+    final todayStart =
+        '${today.year.toString().padLeft(4, '0')}-'
+        '${today.month.toString().padLeft(2, '0')}-'
+        '${today.day.toString().padLeft(2, '0')}T12:00:00Z';
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           esportsMatchesProvider.overrideWith((ref) async {
-            return const [
+            return [
               EsportsMatchSummary(
                 id: '10',
                 leagueName: 'KPL Spring',
@@ -605,9 +664,12 @@ void main() {
                 scoreA: null,
                 scoreB: null,
                 statusKey: 'upcoming',
-                startTime: '2026-07-12T12:00:00Z',
+                startTime: todayStart,
               ),
             ];
+          }),
+          esportsMetaProvider.overrideWith((ref) async {
+            return const EsportsMeta(leagues: [], rankTypes: []);
           }),
         ],
         child: const MaterialApp(home: Scaffold(body: EsportsScreen())),
@@ -620,7 +682,7 @@ void main() {
 
     await tester.tap(find.text('Match Date'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('12'));
+    await tester.tap(find.text(today.day.toString()).last);
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
