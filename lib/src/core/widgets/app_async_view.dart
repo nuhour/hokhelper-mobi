@@ -220,6 +220,7 @@ class _LoadingListCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: context.hokTheme.outlineSoft),
     ),
     child: const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,6 +244,7 @@ class _LoadingMetricCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: context.hokTheme.outlineSoft),
     ),
     child: const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,6 +266,7 @@ class _LoadingGalleryCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: context.hokTheme.surfaceSlate,
       borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: context.hokTheme.outlineSoft),
     ),
     child: Padding(
       padding: EdgeInsets.all(10),

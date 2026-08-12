@@ -789,7 +789,7 @@ class _SlotCard extends StatelessWidget {
             border: Border.all(
               color: scheme == null
                   ? context.hokTheme.onSurfaceMuted.withValues(alpha: 0.28)
-                  : Colors.white.withValues(alpha: 0.12),
+                  : context.hokTheme.outlineSoft,
               style: BorderStyle.solid,
             ),
           ),
@@ -919,7 +919,7 @@ class _BuildCollectionTabs extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: context.hokTheme.outlineSoft),
       ),
       child: Row(
         children: [
@@ -1465,7 +1465,7 @@ class _BuildEditorTabs extends StatelessWidget {
                         border: Border.all(
                           color: selected == entry.tab
                               ? AppTheme.gold
-                              : Colors.white.withValues(alpha: 0.12),
+                              : context.hokTheme.outlineSoft,
                         ),
                       ),
                       child: Row(
@@ -1475,7 +1475,7 @@ class _BuildEditorTabs extends StatelessWidget {
                             entry.icon,
                             size: 18,
                             color: selected == entry.tab
-                                ? Colors.white
+                                ? Theme.of(context).colorScheme.onPrimary
                                 : context.hokTheme.onSurfaceMuted,
                           ),
                           const SizedBox(width: 4),
@@ -1486,7 +1486,7 @@ class _BuildEditorTabs extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: selected == entry.tab
-                                    ? Colors.white
+                                    ? Theme.of(context).colorScheme.onPrimary
                                     : context.hokTheme.onSurfaceMuted,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 11,
@@ -1643,7 +1643,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                                   color: context.hokTheme.backgroundDeep
                                       .withValues(alpha: 0.7),
                                   border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.16),
+                                    color: context.hokTheme.outlineSoft,
                                     width: 1.4,
                                   ),
                                 ),
@@ -1744,9 +1744,7 @@ class _BuildEmptyEquipmentSlot extends StatelessWidget {
       width: _BuildEquipmentSlots.slotSize,
       height: _BuildEquipmentSlots.slotSize,
       child: CustomPaint(
-        painter: _DashedCirclePainter(
-          color: Colors.white.withValues(alpha: 0.22),
-        ),
+        painter: _DashedCirclePainter(color: context.hokTheme.outlineSoft),
         child: Icon(
           Icons.add,
           size: 16,
@@ -1802,9 +1800,7 @@ class _BuildCatalogTabs extends StatelessWidget {
       height: 42,
       margin: const EdgeInsets.only(top: 4),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-        ),
+        border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Row(
         children: [
@@ -1929,15 +1925,15 @@ class _EquipmentFilter extends StatelessWidget {
           color: selected ? AppTheme.gold : context.hokTheme.backgroundDeep,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected
-                ? AppTheme.gold
-                : Colors.white.withValues(alpha: 0.14),
+            color: selected ? AppTheme.gold : context.hokTheme.outlineSoft,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
+            color: selected
+                ? Theme.of(context).colorScheme.onPrimary
+                : context.hokTheme.onSurfaceMuted,
             fontWeight: FontWeight.w800,
             fontSize: 11,
           ),
@@ -2941,7 +2937,7 @@ class _BuildCatalogAsset extends StatelessWidget {
                     width: selected ? 2 : 1,
                     color: selected
                         ? AppTheme.gold
-                        : Colors.white.withValues(alpha: 0.1),
+                        : context.hokTheme.outlineSoft,
                   ),
                 ),
                 child: AppImage(
@@ -3490,9 +3486,7 @@ class _ExploreSortButton extends StatelessWidget {
         color: selected ? AppTheme.gold : context.hokTheme.backgroundDeep,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: selected
-              ? AppTheme.gold
-              : Colors.white.withValues(alpha: 0.14),
+          color: selected ? AppTheme.gold : context.hokTheme.outlineSoft,
         ),
       ),
       child: Row(
@@ -3500,7 +3494,9 @@ class _ExploreSortButton extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: selected ? Colors.white : context.hokTheme.onSurfaceMuted,
+            color: selected
+                ? Theme.of(context).colorScheme.onPrimary
+                : context.hokTheme.onSurfaceMuted,
           ),
           const SizedBox(width: 6),
           Flexible(
@@ -3510,7 +3506,7 @@ class _ExploreSortButton extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: selected
-                    ? Colors.white
+                    ? Theme.of(context).colorScheme.onPrimary
                     : context.hokTheme.onSurfaceMuted,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,

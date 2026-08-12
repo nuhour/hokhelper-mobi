@@ -973,9 +973,7 @@ class _MetricPill extends StatelessWidget {
     final tint = color;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color:
-            tint?.withValues(alpha: 0.14) ??
-            Colors.white.withValues(alpha: 0.06),
+        color: tint?.withValues(alpha: 0.14) ?? context.hokTheme.surfaceMuted,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: tint?.withValues(alpha: 0.28) ?? context.hokTheme.outlineSoft,

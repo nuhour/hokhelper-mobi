@@ -1095,7 +1095,7 @@ class _FilterDropdown extends StatelessWidget {
         width: double.infinity,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: context.hokTheme.surfaceMuted,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: context.hokTheme.outlineSoft),
           ),
@@ -1159,7 +1159,7 @@ class _DateFilterButton extends StatelessWidget {
         height: 48,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: context.hokTheme.surfaceMuted,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: context.hokTheme.outlineSoft),
           ),
@@ -1305,7 +1305,7 @@ class _InlineEmptyState extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.10),
+          color: context.hokTheme.outlineSoft.withValues(alpha: 0.82),
           style: BorderStyle.solid,
         ),
       ),
@@ -1747,7 +1747,7 @@ class _StatsLoadingTable extends StatelessWidget {
             ),
             if (index != 4) ...[
               const SizedBox(height: 16),
-              Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
+              Divider(color: context.hokTheme.outlineSoft, height: 1),
               const SizedBox(height: 16),
             ],
           ],
@@ -1781,7 +1781,7 @@ class _StatsTableHeader extends StatelessWidget {
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.16),
+        color: context.hokTheme.surfaceMuted,
         border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Row(
@@ -1835,9 +1835,7 @@ class _StatsTableRow extends StatelessWidget {
     return Container(
       height: 58,
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
-        ),
+        border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Row(
         children: [
@@ -2204,7 +2202,7 @@ class _FocusMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
+        color: context.hokTheme.surfaceMuted,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(

@@ -440,10 +440,8 @@ class _WinRateBar extends StatelessWidget {
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: .18),
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: .08)),
-        ),
+        color: context.hokTheme.surfaceMuted,
+        border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
       ),
       child: Row(
         children: [
@@ -519,10 +517,8 @@ class _BanStrip extends StatelessWidget {
     height: 66,
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     decoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: .24),
-      border: Border(
-        bottom: BorderSide(color: Colors.white.withValues(alpha: .08)),
-      ),
+      color: context.hokTheme.surfaceMuted,
+      border: Border(bottom: BorderSide(color: context.hokTheme.outlineSoft)),
     ),
     child: Row(
       children: [
@@ -541,11 +537,7 @@ class _BanStrip extends StatelessWidget {
             onRemove: onRemove,
           ),
         ),
-        Container(
-          width: 1,
-          height: 34,
-          color: Colors.white.withValues(alpha: .1),
-        ),
+        Container(width: 1, height: 34, color: context.hokTheme.outlineSoft),
         Expanded(
           child: _SlotRow(
             slots: enemyBans,
@@ -846,7 +838,7 @@ class _TeamSlotState extends State<_TeamSlot>
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.black.withValues(alpha: .22),
+                    color: context.hokTheme.surfaceRaised,
                     border: Border.all(
                       color: widget.color.withValues(
                         alpha: widget.hero == null ? .25 : .85,
@@ -865,7 +857,7 @@ class _TeamSlotState extends State<_TeamSlot>
                   child: widget.hero == null
                       ? Icon(
                           Icons.add_rounded,
-                          color: Colors.white.withValues(alpha: .26),
+                          color: context.hokTheme.onSurfaceMuted,
                           size: widget.isBan ? 18 : 23,
                         )
                       : AppImage(
@@ -944,7 +936,7 @@ class _RecommendationPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border.symmetric(
-          vertical: BorderSide(color: Colors.white.withValues(alpha: .08)),
+          vertical: BorderSide(color: context.hokTheme.outlineSoft),
         ),
       ),
       child: Column(
@@ -998,10 +990,8 @@ class _RecommendationPanel extends StatelessWidget {
                 : ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: items.length + (showEndFooter ? 1 : 0),
-                    separatorBuilder: (_, _) => Divider(
-                      height: 1,
-                      color: Colors.white.withValues(alpha: .06),
-                    ),
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: context.hokTheme.outlineSoft),
                     itemBuilder: (context, index) {
                       if (index == items.length) {
                         return const AppListFooter(hasMore: false);
@@ -1038,10 +1028,10 @@ class _RecTab extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       backgroundColor: selected ? AppTheme.gold : Colors.transparent,
       foregroundColor: selected
-          ? context.hokTheme.onSurfaceStrong
+          ? Theme.of(context).colorScheme.onPrimary
           : context.hokTheme.onSurfaceMuted,
       side: BorderSide(
-        color: selected ? AppTheme.gold : Colors.white.withValues(alpha: .17),
+        color: selected ? AppTheme.gold : context.hokTheme.outlineSoft,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
     ),
@@ -1174,7 +1164,7 @@ class _JobFilter extends StatelessWidget {
                   assetName: _jobAssetName(job),
                   size: 18,
                   color: selected == job
-                      ? Colors.white
+                      ? Theme.of(context).colorScheme.onPrimary
                       : context.hokTheme.onSurfaceMuted,
                 ),
           onTap: () => onChanged(job),
@@ -1233,9 +1223,7 @@ class _HeroPool extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: context.hokTheme.surfaceSlate,
                         borderRadius: BorderRadius.circular(9),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .05),
-                        ),
+                        border: Border.all(color: context.hokTheme.outlineSoft),
                       ),
                       child: Opacity(
                         opacity: locked ? .3 : 1,
@@ -1270,7 +1258,7 @@ class _LaneFilter extends StatelessWidget {
     height: 48,
     decoration: BoxDecoration(
       border: Border.symmetric(
-        horizontal: BorderSide(color: Colors.white.withValues(alpha: .08)),
+        horizontal: BorderSide(color: context.hokTheme.outlineSoft),
       ),
     ),
     child: Row(
@@ -1288,7 +1276,7 @@ class _LaneFilter extends StatelessWidget {
                       assetName: _laneAssetName(lane),
                       size: 19,
                       color: selected == lane
-                          ? Colors.white
+                          ? Theme.of(context).colorScheme.onPrimary
                           : context.hokTheme.onSurfaceMuted,
                     ),
               onTap: () => onChanged(lane),
@@ -1325,9 +1313,7 @@ class _FilterIcon extends StatelessWidget {
           shape: BoxShape.circle,
           color: selected ? AppTheme.gold : Colors.transparent,
           border: Border.all(
-            color: selected
-                ? AppTheme.gold
-                : Colors.white.withValues(alpha: .16),
+            color: selected ? AppTheme.gold : context.hokTheme.outlineSoft,
           ),
         ),
         child: icon,
