@@ -10,8 +10,8 @@ class NativeGoogleSignInResult {
   const NativeGoogleSignInResult.authenticated(String idToken)
     : this._(NativeGoogleSignInStatus.authenticated, idToken, null);
 
-  const NativeGoogleSignInResult.cancelled()
-    : this._(NativeGoogleSignInStatus.cancelled, null, null);
+  const NativeGoogleSignInResult.cancelled([String? error])
+    : this._(NativeGoogleSignInStatus.cancelled, null, error);
 
   const NativeGoogleSignInResult.unavailable([String? error])
     : this._(NativeGoogleSignInStatus.unavailable, null, error);
@@ -56,12 +56,22 @@ class GoogleFrameworkSignIn implements NativeGoogleSignIn {
       final account = await signIn.authenticate();
       final idToken = account.authentication.idToken?.trim();
       if (idToken == null || idToken.isEmpty) {
-        return const NativeGoogleSignInResult.unavailable();
+        return const NativeGoogleSignInResult.unavailable(
+          'Google returned no ID token; check the Android OAuth client and signing certificate.',
+        );
       }
       return NativeGoogleSignInResult.authenticated(idToken);
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) {
-        return const NativeGoogleSignInResult.cancelled();
+        // Credential Manager reports a provider-configuration failure as
+        // "canceled" on some Android versions. Preserve the detail so the
+        // login screen can fall back to web OAuth instead of ending silently.
+        final detail = error.description?.trim();
+        return NativeGoogleSignInResult.cancelled(
+          detail == null || detail.isEmpty
+              ? 'Google account selection was cancelled or the Android OAuth client is not configured.'
+              : 'Google sign-in returned canceled: $detail',
+        );
       }
       return NativeGoogleSignInResult.unavailable(
         'Google sign-in failed (${error.code.name}): '

@@ -81,39 +81,60 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun openDiscordAuthorization(uri: Uri): Boolean {
-        val deepLinks = listOf(
-            uri.buildUpon()
-                .scheme("discord")
-                .authority("-")
-                .path("/oauth2/authorize")
-                .build(),
-            uri.buildUpon()
-                .scheme("discord")
-                .authority("discord.com")
-                .path("/oauth2/authorize")
-                .build()
-        )
+        // Discord's mobile authorization handoff uses the same deep link as
+        // its official Android authentication activity:
+        // discord://action/oauth2/authorize?... . The old guessed URI forms
+        // do not match the Discord mobile client's intent filter and therefore
+        // always fall through to Chrome.
+        val deepLink = uri.buildUpon()
+            .scheme("discord")
+            .authority("action")
+            .path("/oauth2/authorize")
+            .build()
+        val deepLinkIntent = Intent(Intent.ACTION_VIEW, deepLink)
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+            .addCategory(Intent.CATEGORY_DEFAULT)
+        if (deepLinkIntent.resolveActivity(packageManager) != null) {
+            try {
+                startActivity(deepLinkIntent)
+                return true
+            } catch (_: Exception) {
+                // Fall through to the package-specific and browser paths.
+            }
+        }
+
         val discordPackages = listOf(
             "com.discord",
             "com.discord.beta",
             "com.discord.canary"
         )
         for (packageName in discordPackages) {
-            for (deepLink in deepLinks) {
-                val deepLinkIntent = Intent(Intent.ACTION_VIEW, deepLink)
-                    .addCategory(Intent.CATEGORY_BROWSABLE)
-                    .setPackage(packageName)
-                if (deepLinkIntent.resolveActivity(packageManager) != null) {
-                    startActivity(deepLinkIntent)
+            val packageIntent = Intent(Intent.ACTION_VIEW, deepLink)
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+                .addCategory(Intent.CATEGORY_DEFAULT)
+                .setPackage(packageName)
+            if (packageIntent.resolveActivity(packageManager) != null) {
+                try {
+                    startActivity(packageIntent)
                     return true
+                } catch (_: Exception) {
+                    // Continue looking for another installed Discord flavor.
                 }
             }
+
+            // Some Discord distributions expose only the HTTPS intent filter;
+            // prefer it over Chrome when that package is installed.
             val webIntent = Intent(Intent.ACTION_VIEW, uri)
                 .addCategory(Intent.CATEGORY_BROWSABLE)
+                .addCategory(Intent.CATEGORY_DEFAULT)
                 .setPackage(packageName)
             if (webIntent.resolveActivity(packageManager) != null) {
-                startActivity(webIntent)
-                return true
+                try {
+                    startActivity(webIntent)
+                    return true
+                } catch (_: Exception) {
+                    // Continue looking for another installed Discord flavor.
+                }
             }
         }
         return false

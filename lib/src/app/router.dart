@@ -419,6 +419,18 @@ GoRouter createAppRouter() {
           state: state.uri.queryParameters['state'],
         ),
       ),
+      // Discord mobile OAuth uses the provider-required
+      // discord-<application-id>:/authorize/callback scheme. Android and iOS
+      // deliver that URI to Flutter with /authorize/callback as its path.
+      GoRoute(
+        path: '/authorize/callback',
+        builder: (context, state) => OAuthCallbackScreen(
+          provider: 'discord',
+          code: state.uri.queryParameters['code'],
+          error: state.uri.queryParameters['error'],
+          state: state.uri.queryParameters['state'],
+        ),
+      ),
       GoRoute(
         path: '/auth/reddit/callback',
         builder: (context, state) => OAuthCallbackScreen(

@@ -49,6 +49,17 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
       return;
     }
 
+    final stateStore = ref.read(oauthStateStoreProvider);
+    // Keep both values from the exact authorization attempt. This matters for
+    // Discord because the app can use either its custom callback or the web
+    // callback while the backend is being rolled forward.
+    final redirectUri =
+        await stateStore.consumeRedirectUri(widget.provider) ??
+        AppConfig.current.oauthRedirectUri(widget.provider);
+    // The mobile Discord flow keeps its PKCE verifier in secure storage. It is
+    // consumed only after state validation and before the one-time code swap.
+    final codeVerifier = await stateStore.consumeCodeVerifier(widget.provider);
+
     final oauthError = widget.error?.trim();
     if (oauthError != null && oauthError.isNotEmpty) {
       if (mounted) {
@@ -71,7 +82,8 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
           .loginWithOAuth(
             provider: widget.provider,
             code: callbackCode,
-            redirectUri: AppConfig.current.oauthRedirectUri(widget.provider),
+            redirectUri: redirectUri,
+            codeVerifier: codeVerifier,
           );
       if (mounted) {
         context.go('/me');

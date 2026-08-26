@@ -33,9 +33,11 @@ class _FakeAuthRepository implements AuthRepository {
   var requestedOAuthProvider = '';
   var requestedOAuthRedirectUri = '';
   var requestedOAuthState = '';
+  String? requestedOAuthCodeChallenge;
   String? oauthProvider;
   String? oauthCode;
   String? oauthRedirectUri;
+  String? oauthCodeVerifier;
   String? googleIdToken;
   String? appleIdentityToken;
   String? appleRawNonce;
@@ -71,11 +73,13 @@ class _FakeAuthRepository implements AuthRepository {
     required String provider,
     required String code,
     required String redirectUri,
+    String? codeVerifier,
   }) async {
     didOAuthLogin = true;
     oauthProvider = provider;
     oauthCode = code;
     oauthRedirectUri = redirectUri;
+    oauthCodeVerifier = codeVerifier;
     return const AuthUser(
       id: 27,
       username: 'oauth-user',
@@ -117,16 +121,20 @@ class _FakeAuthRepository implements AuthRepository {
     required String provider,
     required String redirectUri,
     required String state,
+    String? codeChallenge,
   }) async {
     requestedOAuthProvider = provider;
     requestedOAuthRedirectUri = redirectUri;
     requestedOAuthState = state;
+    requestedOAuthCodeChallenge = codeChallenge;
     return 'https://oauth.example.test/$provider?redirect_uri=$redirectUri';
   }
 }
 
 class _MemoryOAuthStateStore extends OAuthStateStore {
   final Map<String, String> _states = {};
+  final Map<String, String> _codeVerifiers = {};
+  final Map<String, String> _redirectUris = {};
 
   @override
   Future<String> create(String provider) async {
@@ -145,8 +153,41 @@ class _MemoryOAuthStateStore extends OAuthStateStore {
   }
 
   @override
+  Future<void> saveCodeVerifier({
+    required String provider,
+    required String codeVerifier,
+  }) async {
+    _codeVerifiers[provider] = codeVerifier;
+  }
+
+  @override
+  Future<String?> consumeCodeVerifier(String provider) async {
+    return _codeVerifiers.remove(provider);
+  }
+
+  @override
+  Future<void> clearCodeVerifier(String provider) async {
+    _codeVerifiers.remove(provider);
+  }
+
+  @override
+  Future<void> saveRedirectUri({
+    required String provider,
+    required String redirectUri,
+  }) async {
+    _redirectUris[provider] = redirectUri;
+  }
+
+  @override
+  Future<String?> consumeRedirectUri(String provider) async {
+    return _redirectUris.remove(provider);
+  }
+
+  @override
   Future<void> clear(String provider) async {
     _states.remove(provider);
+    _codeVerifiers.remove(provider);
+    _redirectUris.remove(provider);
   }
 }
 
@@ -360,6 +401,8 @@ void main() {
   });
 
   testWidgets('login screen starts Google and Discord OAuth', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
     final oauthStateStore = _MemoryOAuthStateStore();
     final openedUrls = <String>[];
@@ -422,6 +465,7 @@ void main() {
       find.widgetWithText(OutlinedButton, 'Continue with Discord'),
     );
     await tester.pump(const Duration(milliseconds: 300));
+    debugDefaultTargetPlatformOverride = null;
 
     expect(repository.requestedOAuthProvider, 'discord');
     expect(
@@ -432,7 +476,114 @@ void main() {
       repository.requestedOAuthState,
       startsWith('hokhelper-mobile.discord.'),
     );
+    expect(
+      repository.requestedOAuthCodeChallenge,
+      matches(RegExp(r'^[A-Za-z0-9._~-]{43,128}$')),
+    );
     expect(openedUrls.last, contains('https://oauth.example.test/discord'));
+  });
+
+  testWidgets('Google cancellation continues with browser OAuth', (
+    tester,
+  ) async {
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final openedUrls = <String>[];
+    final router = GoRouter(
+      initialLocation: '/login',
+      routes: [
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(_MemoryOAuthStateStore()),
+          nativeGoogleSignInProvider.overrideWithValue(
+            const _FakeNativeGoogleSignIn(
+              NativeGoogleSignInResult.cancelled('provider configuration'),
+            ),
+          ),
+          oauthUrlOpenerProvider.overrideWithValue(({
+            required provider,
+            required url,
+          }) async {
+            openedUrls.add(url);
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Continue with Google'),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(repository.requestedOAuthProvider, 'google');
+    expect(openedUrls, hasLength(1));
+  });
+
+  testWidgets('Discord mobile OAuth uses custom callback and PKCE', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final oauthStateStore = _MemoryOAuthStateStore();
+    final openedUrls = <String>[];
+    final router = GoRouter(
+      initialLocation: '/login',
+      routes: [
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(oauthStateStore),
+          oauthUrlOpenerProvider.overrideWithValue(({
+            required provider,
+            required url,
+          }) async {
+            openedUrls.add(url);
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Continue with Discord'),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    debugDefaultTargetPlatformOverride = null;
+
+    expect(
+      repository.requestedOAuthRedirectUri,
+      'discord-${AppConfig.discordApplicationId}:/authorize/callback',
+    );
+    expect(
+      repository.requestedOAuthCodeChallenge,
+      matches(RegExp(r'^[A-Za-z0-9._~-]{43,128}$')),
+    );
+    expect(openedUrls, hasLength(1));
+    // The fake API intentionally returns a legacy URL without a challenge;
+    // the client must not retain a verifier that the server cannot exchange.
+    expect(await oauthStateStore.consumeCodeVerifier('discord'), isNull);
+    expect(
+      await oauthStateStore.consumeRedirectUri('discord'),
+      'discord-${AppConfig.discordApplicationId}:/authorize/callback',
+    );
   });
 
   testWidgets(
@@ -653,10 +804,65 @@ void main() {
     expect(repository.didOAuthLogin, isTrue);
     expect(repository.oauthProvider, 'google');
     expect(repository.oauthCode, 'mobile-code');
+    expect(repository.oauthCodeVerifier, isNull);
     expect(
       repository.oauthRedirectUri,
       'https://hokhelper.com/auth/google/callback',
     );
+    expect(router.routerDelegate.currentConfiguration.uri.path, '/me');
+  });
+
+  testWidgets('Discord callback uses the stored custom redirect and verifier', (
+    tester,
+  ) async {
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final oauthStateStore = _MemoryOAuthStateStore();
+    final oauthState = await oauthStateStore.create('discord');
+    const redirectUri = 'discord-1459515499649175663:/authorize/callback';
+    const codeVerifier =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO0123456789-._~';
+    await oauthStateStore.saveRedirectUri(
+      provider: 'discord',
+      redirectUri: redirectUri,
+    );
+    await oauthStateStore.saveCodeVerifier(
+      provider: 'discord',
+      codeVerifier: codeVerifier,
+    );
+    final router = GoRouter(
+      initialLocation:
+          '/authorize/callback?code=discord-code&state=$oauthState',
+      routes: [
+        GoRoute(
+          path: '/authorize/callback',
+          builder: (_, state) => OAuthCallbackScreen(
+            provider: 'discord',
+            code: state.uri.queryParameters['code'],
+            error: state.uri.queryParameters['error'],
+            state: state.uri.queryParameters['state'],
+          ),
+        ),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(oauthStateStore),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.didOAuthLogin, isTrue);
+    expect(repository.oauthProvider, 'discord');
+    expect(repository.oauthCode, 'discord-code');
+    expect(repository.oauthRedirectUri, redirectUri);
+    expect(repository.oauthCodeVerifier, codeVerifier);
     expect(router.routerDelegate.currentConfiguration.uri.path, '/me');
   });
 

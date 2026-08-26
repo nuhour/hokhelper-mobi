@@ -261,6 +261,55 @@ void main() {
       });
     });
 
+    test('sends Discord PKCE values for a mobile callback', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {
+          'auth_url': 'https://discord.example.test/authorize',
+          'access': 'oauth-access',
+          'refresh': 'oauth-refresh',
+          'user': {
+            'id': 13,
+            'username': 'discord-user',
+            'email': 'discord@example.test',
+          },
+        },
+      });
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: _MemoryTokenStore(),
+      );
+      const verifier =
+          'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO0123456789-._~';
+      const challenge = '0123456789012345678901234567890123456789012';
+
+      await repository.getOAuthAuthorizationUrl(
+        provider: 'discord',
+        redirectUri: 'discord-1459515499649175663:/authorize/callback',
+        state: 'hokhelper-mobile.discord.nonce',
+        codeChallenge: challenge,
+      );
+
+      expect(apiClient.body, {
+        'redirect_uri': 'discord-1459515499649175663:/authorize/callback',
+        'state': 'hokhelper-mobile.discord.nonce',
+        'code_challenge': challenge,
+      });
+
+      await repository.loginWithOAuth(
+        provider: 'discord',
+        code: 'callback-code',
+        redirectUri: 'discord-1459515499649175663:/authorize/callback',
+        codeVerifier: verifier,
+      );
+
+      expect(apiClient.body, {
+        'code': 'callback-code',
+        'redirect_uri': 'discord-1459515499649175663:/authorize/callback',
+        'code_verifier': verifier,
+      });
+    });
+
     test('logs in with OAuth provider callback code', () async {
       final apiClient = _FakeApiClient({
         'success': true,

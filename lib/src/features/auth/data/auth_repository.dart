@@ -23,6 +23,7 @@ class AuthRepository {
     required String provider,
     required String code,
     required String redirectUri,
+    String? codeVerifier,
   }) async {
     final normalizedProvider = provider.trim().toLowerCase();
     if (!{'google', 'discord', 'reddit'}.contains(normalizedProvider)) {
@@ -34,7 +35,12 @@ class AuthRepository {
 
     final json = await apiClient.postJson(
       '/auth/$normalizedProvider/login',
-      body: {'code': code, 'redirect_uri': redirectUri},
+      body: {
+        'code': code,
+        'redirect_uri': redirectUri,
+        if (codeVerifier != null && codeVerifier.trim().isNotEmpty)
+          'code_verifier': codeVerifier.trim(),
+      },
     );
 
     return _readAuthResponse(json, fallbackMessage: 'OAuth login failed');
@@ -70,6 +76,7 @@ class AuthRepository {
     required String provider,
     required String redirectUri,
     required String state,
+    String? codeChallenge,
   }) async {
     final normalizedProvider = provider.trim().toLowerCase();
     if (!{'google', 'discord'}.contains(normalizedProvider)) {
@@ -81,7 +88,12 @@ class AuthRepository {
 
     final json = await apiClient.postJson(
       '/auth/$normalizedProvider/auth_url',
-      body: {'redirect_uri': redirectUri, 'state': state},
+      body: {
+        'redirect_uri': redirectUri,
+        'state': state,
+        if (codeChallenge != null && codeChallenge.trim().isNotEmpty)
+          'code_challenge': codeChallenge.trim(),
+      },
     );
     final result = json['result'];
     final payload = result is Map ? Map<String, dynamic>.from(result) : json;

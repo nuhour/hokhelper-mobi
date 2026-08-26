@@ -58,6 +58,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String provider,
     required String code,
     required String redirectUri,
+    String? codeVerifier,
   }) async {
     final repository = ref.read(authRepositoryProvider);
     state = const AsyncLoading();
@@ -66,6 +67,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
         provider: provider,
         code: code,
         redirectUri: redirectUri,
+        codeVerifier: codeVerifier,
       );
       state = AsyncData(user);
     } on ApiError catch (error, stackTrace) {

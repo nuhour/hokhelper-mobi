@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../data/native_apple_sign_in.dart';
 import '../data/native_google_sign_in.dart';
+import '../data/oauth_pkce.dart';
 import 'auth_page_scaffold.dart';
 import 'auth_controller.dart';
 
@@ -310,6 +311,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _oauthError = null;
     });
 
+    String? nativeGoogleError;
     try {
       final repository = ref.read(authRepositoryProvider);
       if (provider == 'apple') {
@@ -340,32 +342,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           repository: repository,
           serverClientId: AppConfig.googleServerClientId,
         );
-        if (nativeResult == NativeGoogleSignInStatus.authenticated) {
+        if (nativeResult.status == NativeGoogleSignInStatus.authenticated) {
           if (mounted) {
             context.go(_safeReturnRoute(widget.returnTo));
           }
           return;
         }
-        if (nativeResult == NativeGoogleSignInStatus.cancelled) {
-          return;
-        }
+        // Credential Manager may report a configuration error as "canceled".
+        // Continue to the web flow for both cases instead of leaving the user
+        // on the login page with no visible response.
+        nativeGoogleError = nativeResult.error;
       }
 
       final stateStore = ref.read(oauthStateStoreProvider);
       final state = await stateStore.create(provider);
       final redirectUri = AppConfig.current.oauthRedirectUri(provider);
+      await stateStore.saveRedirectUri(
+        provider: provider,
+        redirectUri: redirectUri,
+      );
+      String? codeVerifier;
+      if (provider == 'discord') {
+        codeVerifier = OAuthPkce.generateCodeVerifier();
+        await stateStore.saveCodeVerifier(
+          provider: provider,
+          codeVerifier: codeVerifier,
+        );
+      }
       final authUrl = await repository.getOAuthAuthorizationUrl(
         provider: provider,
         redirectUri: redirectUri,
         state: state,
+        codeChallenge: codeVerifier == null
+            ? null
+            : OAuthPkce.createCodeChallenge(codeVerifier),
       );
+
+      if (provider == 'discord' &&
+          codeVerifier != null &&
+          !_hasOAuthQueryParameter(authUrl, 'code_challenge')) {
+        // Keep the custom callback for an older deployed API, but do not send
+        // a verifier to its token exchange because that API did not include
+        // the challenge in Discord's authorization request.
+        await stateStore.clearCodeVerifier(provider);
+      }
 
       await ref.read(oauthUrlOpenerProvider)(provider: provider, url: authUrl);
     } catch (error) {
       await ref.read(oauthStateStoreProvider).clear(provider);
       if (mounted) {
         setState(() {
-          _oauthError = 'Failed to start OAuth login. ${error.toString()}';
+          final nativeDetail = nativeGoogleError == null
+              ? ''
+              : ' $nativeGoogleError';
+          _oauthError =
+              'Failed to start OAuth login.$nativeDetail ${error.toString()}';
         });
       }
     } finally {
@@ -377,26 +408,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<NativeGoogleSignInStatus> _tryNativeGoogleSignIn({
+  Future<NativeGoogleSignInResult> _tryNativeGoogleSignIn({
     required AuthRepository repository,
     required String serverClientId,
   }) async {
     final result = await ref
         .read(nativeGoogleSignInProvider)
-        .authenticate(serverClientId: serverClientId);
+        .authenticate(serverClientId: serverClientId)
+        .timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => const NativeGoogleSignInResult.unavailable(
+            'Google sign-in timed out. Continuing with browser sign-in.',
+          ),
+        );
     final idToken = result.idToken;
     if (result.status != NativeGoogleSignInStatus.authenticated ||
         idToken == null) {
       // Device-side Google configuration differs between stores and debug
       // signatures. Keep the browser OAuth path available when Play Services
       // cannot issue an ID token instead of leaving the user at a dead end.
-      return result.status;
+      return result;
     }
 
-    await repository.loginWithGoogleIdToken(idToken);
-    ref.invalidate(authControllerProvider);
-    return NativeGoogleSignInStatus.authenticated;
+    try {
+      await repository.loginWithGoogleIdToken(idToken);
+      ref.invalidate(authControllerProvider);
+      return result;
+    } catch (error) {
+      // A token can be issued before an older backend has been deployed with
+      // the ID-token endpoint. Continue with the web flow in that case.
+      return NativeGoogleSignInResult.unavailable(
+        'Native Google sign-in could not be completed: $error',
+      );
+    }
   }
+}
+
+bool _hasOAuthQueryParameter(String url, String name) {
+  final uri = Uri.tryParse(url);
+  return uri != null && uri.queryParameters.containsKey(name);
 }
 
 String _safeReturnRoute(String? value) {

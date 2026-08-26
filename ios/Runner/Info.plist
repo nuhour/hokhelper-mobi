@@ -60,6 +60,16 @@
 				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Discord Mobile OAuth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>discord-1459515499649175663</string>
+			</array>
+		</dict>
 	</array>
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_IOS_CLIENT_ID)</string>

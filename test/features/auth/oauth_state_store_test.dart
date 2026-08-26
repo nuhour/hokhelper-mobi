@@ -27,4 +27,55 @@ void main() {
 
     expect(await store.consume(provider: 'discord', state: state), isFalse);
   });
+
+  test('stores and consumes a provider-bound PKCE verifier once', () async {
+    final store = OAuthStateStore();
+    await store.saveCodeVerifier(
+      provider: 'Discord',
+      codeVerifier: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO0123456789-._~',
+    );
+
+    expect(
+      await store.consumeCodeVerifier('discord'),
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO0123456789-._~',
+    );
+    expect(await store.consumeCodeVerifier('discord'), isNull);
+  });
+
+  test(
+    'stores and consumes the redirect URI for the same OAuth attempt',
+    () async {
+      final store = OAuthStateStore();
+      await store.saveRedirectUri(
+        provider: 'Discord',
+        redirectUri: 'discord-123:/authorize/callback',
+      );
+
+      expect(
+        await store.consumeRedirectUri('discord'),
+        'discord-123:/authorize/callback',
+      );
+      expect(await store.consumeRedirectUri('discord'), isNull);
+    },
+  );
+
+  test('clears verifier and redirect URI when state does not match', () async {
+    final store = OAuthStateStore();
+    await store.create('discord');
+    await store.saveCodeVerifier(
+      provider: 'discord',
+      codeVerifier: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO0123456789-._~',
+    );
+    await store.saveRedirectUri(
+      provider: 'discord',
+      redirectUri: 'discord-123:/authorize/callback',
+    );
+
+    expect(
+      await store.consume(provider: 'discord', state: 'wrong-state'),
+      isFalse,
+    );
+    expect(await store.consumeCodeVerifier('discord'), isNull);
+    expect(await store.consumeRedirectUri('discord'), isNull);
+  });
 }

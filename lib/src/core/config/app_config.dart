@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class AppConfig {
   const AppConfig({
     required this.apiBaseUrl,
@@ -36,6 +38,12 @@ class AppConfig {
     defaultValue:
         '623444676083-gdsoou9vr9ujsn0r1c7npohutjpakbd9.apps.googleusercontent.com',
   );
+  // Discord 的应用 ID 是公开标识符；移动端回调 scheme 必须与开发者后台
+  // 注册的 discord-<application-id>:/authorize/callback 完全一致。
+  static const discordApplicationId = String.fromEnvironment(
+    'HOK_DISCORD_APPLICATION_ID',
+    defaultValue: '1459515499649175663',
+  );
 
   final String apiBaseUrl;
   final String apiPrefix;
@@ -55,8 +63,19 @@ class AppConfig {
     return '$base/$prefix';
   }
 
-  String oauthRedirectUri(String provider) {
+  String oauthRedirectUri(String provider, {bool? mobile}) {
+    final normalizedProvider = provider.trim().toLowerCase();
+    final useMobileRedirect =
+        mobile ??
+        (!kIsWeb &&
+            normalizedProvider == 'discord' &&
+            (defaultTargetPlatform == TargetPlatform.android ||
+                defaultTargetPlatform == TargetPlatform.iOS));
+    if (useMobileRedirect && normalizedProvider == 'discord') {
+      return 'discord-$discordApplicationId:/authorize/callback';
+    }
+
     final base = mediaBaseUrl.replaceFirst(RegExp(r'/+$'), '');
-    return '$base/auth/${provider.trim().toLowerCase()}/callback';
+    return '$base/auth/$normalizedProvider/callback';
   }
 }
