@@ -381,10 +381,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (provider == 'discord' &&
           codeVerifier != null &&
           !_hasOAuthQueryParameter(authUrl, 'code_challenge')) {
-        // Keep the custom callback for an older deployed API, but do not send
-        // a verifier to its token exchange because that API did not include
-        // the challenge in Discord's authorization request.
-        await stateStore.clearCodeVerifier(provider);
+        // Discord 的移动端自定义回调必须使用 PKCE；当前后端未返回
+        // challenge 时不启动一个不完整的授权请求。
+        throw StateError(
+          'Discord mobile login needs the latest backend OAuth deployment. '
+          'Please try again after the API is updated.',
+        );
       }
 
       await ref.read(oauthUrlOpenerProvider)(provider: provider, url: authUrl);

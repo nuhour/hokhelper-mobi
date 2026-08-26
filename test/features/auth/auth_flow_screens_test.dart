@@ -42,6 +42,7 @@ class _FakeAuthRepository implements AuthRepository {
   String? appleIdentityToken;
   String? appleRawNonce;
   String? appleName;
+  bool includeDiscordPkce = true;
 
   @override
   Future<AuthUser> registerWithEmail({
@@ -127,7 +128,11 @@ class _FakeAuthRepository implements AuthRepository {
     requestedOAuthRedirectUri = redirectUri;
     requestedOAuthState = state;
     requestedOAuthCodeChallenge = codeChallenge;
-    return 'https://oauth.example.test/$provider?redirect_uri=$redirectUri';
+    final pkce =
+        provider == 'discord' && codeChallenge != null && includeDiscordPkce
+        ? '&code_challenge=$codeChallenge&code_challenge_method=S256'
+        : '';
+    return 'https://oauth.example.test/$provider?redirect_uri=$redirectUri$pkce';
   }
 }
 
@@ -577,12 +582,57 @@ void main() {
       matches(RegExp(r'^[A-Za-z0-9._~-]{43,128}$')),
     );
     expect(openedUrls, hasLength(1));
-    // The fake API intentionally returns a legacy URL without a challenge;
-    // the client must not retain a verifier that the server cannot exchange.
-    expect(await oauthStateStore.consumeCodeVerifier('discord'), isNull);
+    expect(await oauthStateStore.consumeCodeVerifier('discord'), isNotNull);
     expect(
       await oauthStateStore.consumeRedirectUri('discord'),
       'discord-${AppConfig.discordApplicationId}:/authorize/callback',
+    );
+  });
+
+  testWidgets('Discord OAuth does not start without a PKCE challenge', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore())
+      ..includeDiscordPkce = false;
+    final openedUrls = <String>[];
+    final router = GoRouter(
+      initialLocation: '/login',
+      routes: [
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(_MemoryOAuthStateStore()),
+          oauthUrlOpenerProvider.overrideWithValue(({
+            required provider,
+            required url,
+          }) async {
+            openedUrls.add(url);
+          }),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Continue with Discord'),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    debugDefaultTargetPlatformOverride = null;
+
+    expect(openedUrls, isEmpty);
+    expect(
+      find.textContaining('latest backend OAuth deployment'),
+      findsOneWidget,
     );
   });
 
