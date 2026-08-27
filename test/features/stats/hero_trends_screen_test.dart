@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/i18n/app_localizations.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
+import 'package:hok_helper_mobile/src/features/stats/domain/stats_trends.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 
 import 'stats_trends_fixture.dart';
@@ -386,6 +388,93 @@ void main() {
     expect(find.text('Counter Picks'), findsOneWidget);
     expect(find.text('Synergy Picks'), findsNothing);
   });
+
+  testWidgets(
+    'localizes equipment trend series and keeps icons when names are untranslated',
+    (tester) async {
+      final detail = StatsTrendDetail.fromJson({
+        'equip_trend_series': [
+          {
+            'equip_id': 12211,
+            'equip': {'id': 12211, 'name': '梦魇之牙', 'name_en': 'Venomous Staff'},
+            'pick_rate': 70.24,
+            'win_rate': 54.2,
+            'points': [
+              {
+                'snapshot_date': '2026-07-15',
+                'pick_rate': 70.24,
+                'win_rate': 54.2,
+              },
+            ],
+          },
+          {
+            'equip_id': 12345,
+            'equip': {'id': 12345, 'name': '抵抗之靴'},
+            'pick_rate': 45.1,
+            'win_rate': 60.0,
+            'points': [
+              {
+                'snapshot_date': '2026-07-15',
+                'pick_rate': 45.1,
+                'win_rate': 60.0,
+              },
+            ],
+          },
+        ],
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            heroTrendTableProvider.overrideWith(
+              (ref, query) async => sampleStatsTrendTable(),
+            ),
+            heroTrendDetailProvider.overrideWith(
+              (ref, request) async => detail,
+            ),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [AppLocalizations.delegate],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: HeroTrendsScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('trend-curve-hero-199')));
+      await tester.pumpAndSettle();
+      final equipmentTab = find.descendant(
+        of: find.byKey(const ValueKey('trend-detail-tabs')),
+        matching: find.text('Equipment'),
+      );
+      await tester.tap(equipmentTab);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Venomous Staff'), findsNWidgets(2));
+      expect(find.text('梦魇之牙'), findsNothing);
+      expect(find.text('抵抗之靴'), findsNothing);
+      expect(find.text('Pick Rate 70.24%'), findsOneWidget);
+      expect(find.text('Win Rate 54.20%'), findsOneWidget);
+
+      final images = tester.widgetList<AppImage>(find.byType(AppImage));
+      expect(
+        images
+            .where(
+              (image) =>
+                  image.url ==
+                  'https://hokhelper.com/static/game/equip/12211.png',
+            )
+            .length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        images.any((image) => image.semanticLabel == 'Equipment #12345'),
+        isTrue,
+      );
+    },
+  );
 
   testWidgets('equip avatar opens the single equip matrix table', (
     tester,

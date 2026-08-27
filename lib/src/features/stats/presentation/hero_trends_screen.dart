@@ -1379,6 +1379,7 @@ class _StatsDetailHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<HokThemeColors>();
+    final displayName = _trendRowDisplayName(context, row);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 6, 8),
       child: Row(
@@ -1395,7 +1396,7 @@ class _StatsDetailHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  row.name,
+                  displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -2471,6 +2472,7 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
     final value = ref.watch(heroTrendDetailProvider(request));
     final row = widget.request.row;
     final colors = Theme.of(context).extension<HokThemeColors>();
+    final displayName = _trendRowDisplayName(context, row);
     return _StatsDrawerShell(
       child: Column(
         children: [
@@ -2490,7 +2492,7 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        row.name,
+                        displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -2787,10 +2789,15 @@ class _SeriesListDetailState extends State<_SeriesListDetail> {
       final row = rows[index];
       final color = _chartColors[index % _chartColors.length];
       final points = _listOfMaps(row['points']);
-      final name = _seriesName(row);
-      chartSeries.add(_seriesFromMaps('$name Win', color, points, 'win_rate'));
+      final name = _seriesName(context, row);
+      final chartName = name.isEmpty
+          ? _seriesFallbackLabel(context, row, widget.identityKey)
+          : name;
       chartSeries.add(
-        _ChartSeries('$name Share', color, [
+        _seriesFromMaps('$chartName Win', color, points, 'win_rate'),
+      );
+      chartSeries.add(
+        _ChartSeries('$chartName Share', color, [
           for (final point in points)
             _double(point['style_share'] ?? point['pick_rate']),
         ], dashed: true),
@@ -2846,15 +2853,22 @@ class _SeriesListDetailState extends State<_SeriesListDetail> {
     );
   }
 
-  String _seriesName(Map<String, dynamic> row) =>
-      _seriesDisplayName(row, widget.identityKey);
+  String _seriesName(BuildContext context, Map<String, dynamic> row) =>
+      _seriesDisplayName(context, row, widget.identityKey);
 }
 
-// HOKX 系列名：打法系列为「技能名 · 分路」，装备系列仅名称。
-String _seriesDisplayName(Map<String, dynamic> row, String identityKey) {
+// 系列名优先使用当前语言；非中文界面不把未翻译的中文名称落到界面。
+String _seriesDisplayName(
+  BuildContext context,
+  Map<String, dynamic> row,
+  String identityKey,
+) {
   final identity = _map(row[identityKey]);
-  final name = identity['name']?.toString().trim() ?? '';
-  final base = name.isEmpty ? '-' : name;
+  final base = _localizedEntityName(
+    context,
+    identity,
+    hideUnlocalizedCjk: identityKey == 'equip',
+  );
   if (identityKey != 'skill') return base;
   final lane = _positionLabel(
     row['position'] ??
@@ -2862,7 +2876,111 @@ String _seriesDisplayName(Map<String, dynamic> row, String identityKey) {
         row['position_key'] ??
         row['position_code'],
   );
-  return lane.isEmpty ? base : '$base · $lane';
+  return base.isEmpty || lane.isEmpty ? base : '$base · $lane';
+}
+
+// 服务端不同统计接口的本地化字段形状不完全一致，按常见字段顺序读取。
+String _localizedEntityName(
+  BuildContext context,
+  Map<String, dynamic> entity, {
+  bool hideUnlocalizedCjk = false,
+}) {
+  final languageCode = AppLocalizations.of(
+    context,
+  ).locale.languageCode.toLowerCase();
+
+  String accepted(Object? value) {
+    final name = value?.toString().trim() ?? '';
+    if (name.isEmpty) return '';
+    if (hideUnlocalizedCjk && languageCode != 'zh' && _containsCjk(name)) {
+      return '';
+    }
+    return name;
+  }
+
+  final languageTitle = languageCode.isEmpty
+      ? ''
+      : '${languageCode[0].toUpperCase()}${languageCode.substring(1)}';
+  final localizedValues = <Object?>[
+    entity['name_$languageCode'],
+    entity['${languageCode}_name'],
+    if (languageTitle.isNotEmpty) entity['name$languageTitle'],
+    _localizedMapValue(entity['names'], languageCode),
+    _localizedMapValue(entity['localized_names'], languageCode),
+    _localizedMapValue(entity['translations'], languageCode),
+    _localizedMapValue(entity['i18n'], languageCode),
+  ];
+  for (final value in localizedValues) {
+    final name = accepted(value);
+    if (name.isNotEmpty) return name;
+  }
+  return accepted(entity['name'] ?? entity['label']);
+}
+
+String _localizedMapValue(Object? source, String languageCode) {
+  if (source is! Map) return '';
+  final keys = <String>[
+    languageCode,
+    languageCode.toUpperCase(),
+    '${languageCode}_$languageCode',
+    '$languageCode-${languageCode.toUpperCase()}',
+  ];
+  for (final key in keys) {
+    final value = source[key];
+    if (value is Map) {
+      final nested = value['name'] ?? value['label'] ?? value['value'];
+      final nestedText = nested?.toString().trim() ?? '';
+      if (nestedText.isNotEmpty) return nestedText;
+    }
+    final text = value?.toString().trim() ?? '';
+    if (text.isNotEmpty) return text;
+  }
+  return '';
+}
+
+bool _containsCjk(String value) {
+  return value.runes.any(
+    (rune) =>
+        (rune >= 0x3400 && rune <= 0x4dbf) ||
+        (rune >= 0x4e00 && rune <= 0x9fff) ||
+        (rune >= 0xf900 && rune <= 0xfaff),
+  );
+}
+
+String _entityId(Map<String, dynamic> entity) {
+  for (final key in const ['id', 'equip_id', 'skill_id']) {
+    final value = entity[key]?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  }
+  return '';
+}
+
+String _seriesFallbackLabel(
+  BuildContext context,
+  Map<String, dynamic> row,
+  String identityKey,
+) {
+  final l10n = AppLocalizations.of(context);
+  final entity = _map(row[identityKey]);
+  final type = identityKey == 'equip'
+      ? l10n.translate('statsEquipment')
+      : identityKey == 'skill'
+      ? l10n.translate('statsTrend')
+      : identityKey;
+  final id = _entityId(entity);
+  return id.isEmpty ? type : '$type #$id';
+}
+
+String _trendRowDisplayName(BuildContext context, StatsTrendRow row) {
+  if (row.kind != 'equip') return row.name;
+  final name = _localizedEntityName(
+    context,
+    row.equip,
+    hideUnlocalizedCjk: true,
+  );
+  return name.isEmpty
+      ? AppLocalizations.of(context).translate('statsEquipment')
+      : name;
 }
 
 class _SeriesLegendChip extends StatelessWidget {
@@ -2885,57 +3003,73 @@ class _SeriesLegendChip extends StatelessWidget {
     final colors = Theme.of(context).extension<HokThemeColors>();
     final primary = Theme.of(context).colorScheme.primary;
     final identity = _map(row[identityKey]);
-    final name = _seriesDisplayName(row, identityKey);
+    final name = _seriesDisplayName(context, row, identityKey);
+    final accessibleName = name.isEmpty
+        ? _seriesFallbackLabel(context, row, identityKey)
+        : name;
     final iconUrl = _trendAssetUrl(
       identity,
       identityKey == 'skill' ? 'summoner_skill' : 'equip',
     );
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: selected ? primary.withValues(alpha: 0.1) : Colors.transparent,
+    return Tooltip(
+      message: accessibleName,
+      child: Semantics(
+        button: true,
+        label: accessibleName,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected
-                ? primary.withValues(alpha: 0.7)
-                : colors?.outlineSoft ?? context.hokTheme.outlineSoft,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 5),
-            if (iconUrl.isNotEmpty) ...[
-              AppImage(
-                url: iconUrl,
-                width: 14,
-                height: 14,
-                borderRadius: 7,
-                excludeFromSemantics: true,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: selected
+                  ? primary.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected
+                    ? primary.withValues(alpha: 0.7)
+                    : colors?.outlineSoft ?? context.hokTheme.outlineSoft,
               ),
-              const SizedBox(width: 4),
-            ],
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 110),
-              child: Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontSize: 10,
-                  color: selected ? null : colors?.onSurfaceMuted,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 5),
+                if (iconUrl.isNotEmpty) ...[
+                  AppImage(
+                    url: iconUrl,
+                    width: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    excludeFromSemantics: true,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                if (name.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 110),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        color: selected ? null : colors?.onSurfaceMuted,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -2956,39 +3090,78 @@ class _SeriesSummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<HokThemeColors>();
-    final name = _seriesDisplayName(row, identityKey);
+    final name = _seriesDisplayName(context, row, identityKey);
+    final accessibleName = name.isEmpty
+        ? _seriesFallbackLabel(context, row, identityKey)
+        : name;
+    final identity = _map(row[identityKey]);
+    final iconUrl = _trendAssetUrl(
+      identity,
+      identityKey == 'skill' ? 'summoner_skill' : 'equip',
+    );
     final points = _listOfMaps(row['points']);
     final latest = points.isNotEmpty ? points.last : row;
-    return Row(
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelMedium,
+        Semantics(
+          label: accessibleName,
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              if (iconUrl.isNotEmpty) ...[
+                Tooltip(
+                  message: accessibleName,
+                  child: AppImage(
+                    url: iconUrl,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    semanticLabel: accessibleName,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              if (name.isNotEmpty)
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+            ],
           ),
         ),
-        Text(
-          'Share ${_percent(latest['style_share'] ?? latest['pick_rate'])}',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: colors?.onSurfaceMuted,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'Win ${_percent(latest['win_rate'])}',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+        const SizedBox(height: 4),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${l10n.translate('statsPickRate')} '
+              '${_percent(latest['style_share'] ?? latest['pick_rate'])}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors?.onSurfaceMuted,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${l10n.translate('statsWinRate')} '
+              '${_percent(latest['win_rate'])}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
         ),
       ],
     );
