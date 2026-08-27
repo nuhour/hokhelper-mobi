@@ -3,6 +3,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
+import 'package:hok_helper_mobile/src/features/auth/data/app_integrity_client.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
 
 class _FakeApiClient extends ApiClient {
@@ -197,6 +198,33 @@ void main() {
       });
     });
 
+    test('sends register code with app integrity proof', () async {
+      final apiClient = _FakeApiClient({'success': true});
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: _MemoryTokenStore(),
+      );
+      const proof = AppIntegrityProof(
+        provider: 'play_integrity',
+        token: 'integrity-token',
+        requestHash: 'request-hash',
+      );
+
+      await repository.sendRegisterCode(
+        email: 'lam@example.test',
+        integrityProof: proof,
+      );
+
+      expect(apiClient.body, {
+        'email': 'lam@example.test',
+        'app_integrity': {
+          'provider': 'play_integrity',
+          'token': 'integrity-token',
+          'request_hash': 'request-hash',
+        },
+      });
+    });
+
     test('registers with email and stores returned tokens', () async {
       final apiClient = _FakeApiClient({
         'success': true,
@@ -235,6 +263,50 @@ void main() {
       expect(tokenStore.refresh, 'refresh-token');
       expect(user.id, 8);
       expect(user.displayName, 'Newbie');
+    });
+
+    test('includes app integrity proof when registering', () async {
+      final apiClient = _FakeApiClient({
+        'success': true,
+        'result': {
+          'access': 'access-token',
+          'refresh': 'refresh-token',
+          'user': {
+            'id': 8,
+            'username': 'new-user',
+            'email': 'new@example.test',
+          },
+        },
+      });
+      final repository = AuthRepository(
+        apiClient: apiClient,
+        tokenStore: _MemoryTokenStore(),
+      );
+      const proof = AppIntegrityProof(
+        provider: 'play_integrity',
+        token: 'register-integrity-token',
+        requestHash: 'register-request-hash',
+      );
+
+      await repository.registerWithEmail(
+        email: 'new@example.test',
+        password: 'StrongPass1!',
+        code: '123456',
+        username: 'new-user',
+        integrityProof: proof,
+      );
+
+      expect(apiClient.body, {
+        'email': 'new@example.test',
+        'password': 'StrongPass1!',
+        'code': '123456',
+        'username': 'new-user',
+        'app_integrity': {
+          'provider': 'play_integrity',
+          'token': 'register-integrity-token',
+          'request_hash': 'register-request-hash',
+        },
+      });
     });
 
     test('requests OAuth URL with HTTPS callback and state', () async {

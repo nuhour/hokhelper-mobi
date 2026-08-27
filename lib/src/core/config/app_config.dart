@@ -6,6 +6,7 @@ class AppConfig {
     required this.apiPrefix,
     this.mediaBaseUrl = 'https://hokhelper.com',
     this.httpProxy = '',
+    this.playIntegrityProjectNumber = playIntegrityCloudProjectNumber,
   });
 
   // Installed builds use the public API by default. A local backend is opt-in
@@ -38,6 +39,11 @@ class AppConfig {
     defaultValue:
         '623444676083-gdsoou9vr9ujsn0r1c7npohutjpakbd9.apps.googleusercontent.com',
   );
+  // 应用完整性预热需要云项目编号；它不是凭据，可在构建时覆盖。
+  static const playIntegrityCloudProjectNumber = String.fromEnvironment(
+    'HOK_PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER',
+    defaultValue: '623444676083',
+  );
   // Discord 的应用 ID 是公开标识符；移动端回调 scheme 必须与开发者后台
   // 注册的 discord-<application-id>:/authorize/callback 完全一致。
   static const discordApplicationId = String.fromEnvironment(
@@ -49,6 +55,7 @@ class AppConfig {
   final String apiPrefix;
   final String mediaBaseUrl;
   final String httpProxy;
+  final String playIntegrityProjectNumber;
 
   String get apiRoot {
     final base = apiBaseUrl.replaceFirst(RegExp(r'/+$'), '');

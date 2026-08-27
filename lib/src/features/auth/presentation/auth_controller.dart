@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/core_providers.dart';
+import '../data/app_integrity_client.dart';
 import '../data/auth_repository.dart';
 import '../data/oauth_state_store.dart';
 import '../domain/auth_user.dart';
@@ -87,6 +88,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String password,
     required String code,
     String? username,
+    AppIntegrityProof? integrityProof,
   }) async {
     final repository = ref.read(authRepositoryProvider);
     state = const AsyncLoading();
@@ -96,6 +98,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
         password: password,
         code: code,
         username: username,
+        integrityProof: integrityProof,
       );
       state = AsyncData(user);
     } catch (error, stackTrace) {
@@ -105,11 +108,16 @@ class AuthController extends AsyncNotifier<AuthUser?> {
 
   Future<void> sendRegisterCode({
     required String email,
-    required String turnstileToken,
+    String turnstileToken = '',
+    AppIntegrityProof? integrityProof,
   }) {
     return ref
         .read(authRepositoryProvider)
-        .sendRegisterCode(email: email, turnstileToken: turnstileToken);
+        .sendRegisterCode(
+          email: email,
+          turnstileToken: turnstileToken,
+          integrityProof: integrityProof,
+        );
   }
 
   Future<void> sendVerificationCode(String email) {

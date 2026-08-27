@@ -6,6 +6,7 @@ import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/network/api_error.dart';
 import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
+import 'package:hok_helper_mobile/src/features/auth/data/app_integrity_client.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
@@ -76,7 +77,8 @@ class _FakeAuthRepository implements AuthRepository {
   @override
   Future<void> sendRegisterCode({
     required String email,
-    required String turnstileToken,
+    String turnstileToken = '',
+    AppIntegrityProof? integrityProof,
   }) async {
     didSendRegisterCode = true;
   }
@@ -87,6 +89,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String password,
     required String code,
     String? username,
+    AppIntegrityProof? integrityProof,
   }) async {
     return userToReturn ??
         const AuthUser(

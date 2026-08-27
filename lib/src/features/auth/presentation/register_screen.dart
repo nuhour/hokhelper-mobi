@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'auth_page_scaffold.dart';
+import '../data/app_integrity_client.dart';
 import 'auth_controller.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -19,6 +22,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   var _message = '';
   var _isSendingCode = false;
+  var _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 提前预热令牌提供器，避免用户点击发送验证码后才开始初始化。
+    unawaited(AppIntegrityClient.instance.prepare());
+  }
 
   @override
   void dispose() {
@@ -32,7 +43,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
+    final isLoading = authState.isLoading || _isSubmitting;
     final error = authState.hasError ? authState.error.toString() : null;
 
     ref.listen(authControllerProvider, (previous, next) {
@@ -173,17 +184,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _sendCode() async {
+    final email = _emailController.text.trim().toLowerCase();
+    if (email.isEmpty) {
+      setState(() => _message = 'Please enter your email first');
+      return;
+    }
     setState(() {
       _isSendingCode = true;
       _message = '';
     });
     try {
+      final integrityProof = await _requestIntegrityProof(
+        action: 'email_register_code',
+        values: {'email': email},
+      );
       await ref
           .read(authControllerProvider.notifier)
-          .sendRegisterCode(
-            email: _emailController.text.trim(),
-            turnstileToken: '',
-          );
+          .sendRegisterCode(email: email, integrityProof: integrityProof);
       if (mounted) {
         setState(() => _message = 'Verification code sent');
       }
@@ -198,14 +215,50 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
-  void _submit() {
-    ref
-        .read(authControllerProvider.notifier)
-        .register(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          code: _codeController.text.trim(),
-          username: _usernameController.text.trim(),
-        );
+  Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
+    setState(() {
+      _isSubmitting = true;
+      _message = '';
+    });
+    try {
+      final email = _emailController.text.trim().toLowerCase();
+      final code = _codeController.text.trim();
+      final username = _usernameController.text.trim();
+      final integrityProof = await _requestIntegrityProof(
+        action: 'email_register',
+        values: {
+          'email': email,
+          'username': username,
+          'code': code.toUpperCase(),
+        },
+      );
+      await ref
+          .read(authControllerProvider.notifier)
+          .register(
+            email: email,
+            password: _passwordController.text,
+            code: code,
+            username: username,
+            integrityProof: integrityProof,
+          );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _message = error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<AppIntegrityProof?> _requestIntegrityProof({
+    required String action,
+    required Map<String, String> values,
+  }) async {
+    return AppIntegrityClient.instance.getProof(action: action, values: values);
   }
 }

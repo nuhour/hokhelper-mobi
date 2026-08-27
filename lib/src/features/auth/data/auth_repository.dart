@@ -2,6 +2,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/storage/secure_token_store.dart';
+import 'app_integrity_client.dart';
 import '../domain/auth_user.dart';
 
 class AuthRepository {
@@ -110,11 +111,17 @@ class AuthRepository {
 
   Future<void> sendRegisterCode({
     required String email,
-    required String turnstileToken,
+    String turnstileToken = '',
+    AppIntegrityProof? integrityProof,
   }) {
+    final body = <String, Object?>{
+      'email': email,
+      if (turnstileToken.trim().isNotEmpty) 'turnstile_token': turnstileToken,
+      if (integrityProof != null) 'app_integrity': integrityProof.toJson(),
+    };
     return _postVoid(
       '/auth/email/send_register_code',
-      body: {'email': email, 'turnstile_token': turnstileToken},
+      body: body,
       fallbackMessage: 'Failed to send verification code',
     );
   }
@@ -124,12 +131,14 @@ class AuthRepository {
     required String password,
     required String code,
     String? username,
+    AppIntegrityProof? integrityProof,
   }) async {
-    final body = <String, String>{
+    final body = <String, Object?>{
       'email': email,
       'password': password,
       'code': code,
       if (username != null && username.isNotEmpty) 'username': username,
+      if (integrityProof != null) 'app_integrity': integrityProof.toJson(),
     };
     final json = await apiClient.postJson('/auth/email/register', body: body);
 

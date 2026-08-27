@@ -7,6 +7,7 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
 import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
+import 'package:hok_helper_mobile/src/features/auth/data/app_integrity_client.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/native_apple_sign_in.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/native_google_sign_in.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/oauth_state_store.dart';
@@ -50,6 +51,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String password,
     required String code,
     String? username,
+    AppIntegrityProof? integrityProof,
   }) async {
     didRegister = true;
     return AuthUser(
