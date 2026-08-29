@@ -357,6 +357,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('me-settings-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('me-avatar-backdrop')), findsOneWidget);
   });
 
   testWidgets('signed-out profile shows login CTA', (tester) async {
@@ -365,6 +366,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+    expect(find.byKey(const ValueKey('me-avatar-backdrop')), findsOneWidget);
   });
 
   testWidgets('signed-out profile can open settings from header', (
@@ -413,6 +415,7 @@ void main() {
     expect(find.text('LV.7'), findsOneWidget);
     expect(find.text('1,200 XP'), findsOneWidget);
     expect(find.text('Jungle main'), findsOneWidget);
+    expect(find.byKey(const ValueKey('me-avatar-backdrop')), findsOneWidget);
     expect(find.text('Posts'), findsWidgets);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Followers'), findsOneWidget);

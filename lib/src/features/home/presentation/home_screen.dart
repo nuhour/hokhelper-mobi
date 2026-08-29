@@ -10,10 +10,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/region_country_picker.dart';
+import '../../auth/domain/auth_user.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../content/presentation/skin_gallery_screen.dart';
 import '../../esports/presentation/esports_screen.dart';
 import '../../heroes/presentation/hero_gallery_screen.dart';
 import '../../heroes/presentation/hero_detail_screen.dart';
+import '../../profile/domain/user_profile.dart';
+import '../../profile/presentation/me_screen.dart';
 import '../../search/presentation/search_screen.dart';
 import '../data/home_repository.dart';
 
@@ -410,7 +414,7 @@ void _showPortalMenu(BuildContext context) {
   );
 }
 
-class _PortalMenuSheet extends StatelessWidget {
+class _PortalMenuSheet extends ConsumerWidget {
   const _PortalMenuSheet();
 
   static const _groups = [
@@ -461,22 +465,43 @@ class _PortalMenuSheet extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authUser = ref.watch(authControllerProvider).asData?.value;
+    final profile = authUser == null
+        ? null
+        : ref.watch(currentUserProfileProvider).valueOrNull;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                tooltip: AppLocalizations.of(context).close,
-                onPressed: () =>
-                    Navigator.of(context, rootNavigator: true).pop(),
-                icon: Icon(Icons.close, color: context.hokTheme.onSurfaceMuted),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _PortalMenuAccountButton(
+                    user: authUser,
+                    profile: profile,
+                    onTap: () {
+                      final router = GoRouter.of(context);
+                      Navigator.of(context, rootNavigator: true).pop();
+                      router.go('/settings/profile');
+                    },
+                  ),
+                ),
+                IconButton(
+                  tooltip: AppLocalizations.of(context).close,
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(),
+                  icon: Icon(
+                    Icons.close,
+                    color: context.hokTheme.onSurfaceMuted,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 16),
             Expanded(
               child: ListView.separated(
                 itemCount: _groups.length,
@@ -490,6 +515,92 @@ class _PortalMenuSheet extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PortalMenuAccountButton extends StatelessWidget {
+  const _PortalMenuAccountButton({
+    required this.user,
+    required this.profile,
+    required this.onTap,
+  });
+
+  final AuthUser? user;
+  final UserProfile? profile;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final displayName = profile?.displayName.isNotEmpty == true
+        ? profile!.displayName
+        : user?.displayName?.isNotEmpty == true
+        ? user!.displayName!
+        : user?.username.isNotEmpty == true
+        ? user!.username
+        : l10n.profileLogin;
+    final fallback = displayName.isEmpty ? '?' : displayName[0].toUpperCase();
+    final profileAvatar = profile?.avatar.trim() ?? '';
+    final avatarUrl = profileAvatar.isNotEmpty
+        ? profileAvatar
+        : user?.avatar ?? '';
+
+    return Material(
+      key: const ValueKey('home-portal-menu-account'),
+      color: context.hokTheme.surfaceRaised,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+          child: Row(
+            children: [
+              SizedBox.square(
+                key: const ValueKey('home-portal-menu-avatar'),
+                dimension: 52,
+                child: FittedBox(
+                  child: ProfileAvatar(
+                    avatarUrl: avatarUrl,
+                    fallback: fallback,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: context.hokTheme.onSurfaceStrong,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      l10n.profileAccountTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.hokTheme.onSurfaceMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: context.hokTheme.onSurfaceMuted,
+              ),
+            ],
+          ),
         ),
       ),
     );

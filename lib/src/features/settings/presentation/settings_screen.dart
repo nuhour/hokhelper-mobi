@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/cache/app_cache_service.dart';
 import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
+import '../../../core/platform/app_update_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_image.dart';
@@ -19,6 +23,14 @@ final blockedCommunityUsersProvider =
       }
       return ref.watch(communityRepositoryProvider).loadBlockedUsers();
     });
+
+final appCacheServiceProvider = Provider<AppCacheService>((ref) {
+  return AppCacheService();
+});
+
+final appUpdateServiceProvider = Provider<AppUpdateService>((ref) {
+  return AppUpdateService();
+});
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -112,7 +124,7 @@ class SettingsScreen extends ConsumerWidget {
                         subtitle: l10n.settingsClearCacheSubtitle,
                         actionLabel: l10n.settingsClearCacheAction,
                         grouped: true,
-                        onTap: () => _clearCache(context, l10n),
+                        onTap: () => unawaited(_clearCache(context, ref, l10n)),
                       ),
                       Divider(height: 1, color: colors.border),
                       _SettingsActionTile(
@@ -122,7 +134,8 @@ class SettingsScreen extends ConsumerWidget {
                         subtitle: l10n.settingsUpdatesSubtitle,
                         actionLabel: l10n.settingsCheckUpdatesAction,
                         grouped: true,
-                        onTap: () => _checkUpdates(context, l10n),
+                        onTap: () =>
+                            unawaited(_checkUpdates(context, ref, l10n)),
                       ),
                       Divider(height: 1, color: colors.border),
                       _SettingsActionTile(
@@ -166,18 +179,99 @@ class SettingsScreen extends ConsumerWidget {
     };
   }
 
-  static void _clearCache(BuildContext context, AppLocalizations l10n) {
-    PaintingBinding.instance.imageCache.clear();
-    PaintingBinding.instance.imageCache.clearLiveImages();
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(l10n.settingsCacheCleared)));
+  static Future<void> _clearCache(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    AppCacheUsage usage;
+    try {
+      usage = await ref.read(appCacheServiceProvider).measure();
+    } on Object {
+      usage = const AppCacheUsage.empty();
+    }
+    if (!context.mounted) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const ValueKey('settings-clear-cache-dialog'),
+        title: Text(l10n.settingsClearCacheConfirmTitle),
+        content: Text(
+          l10n.format('settingsClearCacheConfirmBody', <String, String>{
+            'size': usage.formattedSize,
+            'files': '${usage.fileCount}',
+          }),
+        ),
+        actions: [
+          TextButton(
+            key: const ValueKey('settings-clear-cache-cancel-button'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.settingsClose),
+          ),
+          FilledButton(
+            key: const ValueKey('settings-clear-cache-confirm-button'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.settingsClearCacheConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    try {
+      await ref.read(appCacheServiceProvider).clear();
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.format('settingsCacheClearedWithSize', {
+                'size': usage.formattedSize,
+              }),
+            ),
+          ),
+        );
+    } on Object {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.settingsCacheClearFailed)));
+    }
   }
 
-  static void _checkUpdates(BuildContext context, AppLocalizations l10n) {
+  static Future<void> _checkUpdates(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    final openedUri = await ref
+        .read(appUpdateServiceProvider)
+        .openStoreListing();
+    if (!context.mounted) {
+      return;
+    }
+
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(l10n.settingsLatestVersion)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            openedUri == null
+                ? l10n.settingsUpdateOpenFailed
+                : l10n.settingsUpdateStoreOpened,
+          ),
+        ),
+      );
   }
 
   static void _showBlockedUsers(BuildContext context) {

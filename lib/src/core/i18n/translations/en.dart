@@ -20,10 +20,20 @@ const enTranslations = {
   'settingsClearCacheSubtitle': 'Clear temporary images and local UI cache.',
   'settingsClearCacheAction': 'Clear Cache',
   'settingsCacheCleared': 'Cache cleared',
+  'settingsClearCacheConfirmTitle': 'Clear cache?',
+  'settingsClearCacheConfirmBody':
+      'This removes cached network images and temporary UI image data. Estimated space to release: {size} across {files} files. Your account, preferences, and saved content stay intact.',
+  'settingsClearCacheConfirm': 'Clear',
+  'settingsCacheClearedWithSize': 'Cache cleared · {size} released',
+  'settingsCacheClearFailed': 'Cache cleanup did not finish. Please try again.',
   'settingsUpdatesTitle': 'Updates',
   'settingsUpdatesSubtitle': 'Check whether this app is up to date.',
   'settingsCheckUpdatesAction': 'Check for Updates',
   'settingsLatestVersion': 'You are using the latest version',
+  'settingsUpdateStoreOpened':
+      'Google Play opened. Check whether an update is available.',
+  'settingsUpdateOpenFailed':
+      'Open Google Play from the store app, then try again.',
   'settingsAboutTitle': 'About',
   'settingsAboutSubtitle': 'Version, app identity, and project information.',
   'settingsAboutAction': 'About',

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -92,23 +94,10 @@ class _SignedOutProfile extends StatelessWidget {
     final colors = _ProfileColors.of(context);
     final l10n = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 56),
+      padding: const EdgeInsets.only(top: 24),
       child: Column(
         children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.raised,
-              border: Border.all(color: colors.border, width: 2),
-            ),
-            child: Icon(
-              Icons.person_outline_rounded,
-              size: 42,
-              color: colors.muted,
-            ),
-          ),
+          _ProfileAvatarBackdrop(avatarUrl: '', fallback: '?'),
           const SizedBox(height: 20),
           Text(
             l10n.profileGuestTitle,
@@ -200,6 +189,10 @@ class _ProfileOverview extends StatelessWidget {
     final avatarInitial = displayName.isNotEmpty
         ? displayName.substring(0, 1).toUpperCase()
         : '?';
+    final profileAvatar = profile?.avatar.trim() ?? '';
+    final avatarUrl = profileAvatar.isNotEmpty
+        ? profileAvatar
+        : user.avatar ?? '';
     final colors = _ProfileColors.of(context);
     final username = profile?.username.isNotEmpty == true
         ? profile!.username
@@ -209,12 +202,7 @@ class _ProfileOverview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Center(
-          child: ProfileAvatar(
-            avatarUrl: profile?.avatar ?? '',
-            fallback: avatarInitial,
-          ),
-        ),
+        _ProfileAvatarBackdrop(avatarUrl: avatarUrl, fallback: avatarInitial),
         const SizedBox(height: 10),
         Text(
           displayName,
@@ -630,6 +618,80 @@ class ProfileAvatar extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => fallbackWidget,
                 ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileAvatarBackdrop extends StatelessWidget {
+  const _ProfileAvatarBackdrop({
+    required this.avatarUrl,
+    required this.fallback,
+  });
+
+  final String avatarUrl;
+  final String fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = Theme.of(context).scaffoldBackgroundColor;
+    return SizedBox(
+      key: const ValueKey('me-avatar-backdrop'),
+      width: double.infinity,
+      height: 190,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (bounds) => const LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.transparent,
+                  Colors.white,
+                  Colors.white,
+                  Colors.transparent,
+                ],
+                stops: [0, 0.16, 0.84, 1],
+              ).createShader(bounds),
+              child: ImageFiltered(
+                imageFilter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                child: Image.asset(
+                  'assets/home/avatar_bg.webp',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                ),
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    background.withValues(alpha: 0.12),
+                    background.withValues(alpha: 0.2),
+                    background.withValues(alpha: 0.74),
+                  ],
+                ),
+              ),
+            ),
+            Center(
+              child: SizedBox.square(
+                dimension: 112,
+                child: Center(
+                  child: ProfileAvatar(
+                    avatarUrl: avatarUrl,
+                    fallback: fallback,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

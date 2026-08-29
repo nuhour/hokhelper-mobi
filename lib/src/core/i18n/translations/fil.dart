@@ -21,10 +21,21 @@ const filTranslations = {
       'Burahin ang pansamantalang larawan at UI cache.',
   'settingsClearCacheAction': 'Burahin ang Cache',
   'settingsCacheCleared': 'Nabura na ang cache',
+  'settingsClearCacheConfirmTitle': 'Burahin ang cache?',
+  'settingsClearCacheConfirmBody':
+      'Aalisin nito ang naka-cache na network images at pansamantalang UI image data. Tinatayang mababawas: {size} mula sa {files} file. Mananatili ang account, preferences, at naka-save na content.',
+  'settingsClearCacheConfirm': 'Burahin',
+  'settingsCacheClearedWithSize': 'Nabura na ang cache · {size} ang nabakante',
+  'settingsCacheClearFailed':
+      'Hindi natapos ang paglilinis ng cache. Subukan muli.',
   'settingsUpdatesTitle': 'Mga Update',
   'settingsUpdatesSubtitle': 'Tingnan kung napapanahon ang app.',
   'settingsCheckUpdatesAction': 'Tingnan ang Update',
   'settingsLatestVersion': 'Pinakabagong bersyon na ang gamit mo',
+  'settingsUpdateStoreOpened':
+      'Binuksan ang Google Play. Tingnan kung may update.',
+  'settingsUpdateOpenFailed':
+      'Buksan ang Google Play sa store app at subukan muli.',
   'settingsAboutTitle': 'Tungkol',
   'settingsAboutSubtitle':
       'Bersyon, pagkakakilanlan ng app, at impormasyon ng proyekto.',

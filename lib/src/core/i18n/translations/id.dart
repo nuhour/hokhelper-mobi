@@ -21,10 +21,21 @@ final idTranslations = {
   'settingsClearCacheSubtitle': 'Hapus gambar sementara dan cache UI lokal.',
   'settingsClearCacheAction': 'Hapus Cache',
   'settingsCacheCleared': 'Cache dibersihkan',
+  'settingsClearCacheConfirmTitle': 'Hapus cache?',
+  'settingsClearCacheConfirmBody':
+      'Ini akan menghapus gambar jaringan yang tersimpan dan data gambar UI sementara. Perkiraan ruang yang dibebaskan: {size} dari {files} file. Akun, preferensi, dan konten tersimpan tetap ada.',
+  'settingsClearCacheConfirm': 'Hapus',
+  'settingsCacheClearedWithSize': 'Cache dibersihkan · {size} dibebaskan',
+  'settingsCacheClearFailed':
+      'Pembersihan cache belum selesai. Silakan coba lagi.',
   'settingsUpdatesTitle': 'Pembaruan',
   'settingsUpdatesSubtitle': 'Periksa apakah aplikasi sudah versi terbaru.',
   'settingsCheckUpdatesAction': 'Periksa Pembaruan',
   'settingsLatestVersion': 'Anda menggunakan versi terbaru',
+  'settingsUpdateStoreOpened':
+      'Google Play dibuka. Periksa apakah pembaruan tersedia.',
+  'settingsUpdateOpenFailed':
+      'Buka Google Play dari aplikasi toko, lalu coba lagi.',
   'settingsAboutTitle': 'Tentang',
   'settingsAboutSubtitle': 'Versi, identitas aplikasi, dan informasi proyek.',
   'settingsAboutAction': 'Tentang',

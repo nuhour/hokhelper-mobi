@@ -20,10 +20,20 @@ const msTranslations = {
       'Kosongkan imej sementara dan cache antara muka.',
   'settingsClearCacheAction': 'Kosongkan cache',
   'settingsCacheCleared': 'Cache telah dikosongkan',
+  'settingsClearCacheConfirmTitle': 'Kosongkan cache?',
+  'settingsClearCacheConfirmBody':
+      'Ini akan membuang imej rangkaian yang dicache dan data imej UI sementara. Anggaran ruang dibebaskan: {size} daripada {files} fail. Akaun, pilihan dan kandungan tersimpan anda kekal.',
+  'settingsClearCacheConfirm': 'Kosongkan',
+  'settingsCacheClearedWithSize': 'Cache dikosongkan · {size} dibebaskan',
+  'settingsCacheClearFailed': 'Pembersihan cache belum selesai. Cuba lagi.',
   'settingsUpdatesTitle': 'Kemas kini',
   'settingsUpdatesSubtitle': 'Semak sama ada aplikasi ini terkini.',
   'settingsCheckUpdatesAction': 'Semak kemas kini',
   'settingsLatestVersion': 'Anda menggunakan versi terkini',
+  'settingsUpdateStoreOpened':
+      'Google Play dibuka. Semak sama ada kemas kini tersedia.',
+  'settingsUpdateOpenFailed':
+      'Buka Google Play daripada aplikasi kedai, kemudian cuba lagi.',
   'settingsAboutTitle': 'Perihal',
   'settingsAboutSubtitle': 'Versi, identiti aplikasi dan maklumat projek.',
   'settingsAboutAction': 'Perihal',

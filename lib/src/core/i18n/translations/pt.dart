@@ -21,10 +21,21 @@ const ptTranslations = {
       'Limpa imagens temporárias e o cache da interface.',
   'settingsClearCacheAction': 'Limpar cache',
   'settingsCacheCleared': 'Cache limpo',
+  'settingsClearCacheConfirmTitle': 'Limpar o cache?',
+  'settingsClearCacheConfirmBody':
+      'Isso remove imagens de rede em cache e dados temporários de imagens da interface. Espaço estimado a liberar: {size} em {files} arquivos. Sua conta, preferências e conteúdo salvo serão mantidos.',
+  'settingsClearCacheConfirm': 'Limpar',
+  'settingsCacheClearedWithSize': 'Cache limpo · {size} liberados',
+  'settingsCacheClearFailed':
+      'A limpeza do cache não terminou. Tente novamente.',
   'settingsUpdatesTitle': 'Atualizações',
   'settingsUpdatesSubtitle': 'Verifica se o app está atualizado.',
   'settingsCheckUpdatesAction': 'Verificar atualizações',
   'settingsLatestVersion': 'Você já está usando a versão mais recente',
+  'settingsUpdateStoreOpened':
+      'O Google Play foi aberto. Veja se há uma atualização.',
+  'settingsUpdateOpenFailed':
+      'Abra o Google Play pelo app da loja e tente novamente.',
   'settingsAboutTitle': 'Sobre',
   'settingsAboutSubtitle':
       'Versão, identidade do app e informações do projeto.',

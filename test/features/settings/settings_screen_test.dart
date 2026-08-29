@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hok_helper_mobile/src/core/cache/app_cache_service.dart';
 import 'package:hok_helper_mobile/src/core/constants/regions.dart';
 import 'package:hok_helper_mobile/src/core/i18n/app_localizations.dart';
+import 'package:hok_helper_mobile/src/core/platform/app_update_service.dart';
 import 'package:hok_helper_mobile/src/core/storage/preferences_store.dart';
 import 'package:hok_helper_mobile/src/core/theme/app_theme.dart';
 import 'package:hok_helper_mobile/src/features/settings/presentation/settings_controller.dart';
@@ -25,9 +27,7 @@ void main() {
 
     expect(find.text('Language'), findsOneWidget);
     expect(find.text('Region'), findsNothing);
-    await tester.tap(
-      find.byKey(const ValueKey('settings-language-dropdown')),
-    );
+    await tester.tap(find.byKey(const ValueKey('settings-language-dropdown')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('中文').last);
     await tester.pumpAndSettle();
@@ -54,8 +54,32 @@ void main() {
       PreferencesStore.selectedLanguageCodeKey: 'en',
     });
 
+    var clearCalled = false;
+    final launchedUris = <Uri>[];
+
     await tester.pumpWidget(
-      const ProviderScope(child: _LocalizedSettingsHost()),
+      ProviderScope(
+        overrides: [
+          appCacheServiceProvider.overrideWithValue(
+            AppCacheService(
+              usageReader: () async =>
+                  const AppCacheUsage(bytes: 3 * 1024 * 1024, fileCount: 4),
+              clearer: () async {
+                clearCalled = true;
+              },
+            ),
+          ),
+          appUpdateServiceProvider.overrideWithValue(
+            AppUpdateService(
+              launchExternal: (uri) async {
+                launchedUris.add(uri);
+                return true;
+              },
+            ),
+          ),
+        ],
+        child: const _LocalizedSettingsHost(),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -70,13 +94,34 @@ void main() {
             widget is Scrollable && widget.axisDirection == AxisDirection.down,
       ),
     );
-    tester
-        .widget<ListTile>(
-          find.byKey(const ValueKey('settings-clear-cache-tile')),
-        )
-        .onTap!();
-    await tester.pump();
-    expect(find.text('Cache cleared'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('settings-clear-cache-tile')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('settings-clear-cache-dialog')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('3.0 MB'), findsOneWidget);
+    expect(find.textContaining('4 files'), findsOneWidget);
+    expect(clearCalled, isFalse);
+
+    await tester.tap(
+      find.byKey(const ValueKey('settings-clear-cache-cancel-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('settings-clear-cache-dialog')),
+      findsNothing,
+    );
+    expect(clearCalled, isFalse);
+
+    await tester.tap(find.byKey(const ValueKey('settings-clear-cache-tile')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('settings-clear-cache-confirm-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(clearCalled, isTrue);
+    expect(find.text('Cache cleared · 3.0 MB released'), findsOneWidget);
     ScaffoldMessenger.of(
       tester.element(find.byType(SettingsScreen)),
     ).clearSnackBars();
@@ -95,11 +140,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Check for Updates'), findsOneWidget);
-    await tester.tap(
-      find.widgetWithText(TextButton, 'Check for Updates').hitTestable(),
+    await tester.tap(find.byKey(const ValueKey('settings-check-updates-tile')));
+    await tester.pumpAndSettle();
+    expect(launchedUris, [AppUpdateService.playStoreMarketUri]);
+    expect(
+      find.text('Google Play opened. Check whether an update is available.'),
+      findsOneWidget,
     );
-    await tester.pump(const Duration(milliseconds: 750));
-    expect(find.text('You are using the latest version'), findsOneWidget);
     ScaffoldMessenger.of(
       tester.element(find.byType(SettingsScreen)),
     ).clearSnackBars();

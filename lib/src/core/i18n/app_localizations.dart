@@ -58,10 +58,19 @@ class AppLocalizations {
   String get settingsClearCacheSubtitle => _t('settingsClearCacheSubtitle');
   String get settingsClearCacheAction => _t('settingsClearCacheAction');
   String get settingsCacheCleared => _t('settingsCacheCleared');
+  String get settingsClearCacheConfirmTitle =>
+      _t('settingsClearCacheConfirmTitle');
+  String get settingsClearCacheConfirmBody =>
+      _t('settingsClearCacheConfirmBody');
+  String get settingsClearCacheConfirm => _t('settingsClearCacheConfirm');
+  String get settingsCacheClearedWithSize => _t('settingsCacheClearedWithSize');
+  String get settingsCacheClearFailed => _t('settingsCacheClearFailed');
   String get settingsUpdatesTitle => _t('settingsUpdatesTitle');
   String get settingsUpdatesSubtitle => _t('settingsUpdatesSubtitle');
   String get settingsCheckUpdatesAction => _t('settingsCheckUpdatesAction');
   String get settingsLatestVersion => _t('settingsLatestVersion');
+  String get settingsUpdateStoreOpened => _t('settingsUpdateStoreOpened');
+  String get settingsUpdateOpenFailed => _t('settingsUpdateOpenFailed');
   String get settingsAboutTitle => _t('settingsAboutTitle');
   String get settingsAboutSubtitle => _t('settingsAboutSubtitle');
   String get settingsAboutAction => _t('settingsAboutAction');

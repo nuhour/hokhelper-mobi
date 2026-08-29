@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
+import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
 import 'package:hok_helper_mobile/src/features/content/presentation/skin_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/esports/domain/esports_match_summary.dart';
@@ -14,6 +16,40 @@ import 'package:hok_helper_mobile/src/features/heroes/domain/hero_summary.dart';
 import 'package:hok_helper_mobile/src/features/heroes/presentation/hero_gallery_screen.dart';
 import 'package:hok_helper_mobile/src/features/home/data/home_repository.dart';
 import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dart';
+import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
+import 'package:hok_helper_mobile/src/features/profile/presentation/me_screen.dart';
+
+class _TestAuthController extends AuthController {
+  _TestAuthController(this.user);
+
+  final AuthUser? user;
+
+  @override
+  Future<AuthUser?> build() async {
+    return user;
+  }
+}
+
+const _menuProfile = UserProfile(
+  id: 42,
+  username: 'lam',
+  displayName: 'Lam',
+  email: 'lam@example.test',
+  avatar: '',
+  level: 7,
+  points: 1200,
+  xpTotal: 1400,
+  xpCurrentLevel: 260,
+  xpToNextLevel: 740,
+  levelProgress: 26,
+  levelCap: false,
+  bio: 'Jungle main',
+  socialLinks: {},
+  stats: ProfileStats(posts: 3, following: 4, followers: 5, likes: 6),
+  isFollowing: false,
+  isLiked: false,
+  isSelf: true,
+);
 
 Widget _buildHomeScreen(HomeStats stats) {
   return ProviderScope(
@@ -302,6 +338,66 @@ void main() {
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('home-portal-menu-drawer')), findsNothing);
+  });
+
+  testWidgets('home menu account opens personal information', (tester) async {
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(body: HomeScreen()),
+        ),
+        GoRoute(
+          path: '/settings/profile',
+          builder: (context, state) =>
+              const Scaffold(body: Text('Personal Information')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeStatsProvider.overrideWith(
+            (ref) async => const HomeStats(
+              success: true,
+              message: 'Home portal ready',
+              result: {},
+            ),
+          ),
+          authControllerProvider.overrideWith(() => _TestAuthController(user)),
+          currentUserProfileProvider.overrideWith((ref) async => _menuProfile),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.menu_rounded));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('home-portal-menu-account')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('home-portal-menu-avatar')),
+      findsOneWidget,
+    );
+    expect(find.text('Lam'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('home-portal-menu-account')));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/settings/profile');
+    expect(find.text('Personal Information'), findsOneWidget);
   });
 
   testWidgets('home screen renders hokx portal preview sections', (

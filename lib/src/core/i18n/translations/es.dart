@@ -21,10 +21,21 @@ const esTranslations = {
       'Borra las imágenes temporales y la caché de la interfaz.',
   'settingsClearCacheAction': 'Borrar caché',
   'settingsCacheCleared': 'Caché borrada',
+  'settingsClearCacheConfirmTitle': '¿Borrar la caché?',
+  'settingsClearCacheConfirmBody':
+      'Se eliminarán las imágenes de red almacenadas y los datos temporales de imágenes de la interfaz. Espacio estimado: {size} en {files} archivos. Tu cuenta, preferencias y contenido guardado se conservarán.',
+  'settingsClearCacheConfirm': 'Borrar',
+  'settingsCacheClearedWithSize': 'Caché borrada · {size} liberados',
+  'settingsCacheClearFailed':
+      'La limpieza de la caché no terminó. Inténtalo de nuevo.',
   'settingsUpdatesTitle': 'Actualizaciones',
   'settingsUpdatesSubtitle': 'Comprueba si la aplicación está actualizada.',
   'settingsCheckUpdatesAction': 'Buscar actualizaciones',
   'settingsLatestVersion': 'Ya tienes la última versión',
+  'settingsUpdateStoreOpened':
+      'Google Play se abrió. Comprueba si hay una actualización.',
+  'settingsUpdateOpenFailed':
+      'Abre Google Play desde la tienda y vuelve a intentarlo.',
   'settingsAboutTitle': 'Acerca de',
   'settingsAboutSubtitle':
       'Versión, identidad de la aplicación e información del proyecto.',

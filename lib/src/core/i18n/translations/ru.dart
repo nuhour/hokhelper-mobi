@@ -20,10 +20,20 @@ const ruTranslations = {
       'Удаляет временные изображения и кэш интерфейса.',
   'settingsClearCacheAction': 'Очистить кэш',
   'settingsCacheCleared': 'Кэш очищен',
+  'settingsClearCacheConfirmTitle': 'Очистить кэш?',
+  'settingsClearCacheConfirmBody':
+      'Будут удалены кэшированные сетевые изображения и временные данные изображений интерфейса. Освободится примерно {size} в {files} файлах. Аккаунт, настройки и сохранённый контент останутся.',
+  'settingsClearCacheConfirm': 'Очистить',
+  'settingsCacheClearedWithSize': 'Кэш очищен · освобождено {size}',
+  'settingsCacheClearFailed': 'Очистка кэша не завершилась. Повторите попытку.',
   'settingsUpdatesTitle': 'Обновления',
   'settingsUpdatesSubtitle': 'Проверить актуальность версии приложения.',
   'settingsCheckUpdatesAction': 'Проверить обновления',
   'settingsLatestVersion': 'У вас установлена последняя версия',
+  'settingsUpdateStoreOpened':
+      'Google Play открыт. Проверьте наличие обновления.',
+  'settingsUpdateOpenFailed':
+      'Откройте Google Play через магазин приложений и повторите попытку.',
   'settingsAboutTitle': 'О приложении',
   'settingsAboutSubtitle': 'Версия, данные приложения и информация о проекте.',
   'settingsAboutAction': 'О приложении',
