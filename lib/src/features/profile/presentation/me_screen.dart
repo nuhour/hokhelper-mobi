@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -429,24 +430,7 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.translate('profileDeleteAccountDialogTitle')),
-        content: Text(l10n.translate('profileDeleteAccountDialogBody')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.translate('commonCancel')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(l10n.translate('profileDeleteAccountConfirm')),
-          ),
-        ],
-      ),
+      builder: (_) => const _DeleteAccountConfirmationDialog(),
     );
     if (confirmed != true || !context.mounted) {
       return;
@@ -467,6 +451,92 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
         AppNotice.failure(context, fallbackKey: 'profileDeleteAccountFailed');
       }
     }
+  }
+}
+
+class _DeleteAccountConfirmationDialog extends StatefulWidget {
+  const _DeleteAccountConfirmationDialog();
+
+  @override
+  State<_DeleteAccountConfirmationDialog> createState() =>
+      _DeleteAccountConfirmationDialogState();
+}
+
+class _DeleteAccountConfirmationDialogState
+    extends State<_DeleteAccountConfirmationDialog> {
+  static const _countdownStart = 10;
+
+  Timer? _timer;
+  var _remainingSeconds = _countdownStart;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (_remainingSeconds <= 1) {
+        _timer?.cancel();
+        setState(() => _remainingSeconds = 0);
+        return;
+      }
+      setState(() => _remainingSeconds -= 1);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final countdownMessage = _remainingSeconds == 0
+        ? l10n.translate('profileDeleteAccountReady')
+        : l10n.format('profileDeleteAccountCountdown', {
+            'seconds': '$_remainingSeconds',
+          });
+    final colors = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      title: Text(l10n.translate('profileDeleteAccountDialogTitle')),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.translate('profileDeleteAccountDialogBody')),
+          const SizedBox(height: 14),
+          Text(
+            countdownMessage,
+            key: const ValueKey('profile-delete-account-countdown'),
+            style: TextStyle(
+              color: _remainingSeconds == 0
+                  ? colors.error
+                  : colors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l10n.translate('commonCancel')),
+        ),
+        FilledButton(
+          key: const ValueKey('profile-delete-account-confirm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.error,
+            foregroundColor: colors.onError,
+          ),
+          onPressed: _remainingSeconds == 0
+              ? () => Navigator.pop(context, true)
+              : null,
+          child: Text(l10n.translate('profileDeleteAccountConfirm')),
+        ),
+      ],
+    );
   }
 }
 

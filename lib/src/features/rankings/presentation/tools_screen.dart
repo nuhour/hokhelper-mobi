@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_section_header.dart';
-import '../../auth/presentation/auth_controller.dart';
 
-class ToolsScreen extends ConsumerWidget {
+class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
   static const _primaryTools = [
@@ -56,10 +54,8 @@ class ToolsScreen extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isAuthenticated =
-        ref.watch(authControllerProvider).valueOrNull != null;
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -84,19 +80,7 @@ class ToolsScreen extends ConsumerWidget {
                       tool: tool,
                       title: l10n.toolTitle(tool.route),
                       subtitle: l10n.toolSubtitle(tool.route),
-                      onTap: () {
-                        final requiresAccount =
-                            tool.route == '/tools/bp-simulator' ||
-                            tool.route == '/tools/tier-list' ||
-                            tool.route == '/tools/prompts';
-                        if (requiresAccount && !isAuthenticated) {
-                          context.go(
-                            '/login?returnTo=${Uri.encodeComponent(tool.route)}',
-                          );
-                          return;
-                        }
-                        context.go(tool.route);
-                      },
+                      onTap: () => context.go(tool.route),
                     ),
                   ),
               ],

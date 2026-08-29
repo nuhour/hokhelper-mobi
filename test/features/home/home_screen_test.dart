@@ -482,6 +482,34 @@ void main() {
     expect(find.text('Win Rate'), findsAtLeastNWidgets(1));
     expect(find.text('Trend'), findsOneWidget);
     expect(find.text('Core'), findsAtLeastNWidgets(1));
+    final heroWinRateHeader = find.byKey(
+      const ValueKey('home-hero-ranking-header-wr'),
+    );
+    final heroWinRateCell = find.byKey(
+      const ValueKey('home-hero-ranking-cell-2619-wr'),
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.descendant(of: heroWinRateHeader, matching: find.byType(Text)),
+          )
+          .textAlign,
+      TextAlign.center,
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.descendant(of: heroWinRateCell, matching: find.byType(Text)),
+          )
+          .textAlign,
+      TextAlign.center,
+    );
+    expect(
+      (tester.getCenter(heroWinRateHeader).dx -
+              tester.getCenter(heroWinRateCell).dx)
+          .abs(),
+      lessThan(0.1),
+    );
     expect(find.text('趋势'), findsNothing);
     expect(find.text('核心'), findsNothing);
     expect(

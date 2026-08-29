@@ -19,15 +19,13 @@ import '../domain/community_sticker.dart';
 import 'community_composer_assets.dart';
 import 'community_screen.dart';
 
-final postDetailProvider = FutureProvider.family<CommunityPostDetail, String>((
-  ref,
-  postId,
-) async {
-  final settings = await ref.watch(appSettingsControllerProvider.future);
-  return ref
-      .watch(communityRepositoryProvider)
-      .loadPostDetail(postId, regionId: settings.region.regionId);
-});
+final postDetailProvider = FutureProvider.autoDispose
+    .family<CommunityPostDetail, String>((ref, postId) async {
+      final settings = await ref.watch(appSettingsControllerProvider.future);
+      return ref
+          .watch(communityRepositoryProvider)
+          .loadPostDetail(postId, regionId: settings.region.regionId);
+    });
 
 class CommunityPostDetailScreen extends ConsumerStatefulWidget {
   const CommunityPostDetailScreen({required this.postId, super.key});

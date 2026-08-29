@@ -2005,9 +2005,12 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                 children: [
                   for (var index = 0; index < metricColumns.length; index++)
                     Container(
+                      key: ValueKey(
+                        'home-hero-ranking-header-${metricColumns[index].id}',
+                      ),
                       width: _homeTableColumnWidth(metricColumns[index]),
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.only(left: 4),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         border:
                             index == 0 ||
@@ -2025,6 +2028,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                         metricColumns[index].label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           fontSize: 9,
                           color: context.hokTheme.onSurfaceMuted,
@@ -2048,6 +2052,9 @@ class _HomeDataTableState extends State<_HomeDataTable> {
               children: [
                 for (var index = 0; index < metricColumns.length; index++)
                   Container(
+                    key: ValueKey(
+                      'home-hero-ranking-cell-${_homeHeroRecordId(row)}-${metricColumns[index].id}',
+                    ),
                     width: _homeTableColumnWidth(metricColumns[index]),
                     height: _rowHeight,
                     decoration: BoxDecoration(
@@ -2064,8 +2071,7 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                             )
                           : null,
                     ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
+                    child: Center(
                       child: _HomeDataCell(
                         row: row,
                         column: metricColumns[index],
@@ -2246,9 +2252,14 @@ class _HomeDataCell extends StatelessWidget {
     final isPlayer = column.id == 'player_name' || column.type == 'player';
     final isTrend = column.id == 'trend_smoothed' || column.type == 'sparkline';
     if (isTrend) {
-      return _HomeMiniSparkline(
-        key: ValueKey('home-trend-${_homeHeroRecordId(row)}'),
-        values: _readTrendValues(row[column.id]),
+      return SizedBox(
+        width: _homeTableColumnWidth(column),
+        child: Center(
+          child: _HomeMiniSparkline(
+            key: ValueKey('home-trend-${_homeHeroRecordId(row)}'),
+            values: _readTrendValues(row[column.id]),
+          ),
+        ),
       );
     }
     final minWidth = isHero ? 48.0 : (isPlayer ? 132.0 : 44.0);
@@ -2260,6 +2271,7 @@ class _HomeDataCell extends StatelessWidget {
           _homeTableValue(row, column),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: cellStyle?.copyWith(fontSize: 11),
         ),
       );

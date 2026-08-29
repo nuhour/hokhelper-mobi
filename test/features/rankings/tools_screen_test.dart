@@ -33,7 +33,7 @@ GoRouter _buildRouter() {
   return createAppRouter()..go('/tools');
 }
 
-/// BP 模拟器 / 梯度榜编辑器 / 提示词入口要求登录态，测试默认以已登录身份进入。
+/// 需要保存数据的工具仍然覆盖登录态，入口本身保持对游客开放。
 class _SignedInAuthController extends AuthController {
   @override
   Future<AuthUser?> build() async {
@@ -409,7 +409,7 @@ void main() {
     );
   });
 
-  testWidgets('gated tool tiles redirect signed-out users to login', (
+  testWidgets('all tool tiles open their pages for signed-out users', (
     tester,
   ) async {
     final router = _buildRouter();
@@ -424,12 +424,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('BP Simulator'));
-    await tester.pumpAndSettle();
+    const tools = <(String, String)>[
+      ('BP Simulator', '/tools/bp-simulator'),
+      ('Tier List Editor', '/tools/tier-list'),
+      ('Prompts', '/tools/prompts'),
+      ('Team Builder', '/tools/team-builder'),
+      ('Build Simulator', '/tools/build-sim'),
+      ('Rank Fortune', '/tools/rank-fortune'),
+    ];
+    for (final (label, route) in tools) {
+      await tester.ensureVisible(find.text(label));
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
 
-    final uri = router.routeInformationProvider.value.uri;
-    expect(uri.path, '/login');
-    expect(uri.queryParameters['returnTo'], '/tools/bp-simulator');
+      expect(router.routeInformationProvider.value.uri.path, route);
+      router.go('/tools');
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('prompts tile opens the prompts route', (tester) async {

@@ -13,6 +13,20 @@ class CommunityPostDetail {
   final bool isLiked;
   final List<CommunityCommentSummary> comments;
 
+  CommunityPostDetail copyWith({
+    CommunityPostSummary? post,
+    String? content,
+    bool? isLiked,
+    List<CommunityCommentSummary>? comments,
+  }) {
+    return CommunityPostDetail(
+      post: post ?? this.post,
+      content: content ?? this.content,
+      isLiked: isLiked ?? this.isLiked,
+      comments: comments ?? this.comments,
+    );
+  }
+
   factory CommunityPostDetail.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
     final postJson = map['post'];

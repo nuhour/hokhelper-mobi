@@ -781,10 +781,24 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('profile-delete-account-tile')));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.text('Permanently delete account?'), findsOneWidget);
     expect(find.text('Delete permanently'), findsOneWidget);
+    final deleteButton = find.byKey(
+      const ValueKey('profile-delete-account-confirm'),
+    );
+    expect(tester.widget<FilledButton>(deleteButton).onPressed, isNull);
+    expect(find.text('Permanent deletion available in 10s'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 9));
+    expect(tester.widget<FilledButton>(deleteButton).onPressed, isNull);
+    expect(find.text('Permanent deletion available in 1s'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.widget<FilledButton>(deleteButton).onPressed, isNotNull);
+    expect(find.text('Permanent deletion is ready'), findsOneWidget);
+
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 

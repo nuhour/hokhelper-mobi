@@ -545,7 +545,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(clipboardCall?.arguments, {
-      'text': 'https://hokhelper.com/tools/prompts?promptId=7',
+      'text':
+          'Cyber skin concept\n\nhttps://hokhelper.com/tools/prompts?promptId=7\n\nContent from HOK Helper',
     });
     expect(find.text('Link copied'), findsOneWidget);
   });

@@ -27,6 +27,36 @@ class CommunityPostSummary {
   final int commentCount;
   final bool isLiked;
 
+  CommunityPostSummary copyWith({
+    String? id,
+    String? title,
+    String? preview,
+    int? authorId,
+    String? authorName,
+    String? authorAvatarUrl,
+    List<String>? tags,
+    String? createdAt,
+    int? viewCount,
+    int? likeCount,
+    int? commentCount,
+    bool? isLiked,
+  }) {
+    return CommunityPostSummary(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      preview: preview ?? this.preview,
+      authorId: authorId ?? this.authorId,
+      authorName: authorName ?? this.authorName,
+      authorAvatarUrl: authorAvatarUrl ?? this.authorAvatarUrl,
+      tags: tags ?? this.tags,
+      createdAt: createdAt ?? this.createdAt,
+      viewCount: viewCount ?? this.viewCount,
+      likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
+      isLiked: isLiked ?? this.isLiked,
+    );
+  }
+
   String get metricText => '$likeCount likes · $commentCount comments';
 
   factory CommunityPostSummary.fromJson(Object? json) {

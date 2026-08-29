@@ -2,7 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../i18n/app_localizations.dart';
 import '../theme/app_theme.dart';
+
+String buildAppShareText(
+  BuildContext context, {
+  required String content,
+  String? url,
+}) {
+  final sourceAttribution = AppLocalizations.of(
+    context,
+  ).translate('shareSourceAttribution');
+  return [
+    if (content.trim().isNotEmpty) content.trim(),
+    if (url?.trim().isNotEmpty == true) url!.trim(),
+    sourceAttribution,
+  ].join('\n\n');
+}
 
 Future<void> showAppShareSheet(
   BuildContext context, {
@@ -25,6 +41,9 @@ class _AppShareSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sharedTitle = buildAppShareText(context, content: title);
+    final copiedMessage = buildAppShareText(context, content: title, url: url);
+
     return SafeArea(
       top: false,
       child: Material(
@@ -69,7 +88,7 @@ class _AppShareSheet extends StatelessWidget {
                     color: context.hokTheme.onSurfaceStrong,
                     onTap: () => _open(
                       context,
-                      'https://x.com/intent/tweet?text=${Uri.encodeComponent(title)}&url=${Uri.encodeComponent(url)}',
+                      'https://x.com/intent/tweet?text=${Uri.encodeComponent(sharedTitle)}&url=${Uri.encodeComponent(url)}',
                     ),
                   ),
                   _ShareTarget(
@@ -77,7 +96,9 @@ class _AppShareSheet extends StatelessWidget {
                     icon: Icons.photo_camera_outlined,
                     color: const Color(0xFFEC4899),
                     onTap: () async {
-                      await Clipboard.setData(ClipboardData(text: url));
+                      await Clipboard.setData(
+                        ClipboardData(text: copiedMessage),
+                      );
                       if (context.mounted) {
                         await _open(context, 'https://www.instagram.com/');
                       }
@@ -89,7 +110,7 @@ class _AppShareSheet extends StatelessWidget {
                     color: const Color(0xFF3B82F6),
                     onTap: () => _open(
                       context,
-                      'https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(url)}&quote=${Uri.encodeComponent(title)}',
+                      'https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(url)}&quote=${Uri.encodeComponent(sharedTitle)}',
                     ),
                   ),
                   _ShareTarget(
@@ -98,7 +119,7 @@ class _AppShareSheet extends StatelessWidget {
                     color: const Color(0xFFF97316),
                     onTap: () => _open(
                       context,
-                      'https://www.reddit.com/submit?title=${Uri.encodeComponent(title)}&url=${Uri.encodeComponent(url)}',
+                      'https://www.reddit.com/submit?title=${Uri.encodeComponent(sharedTitle)}&url=${Uri.encodeComponent(url)}',
                     ),
                   ),
                   _ShareTarget(
@@ -106,7 +127,9 @@ class _AppShareSheet extends StatelessWidget {
                     icon: Icons.link_rounded,
                     color: AppTheme.gold,
                     onTap: () async {
-                      await Clipboard.setData(ClipboardData(text: url));
+                      await Clipboard.setData(
+                        ClipboardData(text: copiedMessage),
+                      );
                       if (!context.mounted) return;
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(

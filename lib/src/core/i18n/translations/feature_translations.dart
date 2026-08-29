@@ -6,6 +6,8 @@ const enFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'This cannot be undone. Your HOK Helper account and associated data will be permanently deleted.',
   'profileDeleteAccountConfirm': 'Delete permanently',
+  'profileDeleteAccountCountdown': 'Permanent deletion available in {seconds}s',
+  'profileDeleteAccountReady': 'Permanent deletion is ready',
   'profileDeleteAccountSuccess': 'Your account has been deleted.',
   'profileDeleteAccountFailed': 'Unable to delete the account. Try again.',
   'commonCreate': 'Create',
@@ -15,6 +17,7 @@ const enFeatureTranslations = <String, String>{
   'commonEdit': 'Edit',
   'commonReset': 'Reset',
   'commonShare': 'Share',
+  'shareSourceAttribution': 'Content from HOK Helper',
   'commonAll': 'All',
   'commonLatest': 'Latest',
   'commonPopular': 'Popular',
@@ -214,6 +217,8 @@ const zhFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogTitle': '永久删除账户？',
   'profileDeleteAccountDialogBody': '此操作无法撤销。你的 HOK Helper 账户及关联数据将被永久删除。',
   'profileDeleteAccountConfirm': '永久删除',
+  'profileDeleteAccountCountdown': '永久删除将在 {seconds} 秒后可用',
+  'profileDeleteAccountReady': '现在可以永久删除',
   'profileDeleteAccountSuccess': '你的账户已删除。',
   'profileDeleteAccountFailed': '无法删除账户，请重试。',
   'commonCreate': '创建',
@@ -223,6 +228,7 @@ const zhFeatureTranslations = <String, String>{
   'commonEdit': '编辑',
   'commonReset': '重置',
   'commonShare': '分享',
+  'shareSourceAttribution': '内容来自 HOK Helper',
   'commonAll': '全部',
   'commonLatest': '最新',
   'commonPopular': '热门',
@@ -420,6 +426,9 @@ const idFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'Tindakan ini tidak dapat dibatalkan. Akun HOK Helper dan data terkait akan dihapus permanen.',
   'profileDeleteAccountConfirm': 'Hapus permanen',
+  'profileDeleteAccountCountdown':
+      'Penghapusan permanen tersedia dalam {seconds} dtk',
+  'profileDeleteAccountReady': 'Penghapusan permanen sudah tersedia',
   'profileDeleteAccountSuccess': 'Akun Anda telah dihapus.',
   'profileDeleteAccountFailed': 'Akun tidak dapat dihapus. Coba lagi.',
   'commonCreate': 'Buat',
@@ -429,6 +438,7 @@ const idFeatureTranslations = <String, String>{
   'commonEdit': 'Edit',
   'commonReset': 'Atur ulang',
   'commonShare': 'Bagikan',
+  'shareSourceAttribution': 'Konten dari HOK Helper',
   'commonAll': 'Semua',
   'commonLatest': 'Terbaru',
   'commonPopular': 'Populer',
@@ -629,6 +639,9 @@ const filFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'Hindi ito mababawi. Permanenteng buburahin ang iyong HOK Helper account at kaugnay na data.',
   'profileDeleteAccountConfirm': 'Permanenteng burahin',
+  'profileDeleteAccountCountdown':
+      'Magagamit ang permanenteng pagbura makalipas ang {seconds}s',
+  'profileDeleteAccountReady': 'Maaari nang burahin nang permanente',
   'profileDeleteAccountSuccess': 'Na-delete na ang iyong account.',
   'profileDeleteAccountFailed': 'Hindi ma-delete ang account. Subukan muli.',
   'commonCreate': 'Gumawa',
@@ -638,6 +651,7 @@ const filFeatureTranslations = <String, String>{
   'commonEdit': 'I-edit',
   'commonReset': 'I-reset',
   'commonShare': 'Ibahagi',
+  'shareSourceAttribution': 'Nilalaman mula sa HOK Helper',
   'commonAll': 'Lahat',
   'commonLatest': 'Pinakabago',
   'commonPopular': 'Sikat',
@@ -839,6 +853,9 @@ const ptFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'Esta ação não pode ser desfeita. Sua conta HOK Helper e os dados associados serão excluídos permanentemente.',
   'profileDeleteAccountConfirm': 'Excluir permanentemente',
+  'profileDeleteAccountCountdown':
+      'A exclusão permanente estará disponível em {seconds}s',
+  'profileDeleteAccountReady': 'A exclusão permanente está disponível',
   'profileDeleteAccountSuccess': 'Sua conta foi excluída.',
   'profileDeleteAccountFailed':
       'Não foi possível excluir a conta. Tente novamente.',
@@ -849,6 +866,7 @@ const ptFeatureTranslations = <String, String>{
   'commonEdit': 'Editar',
   'commonReset': 'Redefinir',
   'commonShare': 'Compartilhar',
+  'shareSourceAttribution': 'Conteúdo do HOK Helper',
   'commonAll': 'Todos',
   'commonLatest': 'Recentes',
   'commonPopular': 'Popular',
@@ -1049,6 +1067,9 @@ const esFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'Esta acción no se puede deshacer. Tu cuenta de HOK Helper y los datos asociados se eliminarán permanentemente.',
   'profileDeleteAccountConfirm': 'Eliminar permanentemente',
+  'profileDeleteAccountCountdown':
+      'La eliminación permanente estará disponible en {seconds}s',
+  'profileDeleteAccountReady': 'La eliminación permanente está disponible',
   'profileDeleteAccountSuccess': 'Tu cuenta se ha eliminado.',
   'profileDeleteAccountFailed':
       'No se pudo eliminar la cuenta. Inténtalo de nuevo.',
@@ -1059,6 +1080,7 @@ const esFeatureTranslations = <String, String>{
   'commonEdit': 'Editar',
   'commonReset': 'Restablecer',
   'commonShare': 'Compartir',
+  'shareSourceAttribution': 'Contenido de HOK Helper',
   'commonAll': 'Todos',
   'commonLatest': 'Recientes',
   'commonPopular': 'Popular',
@@ -1260,6 +1282,9 @@ const arFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'لا يمكن التراجع عن هذا الإجراء. سيتم حذف حساب HOK Helper والبيانات المرتبطة به نهائيًا.',
   'profileDeleteAccountConfirm': 'حذف نهائي',
+  'profileDeleteAccountCountdown':
+      'سيصبح الحذف النهائي متاحًا خلال {seconds} ث',
+  'profileDeleteAccountReady': 'الحذف النهائي متاح الآن',
   'profileDeleteAccountSuccess': 'تم حذف حسابك.',
   'profileDeleteAccountFailed': 'تعذر حذف الحساب. حاول مرة أخرى.',
   'commonCreate': 'إنشاء',
@@ -1269,6 +1294,7 @@ const arFeatureTranslations = <String, String>{
   'commonEdit': 'تعديل',
   'commonReset': 'إعادة ضبط',
   'commonShare': 'مشاركة',
+  'shareSourceAttribution': 'المحتوى من HOK Helper',
   'commonAll': 'الكل',
   'commonLatest': 'الأحدث',
   'commonPopular': 'الشائع',
@@ -1468,6 +1494,9 @@ const ruFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'Это действие нельзя отменить. Аккаунт HOK Helper и связанные данные будут удалены навсегда.',
   'profileDeleteAccountConfirm': 'Удалить навсегда',
+  'profileDeleteAccountCountdown':
+      'Удаление навсегда станет доступно через {seconds} с',
+  'profileDeleteAccountReady': 'Удаление навсегда доступно',
   'profileDeleteAccountSuccess': 'Ваш аккаунт удалён.',
   'profileDeleteAccountFailed':
       'Не удалось удалить аккаунт. Повторите попытку.',
@@ -1478,6 +1507,7 @@ const ruFeatureTranslations = <String, String>{
   'commonEdit': 'Изменить',
   'commonReset': 'Сбросить',
   'commonShare': 'Поделиться',
+  'shareSourceAttribution': 'Контент от HOK Helper',
   'commonAll': 'Все',
   'commonLatest': 'Новые',
   'commonPopular': 'Популярные',
@@ -1679,6 +1709,8 @@ const msFeatureTranslations = <String, String>{
   'profileDeleteAccountDialogBody':
       'Tindakan ini tidak boleh dibatalkan. Akaun HOK Helper dan data berkaitan akan dipadam secara kekal.',
   'profileDeleteAccountConfirm': 'Padam secara kekal',
+  'profileDeleteAccountCountdown': 'Pemadaman kekal tersedia dalam {seconds}s',
+  'profileDeleteAccountReady': 'Pemadaman kekal sudah tersedia',
   'profileDeleteAccountSuccess': 'Akaun anda telah dipadam.',
   'profileDeleteAccountFailed': 'Akaun tidak dapat dipadam. Cuba lagi.',
   'commonCreate': 'Cipta',
@@ -1688,6 +1720,7 @@ const msFeatureTranslations = <String, String>{
   'commonEdit': 'Edit',
   'commonReset': 'Tetap semula',
   'commonShare': 'Kongsi',
+  'shareSourceAttribution': 'Kandungan daripada HOK Helper',
   'commonAll': 'Semua',
   'commonLatest': 'Terkini',
   'commonPopular': 'Popular',

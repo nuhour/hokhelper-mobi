@@ -24,9 +24,10 @@ enum CommunityPostSort {
 }
 
 class CommunityRepository {
-  const CommunityRepository({required this.apiClient});
+  CommunityRepository({required this.apiClient});
 
   final ApiClient apiClient;
+  final Map<String, CommunityLikeResult> _postLikeOverrides = {};
 
   Future<List<CommunityPostSummary>> loadPosts(
     int regionId, {
@@ -52,7 +53,9 @@ class CommunityRepository {
       },
     );
 
-    return _readRows(json).map(CommunityPostSummary.fromJson).toList();
+    return _readRows(
+      json,
+    ).map(CommunityPostSummary.fromJson).map(_applyLikeOverride).toList();
   }
 
   Future<CommunityPostSummary> createPost({
@@ -157,12 +160,33 @@ class CommunityRepository {
       query: {'region_id': regionId},
     );
     final result = json['result'];
-    return CommunityPostDetail.fromJson(result is Map ? result : json);
+    final detail = CommunityPostDetail.fromJson(result is Map ? result : json);
+    final override = _postLikeOverrides[postId];
+    if (override == null) return detail;
+    return detail.copyWith(
+      post: detail.post.copyWith(
+        likeCount: override.likeCount,
+        isLiked: override.isLiked,
+      ),
+      isLiked: override.isLiked,
+    );
   }
 
   Future<CommunityLikeResult> togglePostLike(String postId) async {
     final json = await apiClient.postJson('/community/posts/$postId/like');
-    return CommunityLikeResult.fromJson(_unwrapResult(json));
+    final result = CommunityLikeResult.fromJson(_unwrapResult(json));
+    _postLikeOverrides[postId] = result;
+    return result;
+  }
+
+  CommunityPostSummary _applyLikeOverride(CommunityPostSummary post) {
+    final override = _postLikeOverrides[post.id];
+    return override == null
+        ? post
+        : post.copyWith(
+            likeCount: override.likeCount,
+            isLiked: override.isLiked,
+          );
   }
 
   Future<void> reportPost(

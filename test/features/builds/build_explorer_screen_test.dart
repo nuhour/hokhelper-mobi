@@ -273,7 +273,8 @@ void main() {
 
     expect(clipboardCall, isNotNull);
     expect(clipboardCall!.arguments, {
-      'text': 'https://hokhelper.com/tools/build-sim?scheme=7',
+      'text':
+          'Burst jungle\n\nhttps://hokhelper.com/tools/build-sim?scheme=7\n\nContent from HOK Helper',
     });
     expect(find.text('Link copied'), findsOneWidget);
   });

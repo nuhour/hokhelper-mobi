@@ -301,6 +301,11 @@ void main() {
           .dy,
       lessThan(tester.getTopLeft(find.widgetWithText(TextField, 'Email')).dy),
     );
+    final welcome = tester.widget<Text>(
+      find.byKey(const ValueKey('auth-welcome-title')),
+    );
+    expect(welcome.data, 'Welcome to\nHOK Helper');
+    expect(welcome.textAlign, TextAlign.center);
   });
 
   testWidgets('login back button returns to its source page', (tester) async {

@@ -68,6 +68,9 @@ class _FakeApiClient extends ApiClient {
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
     postPath = path;
     postBody = body;
+    if (path.endsWith('/like')) {
+      return const {'liked': true, 'like_count': 19};
+    }
     return const {
       'id': 'c3',
       'content': 'Reply with river vision.',
@@ -121,5 +124,21 @@ void main() {
     expect(comment.id, 'c3');
     expect(comment.parentId, 'c1');
     expect(comment.parentAuthorName, 'Lam');
+  });
+
+  test('keeps the latest like state when detail is loaded again', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final beforeLike = await repository.loadPostDetail('99', regionId: 2);
+    expect(beforeLike.post.likeCount, 18);
+
+    final liked = await repository.togglePostLike('99');
+    expect(liked.likeCount, 19);
+
+    final afterLike = await repository.loadPostDetail('99', regionId: 2);
+    expect(afterLike.post.likeCount, 19);
+    expect(afterLike.post.isLiked, isTrue);
+    expect(afterLike.isLiked, isTrue);
   });
 }

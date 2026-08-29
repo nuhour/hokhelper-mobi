@@ -112,7 +112,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    l10n.translate('authWelcome'),
+                    _formatWelcomeTitle(l10n.translate('authWelcome')),
+                    key: const ValueKey('auth-welcome-title'),
+                    textAlign: TextAlign.center,
+                    softWrap: true,
+                    maxLines: 2,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
@@ -435,6 +439,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     }
   }
+}
+
+String _formatWelcomeTitle(String value) {
+  final title = value.trim();
+  const brand = 'HOK Helper';
+  final brandStart = title.toLowerCase().lastIndexOf(brand.toLowerCase());
+  if (brandStart <= 0) return title;
+
+  final introduction = title.substring(0, brandStart).trimRight();
+  return introduction.isEmpty ? title : '$introduction\n$brand';
 }
 
 bool _hasOAuthQueryParameter(String url, String name) {
