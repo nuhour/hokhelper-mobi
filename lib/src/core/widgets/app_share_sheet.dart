@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../i18n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import 'app_platform_icon.dart';
 
 String buildAppShareText(
   BuildContext context, {
@@ -27,6 +28,8 @@ Future<void> showAppShareSheet(
 }) async {
   await showModalBottomSheet<void>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     useRootNavigator: true,
     backgroundColor: Colors.transparent,
     builder: (context) => _AppShareSheet(title: title, url: url),
@@ -84,7 +87,11 @@ class _AppShareSheet extends StatelessWidget {
                 children: [
                   _ShareTarget(
                     label: 'X',
-                    icon: Icons.alternate_email_rounded,
+                    icon: AppPlatformIcon(
+                      platform: 'x',
+                      color: context.hokTheme.onSurfaceStrong,
+                      size: 22,
+                    ),
                     color: context.hokTheme.onSurfaceStrong,
                     onTap: () => _open(
                       context,
@@ -93,7 +100,11 @@ class _AppShareSheet extends StatelessWidget {
                   ),
                   _ShareTarget(
                     label: 'Instagram',
-                    icon: Icons.photo_camera_outlined,
+                    icon: const AppPlatformIcon(
+                      platform: 'instagram',
+                      color: Color(0xFFEC4899),
+                      size: 22,
+                    ),
                     color: const Color(0xFFEC4899),
                     onTap: () async {
                       await Clipboard.setData(
@@ -106,7 +117,11 @@ class _AppShareSheet extends StatelessWidget {
                   ),
                   _ShareTarget(
                     label: 'Facebook',
-                    icon: Icons.facebook_rounded,
+                    icon: const AppPlatformIcon(
+                      platform: 'facebook',
+                      color: Color(0xFF3B82F6),
+                      size: 22,
+                    ),
                     color: const Color(0xFF3B82F6),
                     onTap: () => _open(
                       context,
@@ -115,7 +130,11 @@ class _AppShareSheet extends StatelessWidget {
                   ),
                   _ShareTarget(
                     label: 'Reddit',
-                    icon: Icons.forum_outlined,
+                    icon: const AppPlatformIcon(
+                      platform: 'reddit',
+                      color: Color(0xFFF97316),
+                      size: 22,
+                    ),
                     color: const Color(0xFFF97316),
                     onTap: () => _open(
                       context,
@@ -124,7 +143,7 @@ class _AppShareSheet extends StatelessWidget {
                   ),
                   _ShareTarget(
                     label: 'Copy',
-                    icon: Icons.link_rounded,
+                    icon: const Icon(Icons.link_rounded, size: 22),
                     color: AppTheme.gold,
                     onTap: () async {
                       await Clipboard.setData(
@@ -163,7 +182,7 @@ class _ShareTarget extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+  final Widget icon;
   final Color color;
   final VoidCallback onTap;
 
@@ -186,7 +205,7 @@ class _ShareTarget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: color.withValues(alpha: 0.25)),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: icon,
               ),
               const SizedBox(height: 6),
               Text(

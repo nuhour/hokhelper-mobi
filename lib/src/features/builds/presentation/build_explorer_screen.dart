@@ -483,6 +483,8 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
   Future<void> _showCloneSheet(BuildContext context) async {
     final slotIndex = await showModalBottomSheet<int>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       showDragHandle: true,
       builder: (context) {

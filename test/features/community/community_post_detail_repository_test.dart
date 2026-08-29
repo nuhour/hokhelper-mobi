@@ -141,4 +141,23 @@ void main() {
     expect(afterLike.post.isLiked, isTrue);
     expect(afterLike.isLiked, isTrue);
   });
+
+  test('keeps newly created comments when detail is loaded again', () async {
+    final apiClient = _FakeApiClient();
+    final repository = CommunityRepository(apiClient: apiClient);
+
+    final beforeComment = await repository.loadPostDetail('99', regionId: 2);
+    expect(beforeComment.comments, hasLength(2));
+
+    final created = await repository.createComment(
+      '99',
+      content: 'Reply with river vision.',
+      parentId: 'c1',
+    );
+    expect(created.id, 'c3');
+
+    final afterComment = await repository.loadPostDetail('99', regionId: 2);
+    expect(afterComment.comments.map((comment) => comment.id), contains('c3'));
+    expect(afterComment.post.commentCount, 3);
+  });
 }

@@ -294,6 +294,56 @@ void main() {
     expect(find.text('No community posts found'), findsNothing);
   });
 
+  testWidgets('aligns the leak original-post action to the right', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          communityPostsProvider.overrideWith((ref) async => const []),
+          leakPostsProvider.overrideWith((ref) async {
+            return const [
+              LeakPostSummary(
+                id: '504',
+                title: 'Leak with source',
+                content: 'Open the original source for this report.',
+                category: 'hero',
+                platform: 'x',
+                authorName: 'scout',
+                authorHandle: '@scout',
+                authorAvatarUrl: '',
+                mediaUrl: '',
+                mediaType: 'text',
+                sourceUrl: 'https://example.test/source',
+                publishedAt: '2026-07-02T12:00:00Z',
+                likeCount: 8,
+                viewCount: 77,
+                keywords: ['hero'],
+              ),
+            ];
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CommunityScreen(initialTabIndex: 0)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Leak with source'));
+    await tester.pumpAndSettle();
+
+    final action = tester.getRect(
+      find.byKey(const ValueKey('leak-open-original-post')),
+    );
+    expect(
+      action.center.dx,
+      greaterThan(
+        tester.view.physicalSize.width / tester.view.devicePixelRatio / 2,
+      ),
+    );
+  });
+
   testWidgets('toggles leak likes locally like the hokx portal', (
     tester,
   ) async {
@@ -846,6 +896,67 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Create Post'));
     await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('community-create-post-title')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('community-create-post-close')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('community-create-post-cancel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('community-create-post-submit')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('community-create-post-suggested-tags')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.widgetWithText(TextField, 'Content')).height,
+      greaterThan(120),
+    );
+    final headerTop = tester
+        .getTopLeft(find.byKey(const ValueKey('community-create-post-title')))
+        .dy;
+    final submitTop = tester
+        .getTopLeft(find.byKey(const ValueKey('community-create-post-submit')))
+        .dy;
+    await tester.drag(
+      find.byKey(const ValueKey('community-create-post-scroll-view')),
+      const Offset(0, -320),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .getTopLeft(find.byKey(const ValueKey('community-create-post-title')))
+          .dy,
+      closeTo(headerTop, 0.01),
+    );
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey('community-create-post-submit')),
+          )
+          .dy,
+      closeTo(submitTop, 0.01),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('community-create-post-cancel')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('community-create-post-sheet')),
+      findsNothing,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Create Post'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Title'),
       'Mobile macro notes',
@@ -903,6 +1014,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(FilledButton, 'Create Post'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Hero Matchups'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hero Matchups'));
     await tester.enterText(

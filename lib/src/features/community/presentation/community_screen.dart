@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/app_platform_icon.dart';
 import '../../../core/widgets/app_video_player_sheet.dart';
 import '../../activity/presentation/event_assistance_screen.dart';
 import '../../auth/presentation/auth_controller.dart';
@@ -325,37 +326,37 @@ const _communitySocialChannels = [
   _CommunitySocialChannel(
     label: 'Telegram',
     url: 'https://t.me/hokhelper',
-    icon: Icons.send_rounded,
+    platform: 'telegram',
     color: Color(0xFF38BDF8),
   ),
   _CommunitySocialChannel(
     label: 'Discord',
     url: 'https://discord.gg/jmVttVkzU',
-    icon: Icons.forum_rounded,
+    platform: 'discord',
     color: Color(0xFF818CF8),
   ),
   _CommunitySocialChannel(
     label: 'Instagram',
     url: 'https://instagram.com/hokhelper',
-    icon: Icons.camera_alt_outlined,
+    platform: 'instagram',
     color: Color(0xFFF472B6),
   ),
   _CommunitySocialChannel(
     label: 'TikTok',
     url: 'https://www.tiktok.com/@hokhelper6',
-    icon: Icons.music_note_rounded,
+    platform: 'tiktok',
     color: Color(0xFFF8FAFC),
   ),
   _CommunitySocialChannel(
     label: 'X',
     url: 'https://twitter.com/hokhelper',
-    icon: Icons.alternate_email_rounded,
+    platform: 'x',
     color: Color(0xFF60A5FA),
   ),
   _CommunitySocialChannel(
     label: 'Facebook',
     url: 'https://www.facebook.com/hokhelper',
-    icon: Icons.facebook_rounded,
+    platform: 'facebook',
     color: Color(0xFF3B82F6),
   ),
 ];
@@ -364,19 +365,21 @@ class _CommunitySocialChannel {
   const _CommunitySocialChannel({
     required this.label,
     required this.url,
-    required this.icon,
+    required this.platform,
     required this.color,
   });
 
   final String label;
   final String url;
-  final IconData icon;
+  final String platform;
   final Color color;
 }
 
 void _showCommunityJoinSheet(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -456,7 +459,7 @@ class _CommunityJoinSheet extends ConsumerWidget {
                 if (index == _communitySocialChannels.length) {
                   return _CommunityChannelButton(
                     label: l10n.translate('communityWechatGroup'),
-                    icon: Icons.qr_code_2_rounded,
+                    platform: 'wechat',
                     color: const Color(0xFF22C55E),
                     onTap: () => _showCommunityWechatQr(context, ref),
                   );
@@ -464,7 +467,7 @@ class _CommunityJoinSheet extends ConsumerWidget {
                 final channel = _communitySocialChannels[index];
                 return _CommunityChannelButton(
                   label: channel.label,
-                  icon: channel.icon,
+                  platform: channel.platform,
                   color: channel.color,
                   onTap: () => launchUrl(
                     Uri.parse(channel.url),
@@ -483,13 +486,13 @@ class _CommunityJoinSheet extends ConsumerWidget {
 class _CommunityChannelButton extends StatelessWidget {
   const _CommunityChannelButton({
     required this.label,
-    required this.icon,
+    required this.platform,
     required this.color,
     required this.onTap,
   });
 
   final String label;
-  final IconData icon;
+  final String platform;
   final Color color;
   final VoidCallback onTap;
 
@@ -505,7 +508,7 @@ class _CommunityChannelButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: color),
+              AppPlatformIcon(platform: platform, size: 20, color: color),
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
@@ -1094,46 +1097,78 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final viewInsets = MediaQuery.viewInsetsOf(context);
+            final screenHeight = MediaQuery.sizeOf(context).height;
+            final availableHeight = screenHeight - viewInsets.bottom - 24;
+            final panelHeight = availableHeight < screenHeight * 0.82
+                ? availableHeight
+                : screenHeight * 0.82;
             return Padding(
               padding: EdgeInsets.only(
                 left: 12,
                 right: 12,
-                bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
+                bottom: viewInsets.bottom + 12,
               ),
               child: SafeArea(
                 top: false,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+                child: Material(
+                  key: const ValueKey('community-create-post-sheet'),
+                  color: context.hokTheme.surfaceSlate,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(color: context.hokTheme.outlineSoft),
                   ),
-                  child: SingleChildScrollView(
-                    child: _CreatePostCard(
-                      contentController: _contentController,
-                      customTagController: _customTagController,
-                      isExpanded: true,
-                      isSubmitting: _createSubmitting,
-                      onExpand: () {},
-                      onCustomTagAdd: () {
-                        _addCustomTag();
-                        setSheetState(() {});
-                      },
-                      onSubmit: () async {
-                        final created = await _createPost(context);
-                        if (mounted && created && context.mounted) {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      onTagToggled: (tag) {
-                        _togglePostTag(tag);
-                        setSheetState(() {});
-                      },
-                      selectedTags: _selectedPostTags,
-                      titleController: _titleController,
-                      loadStickers: _loadStickers,
+                  child: SizedBox(
+                    height: panelHeight,
+                    child: Column(
+                      children: [
+                        _CreatePostPanelHeader(
+                          onClose: () => Navigator.of(sheetContext).pop(),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            key: const ValueKey(
+                              'community-create-post-scroll-view',
+                            ),
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
+                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                            child: _CreatePostCard(
+                              contentController: _contentController,
+                              customTagController: _customTagController,
+                              onCustomTagAdd: () {
+                                _addCustomTag();
+                                setSheetState(() {});
+                              },
+                              onTagToggled: (tag) {
+                                _togglePostTag(tag);
+                                setSheetState(() {});
+                              },
+                              selectedTags: _selectedPostTags,
+                              titleController: _titleController,
+                              loadStickers: _loadStickers,
+                            ),
+                          ),
+                        ),
+                        _CreatePostPanelFooter(
+                          isSubmitting: _createSubmitting,
+                          onCancel: () => Navigator.of(sheetContext).pop(),
+                          onSubmit: () async {
+                            final created = await _createPost(sheetContext);
+                            if (mounted && created && sheetContext.mounted) {
+                              Navigator.of(sheetContext).pop();
+                            }
+                            if (mounted) setSheetState(() {});
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1352,9 +1387,11 @@ class _CompactSegment<T> extends StatelessWidget {
 }
 
 class _SquareControl extends StatelessWidget {
-  const _SquareControl({required this.icon});
+  const _SquareControl({this.icon, this.child})
+    : assert((icon == null) != (child == null));
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
@@ -1367,7 +1404,7 @@ class _SquareControl extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       alignment: Alignment.center,
-      child: Icon(icon, size: 19),
+      child: child ?? Icon(icon!, size: 19),
     );
   }
 }
@@ -1447,11 +1484,7 @@ class _CreatePostCard extends StatelessWidget {
   const _CreatePostCard({
     required this.contentController,
     required this.customTagController,
-    required this.isExpanded,
-    required this.isSubmitting,
     required this.onCustomTagAdd,
-    required this.onExpand,
-    required this.onSubmit,
     required this.onTagToggled,
     required this.selectedTags,
     required this.titleController,
@@ -1460,11 +1493,7 @@ class _CreatePostCard extends StatelessWidget {
 
   final TextEditingController contentController;
   final TextEditingController customTagController;
-  final bool isExpanded;
-  final bool isSubmitting;
   final VoidCallback onCustomTagAdd;
-  final VoidCallback onExpand;
-  final VoidCallback onSubmit;
   final ValueChanged<String> onTagToggled;
   final Set<String> selectedTags;
   final TextEditingController titleController;
@@ -1483,120 +1512,183 @@ class _CreatePostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Create Post',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: context.hokTheme.onSurfaceStrong,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                if (!isExpanded)
-                  FilledButton.icon(
-                    onPressed: onExpand,
-                    icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: const Text('Create Post'),
-                  ),
-              ],
+            TextField(
+              controller: titleController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Title',
+              ),
             ),
-            if (isExpanded) ...[
-              const SizedBox(height: 10),
-              TextField(
-                controller: titleController,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Title',
-                ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: contentController,
+              minLines: 6,
+              maxLines: 10,
+              textInputAction: TextInputAction.newline,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Content',
+                alignLabelWithHint: true,
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: contentController,
-                minLines: 3,
-                maxLines: 5,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Content',
-                ),
+            ),
+            const SizedBox(height: 4),
+            CommunityComposerAssets(
+              controller: contentController,
+              loadStickers: loadStickers,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Suggested tags',
+              key: const ValueKey('community-create-post-suggested-label'),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: context.hokTheme.onSurfaceStrong,
+                fontWeight: FontWeight.w800,
               ),
-              const SizedBox(height: 4),
-              CommunityComposerAssets(
-                controller: contentController,
-                loadStickers: loadStickers,
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              key: const ValueKey('community-create-post-suggested-tags'),
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _recommendedPostTags.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (context, index) {
+                  final tag = _recommendedPostTags[index];
+                  final selected = selectedTags.contains(tag);
+                  return ChoiceChip(
+                    label: Text(tag),
+                    selected: selected,
+                    visualDensity: VisualDensity.compact,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 5),
+                    onSelected: (_) => onTagToggled(tag),
+                    avatar: Icon(
+                      selected ? Icons.check : Icons.tag_outlined,
+                      size: 15,
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 10),
+            ),
+            if (selectedTags.isNotEmpty) ...[
+              const SizedBox(height: 12),
               Text(
-                'Tags',
+                'Selected tags',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: context.hokTheme.onSurfaceStrong,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final tag in _recommendedPostTags)
-                    ChoiceChip(
-                      label: Text(tag),
-                      selected: selectedTags.contains(tag),
-                      onSelected: (_) => onTagToggled(tag),
-                      avatar: selectedTags.contains(tag)
-                          ? const Icon(Icons.check, size: 16)
-                          : const Icon(Icons.tag_outlined, size: 16),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: customTagController,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => onCustomTagAdd(),
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                        labelText: 'Custom tag',
-                        prefixIcon: Icon(Icons.add_circle_outline, size: 20),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: onCustomTagAdd,
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Tag'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final tag in selectedTags) _Pill(label: tag),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: isSubmitting ? null : onSubmit,
-                    icon: const Icon(Icons.send_outlined, size: 16),
-                    label: const Text('Create'),
-                  ),
-                ],
+                key: const ValueKey('community-create-post-selected-tags'),
+                spacing: 7,
+                runSpacing: 7,
+                children: [for (final tag in selectedTags) _Pill(label: tag)],
               ),
             ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: customTagController,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => onCustomTagAdd(),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      labelText: 'Custom tag',
+                      prefixIcon: Icon(Icons.add_circle_outline, size: 20),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: onCustomTagAdd,
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Add Tag'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreatePostPanelHeader extends StatelessWidget {
+  const _CreatePostPanelHeader({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 14, 8, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              key: const ValueKey('community-create-post-title'),
+              'Create Post',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: context.hokTheme.onSurfaceStrong,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('community-create-post-close'),
+            tooltip: 'Close',
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreatePostPanelFooter extends StatelessWidget {
+  const _CreatePostPanelFooter({
+    required this.isSubmitting,
+    required this.onCancel,
+    required this.onSubmit,
+  });
+
+  final bool isSubmitting;
+  final VoidCallback onCancel;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.hokTheme.outlineSoft)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                key: const ValueKey('community-create-post-cancel'),
+                onPressed: isSubmitting ? null : onCancel,
+                child: const Text('Cancel'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                key: const ValueKey('community-create-post-submit'),
+                onPressed: isSubmitting ? null : onSubmit,
+                icon: const Icon(Icons.send_outlined, size: 16),
+                label: Text(isSubmitting ? 'Creating...' : 'Create'),
+              ),
+            ),
           ],
         ),
       ),
@@ -2041,9 +2133,9 @@ class _LeakFilterControls extends StatelessWidget {
                   )
                   .toList(growable: false),
               child: _SquareControl(
-                icon: platform == 'all'
-                    ? Icons.public_outlined
-                    : _platformFallbackIcon(platform),
+                child: platform == 'all'
+                    ? const Icon(Icons.public_outlined, size: 19)
+                    : AppPlatformIcon(platform: platform, size: 19),
               ),
             ),
           ],
@@ -2538,19 +2630,6 @@ String _platformLabel(String value) {
   return value.isEmpty ? 'Source' : value;
 }
 
-IconData _platformFallbackIcon(String platform) {
-  return switch (platform.toLowerCase()) {
-    'twitter' || 'x' => Icons.alternate_email_rounded,
-    'youtube' => Icons.play_circle_outline_rounded,
-    'instagram' => Icons.photo_camera_outlined,
-    'facebook' => Icons.facebook_rounded,
-    'telegram' => Icons.send_outlined,
-    'tiktok' => Icons.music_note_rounded,
-    'reddit' => Icons.forum_outlined,
-    _ => Icons.public_outlined,
-  };
-}
-
 Color _platformColor(BuildContext context, String platform) {
   return switch (platform.toLowerCase()) {
     'youtube' => const Color(0xFFEF4444),
@@ -2571,8 +2650,8 @@ class _PlatformIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      _platformFallbackIcon(platform),
+    return AppPlatformIcon(
+      platform: platform,
       size: size,
       color: _platformColor(context, platform),
     );
@@ -2587,6 +2666,8 @@ bool _isVideoLeak(LeakPostSummary leak) {
 Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
   await showModalBottomSheet<void>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) {
@@ -2751,18 +2832,25 @@ Future<void> _showLeakDetail(BuildContext context, LeakPostSummary leak) async {
                       ],
                       if (leak.sourceUrl.isNotEmpty) ...[
                         const SizedBox(height: 20),
-                        FilledButton.icon(
-                          onPressed: () async {
-                            final uri = Uri.tryParse(leak.sourceUrl);
-                            if (uri != null) {
-                              await launchUrl(
-                                uri,
-                                mode: LaunchMode.externalApplication,
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                          label: const Text('Open original post'),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: FilledButton.icon(
+                            key: const ValueKey('leak-open-original-post'),
+                            onPressed: () async {
+                              final uri = Uri.tryParse(leak.sourceUrl);
+                              if (uri != null) {
+                                await launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              }
+                            },
+                            icon: const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 18,
+                            ),
+                            label: const Text('Open original post'),
+                          ),
                         ),
                       ],
                     ],

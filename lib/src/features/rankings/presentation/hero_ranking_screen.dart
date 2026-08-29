@@ -750,6 +750,8 @@ class _CompactTierHero extends StatelessWidget {
                   ? null
                   : () => showModalBottomSheet<void>(
                       context: context,
+                      isDismissible: true,
+                      enableDrag: true,
                       isScrollControlled: true,
                       useSafeArea: true,
                       builder: (context) => _TierHistorySheet(entry: entry),

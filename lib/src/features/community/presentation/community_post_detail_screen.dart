@@ -187,41 +187,46 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
           onLike: () => _likePost(context),
         ),
         const SizedBox(height: 22),
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    'Comments',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: context.hokTheme.onSurfaceStrong,
-                      fontWeight: FontWeight.w900,
-                    ),
+            Row(
+              key: const ValueKey('community-comments-heading'),
+              children: [
+                Text(
+                  'Comments',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: context.hokTheme.onSurfaceStrong,
+                    fontWeight: FontWeight.w900,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$_commentCount',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: context.hokTheme.onSurfaceMuted,
-                      fontWeight: FontWeight.w800,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '$_commentCount',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: context.hokTheme.onSurfaceMuted,
+                    fontWeight: FontWeight.w800,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Wrap(
-              spacing: 4,
-              children: _CommentSort.values
-                  .map(
-                    (sort) => ChoiceChip(
-                      label: Text(sort.label),
-                      selected: _commentSort == sort,
-                      visualDensity: VisualDensity.compact,
-                      onSelected: (_) => setState(() => _commentSort = sort),
-                    ),
-                  )
-                  .toList(growable: false),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: _CommentSort.values
+                    .map(
+                      (sort) => ChoiceChip(
+                        label: Text(sort.label),
+                        selected: _commentSort == sort,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (_) => setState(() => _commentSort = sort),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
             ),
           ],
         ),
@@ -286,10 +291,13 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
     if (content.isEmpty) return;
     setState(() => _commentSubmitting = true);
     try {
-      final comment = await ref
-          .read(communityRepositoryProvider)
-          .createComment(widget.detail.post.id, content: content);
+      final repository = ref.read(communityRepositoryProvider);
+      final comment = await repository.createComment(
+        widget.detail.post.id,
+        content: content,
+      );
       if (!mounted || !context.mounted) return;
+      repository.rememberCreatedComment(widget.detail.post.id, comment);
       setState(() {
         _comments = [comment, ..._comments];
         _commentCount += 1;
@@ -313,14 +321,14 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
     if (parent == null || content.isEmpty) return;
     setState(() => _replySubmitting = true);
     try {
-      final reply = await ref
-          .read(communityRepositoryProvider)
-          .createComment(
-            widget.detail.post.id,
-            content: content,
-            parentId: parent.id,
-          );
+      final repository = ref.read(communityRepositoryProvider);
+      final reply = await repository.createComment(
+        widget.detail.post.id,
+        content: content,
+        parentId: parent.id,
+      );
       if (!mounted || !context.mounted) return;
+      repository.rememberCreatedComment(widget.detail.post.id, reply);
       setState(() {
         _comments = [..._comments, reply];
         _commentCount += 1;
@@ -814,10 +822,11 @@ class _CommentThread extends StatelessWidget {
                   Row(
                     children: [
                       AppImage(
+                        key: ValueKey('community-comment-avatar-${comment.id}'),
                         url: comment.authorAvatarUrl,
                         width: depth == 0 ? 34 : 28,
                         height: depth == 0 ? 34 : 28,
-                        borderRadius: 10,
+                        borderRadius: 999,
                         semanticLabel: comment.authorName,
                       ),
                       const SizedBox(width: 9),

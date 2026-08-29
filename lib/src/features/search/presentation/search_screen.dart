@@ -20,6 +20,8 @@ final searchRepositoryProvider = Provider<SearchRepository>((ref) {
 Future<void> showPortalSearchSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

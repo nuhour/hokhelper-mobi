@@ -321,6 +321,8 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   Future<void> _openFilters(StatsTrendTable table) async {
     final result = await showModalBottomSheet<StatsTrendQuery>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,

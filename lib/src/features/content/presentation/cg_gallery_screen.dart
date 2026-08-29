@@ -391,6 +391,8 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
     }
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: context.hokTheme.backgroundDeep,

@@ -333,6 +333,8 @@ class _PublicProfileCardState extends ConsumerState<_PublicProfileCard> {
   void _showFollowList(BuildContext context, ProfileFollowListType type) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(

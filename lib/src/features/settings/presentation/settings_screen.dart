@@ -277,6 +277,8 @@ class SettingsScreen extends ConsumerWidget {
   static void _showBlockedUsers(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,

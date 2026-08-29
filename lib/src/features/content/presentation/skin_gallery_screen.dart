@@ -393,6 +393,8 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     }
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: context.hokTheme.backgroundDeep,
@@ -753,6 +755,8 @@ class _SkinCard extends StatelessWidget {
   void _showRatingSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

@@ -150,6 +150,8 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
   void _openRegionDetail(BuildContext context, WorldMapRegion region) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       showDragHandle: true,
       builder: (context) {

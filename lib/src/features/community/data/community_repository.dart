@@ -28,6 +28,8 @@ class CommunityRepository {
 
   final ApiClient apiClient;
   final Map<String, CommunityLikeResult> _postLikeOverrides = {};
+  final Map<String, Map<String, CommunityCommentSummary>>
+  _postCommentOverrides = {};
 
   Future<List<CommunityPostSummary>> loadPosts(
     int regionId, {
@@ -161,15 +163,7 @@ class CommunityRepository {
     );
     final result = json['result'];
     final detail = CommunityPostDetail.fromJson(result is Map ? result : json);
-    final override = _postLikeOverrides[postId];
-    if (override == null) return detail;
-    return detail.copyWith(
-      post: detail.post.copyWith(
-        likeCount: override.likeCount,
-        isLiked: override.isLiked,
-      ),
-      isLiked: override.isLiked,
-    );
+    return _applyDetailOverrides(postId, detail);
   }
 
   Future<CommunityLikeResult> togglePostLike(String postId) async {
@@ -244,7 +238,62 @@ class CommunityRepository {
     if (comment.id.isEmpty || comment.content.isEmpty) {
       throw const FormatException('Comment creation returned invalid data');
     }
+    rememberCreatedComment(postId, comment);
     return comment;
+  }
+
+  void rememberCreatedComment(String postId, CommunityCommentSummary comment) {
+    final comments = _postCommentOverrides.putIfAbsent(
+      postId,
+      () => <String, CommunityCommentSummary>{},
+    );
+    comments[comment.id] = comment;
+  }
+
+  CommunityPostDetail _applyDetailOverrides(
+    String postId,
+    CommunityPostDetail detail,
+  ) {
+    final comments = _mergeCommentOverrides(postId, detail.comments);
+    final commentCount = comments.length > detail.post.commentCount
+        ? comments.length
+        : detail.post.commentCount;
+    final likeOverride = _postLikeOverrides[postId];
+    var post = detail.post;
+    if (commentCount != detail.post.commentCount) {
+      post = post.copyWith(commentCount: commentCount);
+    }
+    if (likeOverride != null) {
+      post = post.copyWith(
+        likeCount: likeOverride.likeCount,
+        isLiked: likeOverride.isLiked,
+      );
+    }
+    if (identical(post, detail.post) && identical(comments, detail.comments)) {
+      return detail;
+    }
+    return detail.copyWith(
+      post: post,
+      comments: comments,
+      isLiked: likeOverride?.isLiked ?? detail.isLiked,
+    );
+  }
+
+  List<CommunityCommentSummary> _mergeCommentOverrides(
+    String postId,
+    List<CommunityCommentSummary> comments,
+  ) {
+    final pending = _postCommentOverrides[postId];
+    if (pending == null || pending.isEmpty) return comments;
+
+    final merged = [...comments];
+    final knownIds = comments.map((comment) => comment.id).toSet();
+    for (final comment in pending.values) {
+      if (knownIds.add(comment.id)) {
+        merged.add(comment);
+      }
+    }
+    return merged;
   }
 
   List<Object?> _readRows(Map<String, dynamic> json) {

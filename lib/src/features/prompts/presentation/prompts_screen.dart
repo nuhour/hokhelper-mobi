@@ -444,6 +444,8 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
   Future<void> _openCreateSheet(BuildContext context) async {
     final created = await showModalBottomSheet<PromptSummary>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
@@ -468,6 +470,8 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
   ) async {
     final updated = await showModalBottomSheet<PromptSummary>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
@@ -566,6 +570,8 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
     }
     final updated = await showModalBottomSheet<PromptSummary>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
@@ -924,6 +930,8 @@ class _PromptGenerationSheetState
   Future<void> _openRechargeSheet() async {
     final result = await showModalBottomSheet<PromptRechargeResult>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(

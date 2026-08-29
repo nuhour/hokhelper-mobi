@@ -167,6 +167,8 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
   Future<void> _openCreateSheet() async {
     final name = await showModalBottomSheet<String>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(

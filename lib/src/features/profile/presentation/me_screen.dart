@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/feedback/app_notice.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
+import '../../../core/widgets/app_platform_icon.dart';
 import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/i18n/app_localizations.dart';
@@ -286,6 +287,8 @@ class _ProfileOverview extends StatelessWidget {
   void _showPointsRulesSheet(BuildContext context, UserProfile profile) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _PointsRulesSheet(profile: profile),
@@ -411,6 +414,8 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
   void _showEditProfileSheet(BuildContext context, UserProfile profile) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _EditProfileSheet(profile: profile),
@@ -420,6 +425,8 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
   void _showChangePasswordSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => const _ChangePasswordSheet(),
@@ -821,8 +828,8 @@ class ProfileSocialLinksDropdown extends StatelessWidget {
                             for (final platform in boundPlatforms)
                               Padding(
                                 padding: const EdgeInsets.only(right: 9),
-                                child: Icon(
-                                  platform.icon,
+                                child: AppPlatformIcon(
+                                  platform: platform.platform,
                                   size: 19,
                                   color: platform.color,
                                 ),
@@ -849,7 +856,10 @@ class ProfileSocialLinksDropdown extends StatelessWidget {
               for (final platform in boundPlatforms)
                 ListTile(
                   dense: true,
-                  leading: Icon(platform.icon, color: platform.color),
+                  leading: AppPlatformIcon(
+                    platform: platform.platform,
+                    color: platform.color,
+                  ),
                   title: Text(
                     platform.label,
                     style: TextStyle(
@@ -885,14 +895,14 @@ class _SocialPlatform {
   const _SocialPlatform({
     required this.key,
     required this.label,
-    required this.icon,
+    required this.platform,
     required this.color,
     required this.profilePrefix,
   });
 
   final String key;
   final String label;
-  final IconData icon;
+  final String platform;
   final Color color;
   final String profilePrefix;
 }
@@ -901,63 +911,63 @@ const _socialPlatforms = [
   _SocialPlatform(
     key: 'instagram',
     label: 'Instagram',
-    icon: Icons.camera_alt_outlined,
+    platform: 'instagram',
     color: Color(0xFFE1306C),
     profilePrefix: 'https://instagram.com/',
   ),
   _SocialPlatform(
     key: 'tiktok',
     label: 'TikTok',
-    icon: Icons.music_note_rounded,
+    platform: 'tiktok',
     color: Color(0xFF25F4EE),
     profilePrefix: 'https://www.tiktok.com/@',
   ),
   _SocialPlatform(
     key: 'youtube',
     label: 'YouTube',
-    icon: Icons.smart_display_rounded,
+    platform: 'youtube',
     color: Color(0xFFFF0033),
     profilePrefix: 'https://youtube.com/@',
   ),
   _SocialPlatform(
     key: 'facebook',
     label: 'Facebook',
-    icon: Icons.facebook_rounded,
+    platform: 'facebook',
     color: Color(0xFF1877F2),
     profilePrefix: 'https://facebook.com/',
   ),
   _SocialPlatform(
     key: 'x',
     label: 'X',
-    icon: Icons.alternate_email_rounded,
+    platform: 'x',
     color: Color(0xFF94A3B8),
     profilePrefix: 'https://x.com/',
   ),
   _SocialPlatform(
     key: 'whatsapp',
     label: 'WhatsApp',
-    icon: Icons.chat_rounded,
+    platform: 'whatsapp',
     color: Color(0xFF25D366),
     profilePrefix: 'https://wa.me/',
   ),
   _SocialPlatform(
     key: 'discord',
     label: 'Discord',
-    icon: Icons.forum_rounded,
+    platform: 'discord',
     color: Color(0xFF5865F2),
     profilePrefix: 'https://discord.com/users/',
   ),
   _SocialPlatform(
     key: 'telegram',
     label: 'Telegram',
-    icon: Icons.send_rounded,
+    platform: 'telegram',
     color: Color(0xFF229ED9),
     profilePrefix: 'https://t.me/',
   ),
   _SocialPlatform(
     key: 'reddit',
     label: 'Reddit',
-    icon: Icons.reddit_rounded,
+    platform: 'reddit',
     color: Color(0xFFFF4500),
     profilePrefix: 'https://reddit.com/user/',
   ),
@@ -996,6 +1006,8 @@ void _showFollowListSheet(
 }) {
   showModalBottomSheet<void>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     isScrollControlled: true,
     backgroundColor: context.hokTheme.surfaceSlate,
     shape: const RoundedRectangleBorder(
@@ -1567,8 +1579,9 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                   controller: _socialControllers[_socialPlatforms[index].key],
                   decoration: InputDecoration(
                     labelText: _socialPlatforms[index].label,
-                    prefixIcon: Icon(
-                      _socialPlatforms[index].icon,
+                    prefixIcon: AppPlatformIcon(
+                      platform: _socialPlatforms[index].platform,
+                      size: 19,
                       color: _socialPlatforms[index].color,
                     ),
                     hintText: 'https://',

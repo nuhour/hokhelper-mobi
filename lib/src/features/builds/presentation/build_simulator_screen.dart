@@ -284,6 +284,8 @@ class _BuildSimulatorScreenState extends ConsumerState<BuildSimulatorScreen> {
   ) async {
     final selected = await showModalBottomSheet<HeroSummary>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
@@ -2788,6 +2790,8 @@ Future<void> _showArcanaDetails(
 ) {
   return showModalBottomSheet<void>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     backgroundColor: context.hokTheme.surfaceSlate,
     showDragHandle: true,
     builder: (context) => SafeArea(
@@ -3372,6 +3376,8 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
     widget.onHeroRequested(heroId);
     await showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: context.hokTheme.surfaceSlate,

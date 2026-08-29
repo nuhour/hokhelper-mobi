@@ -278,6 +278,8 @@ class _FriendLinksSection extends ConsumerWidget {
   void _showFriendLinkApplySheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => const _FriendLinkApplySheet(),

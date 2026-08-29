@@ -138,6 +138,8 @@ Future<int?> showRegionCountryPicker(
   final normalized = options.where((item) => item > 0).toSet().toList()..sort();
   return showModalBottomSheet<int>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (context) =>

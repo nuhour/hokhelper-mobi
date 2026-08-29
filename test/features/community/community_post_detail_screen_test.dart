@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/community/data/community_repository.dart';
 import 'package:hok_helper_mobile/src/features/community/domain/community_post_detail.dart';
@@ -150,6 +151,22 @@ void main() {
     expect(find.text('What if red buff is invaded?'), findsOneWidget);
     expect(find.text('Reply to Lam'), findsOneWidget);
     expect(find.byType(AppListFooter), findsNothing);
+
+    final commentsHeading = tester.getRect(
+      find.byKey(const ValueKey('community-comments-heading')),
+    );
+    final newestChip = tester.getRect(
+      find.widgetWithText(ChoiceChip, 'Newest'),
+    );
+    expect(newestChip.top, greaterThanOrEqualTo(commentsHeading.bottom));
+    expect(
+      tester
+          .widget<AppImage>(
+            find.byKey(const ValueKey('community-comment-avatar-c1')),
+          )
+          .borderRadius,
+      999,
+    );
   });
 
   testWidgets('shows the end footer under long comment threads', (

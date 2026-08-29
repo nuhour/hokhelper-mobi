@@ -1434,6 +1434,8 @@ void _showMatchDetailSheet(
 ) {
   showModalBottomSheet<void>(
     context: context,
+    isDismissible: true,
+    enableDrag: true,
     backgroundColor: context.hokTheme.surfaceSlate,
     showDragHandle: true,
     builder: (context) {

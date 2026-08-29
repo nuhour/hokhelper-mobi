@@ -266,6 +266,8 @@ class _HeroRelationshipsScreenState
     }
     await showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: context.hokTheme.surfaceSlate,

@@ -165,6 +165,8 @@ class _BpDashboardScreenState extends ConsumerState<BpDashboardScreen> {
   Future<void> _openCreateSheet() async {
     final draft = await showModalBottomSheet<_BpCreateDraft>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(

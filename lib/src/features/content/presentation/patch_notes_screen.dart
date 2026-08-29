@@ -194,6 +194,8 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
   void _showPatchDetail(BuildContext context, PatchNoteSummary note) {
     showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.backgroundDeep,
       shape: const RoundedRectangleBorder(

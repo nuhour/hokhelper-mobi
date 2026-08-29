@@ -131,6 +131,8 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
   Future<void> _openEditSheet(BpSchemeSummary scheme) async {
     final draft = await showModalBottomSheet<_BpEditDraft>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
@@ -178,6 +180,8 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
   Future<void> _openDraftProgressSheet(BpSchemeSummary scheme) async {
     final draft = await showModalBottomSheet<_BpDraftProgressDraft>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(

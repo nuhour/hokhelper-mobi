@@ -189,6 +189,8 @@ class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
   }) async {
     await showModalBottomSheet<void>(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       shape: const RoundedRectangleBorder(
