@@ -92,6 +92,14 @@ class OAuthStateStore {
     await _storage.delete(key: _redirectUriKey(normalizedProvider));
   }
 
+  Future<void> clearAll() async {
+    // 退出登录或切换第三方提供方时清除全部一次性状态，避免中断的回调
+    // 在后续登录中被错误复用。
+    for (final provider in const ['google', 'discord', 'reddit']) {
+      await clear(provider);
+    }
+  }
+
   String _key(String provider) => '$_keyPrefix$provider';
 
   String _verifierKey(String provider) => '$_verifierKeyPrefix$provider';

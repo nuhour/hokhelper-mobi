@@ -8,6 +8,7 @@ import 'package:hok_helper_mobile/src/core/providers/core_providers.dart';
 import 'package:hok_helper_mobile/src/core/storage/secure_token_store.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/app_integrity_client.dart';
 import 'package:hok_helper_mobile/src/features/auth/data/auth_repository.dart';
+import 'package:hok_helper_mobile/src/features/auth/data/oauth_state_store.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 
@@ -40,6 +41,15 @@ class _MemoryTokenStore extends SecureTokenStore {
     didClear = true;
     access = null;
     refresh = null;
+  }
+}
+
+class _NoopOAuthStateStore extends OAuthStateStore {
+  var didClearAll = false;
+
+  @override
+  Future<void> clearAll() async {
+    didClearAll = true;
   }
 }
 
@@ -267,6 +277,7 @@ void main() {
 
     test('logout clears user state', () async {
       final tokenStore = _MemoryTokenStore();
+      final oauthStateStore = _NoopOAuthStateStore();
       final repository = _FakeAuthRepository(tokenStore: tokenStore)
         ..userToReturn = const AuthUser(
           id: 7,
@@ -274,7 +285,10 @@ void main() {
           email: 'mulan@example.test',
         );
       final container = ProviderContainer(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(oauthStateStore),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -284,6 +298,7 @@ void main() {
       await container.read(authControllerProvider.notifier).logout();
 
       expect(repository.didLogout, isTrue);
+      expect(oauthStateStore.didClearAll, isTrue);
       expect(container.read(authControllerProvider).valueOrNull, isNull);
     });
 

@@ -78,4 +78,26 @@ void main() {
     expect(await store.consumeCodeVerifier('discord'), isNull);
     expect(await store.consumeRedirectUri('discord'), isNull);
   });
+
+  test('clearAll removes pending state from every OAuth provider', () async {
+    final store = OAuthStateStore();
+    final googleState = await store.create('google');
+    final discordState = await store.create('discord');
+    await store.saveCodeVerifier(
+      provider: 'discord',
+      codeVerifier: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO0123456789-._~',
+    );
+
+    await store.clearAll();
+
+    expect(
+      await store.consume(provider: 'google', state: googleState),
+      isFalse,
+    );
+    expect(
+      await store.consume(provider: 'discord', state: discordState),
+      isFalse,
+    );
+    expect(await store.consumeCodeVerifier('discord'), isNull);
+  });
 }

@@ -407,7 +407,9 @@ void main() {
     );
   });
 
-  testWidgets('login screen starts Google and Discord OAuth', (tester) async {
+  testWidgets('login screen keeps Google native and starts Discord OAuth', (
+    tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
@@ -457,16 +459,12 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(repository.requestedOAuthProvider, 'google');
+    expect(repository.requestedOAuthProvider, isEmpty);
+    expect(openedUrls, isEmpty);
     expect(
-      repository.requestedOAuthRedirectUri,
-      'https://hokhelper.com/auth/google/callback',
+      find.textContaining('Google sign-in is unavailable'),
+      findsOneWidget,
     );
-    expect(
-      repository.requestedOAuthState,
-      startsWith('hokhelper-mobile.google.'),
-    );
-    expect(openedUrls.single, contains('https://oauth.example.test/google'));
 
     await tester.tap(
       find.widgetWithText(OutlinedButton, 'Continue with Discord'),
@@ -490,7 +488,7 @@ void main() {
     expect(openedUrls.last, contains('https://oauth.example.test/discord'));
   });
 
-  testWidgets('Google cancellation continues with browser OAuth', (
+  testWidgets('Google failure never falls back to browser OAuth', (
     tester,
   ) async {
     final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
@@ -531,8 +529,9 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(repository.requestedOAuthProvider, 'google');
-    expect(openedUrls, hasLength(1));
+    expect(repository.requestedOAuthProvider, isEmpty);
+    expect(openedUrls, isEmpty);
+    expect(find.textContaining('provider configuration'), findsOneWidget);
   });
 
   testWidgets('Discord mobile OAuth uses custom callback and PKCE', (
@@ -703,6 +702,7 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
           authRepositoryProvider.overrideWithValue(repository),
+          oauthStateStoreProvider.overrideWithValue(_MemoryOAuthStateStore()),
           nativeAppleSignInProvider.overrideWithValue(
             const _FakeNativeAppleSignIn(
               NativeAppleSignInResult.authenticated(

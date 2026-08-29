@@ -311,9 +311,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _oauthError = null;
     });
 
-    String? nativeGoogleError;
     try {
       final repository = ref.read(authRepositoryProvider);
+      final stateStore = ref.read(oauthStateStoreProvider);
+      await stateStore.clearAll();
       if (provider == 'apple') {
         final result = await ref.read(nativeAppleSignInProvider).authenticate();
         if (result.status == NativeAppleSignInStatus.cancelled) {
@@ -348,13 +349,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           }
           return;
         }
-        // Credential Manager may report a configuration error as "canceled".
-        // Continue to the web flow for both cases instead of leaving the user
-        // on the login page with no visible response.
-        nativeGoogleError = nativeResult.error;
+        // Android/iOS 的 Google 登录只走系统原生凭据链。这里停止而不是
+        // 回退到网站浏览器，避免浏览器里残留的 Discord 会话被当成结果。
+        if (nativeResult.status == NativeGoogleSignInStatus.cancelled &&
+            (nativeResult.error == null || nativeResult.error!.isEmpty)) {
+          return;
+        }
+        throw StateError(
+          nativeResult.error ??
+              'Google sign-in is unavailable. Please update the app and try again.',
+        );
       }
 
-      final stateStore = ref.read(oauthStateStoreProvider);
       final state = await stateStore.create(provider);
       final redirectUri = AppConfig.current.oauthRedirectUri(provider);
       await stateStore.saveRedirectUri(
@@ -394,11 +400,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(oauthStateStoreProvider).clear(provider);
       if (mounted) {
         setState(() {
-          final nativeDetail = nativeGoogleError == null
-              ? ''
-              : ' $nativeGoogleError';
-          _oauthError =
-              'Failed to start OAuth login.$nativeDetail ${error.toString()}';
+          _oauthError = 'Failed to start OAuth login. ${error.toString()}';
         });
       }
     } finally {
@@ -420,15 +422,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .timeout(
           const Duration(seconds: 20),
           onTimeout: () => const NativeGoogleSignInResult.unavailable(
-            'Google sign-in timed out. Continuing with browser sign-in.',
+            'Google sign-in timed out. Please try again.',
           ),
         );
     final idToken = result.idToken;
     if (result.status != NativeGoogleSignInStatus.authenticated ||
         idToken == null) {
-      // Device-side Google configuration differs between stores and debug
-      // signatures. Keep the browser OAuth path available when Play Services
-      // cannot issue an ID token instead of leaving the user at a dead end.
       return result;
     }
 
@@ -437,8 +436,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ref.invalidate(authControllerProvider);
       return result;
     } catch (error) {
-      // A token can be issued before an older backend has been deployed with
-      // the ID-token endpoint. Continue with the web flow in that case.
       return NativeGoogleSignInResult.unavailable(
         'Native Google sign-in could not be completed: $error',
       );

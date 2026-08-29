@@ -53,6 +53,9 @@ class GoogleFrameworkSignIn implements NativeGoogleSignIn {
         return const NativeGoogleSignInResult.unavailable();
       }
 
+      // 每次都从干净的 Google 会话开始，避免退出站内账号后复用上一个
+      // Google 凭据。authenticate 随后仍会展示系统账号选择器。
+      await signIn.signOut();
       final account = await signIn.authenticate();
       final idToken = account.authentication.idToken?.trim();
       if (idToken == null || idToken.isEmpty) {
