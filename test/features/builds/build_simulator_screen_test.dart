@@ -97,10 +97,14 @@ void main() {
 
       expect(find.text('Lam'), findsWidgets);
       expect(find.text('My Builds'), findsWidgets);
+      expect(find.byIcon(Icons.dashboard_customize_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.bookmarks_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
       // 方案标题直接作为卡片头部展示，不再显示 "BUILD n" 占位标签。
       expect(find.text('BUILD 1'), findsNothing);
       expect(find.text('My Lam build'), findsOneWidget);
       expect(find.text('Create Build 2'), findsOneWidget);
+      expect(find.byIcon(Icons.add_box_rounded), findsWidgets);
       await tester.drag(find.byType(ListView).first, const Offset(0, -720));
       await tester.pumpAndSettle();
       expect(find.text('Explore Builds'), findsOneWidget);

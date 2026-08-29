@@ -406,11 +406,11 @@ class _StatsDrawerShell extends StatelessWidget {
 }
 
 enum _TrendDimension {
-  hero('hero_rank', 'Hero', 'base', Icons.sports_martial_arts_rounded),
-  power('power_rank', 'Power', 'main', Icons.bolt_rounded),
-  player('player_rank', 'Player', 'peak', Icons.groups_rounded),
-  equipment('equip_rank', 'Equipment', 'main', Icons.shield_outlined),
-  tier('tier_rank', 'Tier', 'main', Icons.local_fire_department_outlined);
+  hero('hero_rank', 'Hero', 'base', Icons.person_pin_circle_rounded),
+  power('power_rank', 'Power', 'main', Icons.speed_rounded),
+  player('player_rank', 'Player', 'peak', Icons.people_alt_rounded),
+  equipment('equip_rank', 'Equipment', 'main', Icons.inventory_2_rounded),
+  tier('tier_rank', 'Tier', 'main', Icons.workspace_premium_rounded);
 
   const _TrendDimension(this.id, this.label, this.defaultView, this.icon);
 

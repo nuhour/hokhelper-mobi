@@ -704,7 +704,7 @@ class _SlotsPanel extends StatelessWidget {
         Row(
           children: [
             const Icon(
-              Icons.auto_awesome_outlined,
+              Icons.dashboard_customize_rounded,
               color: AppTheme.gold,
               size: 28,
             ),
@@ -814,7 +814,7 @@ class _SlotCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     const Icon(
-                      Icons.edit_outlined,
+                      Icons.edit_note_rounded,
                       size: 17,
                       color: AppTheme.gold,
                     ),
@@ -840,9 +840,9 @@ class _SlotCard extends StatelessWidget {
                           ),
                         ),
                         child: Icon(
-                          Icons.add,
+                          Icons.add_box_rounded,
                           color: context.hokTheme.onSurfaceMuted,
-                          size: 28,
+                          size: 27,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -926,7 +926,7 @@ class _BuildCollectionTabs extends StatelessWidget {
         children: [
           Expanded(
             child: _BuildCollectionTab(
-              icon: Icons.person_outline,
+              icon: Icons.bookmarks_rounded,
               label: l10n.translate('buildMyBuilds'),
               selected: selected == BuildSimCommunityFilter.explore,
               onTap: () => onSelected(BuildSimCommunityFilter.explore),
@@ -934,7 +934,7 @@ class _BuildCollectionTabs extends StatelessWidget {
           ),
           Expanded(
             child: _BuildCollectionTab(
-              icon: Icons.star_border_rounded,
+              icon: Icons.star_rounded,
               label: l10n.translate('buildMyFavorites'),
               selected: selected == BuildSimCommunityFilter.favorites,
               onTap: () => onSelected(BuildSimCommunityFilter.favorites),
@@ -1428,17 +1428,17 @@ class _BuildEditorTabs extends StatelessWidget {
     final tabs = [
       (
         tab: _BuildEditorTab.equipment,
-        icon: Icons.flash_on_outlined,
+        icon: Icons.inventory_2_rounded,
         label: l10n.translate('buildEquipment'),
       ),
       (
         tab: _BuildEditorTab.arcana,
-        icon: Icons.hexagon_outlined,
+        icon: Icons.hub_rounded,
         label: l10n.translate('buildArcana'),
       ),
       (
         tab: _BuildEditorTab.skill,
-        icon: Icons.auto_fix_high_outlined,
+        icon: Icons.auto_awesome_rounded,
         label: l10n.translate('buildSpells'),
       ),
     ];

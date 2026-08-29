@@ -328,7 +328,8 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
       _readMap(widget.result['season'])['background_pic'],
     );
     final seasonName = _readString(_readMap(widget.result['season'])['name']);
-    const bottomNavigationGap = 24.0;
+    final bottomNavigationGap =
+        58.0 + MediaQuery.viewPaddingOf(context).bottom + 16.0;
     return Stack(
       children: [
         ListView(
@@ -787,7 +788,7 @@ class _HomeLiveBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.bolt_rounded, color: AppTheme.gold, size: 16),
+            const Icon(Icons.live_tv_rounded, color: AppTheme.gold, size: 17),
             const SizedBox(width: 5),
             Text(
               '${season.isEmpty ? 'S15' : season}  Live Now',
@@ -892,7 +893,7 @@ class _HomeMainHeroContent extends StatelessWidget {
         ),
         _HomeHeroButton(
           label: l10n.homeTierList,
-          icon: const _HomeTierBarIcon(),
+          icon: const Icon(Icons.workspace_premium_rounded, size: 18),
           onTap: () => context.go('/stats-home?tab=tier'),
         ),
       ],
@@ -990,41 +991,6 @@ class _HomeHeroButton extends StatelessWidget {
         minimumSize: const Size(0, 42),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-}
-
-class _HomeTierBarIcon extends StatelessWidget {
-  const _HomeTierBarIcon();
-
-  static const _colors = [
-    Color(0xFFEF4444),
-    Color(0xFFF97316),
-    Color(0xFFEAB308),
-    Color(0xFF22C55E),
-    Color(0xFF94A3B8),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 18,
-      height: 18,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var index = 0; index < _colors.length; index++)
-            Container(
-              width: 18 - index * 2.5,
-              height: 2.5,
-              decoration: BoxDecoration(
-                color: _colors[index],
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-        ],
       ),
     );
   }
@@ -1325,7 +1291,7 @@ class _HomePortalPreviews extends StatelessWidget {
         onHeroSelected: onHeroSelected,
       ),
       _HomeTierPreviewSection(
-        icon: Icons.local_fire_department_outlined,
+        icon: Icons.workspace_premium_rounded,
         title: l10n.homeTierList,
         route: '/stats-home?tab=tier',
         groups: tierRows.take(4).toList(growable: false),
@@ -1335,7 +1301,7 @@ class _HomePortalPreviews extends StatelessWidget {
         rankRows: _readList(_readMap(result['player_ranking'])['rank']),
       ),
       _HomeCommunitySection(
-        icon: Icons.forum_outlined,
+        icon: Icons.forum_rounded,
         title: l10n.homeCommunityHot,
         route: '/content/community',
         rows: [
@@ -1355,7 +1321,7 @@ class _HomePortalPreviews extends StatelessWidget {
         ],
       ),
       _HomePatchNotesSection(
-        icon: Icons.newspaper_outlined,
+        icon: Icons.update_rounded,
         title: l10n.homeLatestUpdates,
         route: '/content/patch-notes',
         notes: patchNotes.take(6).toList(growable: false),
@@ -1414,7 +1380,7 @@ class _HomeHeroRankingTable extends StatelessWidget {
     final dataRows = rows;
 
     return _HomeDataSection(
-      icon: Icons.bar_chart_outlined,
+      icon: Icons.analytics_rounded,
       title: AppLocalizations.of(context).homeHeroRankings,
       route: '/stats-home',
       child: _HomeDataTable(
@@ -1449,7 +1415,7 @@ class _HomePlayerRankingTableState extends State<_HomePlayerRankingTable> {
     final l10n = AppLocalizations.of(context);
     final rows = _selected == 'peak' ? widget.peakRows : widget.rankRows;
     return _HomeDataSection(
-      icon: Icons.emoji_events_outlined,
+      icon: Icons.leaderboard_rounded,
       title: l10n.homeLeaderboard,
       route: '/stats-home?tab=rankings',
       child: Column(

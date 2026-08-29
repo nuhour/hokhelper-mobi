@@ -40,6 +40,11 @@ void main() {
     expect(find.text('KDA'), findsOneWidget);
     expect(find.text('Win Rate'), findsOneWidget);
     expect(find.text('56.10%'), findsOneWidget);
+    expect(find.byIcon(Icons.person_pin_circle_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.speed_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.people_alt_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.inventory_2_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.workspace_premium_rounded), findsOneWidget);
     expect(find.byKey(const ValueKey('trend-signal-hero-199')), findsOneWidget);
     expect(find.byKey(const ValueKey('trend-best-skill-199')), findsOneWidget);
     expect(find.byKey(const ValueKey('trend-best-equip-199')), findsOneWidget);
