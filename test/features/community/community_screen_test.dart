@@ -708,6 +708,10 @@ void main() {
       'jungle',
     );
     await tester.pumpAndSettle();
+    // 输入阶段只保留草稿，不应在每个字符后触发请求。
+    expect(repository.requestedPostSearch, '');
+    await tester.tap(find.byKey(const ValueKey('forum-post-search-submit')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.fiber_new_outlined));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Oldest'));

@@ -12,6 +12,13 @@ void main() {
     expect(RegionCountry.fromRegionCode(62)?.isoCode, 'ID');
   });
 
+  test('exposes country names without dialing or region codes', () {
+    expect(RegionCountry.fromRegionCode(840)?.label, 'United States');
+    expect(RegionCountry.fromRegionCode(156)?.label, 'China');
+    expect(RegionCountry.fromRegionCode(62)?.label, 'Indonesia');
+    expect(RegionCountry.fromRegionCode(840)?.label.contains('+'), false);
+  });
+
   testWidgets('country picker does not summon the keyboard automatically', (
     tester,
   ) async {

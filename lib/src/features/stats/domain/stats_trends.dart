@@ -209,9 +209,44 @@ class StatsTrendRow {
 
   final Map<String, dynamic> raw;
 
-  Map<String, dynamic> get hero => _map(raw['hero']);
-  Map<String, dynamic> get equip => _map(raw['equip']);
-  Map<String, dynamic> get player => _map(raw['player']);
+  Map<String, dynamic> get hero {
+    final nested = _map(raw['hero']);
+    if (nested.isNotEmpty) return nested;
+    final id = raw['hero_id'] ?? raw['heroId'];
+    if (id == null) return const {};
+    return {
+      'id': id,
+      'heroId': raw['heroId'] ?? id,
+      'name': raw['hero_name'] ?? raw['name'],
+      'avatar_url': raw['hero_avatar_url'] ?? raw['avatar_url'],
+      'position': raw['position'] ?? raw['postion'],
+    };
+  }
+
+  Map<String, dynamic> get equip {
+    final nested = _map(raw['equip']);
+    if (nested.isNotEmpty) return nested;
+    final id = raw['equip_id'] ?? raw['equipId'];
+    if (id == null) return const {};
+    return {
+      'id': id,
+      'equip_id': id,
+      'name': raw['equip_name'] ?? raw['name'],
+      'icon_url': raw['equip_icon_url'] ?? raw['icon_url'] ?? raw['image_url'],
+    };
+  }
+
+  Map<String, dynamic> get player {
+    final nested = _map(raw['player']);
+    if (nested.isNotEmpty) return nested;
+    final id = raw['player_id'] ?? raw['playerId'];
+    if (id == null) return const {};
+    return {
+      'id': id,
+      'name': raw['player_name'] ?? raw['name'],
+      'avatar_url': raw['player_avatar_url'] ?? raw['avatar_url'],
+    };
+  }
 
   String get kind {
     if (hero.isNotEmpty) return 'hero';

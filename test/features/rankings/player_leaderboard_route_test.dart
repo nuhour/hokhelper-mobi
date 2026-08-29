@@ -54,7 +54,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Ranked'), findsOneWidget);
+    expect(find.text('Rank'), findsOneWidget);
     expect(find.text('No data'), findsOneWidget);
   });
 
@@ -92,7 +92,7 @@ void main() {
       '44',
     );
     expect(find.text('Peak'), findsAtLeastNWidgets(1));
-    expect(find.text('BS (+44)'), findsAtLeastNWidgets(1));
+    expect(find.text('Bahamas'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('leaderboard controls synchronize web route query', (
@@ -129,7 +129,7 @@ void main() {
 
     await tester.tap(find.text('Global').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ID').last);
+    await tester.tap(find.text('Indonesia').last);
     await tester.pumpAndSettle();
 
     expect(
@@ -141,7 +141,7 @@ void main() {
       'peak',
     );
 
-    await tester.tap(find.text('Ranked'));
+    await tester.tap(find.text('Rank'));
     await tester.pumpAndSettle();
 
     expect(

@@ -3,9 +3,10 @@ import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/features/stats/data/stats_repository.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_dashboard.dart';
+import 'package:hok_helper_mobile/src/features/stats/domain/stats_trends.dart';
 
 class _FakeApiClient extends ApiClient {
-  _FakeApiClient()
+  _FakeApiClient({this.includeOverviewHero = false})
     : super(
         config: const AppConfig(
           apiBaseUrl: 'https://example.test',
@@ -13,6 +14,7 @@ class _FakeApiClient extends ApiClient {
         ),
       );
 
+  final bool includeOverviewHero;
   final queries = <String, Map<String, dynamic>?>{};
 
   @override
@@ -47,6 +49,19 @@ class _FakeApiClient extends ApiClient {
       };
     }
 
+    if (path == '/stats/hero-combos' && query?['hero_id'] == 133) {
+      return const {
+        'success': true,
+        'data': {
+          'hero_id': 133,
+          'hero': {'id': 133, 'name': 'Augran'},
+          'pick_rate': 0.16,
+          'ban_rate': 0.23,
+          'bp_rate': 0.39,
+        },
+      };
+    }
+
     if (path == '/stats/hero-combos' && query?['equip_id'] == 88) {
       return const {
         'success': true,
@@ -72,7 +87,34 @@ class _FakeApiClient extends ApiClient {
     }
 
     if (path == '/stats/table' && query?['dimension'] == 'hero_rank') {
-      return const {
+      final rows = <Map<String, dynamic>>[
+        {
+          'hero_id': 199,
+          'hero_name': 'Lam',
+          'hero_avatar_url': 'https://example.test/lam.png',
+          'win_rate': 0.561,
+          'pick_rate': 0.18,
+          'ban_rate': 0.07,
+          'score': 91.4,
+        },
+      ];
+      if (includeOverviewHero) {
+        rows.add({
+          'hero_id': 133,
+          'hero_name': 'Augran',
+          'hero_avatar_url': 'https://example.test/augran.png',
+          'wr': 58.8,
+          'win_rate': 0.588,
+          'pick_rate': 16.0,
+          'ban_rate': 23.0,
+          'bp_rate': 39.0,
+          'avg_grade_game': 8.76,
+          'mvp_rate': 12.5,
+          'early_win_rate': 57.1,
+          'mid_win_rate': 60.2,
+        });
+      }
+      return {
         'success': true,
         'data': {
           'dimension': 'hero_rank',
@@ -80,17 +122,7 @@ class _FakeApiClient extends ApiClient {
           'baseline': 'peak_1000',
           'view': 'base',
           'columns': [],
-          'rows': [
-            {
-              'hero_id': 199,
-              'hero_name': 'Lam',
-              'hero_avatar_url': 'https://example.test/lam.png',
-              'win_rate': 0.561,
-              'pick_rate': 0.18,
-              'ban_rate': 0.07,
-              'score': 91.4,
-            },
-          ],
+          'rows': rows,
           'available_views': [],
           'available_baselines': ['peak_1000'],
         },
@@ -384,4 +416,39 @@ void main() {
       expect(detail.equips.single.matchesText, '8900 matches');
     },
   );
+
+  test('adds hero overview metrics when opening a tier hero', () async {
+    final apiClient = _FakeApiClient(includeOverviewHero: true);
+    final repository = StatsRepository(apiClient: apiClient);
+    final row = StatsTrendRow.fromJson({
+      'id': 9001,
+      'hero': {'id': 133, 'name': 'Augran'},
+      'pick_rate': 16.0,
+      'ban_rate': 23.0,
+      'bp_rate': 39.0,
+    });
+
+    final detail = await repository.loadTrendDetail(
+      request: StatsTrendDetailRequest(
+        row: row,
+        query: const StatsTrendQuery(
+          dimension: 'tier_rank',
+          baseline: 'peak_1000',
+          view: 'main',
+        ),
+      ),
+      regionCode: 'en',
+    );
+
+    expect(detail.map('overview_stats')['wr'], 58.8);
+    expect(detail.map('overview_stats')['avg_grade_game'], 8.76);
+    expect(apiClient.queries['/stats/table:hero_rank:base'], {
+      'dimension': 'hero_rank',
+      'baseline': 'peak_1000',
+      'view': 'base',
+      'window_days': 999,
+      'lang': 'en',
+      'lite': 1,
+    });
+  });
 }

@@ -68,7 +68,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Player'), findsOneWidget);
-    expect(find.text('Ranked'), findsAtLeastNWidgets(1));
+    expect(find.text('Rank'), findsAtLeastNWidgets(1));
     expect(find.text('Peak'), findsOneWidget);
     expect(find.text('Top Mid'), findsOneWidget);
     final longName = tester.widget<Text>(
@@ -116,6 +116,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Peak'), findsAtLeastNWidgets(1));
-    expect(find.text('BS (+44)'), findsAtLeastNWidgets(1));
+    expect(find.text('Bahamas'), findsAtLeastNWidgets(1));
   });
 }

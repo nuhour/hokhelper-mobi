@@ -123,7 +123,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/tools/stats');
     expect(find.text('Player'), findsOneWidget);
-    expect(find.text('Ranked'), findsAtLeastNWidgets(1));
+    expect(find.text('Rank'), findsAtLeastNWidgets(1));
     expect(find.text('Peak'), findsOneWidget);
     expect(find.text('BS'), findsOneWidget);
     expect(find.text('Top Mid'), findsOneWidget);

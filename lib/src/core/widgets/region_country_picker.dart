@@ -8,7 +8,16 @@ class RegionCountry {
   final int regionCode;
   final String isoCode;
 
-  String get label => '$isoCode (+$regionCode)';
+  String get name => _countryNames[isoCode] ?? 'Country / region';
+
+  String get label => name;
+
+  String nameFor(Locale locale) {
+    if (locale.languageCode == 'zh') {
+      return _countryNamesZh[isoCode] ?? '国家/地区';
+    }
+    return name;
+  }
 
   static RegionCountry? fromRegionCode(int regionCode) {
     if (regionCode <= 0) return null;
@@ -49,6 +58,76 @@ const _dialingCodeFallback = <int, String>{
   852: 'HK',
   853: 'MO',
   886: 'TW',
+};
+
+const _countryNames = <String, String>{
+  'AR': 'Argentina',
+  'AU': 'Australia',
+  'BR': 'Brazil',
+  'BS': 'Bahamas',
+  'CA': 'Canada',
+  'CN': 'China',
+  'CO': 'Colombia',
+  'DE': 'Germany',
+  'EG': 'Egypt',
+  'ES': 'Spain',
+  'FR': 'France',
+  'GB': 'United Kingdom',
+  'HN': 'Honduras',
+  'HK': 'Hong Kong',
+  'ID': 'Indonesia',
+  'IN': 'India',
+  'IT': 'Italy',
+  'JP': 'Japan',
+  'KR': 'South Korea',
+  'MO': 'Macao',
+  'MM': 'Myanmar',
+  'MY': 'Malaysia',
+  'MX': 'Mexico',
+  'NZ': 'New Zealand',
+  'PH': 'Philippines',
+  'RU': 'Russia',
+  'SG': 'Singapore',
+  'TH': 'Thailand',
+  'TR': 'Türkiye',
+  'TW': 'Taiwan',
+  'US': 'United States',
+  'VN': 'Vietnam',
+};
+
+const _countryNamesZh = <String, String>{
+  'AR': '阿根廷',
+  'AU': '澳大利亚',
+  'BR': '巴西',
+  'BS': '巴哈马',
+  'CA': '加拿大',
+  'CN': '中国',
+  'CO': '哥伦比亚',
+  'DE': '德国',
+  'EG': '埃及',
+  'ES': '西班牙',
+  'FR': '法国',
+  'GB': '英国',
+  'HN': '洪都拉斯',
+  'HK': '中国香港',
+  'ID': '印度尼西亚',
+  'IN': '印度',
+  'IT': '意大利',
+  'JP': '日本',
+  'KR': '韩国',
+  'MO': '中国澳门',
+  'MM': '缅甸',
+  'MY': '马来西亚',
+  'MX': '墨西哥',
+  'NZ': '新西兰',
+  'PH': '菲律宾',
+  'RU': '俄罗斯',
+  'SG': '新加坡',
+  'TH': '泰国',
+  'TR': '土耳其',
+  'TW': '中国台湾',
+  'US': '美国',
+  'VN': '越南',
 };
 
 class RegionFlag extends StatelessWidget {
@@ -95,6 +174,7 @@ class RegionCountryPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = RegionCountry.fromRegionCode(value);
+    final locale = Localizations.localeOf(context);
     final content = Row(
       mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
       children: [
@@ -102,7 +182,7 @@ class RegionCountryPicker extends StatelessWidget {
         const SizedBox(width: 7),
         Flexible(
           child: Text(
-            selected?.label ?? 'Global',
+            selected?.nameFor(locale) ?? 'Global',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -169,6 +249,7 @@ class _RegionCountrySheetState extends State<_RegionCountrySheet> {
   @override
   Widget build(BuildContext context) {
     final query = _controller.text.trim().toUpperCase();
+    final locale = Localizations.localeOf(context);
     final countries = widget.options
         .map(RegionCountry.fromRegionCode)
         .whereType<RegionCountry>()
@@ -176,7 +257,8 @@ class _RegionCountrySheetState extends State<_RegionCountrySheet> {
           (country) =>
               query.isEmpty ||
               country.isoCode.contains(query) ||
-              '${country.regionCode}'.contains(query),
+              '${country.regionCode}'.contains(query) ||
+              country.nameFor(locale).toUpperCase().contains(query),
         )
         .toList(growable: false);
     return FractionallySizedBox(
@@ -231,8 +313,7 @@ class _RegionCountrySheetState extends State<_RegionCountrySheet> {
                 final country = countries[index - 1];
                 return ListTile(
                   leading: RegionFlag(regionCode: country.regionCode),
-                  title: Text(country.isoCode),
-                  subtitle: Text('Region ${country.regionCode}'),
+                  title: Text(country.nameFor(locale)),
                   trailing: widget.value == country.regionCode
                       ? const Icon(Icons.check_rounded)
                       : null,

@@ -5,6 +5,7 @@ StatsTrendTable sampleStatsTrendTable({
   String view = 'base',
   List<Object?>? columns,
   List<Object?>? rows,
+  List<Object?>? availableViews,
 }) {
   return StatsTrendTable.fromJson({
     'dimension': dimension,
@@ -85,10 +86,12 @@ StatsTrendTable sampleStatsTrendTable({
             'trend_smoothed': [58.0, 57.0, 59.0, 60.2],
           },
         ],
-    'available_views': const [
-      {'id': 'base', 'label': 'Base'},
-      {'id': 'prep', 'label': 'Preparation'},
-    ],
+    'available_views':
+        availableViews ??
+        const [
+          {'id': 'base', 'label': 'Base'},
+          {'id': 'prep', 'label': 'Preparation'},
+        ],
     'available_baselines': const ['all', 'peak_base', 'top_rank', 'peak_1000'],
     'available_window_days': const [1, 7, 30, 999],
     'available_filters': const {

@@ -66,8 +66,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   }
 
   void _setQuery(StatsTrendQuery query) {
+    final normalizedQuery = _normalizeTrendQuery(query);
     setState(() {
-      _query = query;
+      _query = normalizedQuery;
       _sortColumn = '';
       _sortAscending = false;
     });
@@ -148,7 +149,15 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
         .where((column) => !column.isIdentity && !column.isSparkline)
         .toList(growable: false);
     final hasSparkline = table.columns.any((column) => column.isSparkline);
-    final fixedWidth = table.dimension == 'player_rank' ? 174.0 : 164.0;
+    final showIdentityName = !const {
+      'power_rank',
+      'tier_rank',
+    }.contains(table.dimension);
+    final fixedWidth = switch (table.dimension) {
+      'player_rank' => 174.0,
+      'power_rank' || 'tier_rank' => 136.0,
+      _ => 164.0,
+    };
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
@@ -161,8 +170,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                 _query.copyWith(
                   dimension: dimension.id,
                   view: dimension.defaultView,
-                  baseline:
-                      _query.baseline == 'all' && dimension.id != 'hero_rank'
+                  baseline: dimension.id == 'tier_rank'
+                      ? 'peak_1000'
+                      : _query.baseline == 'all' && dimension.id != 'hero_rank'
                       ? 'peak_1000'
                       : _query.baseline,
                   equipType: '',
@@ -171,6 +181,34 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
               );
             },
           ),
+          if (_query.dimension == 'player_rank' &&
+              _availablePlayerTrendViews(table).length > 1) ...[
+            const SizedBox(height: 7),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: [
+                  for (final view in _availablePlayerTrendViews(table))
+                    ChoiceChip(
+                      key: ValueKey('stats-trend-player-view-${view.id}'),
+                      selected:
+                          _normalizedTrendViewId(_query.view) ==
+                          _normalizedTrendViewId(view.id),
+                      showCheckmark: false,
+                      label: Text(_trendViewLabel(context, view)),
+                      onSelected: (_) => _setQuery(
+                        _query.copyWith(
+                          view: _normalizedTrendViewId(view.id),
+                          snapshotDate: '',
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 7),
           _FilterSummaryBar(
             query: _query,
@@ -252,17 +290,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                         _TrendIdentityCell(
                           row: rows[index],
                           rank: index + 1,
-                          showSparkline: hasSparkline,
-                          trendBadge:
-                              trendBadges[_trendRowKey(rows[index])] ??
-                              _TrendBadge.none,
-                          monthDirection:
-                              monthDirections[_trendRowKey(rows[index])] ??
-                              _resolveTrendDirection(
-                                signalRowsByKey[_trendRowKey(rows[index])]
-                                        ?.sparkline ??
-                                    rows[index].sparkline,
-                              ),
+                          showName: showIdentityName,
                           focused:
                               int.tryParse(rows[index].id) == focusedHeroId,
                           onAvatarTap: rows[index].kind == 'hero'
@@ -270,15 +298,40 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                               : rows[index].kind == 'equip'
                               ? () => _openTrendDetail(rows[index], table)
                               : null,
-                          onTrendTap:
-                              hasSparkline &&
-                                  (rows[index].kind == 'hero' ||
-                                      rows[index].kind == 'equip')
-                              ? () => _openTrendDetail(rows[index], table)
-                              : null,
                         ),
                     ],
                     columns: [
+                      if (hasSparkline)
+                        AppStatsTableColumn(
+                          label: _columnLabel(
+                            context,
+                            'trend_curve',
+                            'Trend line',
+                          ),
+                          groupLabel: AppLocalizations.of(
+                            context,
+                          ).translate('statsCore'),
+                          width: 122,
+                          cells: [
+                            for (final row in rows)
+                              _TrendSparklineCell(
+                                row: row,
+                                trendBadge:
+                                    trendBadges[_trendRowKey(row)] ??
+                                    _TrendBadge.none,
+                                monthDirection:
+                                    monthDirections[_trendRowKey(row)] ??
+                                    _resolveTrendDirection(
+                                      signalRowsByKey[_trendRowKey(row)]
+                                              ?.sparkline ??
+                                          row.sparkline,
+                                    ),
+                                onTap: row.kind == 'hero' || row.kind == 'equip'
+                                    ? () => _openTrendDetail(row, table)
+                                    : null,
+                              ),
+                          ],
+                        ),
                       for (final column in columns)
                         AppStatsTableColumn(
                           label: _columnLabel(context, column.id, column.label),
@@ -305,6 +358,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                           cells: [
                             for (final row in rows)
                               _TrendValueCell(
+                                row: row,
                                 column: column,
                                 value: row.value(column.id),
                               ),
@@ -548,26 +602,32 @@ class _TrendIdentityCell extends StatelessWidget {
   const _TrendIdentityCell({
     required this.row,
     required this.rank,
-    required this.showSparkline,
-    required this.trendBadge,
-    required this.monthDirection,
+    required this.showName,
     required this.focused,
     required this.onAvatarTap,
-    required this.onTrendTap,
   });
 
   final StatsTrendRow row;
   final int rank;
-  final bool showSparkline;
-  final _TrendBadge trendBadge;
-  final _TrendDirection monthDirection;
+  final bool showName;
   final bool focused;
   final VoidCallback? onAvatarTap;
-  final VoidCallback? onTrendTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<HokThemeColors>();
+    final avatar = Semantics(
+      button: onAvatarTap != null,
+      label: onAvatarTap == null
+          ? row.name
+          : 'Open ${row.name} preparation details',
+      child: InkResponse(
+        key: ValueKey('trend-avatar-${row.kind}-${row.id}'),
+        onTap: onAvatarTap,
+        radius: 24,
+        child: _TrendAvatarCluster(row: row, focused: focused),
+      ),
+    );
     return Semantics(
       label: [if (focused) 'Focused', row.name].join(' '),
       child: Row(
@@ -592,50 +652,66 @@ class _TrendIdentityCell extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Semantics(
-            button: onAvatarTap != null,
-            label: onAvatarTap == null
-                ? row.name
-                : 'Open ${row.name} preparation details',
-            child: InkResponse(
-              key: ValueKey('trend-avatar-${row.kind}-${row.id}'),
-              onTap: onAvatarTap,
-              radius: 24,
-              child: _TrendAvatarCluster(row: row, focused: focused),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Semantics(
-              button: onTrendTap != null,
-              label: onTrendTap == null
-                  ? null
-                  : 'Open ${row.name} trend details',
-              child: InkWell(
-                key: ValueKey('trend-curve-${row.kind}-${row.id}'),
-                onTap: onTrendTap,
-                child: showSparkline && row.sparkline.length > 1
-                    ? _MiniSparkline(
-                        key: ValueKey('trend-signal-${row.kind}-${row.id}'),
-                        values: row.sparkline,
-                        badge: trendBadge,
-                        direction: monthDirection,
-                        showSignal: true,
-                      )
-                    : Text(
-                        row.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: colors?.onSurfaceStrong,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
+          if (showName) ...[
+            avatar,
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                row.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colors?.onSurfaceStrong,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-          ),
+          ] else
+            Expanded(child: Center(child: avatar)),
         ],
+      ),
+    );
+  }
+}
+
+class _TrendSparklineCell extends StatelessWidget {
+  const _TrendSparklineCell({
+    required this.row,
+    required this.trendBadge,
+    required this.monthDirection,
+    required this.onTap,
+  });
+
+  final StatsTrendRow row;
+  final _TrendBadge trendBadge;
+  final _TrendDirection monthDirection;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = row.sparkline.length > 1
+        ? _MiniSparkline(
+            key: ValueKey('trend-signal-${row.kind}-${row.id}'),
+            values: row.sparkline,
+            badge: trendBadge,
+            direction: monthDirection,
+            showSignal: true,
+          )
+        : Text(
+            '-',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(
+                context,
+              ).extension<HokThemeColors>()?.onSurfaceMuted,
+            ),
+          );
+    return Semantics(
+      button: onTap != null,
+      label: onTap == null ? null : 'Open ${row.name} trend details',
+      child: InkWell(
+        key: ValueKey('trend-curve-${row.kind}-${row.id}'),
+        onTap: onTap,
+        child: SizedBox(width: double.infinity, height: 44, child: content),
       ),
     );
   }
@@ -665,12 +741,23 @@ class _TrendAvatarCluster extends StatelessWidget {
           Positioned(
             left: 5,
             top: 0,
-            child: AppImage(
-              url: row.imageUrl,
-              width: 32,
-              height: 32,
-              borderRadius: row.kind == 'equip' ? 8 : 16,
-              semanticLabel: row.name,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: row.kind == 'equip'
+                    ? context.hokTheme.surfaceRaised
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(
+                  row.kind == 'equip' ? 8 : 16,
+                ),
+              ),
+              child: AppImage(
+                url: row.imageUrl,
+                fit: row.kind == 'equip' ? BoxFit.contain : BoxFit.cover,
+                width: 32,
+                height: 32,
+                borderRadius: row.kind == 'equip' ? 8 : 16,
+                semanticLabel: row.name,
+              ),
             ),
           ),
           if (skillUrl.isNotEmpty)
@@ -691,6 +778,7 @@ class _TrendAvatarCluster extends StatelessWidget {
                 key: ValueKey('trend-best-equip-${row.id}'),
                 url: equipUrl,
                 label: _trendAssetName(equip, 'Equipment'),
+                isEquipment: true,
               ),
             ),
           if (focused)
@@ -717,21 +805,36 @@ class _TrendAvatarCluster extends StatelessWidget {
 }
 
 class _TrendLoadoutIcon extends StatelessWidget {
-  const _TrendLoadoutIcon({required this.url, required this.label, super.key});
+  const _TrendLoadoutIcon({
+    required this.url,
+    required this.label,
+    this.isEquipment = false,
+    super.key,
+  });
 
   final String url;
   final String label;
+  final bool isEquipment;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
       message: label,
-      child: AppImage(
-        url: url,
-        width: 17,
-        height: 17,
-        borderRadius: 999,
-        semanticLabel: label,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isEquipment
+              ? context.hokTheme.surfaceRaised
+              : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: AppImage(
+          url: url,
+          fit: isEquipment ? BoxFit.contain : BoxFit.cover,
+          width: 17,
+          height: 17,
+          borderRadius: 999,
+          semanticLabel: label,
+        ),
       ),
     );
   }
@@ -756,8 +859,13 @@ String _trendAssetName(Map<String, dynamic> item, String fallback) {
 }
 
 class _TrendValueCell extends StatelessWidget {
-  const _TrendValueCell({required this.column, required this.value});
+  const _TrendValueCell({
+    required this.row,
+    required this.column,
+    required this.value,
+  });
 
+  final StatsTrendRow row;
   final StatsTrendColumn column;
   final Object? value;
 
@@ -774,17 +882,72 @@ class _TrendValueCell extends StatelessWidget {
         ],
       );
     }
+    final strongPhase = _strongPhaseForRow(row);
+    final phase = _phaseForMetric(column.id);
+    final isStrongPhase =
+        (phase != null && phase == strongPhase) || column.id == 'strong_phase';
     return Text(
       _formatTableValue(value, column.type),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: Theme.of(context).extension<HokThemeColors>()?.onSurfaceStrong,
-        fontWeight: FontWeight.w700,
+        color: isStrongPhase
+            ? const Color(0xFFF43F5E)
+            : Theme.of(context).extension<HokThemeColors>()?.onSurfaceStrong,
+        fontWeight: isStrongPhase ? FontWeight.w900 : FontWeight.w700,
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
     );
   }
+}
+
+String? _phaseForMetric(String id) {
+  if (id.startsWith('phase_early_') || id == 'early_win_rate') {
+    return 'early';
+  }
+  if (id.startsWith('phase_mid_') || id == 'mid_win_rate') return 'mid';
+  if (id.startsWith('phase_late_') || id == 'late_win_rate') return 'late';
+  return null;
+}
+
+String _strongPhaseForRow(StatsTrendRow row) {
+  final rawStrongPhase = row.raw['strong_phase'];
+  final explicit = rawStrongPhase is String
+      ? rawStrongPhase
+      : _map(rawStrongPhase)['phase']?.toString() ?? '';
+  final normalizedExplicit = explicit.trim().toLowerCase().replaceFirst(
+    'phase_',
+    '',
+  );
+  if (const {'early', 'mid', 'late'}.contains(normalizedExplicit)) {
+    return normalizedExplicit;
+  }
+
+  final candidates = <String, ({double wr, double share})>{};
+  for (final phase in const ['early', 'mid', 'late']) {
+    final wr = _double(
+      row.raw['phase_${phase}_wr'] ?? row.raw['${phase}_win_rate'],
+    );
+    final share = _double(
+      row.raw['phase_${phase}_share'] ?? row.raw['${phase}_share'],
+    );
+    if (wr.isFinite || share.isFinite) {
+      candidates[phase] = (
+        wr: wr.isFinite ? wr : double.negativeInfinity,
+        share: share.isFinite ? share : double.negativeInfinity,
+      );
+    }
+  }
+  if (candidates.isEmpty) return '';
+  return candidates.keys.reduce((best, phase) {
+    final current = candidates[phase]!;
+    final previous = candidates[best]!;
+    if (current.wr > previous.wr ||
+        current.wr == previous.wr && current.share > previous.share) {
+      return phase;
+    }
+    return best;
+  });
 }
 
 /// 玩家统计的 Main Heroes：头像下显示真实战力（top_fight），不再把评分当作战力。
@@ -912,6 +1075,9 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
         ? const [1, 7, 30, 999]
         : widget.table.availableWindowDays;
     final snapshots = widget.table.availableSnapshotDates.reversed.toList();
+    final playerViews = _draft.dimension == 'player_rank'
+        ? _availablePlayerTrendViews(widget.table)
+        : const <StatsTrendView>[];
     final canFilterLane = const {
       'hero_rank',
       'power_rank',
@@ -976,6 +1142,30 @@ class _TrendFilterSheetState extends State<_TrendFilterSheet> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                    if (playerViews.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      _FilterLabel(label: 'Leaderboard'),
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 7,
+                        children: [
+                          for (final view in playerViews)
+                            ChoiceChip(
+                              selected:
+                                  _normalizedTrendViewId(_draft.view) ==
+                                  _normalizedTrendViewId(view.id),
+                              showCheckmark: false,
+                              label: Text(_trendViewLabel(context, view)),
+                              onSelected: (_) => setState(() {
+                                _draft = _draft.copyWith(
+                                  view: _normalizedTrendViewId(view.id),
+                                  snapshotDate: '',
+                                );
+                              }),
+                            ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 14),
                     _FilterLabel(
                       label: AppLocalizations.of(
@@ -1374,6 +1564,7 @@ class _StatsDetailHeader extends StatelessWidget {
         children: [
           AppImage(
             url: row.imageUrl,
+            fit: row.kind == 'equip' ? BoxFit.contain : BoxFit.cover,
             width: 40,
             height: 40,
             borderRadius: row.kind == 'equip' ? 9 : 20,
@@ -1444,29 +1635,46 @@ class _HeroPreparationBody extends StatelessWidget {
         rows: detail.list('hero_skill_position_stats'),
       ),
       'bp' => _BpPreparation(detail: detail),
-      _ => _PreparationOverview(row: row),
+      _ => _PreparationOverview(row: row, detail: detail),
     };
   }
 }
 
 class _PreparationOverview extends StatelessWidget {
-  const _PreparationOverview({required this.row});
+  const _PreparationOverview({required this.row, required this.detail});
 
   final StatsTrendRow row;
+  final StatsTrendDetail detail;
 
   @override
   Widget build(BuildContext context) {
+    final overview = detail.map('overview_stats');
+    final stats = <String, dynamic>{...overview, ...row.raw};
+    Object? value(List<String> keys) {
+      for (final key in keys) {
+        final candidate = stats[key];
+        if (candidate != null && candidate != '') return candidate;
+      }
+      return null;
+    }
+
     // HOKX 英雄抽屉「综合」布局：8 张两列指标卡。
     return _MetricGrid(
       items: [
-        ('WR', _percent(row.raw['wr'])),
-        ('P', _percent(row.raw['pick_rate'])),
-        ('B', _percent(row.raw['ban_rate'])),
-        ('BP', _percent(row.raw['bp_rate'])),
-        ('Avg Rating', _compactNumber(row.raw['avg_grade_game'])),
-        ('MVP Rate', _percent(row.raw['mvp_rate'])),
-        ('Early Win', _percent(row.raw['early_win_rate'])),
-        ('Mid Win', _percent(row.raw['mid_win_rate'])),
+        ('WR', _percent(value(const ['wr', 'win_rate']))),
+        ('P', _percent(value(const ['pick_rate']))),
+        ('B', _percent(value(const ['ban_rate']))),
+        ('BP', _percent(value(const ['bp_rate']))),
+        (
+          'Avg Rating',
+          _compactNumber(value(const ['avg_grade_game', 'avg_grade_all'])),
+        ),
+        ('MVP Rate', _percent(value(const ['mvp_rate']))),
+        (
+          'Early Win',
+          _percent(value(const ['early_win_rate', 'phase_early_wr'])),
+        ),
+        ('Mid Win', _percent(value(const ['mid_win_rate', 'phase_mid_wr']))),
       ],
     );
   }
@@ -2470,6 +2678,7 @@ class _TrendDetailSheetState extends ConsumerState<_TrendDetailSheet> {
               children: [
                 AppImage(
                   url: row.imageUrl,
+                  fit: row.kind == 'equip' ? BoxFit.contain : BoxFit.cover,
                   width: 36,
                   height: 36,
                   borderRadius: row.kind == 'equip' ? 9 : 18,
@@ -4013,6 +4222,7 @@ String _columnLabel(BuildContext context, String id, String fallback) {
     'pick_rate': 'statsPickRate',
     'ban_rate': 'statsBanRate',
     'bp_rate': 'statsBpRate',
+    'trend_smoothed': 'statsTrend',
     'avg_kills': 'statsKills',
     'avg_deaths': 'statsDeaths',
     'avg_assists': 'statsAssists',
@@ -4157,6 +4367,36 @@ String _columnLabel(BuildContext context, String id, String fallback) {
         '梯度值': 'Score',
       }[fallback] ??
       fallback;
+}
+
+StatsTrendQuery _normalizeTrendQuery(StatsTrendQuery query) {
+  var normalized = query;
+  if (normalized.dimension == 'tier_rank' &&
+      normalized.baseline != 'peak_1000') {
+    normalized = normalized.copyWith(baseline: 'peak_1000');
+  }
+  if (normalized.dimension == 'player_rank' && normalized.view == 'rank') {
+    normalized = normalized.copyWith(view: 'ranked');
+  }
+  return normalized;
+}
+
+String _normalizedTrendViewId(String view) => view == 'rank' ? 'ranked' : view;
+
+List<StatsTrendView> _availablePlayerTrendViews(StatsTrendTable table) {
+  if (table.availableViews.isNotEmpty) return table.availableViews;
+  return const [
+    StatsTrendView(id: 'peak', label: 'Peak'),
+    StatsTrendView(id: 'ranked', label: 'Rank'),
+  ];
+}
+
+String _trendViewLabel(BuildContext context, StatsTrendView view) {
+  return switch (_normalizedTrendViewId(view.id)) {
+    'ranked' => AppLocalizations.of(context).homeRank,
+    'peak' => AppLocalizations.of(context).homePeak,
+    _ => view.label,
+  };
 }
 
 String _baselineLabel(String baseline) => switch (baseline) {

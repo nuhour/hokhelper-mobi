@@ -1186,7 +1186,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
   }
 }
 
-class _PostSearchSortBar extends StatelessWidget {
+class _PostSearchSortBar extends StatefulWidget {
   const _PostSearchSortBar({
     required this.controller,
     required this.search,
@@ -1214,7 +1214,44 @@ class _PostSearchSortBar extends StatelessWidget {
   final ValueChanged<CommunityInitialView> onViewChanged;
 
   @override
+  State<_PostSearchSortBar> createState() => _PostSearchSortBarState();
+}
+
+class _PostSearchSortBarState extends State<_PostSearchSortBar> {
+  late String _draftSearch;
+
+  @override
+  void initState() {
+    super.initState();
+    _draftSearch = widget.controller.text;
+  }
+
+  @override
+  void didUpdateWidget(covariant _PostSearchSortBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller ||
+        (widget.controller.text != _draftSearch &&
+            widget.search == widget.controller.text)) {
+      _draftSearch = widget.controller.text;
+    }
+  }
+
+  void _submitSearch() {
+    final value = _draftSearch.trim();
+    if (widget.controller.text != value) widget.controller.text = value;
+    setState(() => _draftSearch = value);
+    if (value != widget.search) widget.onSearchChanged(value);
+  }
+
+  void _clearSearch() {
+    widget.controller.clear();
+    setState(() => _draftSearch = '');
+    if (widget.search.isNotEmpty) widget.onSearchChanged('');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final hasDraftSearch = _draftSearch.trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1222,30 +1259,38 @@ class _PostSearchSortBar extends StatelessWidget {
           children: [
             Expanded(
               child: TextField(
-                controller: controller,
-                onChanged: onSearchChanged,
+                controller: widget.controller,
+                onChanged: (value) => setState(() => _draftSearch = value),
+                onSubmitted: (_) => _submitSearch(),
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
                   isDense: true,
                   hintText: 'Search posts',
                   prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  suffixIcon: search.trim().isEmpty
-                      ? null
-                      : IconButton(
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        key: const ValueKey('forum-post-search-submit'),
+                        tooltip: 'Search posts',
+                        onPressed: _submitSearch,
+                        icon: const Icon(Icons.search_rounded, size: 18),
+                      ),
+                      if (hasDraftSearch)
+                        IconButton(
                           tooltip: 'Clear search',
-                          onPressed: () {
-                            controller.clear();
-                            onSearchChanged('');
-                          },
+                          onPressed: _clearSearch,
                           icon: const Icon(Icons.close_rounded, size: 18),
                         ),
+                    ],
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 10),
             FilledButton.icon(
-              onPressed: onCreate,
+              onPressed: widget.onCreate,
               icon: const Icon(Icons.edit_square, size: 18),
               label: const Text('Create Post'),
             ),
@@ -1256,7 +1301,7 @@ class _PostSearchSortBar extends StatelessWidget {
           children: [
             Expanded(
               child: _CompactSegment<CommunityInitialView>(
-                value: activeView,
+                value: widget.activeView,
                 options: const [
                   (
                     CommunityInitialView.hot,
@@ -1274,14 +1319,14 @@ class _PostSearchSortBar extends StatelessWidget {
                     Icons.favorite_border_rounded,
                   ),
                 ],
-                onChanged: onViewChanged,
+                onChanged: widget.onViewChanged,
               ),
             ),
             const SizedBox(width: 8),
             PopupMenuButton<CommunityPostSort>(
               tooltip: 'Sort posts',
-              initialValue: sort,
-              onSelected: onSortChanged,
+              initialValue: widget.sort,
+              onSelected: widget.onSortChanged,
               itemBuilder: (context) => CommunityPostSort.values
                   .map(
                     (option) => PopupMenuItem(
@@ -1296,26 +1341,26 @@ class _PostSearchSortBar extends StatelessWidget {
                     ),
                   )
                   .toList(growable: false),
-              child: _SquareControl(icon: sort.icon),
+              child: _SquareControl(icon: widget.sort.icon),
             ),
           ],
         ),
-        if (tags.isNotEmpty) ...[
+        if (widget.tags.isNotEmpty) ...[
           const SizedBox(height: 10),
           SizedBox(
             height: 34,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: tags.length + 1,
+              itemCount: widget.tags.length + 1,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
-                final tag = index == 0 ? '' : tags[index - 1];
-                final selected = tag == activeTag;
+                final tag = index == 0 ? '' : widget.tags[index - 1];
+                final selected = tag == widget.activeTag;
                 return FilterChip(
                   label: Text(index == 0 ? 'All topics' : tag),
                   selected: selected,
                   showCheckmark: false,
-                  onSelected: (_) => onTagChanged(tag),
+                  onSelected: (_) => widget.onTagChanged(tag),
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
                 );

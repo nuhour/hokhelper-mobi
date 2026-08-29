@@ -111,7 +111,40 @@ class StatsRepository {
       '/stats/hero-combos',
       query: requestQuery,
     );
-    return StatsTrendDetail.fromJson(json['data'] ?? json['result'] ?? json);
+    final detail = StatsTrendDetail.fromJson(
+      json['data'] ?? json['result'] ?? json,
+    );
+
+    // 梯度表只带 P/B/BP；补读同一口径的英雄统计表，让 Overview 与英雄统计维护入口一致。
+    if (query.dimension == 'tier_rank' && row.kind == 'hero') {
+      try {
+        final overviewTable = await loadTrendTable(
+          query: query.copyWith(
+            dimension: 'hero_rank',
+            baseline: requestQuery['baseline']?.toString() ?? 'peak_1000',
+            view: 'base',
+          ),
+          regionCode: regionCode,
+        );
+        StatsTrendRow? overviewRow;
+        for (final candidate in overviewTable.rows) {
+          if (candidate.kind == 'hero' &&
+              (candidate.id == row.id ||
+                  candidate.externalId == row.externalId)) {
+            overviewRow = candidate;
+            break;
+          }
+        }
+        if (overviewRow != null) {
+          final merged = Map<String, dynamic>.from(detail.raw)
+            ..['overview_stats'] = overviewRow.raw;
+          return StatsTrendDetail(merged);
+        }
+      } catch (_) {
+        // 详情接口成功时保留已有 P/B/BP，统计表补读失败不阻塞抽屉打开。
+      }
+    }
+    return detail;
   }
 
   Future<StatsEquipDetail> loadEquipDetail({

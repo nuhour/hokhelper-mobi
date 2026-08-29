@@ -15,7 +15,7 @@ import '../domain/player_ranking_entry.dart';
 import 'hero_ranking_screen.dart';
 
 enum PlayerLeaderboardRankType {
-  ranked('rank', 'Ranked'),
+  ranked('rank', 'Rank'),
   peak('peak', 'Peak');
 
   const PlayerLeaderboardRankType(this.apiValue, this.label);

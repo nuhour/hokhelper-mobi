@@ -258,6 +258,156 @@ void main() {
     expect(dimensions, contains('power_rank'));
   });
 
+  testWidgets('highlights the strongest match phase in red', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(
+              columns: const [
+                {'id': 'hero', 'label': 'Hero', 'type': 'hero'},
+                {
+                  'id': 'phase_early_wr',
+                  'label': 'Early Win',
+                  'type': 'percent',
+                  'sortable': true,
+                  'group': 'Phases',
+                },
+                {
+                  'id': 'phase_mid_wr',
+                  'label': 'Mid Win',
+                  'type': 'percent',
+                  'sortable': true,
+                  'group': 'Phases',
+                },
+                {
+                  'id': 'phase_late_wr',
+                  'label': 'Late Win',
+                  'type': 'percent',
+                  'sortable': true,
+                  'group': 'Phases',
+                },
+              ],
+              rows: const [
+                {
+                  'hero': {'id': 199, 'name': 'Lam'},
+                  'phase_early_wr': 58.0,
+                  'phase_mid_wr': 52.0,
+                  'phase_late_wr': 55.0,
+                },
+              ],
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final strongest = tester.widget<Text>(find.text('58.00%'));
+    expect(strongest.style?.color, const Color(0xFFF43F5E));
+    expect(strongest.style?.fontWeight, FontWeight.w900);
+    expect(
+      tester.widget<Text>(find.text('52.00%')).style?.color,
+      isNot(const Color(0xFFF43F5E)),
+    );
+  });
+
+  testWidgets(
+    'moves trend curves into the scrollable area and hides power names',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            heroTrendTableProvider.overrideWith(
+              (ref, query) async => sampleStatsTrendTable(
+                dimension: query.dimension,
+                view: query.view,
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final curve = find.byKey(const ValueKey('trend-curve-hero-199'));
+      expect(curve, findsOneWidget);
+
+      await tester.tap(find.text('Power'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lam'), findsNothing);
+    },
+  );
+
+  testWidgets('switches the stats trend player table between peak and rank', (
+    tester,
+  ) async {
+    final views = <String>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith((ref, query) async {
+            if (query.dimension == 'player_rank') views.add(query.view);
+            return sampleStatsTrendTable(
+              dimension: query.dimension,
+              view: query.view,
+              columns: query.dimension == 'player_rank'
+                  ? const [
+                      {
+                        'id': 'player',
+                        'label': 'Player',
+                        'type': 'player',
+                        'sortable': true,
+                      },
+                      {
+                        'id': 'peak_score',
+                        'label': 'Peak Score',
+                        'type': 'number',
+                        'sortable': true,
+                      },
+                    ]
+                  : null,
+              rows: query.dimension == 'player_rank'
+                  ? const [
+                      {
+                        'player': {'id': 'p1', 'name': 'Top Player'},
+                        'peak_score': 2400,
+                      },
+                    ]
+                  : null,
+              availableViews: query.dimension == 'player_rank'
+                  ? const [
+                      {'id': 'peak', 'label': 'Peak'},
+                      {'id': 'ranked', 'label': 'Rank'},
+                    ]
+                  : null,
+            );
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Player'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('stats-trend-player-view-peak')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stats-trend-player-view-ranked')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('stats-trend-player-view-ranked')),
+    );
+    await tester.pumpAndSettle();
+    expect(views, contains('ranked'));
+  });
+
   testWidgets('opens the complete trend scope filters without asset errors', (
     tester,
   ) async {
