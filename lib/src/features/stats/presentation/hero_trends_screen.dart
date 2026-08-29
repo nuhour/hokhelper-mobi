@@ -436,6 +436,47 @@ void _showStatsDrawer(BuildContext context, Widget child) {
   );
 }
 
+/// Opens the same hero preparation drawer used by the stats-trends hero table.
+void showStatsHeroPreparationDrawer(
+  BuildContext context, {
+  required StatsTrendRow row,
+}) {
+  _showStatsDrawer(
+    context,
+    _HeroPreparationSheet(
+      request: StatsTrendDetailRequest(
+        row: row,
+        query: const StatsTrendQuery(
+          dimension: 'hero_rank',
+          baseline: 'peak_1000',
+          view: 'base',
+        ),
+      ),
+      showOverview: true,
+    ),
+  );
+}
+
+/// Opens the same hero trend drawer used by the stats-trends hero table.
+void showStatsHeroTrendDrawer(
+  BuildContext context, {
+  required StatsTrendRow row,
+}) {
+  _showStatsDrawer(
+    context,
+    _TrendDetailSheet(
+      request: StatsTrendDetailRequest(
+        row: row,
+        query: const StatsTrendQuery(
+          dimension: 'hero_rank',
+          baseline: 'peak_1000',
+          view: 'base',
+        ),
+      ),
+    ),
+  );
+}
+
 class _StatsDrawerShell extends StatelessWidget {
   const _StatsDrawerShell({required this.child});
 

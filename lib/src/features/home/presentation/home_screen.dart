@@ -19,6 +19,8 @@ import '../../heroes/presentation/hero_detail_screen.dart';
 import '../../profile/domain/user_profile.dart';
 import '../../profile/presentation/me_screen.dart';
 import '../../search/presentation/search_screen.dart';
+import '../../stats/domain/stats_trends.dart';
+import '../../stats/presentation/hero_trends_screen.dart';
 import '../data/home_repository.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
@@ -210,10 +212,7 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
                       heroId: _openedHeroId!,
                       onBack: _closeHeroDetail,
                     ),
-              _HomeLandingTab(
-                result: widget.result,
-                onHeroSelected: _openHeroDetail,
-              ),
+              _HomeLandingTab(result: widget.result),
             ],
           ),
         ),
@@ -314,10 +313,9 @@ class _HomePortalTopBar extends StatelessWidget {
 }
 
 class _HomeLandingTab extends StatefulWidget {
-  const _HomeLandingTab({required this.result, required this.onHeroSelected});
+  const _HomeLandingTab({required this.result});
 
   final Map<String, dynamic> result;
-  final ValueChanged<String> onHeroSelected;
 
   @override
   State<_HomeLandingTab> createState() => _HomeLandingTabState();
@@ -354,10 +352,7 @@ class _HomeLandingTabState extends State<_HomeLandingTab> {
                     },
                   ),
                   const SizedBox(height: 18),
-                  _HomePortalPreviews(
-                    result: widget.result,
-                    onHeroSelected: widget.onHeroSelected,
-                  ),
+                  _HomePortalPreviews(result: widget.result),
                 ],
               ),
             ),
@@ -1377,13 +1372,9 @@ class _LatestPatchCard extends StatelessWidget {
 }
 
 class _HomePortalPreviews extends StatelessWidget {
-  const _HomePortalPreviews({
-    required this.result,
-    required this.onHeroSelected,
-  });
+  const _HomePortalPreviews({required this.result});
 
   final Map<String, dynamic> result;
-  final ValueChanged<String> onHeroSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1396,11 +1387,7 @@ class _HomePortalPreviews extends StatelessWidget {
     final patchNotes = _readList(result['patch_notes']);
 
     final sections = <Widget>[
-      _HomeHeroRankingTable(
-        rows: heroRows,
-        rawColumns: heroColumns,
-        onHeroSelected: onHeroSelected,
-      ),
+      _HomeHeroRankingTable(rows: heroRows, rawColumns: heroColumns),
       _HomeTierPreviewSection(
         icon: Icons.workspace_premium_rounded,
         title: l10n.homeTierList,
@@ -1452,15 +1439,10 @@ class _HomePortalPreviews extends StatelessWidget {
 }
 
 class _HomeHeroRankingTable extends StatelessWidget {
-  const _HomeHeroRankingTable({
-    required this.rows,
-    required this.rawColumns,
-    required this.onHeroSelected,
-  });
+  const _HomeHeroRankingTable({required this.rows, required this.rawColumns});
 
   final List<Map<String, dynamic>> rows;
   final Object? rawColumns;
-  final ValueChanged<String> onHeroSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1498,7 +1480,12 @@ class _HomeHeroRankingTable extends StatelessWidget {
         columns: columns,
         rows: dataRows,
         maxRows: 116,
-        onHeroSelected: onHeroSelected,
+        onHeroAvatarSelected: (row) => showStatsHeroPreparationDrawer(
+          context,
+          row: StatsTrendRow.fromJson(row),
+        ),
+        onHeroTrendSelected: (row) =>
+            showStatsHeroTrendDrawer(context, row: StatsTrendRow.fromJson(row)),
       ),
     );
   }
@@ -1850,13 +1837,15 @@ class _HomeDataTable extends StatefulWidget {
     required this.columns,
     required this.rows,
     this.maxRows = 8,
-    this.onHeroSelected,
+    this.onHeroAvatarSelected,
+    this.onHeroTrendSelected,
   });
 
   final List<_HomeTableColumn> columns;
   final List<Map<String, dynamic>> rows;
   final int maxRows;
-  final ValueChanged<String>? onHeroSelected;
+  final ValueChanged<Map<String, dynamic>>? onHeroAvatarSelected;
+  final ValueChanged<Map<String, dynamic>>? onHeroTrendSelected;
 
   @override
   State<_HomeDataTable> createState() => _HomeDataTableState();
@@ -2075,6 +2064,13 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                       child: _HomeDataCell(
                         row: row,
                         column: metricColumns[index],
+                        onTap:
+                            metricColumns[index].id == 'trend_smoothed' ||
+                                metricColumns[index].type == 'sparkline'
+                            ? widget.onHeroTrendSelected == null
+                                  ? null
+                                  : () => widget.onHeroTrendSelected!(row)
+                            : null,
                       ),
                     ),
                   ),
@@ -2095,7 +2091,9 @@ class _HomeDataTableState extends State<_HomeDataTable> {
                 child: _HomeFixedTableIdentity(
                   row: row,
                   column: heroColumn,
-                  onHeroSelected: widget.onHeroSelected,
+                  onTap: widget.onHeroAvatarSelected == null
+                      ? null
+                      : () => widget.onHeroAvatarSelected!(row),
                 ),
               ),
             ),
@@ -2237,10 +2235,11 @@ List<_HomeColumnGroup> _homeColumnGroups(List<_HomeTableColumn> columns) {
 }
 
 class _HomeDataCell extends StatelessWidget {
-  const _HomeDataCell({required this.row, required this.column});
+  const _HomeDataCell({required this.row, required this.column, this.onTap});
 
   final Map<String, dynamic> row;
   final _HomeTableColumn column;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2252,12 +2251,15 @@ class _HomeDataCell extends StatelessWidget {
     final isPlayer = column.id == 'player_name' || column.type == 'player';
     final isTrend = column.id == 'trend_smoothed' || column.type == 'sparkline';
     if (isTrend) {
-      return SizedBox(
-        width: _homeTableColumnWidth(column),
-        child: Center(
-          child: _HomeMiniSparkline(
-            key: ValueKey('home-trend-${_homeHeroRecordId(row)}'),
-            values: _readTrendValues(row[column.id]),
+      return InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: _homeTableColumnWidth(column),
+          child: Center(
+            child: _HomeMiniSparkline(
+              key: ValueKey('home-trend-${_homeHeroRecordId(row)}'),
+              values: _readTrendValues(row[column.id]),
+            ),
           ),
         ),
       );
@@ -2522,12 +2524,12 @@ class _HomeFixedTableIdentity extends StatelessWidget {
   const _HomeFixedTableIdentity({
     required this.row,
     required this.column,
-    this.onHeroSelected,
+    this.onTap,
   });
 
   final Map<String, dynamic> row;
   final _HomeTableColumn column;
-  final ValueChanged<String>? onHeroSelected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2536,12 +2538,7 @@ class _HomeFixedTableIdentity extends StatelessWidget {
       return _HomeHeroAvatarCluster(
         row: row,
         heroName: _homeTableValue(row, column),
-        onTap: onHeroSelected == null
-            ? null
-            : () {
-                final id = _homeHeroRecordId(row);
-                if (id.isNotEmpty) onHeroSelected!(id);
-              },
+        onTap: onTap,
       );
     }
 

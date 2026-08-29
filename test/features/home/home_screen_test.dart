@@ -18,6 +18,9 @@ import 'package:hok_helper_mobile/src/features/home/data/home_repository.dart';
 import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dart';
 import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
 import 'package:hok_helper_mobile/src/features/profile/presentation/me_screen.dart';
+import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
+
+import '../stats/stats_trends_fixture.dart';
 
 class _TestAuthController extends AuthController {
   _TestAuthController(this.user);
@@ -577,7 +580,7 @@ void main() {
     );
   });
 
-  testWidgets('home hero ranking opens hero detail inside the home portal', (
+  testWidgets('home hero ranking opens preparation and trend drawers', (
     tester,
   ) async {
     final router = GoRouter(
@@ -605,16 +608,25 @@ void main() {
                   'columns': [
                     {'id': 'hero', 'label': 'Hero', 'type': 'hero'},
                     {'id': 'wr', 'label': 'Win Rate', 'type': 'percent'},
+                    {
+                      'id': 'trend_smoothed',
+                      'label': 'Trend',
+                      'type': 'sparkline',
+                    },
                   ],
                   'rows': [
                     {
                       'hero': {'id': 2619, 'heroId': '563', 'name': 'Heino'},
                       'wr': 51.2,
+                      'trend_smoothed': [49.0, 50.5, 51.2],
                     },
                   ],
                 },
               },
             ),
+          ),
+          heroTrendDetailProvider.overrideWith(
+            (ref, request) async => sampleStatsTrendDetail(),
           ),
         ],
         child: MaterialApp.router(routerConfig: router),
@@ -627,17 +639,29 @@ void main() {
     );
 
     await tester.tap(find.byKey(const ValueKey('home-hero-open-2619')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(router.routeInformationProvider.value.uri.path, '/');
     expect(
       router.routeInformationProvider.value.uri.queryParameters['tab'],
-      'heroes',
+      isNull,
     );
     expect(
       router.routeInformationProvider.value.uri.queryParameters['hero_id'],
-      '2619',
+      isNull,
     );
+    expect(find.byKey(const ValueKey('hero-preparation-tabs')), findsOneWidget);
+    expect(find.text('Overview'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('home-trend-2619')));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(find.byKey(const ValueKey('trend-detail-tabs')), findsOneWidget);
+    expect(find.text('Playstyle'), findsOneWidget);
   });
 
   testWidgets('home screen exposes hokx portal tool and topic entry points', (
