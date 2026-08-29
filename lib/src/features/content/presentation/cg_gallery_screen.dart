@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -439,8 +440,6 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
     }
 
     setState(() => _isLoadingMoreCgs = true);
-    final messenger = ScaffoldMessenger.of(context);
-
     try {
       final regionId = await ref.read(cgGalleryRegionProvider.future);
       final nextItems = await ref
@@ -470,9 +469,7 @@ class _CgGalleryScreenState extends ConsumerState<CgGalleryScreen> {
         return;
       }
       setState(() => _isLoadingMoreCgs = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to load more CGs: $error')),
-      );
+      AppNotice.error(context, error);
     }
   }
 }
@@ -880,7 +877,6 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
       return;
     }
     setState(() => _isLoadingMoreComments = true);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final page = await ref
           .read(contentRepositoryProvider)
@@ -902,9 +898,7 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
         return;
       }
       setState(() => _isLoadingMoreComments = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to load more comments: $error')),
-      );
+      AppNotice.error(context, error);
     }
   }
 
@@ -928,9 +922,10 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
       );
       messenger.showSnackBar(const SnackBar(content: Text('Comment posted')));
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to post comment: $error')),
-      );
+      if (!mounted) {
+        return;
+      }
+      AppNotice.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _isPosting = false);
@@ -974,9 +969,10 @@ class _CgDetailSheetState extends ConsumerState<_CgDetailSheet> {
       ref.invalidate(cgDetailProvider(widget.cgId));
       messenger.showSnackBar(const SnackBar(content: Text('Rating submitted')));
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to submit rating: $error')),
-      );
+      if (!mounted) {
+        return;
+      }
+      AppNotice.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _isRating = false);

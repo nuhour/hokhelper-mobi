@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -390,11 +391,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       if (!mounted) {
         return;
       }
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to load more prompts')),
-      );
+      AppNotice.failure(context);
     } finally {
       if (mounted) {
         setState(() => _loadingMore = false);
@@ -538,10 +535,7 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(const SnackBar(content: Text('Prompt deleted')));
     } catch (_) {
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to delete prompt')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -557,26 +551,14 @@ class _PromptsScreenState extends ConsumerState<PromptsScreen> {
         if (!context.mounted) {
           return;
         }
-        final messenger = ScaffoldMessenger.of(context);
-        messenger.hideCurrentSnackBar();
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Prompt generation is temporarily unavailable'),
-          ),
-        );
+        AppNotice.failure(context);
         return;
       }
     } catch (_) {
       if (!context.mounted) {
         return;
       }
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Prompt generation is temporarily unavailable'),
-        ),
-      );
+      AppNotice.failure(context);
       return;
     }
     if (!context.mounted) {
@@ -911,11 +893,7 @@ class _PromptGenerationSheetState
         return;
       }
       setState(() => _generating = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to generate image')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -939,10 +917,7 @@ class _PromptGenerationSheetState
         return;
       }
       setState(() => _settingCoverUrl = null);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to set prompt cover')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -1154,11 +1129,7 @@ class _PromptRechargeSheetState extends ConsumerState<_PromptRechargeSheet> {
         return;
       }
       setState(() => _submitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to recharge quota')),
-      );
+      AppNotice.failure(context);
     }
   }
 }
@@ -1548,11 +1519,7 @@ class _PromptEditorSheetState extends ConsumerState<_PromptEditorSheet> {
         return;
       }
       setState(() => _submitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to create prompt')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -2142,11 +2109,7 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
         return;
       }
       setState(() => _likeSubmitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to like prompt')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -2182,11 +2145,7 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
         return;
       }
       setState(() => _favoriteSubmitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to favorite prompt')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -2194,14 +2153,15 @@ class _PromptCardState extends ConsumerState<_PromptCard> {
     if (ref.read(authControllerProvider).valueOrNull != null) {
       return true;
     }
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: const Text('Sign in to interact with prompts'),
+          content: Text(l10n.translate('promptSignInToInteract')),
           action: SnackBarAction(
-            label: 'Sign in',
+            label: l10n.translate('authLogin'),
             onPressed: () => context.push('/login'),
           ),
         ),

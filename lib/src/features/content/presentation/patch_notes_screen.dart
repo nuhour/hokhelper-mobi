@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -235,7 +237,6 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
     }
 
     setState(() => _isLoadingMoreNotes = true);
-    final messenger = ScaffoldMessenger.of(context);
 
     try {
       final regionId = await ref.read(patchNotesRegionProvider.future);
@@ -265,9 +266,7 @@ class _PatchNotesScreenState extends ConsumerState<PatchNotesScreen> {
         return;
       }
       setState(() => _isLoadingMoreNotes = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to load more patch notes: $error')),
-      );
+      AppNotice.error(context, error);
     }
   }
 }
@@ -547,7 +546,7 @@ class _PatchDetailSheetState extends ConsumerState<_PatchDetailSheet> {
                 if (_detailFailed) ...[
                   const SizedBox(height: 12),
                   Text(
-                    'Failed to load full patch details.',
+                    AppLocalizations.of(context).translate('authRequestFailed'),
                     style: TextStyle(color: context.hokTheme.onSurfaceMuted),
                   ),
                 ],

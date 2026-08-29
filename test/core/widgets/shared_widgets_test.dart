@@ -111,7 +111,11 @@ void main() {
       );
 
       expect(find.byType(AppErrorState), findsOneWidget);
-      expect(find.textContaining('Exception: failed'), findsOneWidget);
+      expect(
+        find.text('The request could not be completed. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Exception: failed'), findsNothing);
 
       await tester.tap(find.text('Retry'));
       expect(retryCount, 1);

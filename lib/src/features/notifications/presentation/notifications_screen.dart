@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters/app_time_formatter.dart';
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/routing/portal_link.dart';
@@ -270,7 +271,6 @@ class _SignedInNotificationsState
     }
 
     setState(() => _isLoadingMore = true);
-    final messenger = ScaffoldMessenger.of(context);
 
     try {
       final nextPage = await ref
@@ -291,15 +291,7 @@ class _SignedInNotificationsState
         return;
       }
       setState(() => _isLoadingMore = false);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).format('notificationsLoadMoreFailed', {
-              'error': error.toString(),
-            }),
-          ),
-        ),
-      );
+      AppNotice.error(context, error, fallbackKey: 'authRequestFailed');
     }
   }
 }

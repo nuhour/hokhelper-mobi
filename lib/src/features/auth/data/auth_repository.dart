@@ -11,10 +11,18 @@ class AuthRepository {
   final ApiClient apiClient;
   final SecureTokenStore tokenStore;
 
-  Future<AuthUser> loginWithEmail(String email, String password) async {
+  Future<AuthUser> loginWithEmail(
+    String email,
+    String password, {
+    String languageCode = 'en',
+  }) async {
     final json = await apiClient.postJson(
       '/auth/email/login',
-      body: {'email': email, 'password': password},
+      body: {
+        'email': email,
+        'password': password,
+        'language_code': languageCode,
+      },
     );
 
     return _readAuthResponse(json, fallbackMessage: 'Login failed');
@@ -25,6 +33,7 @@ class AuthRepository {
     required String code,
     required String redirectUri,
     String? codeVerifier,
+    String languageCode = 'en',
   }) async {
     final normalizedProvider = provider.trim().toLowerCase();
     if (!{'google', 'discord', 'reddit'}.contains(normalizedProvider)) {
@@ -39,6 +48,7 @@ class AuthRepository {
       body: {
         'code': code,
         'redirect_uri': redirectUri,
+        'language_code': languageCode,
         if (codeVerifier != null && codeVerifier.trim().isNotEmpty)
           'code_verifier': codeVerifier.trim(),
       },
@@ -47,10 +57,13 @@ class AuthRepository {
     return _readAuthResponse(json, fallbackMessage: 'OAuth login failed');
   }
 
-  Future<AuthUser> loginWithGoogleIdToken(String idToken) async {
+  Future<AuthUser> loginWithGoogleIdToken(
+    String idToken, {
+    String languageCode = 'en',
+  }) async {
     final json = await apiClient.postJson(
       '/auth/google/login',
-      body: {'id_token': idToken},
+      body: {'id_token': idToken, 'language_code': languageCode},
     );
 
     return _readAuthResponse(json, fallbackMessage: 'Google login failed');
@@ -60,12 +73,14 @@ class AuthRepository {
     required String identityToken,
     required String rawNonce,
     String? name,
+    String languageCode = 'en',
   }) async {
     final json = await apiClient.postJson(
       '/auth/apple/login',
       body: {
         'identity_token': identityToken,
         'raw_nonce': rawNonce,
+        'language_code': languageCode,
         if (name != null && name.isNotEmpty) 'name': name,
       },
     );
@@ -78,6 +93,7 @@ class AuthRepository {
     required String redirectUri,
     required String state,
     String? codeChallenge,
+    String languageCode = 'en',
   }) async {
     final normalizedProvider = provider.trim().toLowerCase();
     if (!{'google', 'discord'}.contains(normalizedProvider)) {
@@ -92,6 +108,7 @@ class AuthRepository {
       body: {
         'redirect_uri': redirectUri,
         'state': state,
+        'language_code': languageCode,
         if (codeChallenge != null && codeChallenge.trim().isNotEmpty)
           'code_challenge': codeChallenge.trim(),
       },
@@ -113,9 +130,11 @@ class AuthRepository {
     required String email,
     String turnstileToken = '',
     AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
   }) {
     final body = <String, Object?>{
       'email': email,
+      'language_code': languageCode,
       if (turnstileToken.trim().isNotEmpty) 'turnstile_token': turnstileToken,
       if (integrityProof != null) 'app_integrity': integrityProof.toJson(),
     };
@@ -132,11 +151,13 @@ class AuthRepository {
     required String code,
     String? username,
     AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
   }) async {
     final body = <String, Object?>{
       'email': email,
       'password': password,
       'code': code,
+      'language_code': languageCode,
       if (username != null && username.isNotEmpty) 'username': username,
       if (integrityProof != null) 'app_integrity': integrityProof.toJson(),
     };
@@ -145,18 +166,25 @@ class AuthRepository {
     return _readAuthResponse(json, fallbackMessage: 'Registration failed');
   }
 
-  Future<void> sendVerificationCode(String email) {
+  Future<void> sendVerificationCode(
+    String email, {
+    String languageCode = 'en',
+  }) {
     return _postVoid(
       '/auth/email/send_verification_code',
-      body: {'email': email},
+      body: {'email': email, 'language_code': languageCode},
       fallbackMessage: 'Failed to send verification code',
     );
   }
 
-  Future<void> verifyCode({required String email, required String code}) {
+  Future<void> verifyCode({
+    required String email,
+    required String code,
+    String languageCode = 'en',
+  }) {
     return _postVoid(
       '/auth/email/verify_code',
-      body: {'email': email, 'code': code},
+      body: {'email': email, 'code': code, 'language_code': languageCode},
       fallbackMessage: 'Invalid verification code',
     );
   }
@@ -165,10 +193,16 @@ class AuthRepository {
     required String email,
     required String code,
     required String newPassword,
+    String languageCode = 'en',
   }) {
     return _postVoid(
       '/auth/email/forgot_password_reset',
-      body: {'email': email, 'code': code, 'new_password': newPassword},
+      body: {
+        'email': email,
+        'code': code,
+        'new_password': newPassword,
+        'language_code': languageCode,
+      },
       fallbackMessage: 'Failed to reset password',
     );
   }
@@ -187,6 +221,8 @@ class AuthRepository {
       throw ApiError(
         kind: ApiErrorKind.backend,
         message: _readFailureMessage(json, fallbackMessage),
+        code: _readErrorCode(json),
+        params: _readErrorParams(json),
       );
     }
   }
@@ -199,6 +235,8 @@ class AuthRepository {
       throw ApiError(
         kind: ApiErrorKind.backend,
         message: _readFailureMessage(json, fallbackMessage),
+        code: _readErrorCode(json),
+        params: _readErrorParams(json),
       );
     }
     final envelope = ApiEnvelope<Map<String, dynamic>>.fromJson(
@@ -240,5 +278,19 @@ class AuthRepository {
     }
 
     return value.toString();
+  }
+
+  String? _readErrorCode(Map<String, dynamic> json) {
+    final value = json['error_code'] ?? json['errorCode'] ?? json['code'];
+    final code = value?.toString().trim();
+    return code == null || code.isEmpty ? null : code;
+  }
+
+  Map<String, dynamic>? _readErrorParams(Map<String, dynamic> json) {
+    final value = json['error_params'] ?? json['errorParams'];
+    if (value is! Map) {
+      return null;
+    }
+    return Map<String, dynamic>.from(value);
   }
 }

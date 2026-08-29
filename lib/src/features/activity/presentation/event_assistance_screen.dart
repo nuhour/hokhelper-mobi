@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -165,11 +166,7 @@ class _EventAssistanceScreenState extends ConsumerState<EventAssistanceScreen> {
         return;
       }
       setState(() => _loadingMore = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to load more records')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -328,11 +325,7 @@ class _ShareAssistanceSheetState extends ConsumerState<_ShareAssistanceSheet> {
       if (!mounted) {
         return;
       }
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to submit assistance text')),
-      );
+      AppNotice.failure(context);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -514,7 +507,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
         return;
       }
       setState(() => _reporting = false);
-      _showRecordSnackBar(context, 'Failed to report record');
+      AppNotice.failure(context);
     }
   }
 

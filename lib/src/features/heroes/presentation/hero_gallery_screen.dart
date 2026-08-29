@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -164,9 +165,7 @@ class _HeroGalleryScreenState extends ConsumerState<HeroGalleryScreen> {
         return;
       }
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load more heroes')),
-      );
+      AppNotice.failure(context);
     }
   }
 

@@ -69,7 +69,11 @@ class _FakeAuthRepository implements AuthRepository {
   var didResetForgottenPassword = false;
 
   @override
-  Future<AuthUser> loginWithEmail(String email, String password) async {
+  Future<AuthUser> loginWithEmail(
+    String email,
+    String password, {
+    String languageCode = 'en',
+  }) async {
     final error = errorToThrow;
     if (error != null) {
       throw error;
@@ -89,6 +93,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String email,
     String turnstileToken = '',
     AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
   }) async {
     didSendRegisterCode = true;
   }
@@ -100,6 +105,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String code,
     String? username,
     AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
   }) async {
     return userToReturn ??
         const AuthUser(
@@ -115,6 +121,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String email,
     required String code,
     required String newPassword,
+    String languageCode = 'en',
   }) async {
     didResetForgottenPassword = true;
   }

@@ -1046,7 +1046,7 @@ void main() {
 
     expect(find.text('Image generation'), findsNothing);
     expect(
-      find.text('Prompt generation is temporarily unavailable'),
+      find.text('The request could not be completed. Please try again.'),
       findsOneWidget,
     );
   });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -425,12 +426,11 @@ class _FriendLinkApplySheetState extends ConsumerState<_FriendLinkApplySheet> {
       );
       navigator.pop();
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Application failed: $error')),
-      );
-      if (mounted) {
-        setState(() => _isSubmitting = false);
+      if (!mounted) {
+        return;
       }
+      AppNotice.error(context, error);
+      setState(() => _isSubmitting = false);
     }
   }
 

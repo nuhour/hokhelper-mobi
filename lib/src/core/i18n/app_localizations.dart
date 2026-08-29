@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import 'auth_localized_strings.dart';
 import 'translations/index.dart';
 
 class AppLocalizations {
@@ -152,7 +153,9 @@ class AppLocalizations {
   String _t(String key) {
     final languageCode = locale.languageCode;
     return appTranslationValues[languageCode]?[key] ??
+        authTranslationValues[languageCode]?[key] ??
         appTranslationValues['en']![key] ??
+        authTranslationValues['en']![key] ??
         key;
   }
 }

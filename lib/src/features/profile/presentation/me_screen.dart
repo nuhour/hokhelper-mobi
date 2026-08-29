@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_list_footer.dart';
@@ -160,7 +161,11 @@ class _SignedInProfile extends ConsumerWidget {
           _ProfileOverview(user: user),
           const SizedBox(height: 12),
           Text(
-            error.toString(),
+            friendlyErrorMessage(
+              context,
+              error,
+              fallbackKey: 'authRequestFailed',
+            ),
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
           TextButton.icon(
@@ -459,29 +464,19 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(profileRepositoryProvider).deleteAccount();
       await ref.read(authControllerProvider.notifier).logout();
       if (context.mounted) {
         context.go('/me');
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(l10n.translate('profileDeleteAccountSuccess')),
-            ),
-          );
+        AppNotice.success(
+          context,
+          l10n.translate('profileDeleteAccountSuccess'),
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(l10n.translate('profileDeleteAccountFailed')),
-            ),
-          );
+        AppNotice.failure(context, fallbackKey: 'profileDeleteAccountFailed');
       }
     }
   }
@@ -858,9 +853,7 @@ Future<void> _openSocialLink(
     // The message below keeps invalid or unavailable platform links recoverable.
   }
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).profileLinkFailed)),
-    );
+    AppNotice.failure(context, fallbackKey: 'profileLinkFailed');
   }
 }
 
@@ -1006,11 +999,7 @@ class _MeFollowListSheetState extends ConsumerState<_MeFollowListSheet> {
         return;
       }
       setState(() => _loadingMore = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to load more users')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -1061,7 +1050,7 @@ class _MeFollowListSheetState extends ConsumerState<_MeFollowListSheet> {
     if (_failed) {
       return Center(
         child: Text(
-          'Failed to load users',
+          AppLocalizations.of(context).translate('authRequestFailed'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: context.hokTheme.onSurfaceMuted,
           ),
@@ -1515,9 +1504,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      AppNotice.error(context, error, fallbackKey: 'authRequestFailed');
     } finally {
       if (mounted) {
         setState(() => _saving = false);
@@ -1652,9 +1639,7 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      AppNotice.error(context, error, fallbackKey: 'authRequestFailed');
     } finally {
       if (mounted) {
         setState(() => _saving = false);

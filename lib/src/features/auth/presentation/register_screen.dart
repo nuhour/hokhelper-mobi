@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
+import '../../../core/i18n/app_localizations.dart';
 import 'auth_page_scaffold.dart';
 import '../data/app_integrity_client.dart';
 import 'auth_controller.dart';
@@ -20,7 +22,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _usernameController = TextEditingController();
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
-  var _message = '';
+  Timer? _sendCooldownTimer;
+  var _sendCooldownSeconds = 0;
   var _isSendingCode = false;
   var _isSubmitting = false;
 
@@ -33,6 +36,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
+    _sendCooldownTimer?.cancel();
     _emailController.dispose();
     _usernameController.dispose();
     _codeController.dispose();
@@ -42,18 +46,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading || _isSubmitting;
-    final error = authState.hasError ? authState.error.toString() : null;
+    final codeButtonDisabled =
+        isLoading || _isSendingCode || _sendCooldownSeconds > 0;
 
     ref.listen(authControllerProvider, (previous, next) {
+      if (next.hasError && mounted) {
+        AppNotice.error(context, next.error!);
+      }
       if (next.hasValue && next.value != null && mounted) {
+        AppNotice.success(context, l10n.translate('authRegisterSuccess'));
         context.go('/me');
       }
     });
 
     return AuthPageScaffold(
-      title: 'Create account',
+      title: l10n.translate('authCreateAccountTitle'),
       fallbackRoute: '/login',
       body: SafeArea(
         child: Center(
@@ -64,7 +74,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               shrinkWrap: true,
               children: [
                 Text(
-                  'Create your account',
+                  l10n.translate('authCreateAccountHeading'),
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 24),
@@ -73,9 +83,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.email],
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('authEmailLabel'),
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   enabled: !isLoading && !_isSendingCode,
                 ),
@@ -84,9 +94,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _usernameController,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.username],
-                  decoration: const InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: Icon(Icons.person_outline),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('authUsernameLabel'),
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
                   enabled: !isLoading,
                 ),
@@ -99,9 +109,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         controller: _codeController,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Verification code',
-                          prefixIcon: Icon(Icons.verified_outlined),
+                        decoration: InputDecoration(
+                          labelText: l10n.translate(
+                            'authVerificationCodeLabel',
+                          ),
+                          prefixIcon: const Icon(Icons.verified_outlined),
                         ),
                         enabled: !isLoading,
                       ),
@@ -110,9 +122,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     SizedBox(
                       height: 56,
                       child: OutlinedButton(
-                        onPressed: isLoading || _isSendingCode
-                            ? null
-                            : _sendCode,
+                        onPressed: codeButtonDisabled ? null : _sendCode,
                         child: _isSendingCode
                             ? const SizedBox.square(
                                 dimension: 18,
@@ -120,7 +130,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Send'),
+                            : _sendCooldownSeconds > 0
+                            ? Text(
+                                l10n.format('authResendIn', {
+                                  'seconds': '$_sendCooldownSeconds',
+                                }),
+                              )
+                            : Text(l10n.translate('authSend')),
                       ),
                     ),
                   ],
@@ -131,26 +147,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: true,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.newPassword],
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: l10n.translate('authPasswordLabel'),
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   enabled: !isLoading,
                   onSubmitted: (_) => _submit(),
                 ),
-                if (_message.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(_message),
-                ],
-                if (error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    error,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: isLoading ? null : _submit,
@@ -159,12 +162,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           dimension: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Register'),
+                      : Text(l10n.translate('authRegister')),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: isLoading ? null : () => _backToLogin(context),
-                  child: const Text('Already have an account? Login'),
+                  child: Text(l10n.translate('authAlreadyAccountLogin')),
                 ),
               ],
             ),
@@ -184,15 +187,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _sendCode() async {
-    final email = _emailController.text.trim().toLowerCase();
-    if (email.isEmpty) {
-      setState(() => _message = 'Please enter your email first');
+    if (_sendCooldownSeconds > 0 || _isSendingCode) {
       return;
     }
-    setState(() {
-      _isSendingCode = true;
-      _message = '';
-    });
+    final email = _emailController.text.trim().toLowerCase();
+    final l10n = AppLocalizations.of(context);
+    if (email.isEmpty) {
+      AppNotice.error(
+        context,
+        StateError(l10n.translate('authEmailRequired')),
+        fallbackKey: 'authEmailRequired',
+      );
+      return;
+    }
+    setState(() => _isSendingCode = true);
     try {
       final integrityProof = await _requestIntegrityProof(
         action: 'email_register_code',
@@ -200,13 +208,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       await ref
           .read(authControllerProvider.notifier)
-          .sendRegisterCode(email: email, integrityProof: integrityProof);
+          .sendRegisterCode(
+            email: email,
+            integrityProof: integrityProof,
+            languageCode: l10n.locale.languageCode,
+          );
       if (mounted) {
-        setState(() => _message = 'Verification code sent');
+        _startCodeCooldown();
+        AppNotice.success(context, l10n.translate('authCodeSent'));
       }
     } catch (error) {
       if (mounted) {
-        setState(() => _message = error.toString());
+        final retryAfter = retryAfterSeconds(error);
+        if (retryAfter != null) {
+          _startCodeCooldown(retryAfter);
+        }
+        AppNotice.error(context, error);
       }
     } finally {
       if (mounted) {
@@ -219,14 +236,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (_isSubmitting) {
       return;
     }
-    setState(() {
-      _isSubmitting = true;
-      _message = '';
-    });
+    setState(() => _isSubmitting = true);
     try {
       final email = _emailController.text.trim().toLowerCase();
       final code = _codeController.text.trim();
       final username = _usernameController.text.trim();
+      final l10n = AppLocalizations.of(context);
       final integrityProof = await _requestIntegrityProof(
         action: 'email_register',
         values: {
@@ -243,16 +258,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             code: code,
             username: username,
             integrityProof: integrityProof,
+            languageCode: l10n.locale.languageCode,
           );
     } catch (error) {
       if (mounted) {
-        setState(() => _message = error.toString());
+        AppNotice.error(context, error);
       }
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  void _startCodeCooldown([int seconds = 60]) {
+    final duration = seconds.clamp(1, 600).toInt();
+    _sendCooldownTimer?.cancel();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _sendCooldownSeconds = duration);
+    _sendCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_sendCooldownSeconds <= 1) {
+        timer.cancel();
+        setState(() => _sendCooldownSeconds = 0);
+        return;
+      }
+      setState(() => _sendCooldownSeconds -= 1);
+    });
   }
 
   Future<AppIntegrityProof?> _requestIntegrityProof({

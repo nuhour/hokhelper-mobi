@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../feedback/app_notice.dart';
+import '../i18n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// Opens a HOKX-style, in-app video panel without handing playback to another app.
@@ -11,9 +13,7 @@ Future<void> showAppVideoPlayer(
 }) async {
   final uri = Uri.tryParse(url.trim());
   if (uri == null || !uri.hasScheme) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Video is unavailable')));
+    AppNotice.failure(context);
     return;
   }
 
@@ -230,7 +230,7 @@ class _VideoUnavailable extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Video is unavailable',
+            AppLocalizations.of(context).translate('authRequestFailed'),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: context.hokTheme.onSurfaceMuted,
               fontWeight: FontWeight.w700,

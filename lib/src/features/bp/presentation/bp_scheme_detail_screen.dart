@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -170,11 +171,7 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
         return;
       }
       setState(() => _isUpdating = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to update BP scheme')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -222,11 +219,7 @@ class _BpSchemeDetailScreenState extends ConsumerState<BpSchemeDetailScreen> {
         return;
       }
       setState(() => _isUpdating = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to save BP draft progress')),
-      );
+      AppNotice.failure(context);
     }
   }
 }
@@ -1325,9 +1318,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       ).showSnackBar(const SnackBar(content: Text('BP draft saved')));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to save BP draft')));
+      AppNotice.failure(context);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -1361,9 +1352,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       ).showSnackBar(const SnackBar(content: Text('BP game saved')));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to save BP')));
+      AppNotice.failure(context);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -1435,9 +1424,7 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to start the next BP game')),
-      );
+      AppNotice.failure(context);
     } finally {
       if (mounted) setState(() => _isAdvancing = false);
     }

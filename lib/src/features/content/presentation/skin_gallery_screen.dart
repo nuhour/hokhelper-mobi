@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/routing/portal_link.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -437,15 +438,15 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
 
     setState(() => _ratingSkinId = skin.id);
     final messenger = ScaffoldMessenger.of(context);
-
     try {
       await ref.read(contentRepositoryProvider).rateSkin(skin.id, rating);
       ref.invalidate(skinGalleryProvider);
       messenger.showSnackBar(const SnackBar(content: Text('Rating submitted')));
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to submit rating: $error')),
-      );
+      if (!mounted) {
+        return;
+      }
+      AppNotice.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _ratingSkinId = null);
@@ -459,8 +460,6 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
     }
 
     setState(() => _isLoadingMoreSkins = true);
-    final messenger = ScaffoldMessenger.of(context);
-
     try {
       final regionId = await ref.read(skinGalleryRegionProvider.future);
       final nextItems = await ref
@@ -491,9 +490,7 @@ class _SkinGalleryScreenState extends ConsumerState<SkinGalleryScreen> {
         return;
       }
       setState(() => _isLoadingMoreSkins = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to load more skins: $error')),
-      );
+      AppNotice.error(context, error);
     }
   }
 }
@@ -948,9 +945,10 @@ class _SkinDetailScreenState extends ConsumerState<SkinDetailScreen> {
       ref.invalidate(skinDetailProvider(widget.skinId));
       messenger.showSnackBar(const SnackBar(content: Text('Rating submitted')));
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to submit rating: $error')),
-      );
+      if (!mounted) {
+        return;
+      }
+      AppNotice.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _isRating = false);

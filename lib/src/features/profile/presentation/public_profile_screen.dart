@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/feedback/app_notice.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_list_footer.dart';
@@ -467,11 +469,7 @@ class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
         return;
       }
       setState(() => _loadingMore = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to load more users')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -522,7 +520,7 @@ class _FollowListSheetState extends ConsumerState<_FollowListSheet> {
     if (_failed) {
       return Center(
         child: Text(
-          'Failed to load users',
+          AppLocalizations.of(context).translate('authRequestFailed'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: context.hokTheme.onSurfaceMuted,
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 
 class AuthPageScaffold extends StatelessWidget {
@@ -17,6 +18,7 @@ class AuthPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -29,7 +31,7 @@ class AuthPageScaffold extends StatelessWidget {
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
             key: ValueKey('auth-back-$fallbackRoute'),
-            tooltip: 'Back',
+            tooltip: l10n.back,
             onPressed: () => _goBack(context),
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
           ),

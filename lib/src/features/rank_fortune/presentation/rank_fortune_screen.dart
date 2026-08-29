@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -190,16 +191,7 @@ class _RankFortuneScreenState extends ConsumerState<RankFortuneScreen> {
       unawaited(HapticFeedback.heavyImpact());
     } catch (error) {
       if (mounted) {
-        final messenger = ScaffoldMessenger.of(context);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                '${AppLocalizations.of(context).translate('fortuneDrawFailed')}: $error',
-              ),
-            ),
-          );
+        AppNotice.error(context, error, fallbackKey: 'fortuneDrawFailed');
       }
     } finally {
       if (mounted) {

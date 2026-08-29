@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -134,10 +135,11 @@ class _HeroDetailContent extends StatelessWidget {
     final stats = _readMap(bundle['stats']);
 
     if (hero.isEmpty && skills.isEmpty && history.isEmpty) {
-      return const AppEmptyState(
+      final l10n = AppLocalizations.of(context);
+      return AppEmptyState(
         icon: Icons.shield_outlined,
-        title: 'Hero detail unavailable',
-        message: 'Pull to refresh or try again later.',
+        title: l10n.translate('authRequestFailed'),
+        message: l10n.serviceSlow,
       );
     }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -109,11 +110,7 @@ class _BuildExplorerScreenState extends ConsumerState<BuildExplorerScreen> {
         return;
       }
       setState(() => _loadingMore = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to load more builds')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -445,11 +442,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
         return;
       }
       setState(() => _likeSubmitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to like build')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -483,11 +476,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
         return;
       }
       setState(() => _favoriteSubmitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to favorite build')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -554,11 +543,7 @@ class _BuildSchemeCardState extends ConsumerState<BuildSchemeCard> {
         return;
       }
       setState(() => _cloneSubmitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to clone build')),
-      );
+      AppNotice.failure(context);
     }
   }
 

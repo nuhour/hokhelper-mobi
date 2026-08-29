@@ -138,8 +138,7 @@ void main() {
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
           eventAssistanceRecordsProvider.overrideWith(
-            (ref) async =>
-                const EventAssistancePage(records: [], total: 0),
+            (ref) async => const EventAssistancePage(records: [], total: 0),
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
@@ -168,8 +167,7 @@ void main() {
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
           eventAssistanceRecordsProvider.overrideWith(
-            (ref) async =>
-                const EventAssistancePage(records: [], total: 0),
+            (ref) async => const EventAssistancePage(records: [], total: 0),
           ),
         ],
         child: const MaterialApp(
@@ -199,8 +197,7 @@ void main() {
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
           eventAssistanceRecordsProvider.overrideWith(
-            (ref) async =>
-                const EventAssistancePage(records: [], total: 0),
+            (ref) async => const EventAssistancePage(records: [], total: 0),
           ),
         ],
         child: HokHelperApp(router: router),
@@ -230,8 +227,7 @@ void main() {
         overrides: [
           eventAssistanceRepositoryProvider.overrideWithValue(repository),
           eventAssistanceRecordsProvider.overrideWith(
-            (ref) async =>
-                const EventAssistancePage(records: [], total: 0),
+            (ref) async => const EventAssistancePage(records: [], total: 0),
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: EventAssistanceScreen())),
@@ -246,7 +242,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Share Assistance Text'), findsOneWidget);
-    expect(find.text('Failed to submit assistance text'), findsOneWidget);
+    expect(
+      find.text('The request could not be completed. Please try again.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('copies and reports event assistance records', (tester) async {

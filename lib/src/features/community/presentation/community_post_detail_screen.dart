@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/formatters/app_time_formatter.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
@@ -304,9 +305,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _commentSubmitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to post comment')));
+      AppNotice.failure(context);
     }
   }
 
@@ -338,9 +337,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _replySubmitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to post reply')));
+      AppNotice.failure(context);
     }
   }
 
@@ -363,9 +360,7 @@ class _PostDetailBodyState extends ConsumerState<_PostDetailBody> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _likeSubmitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to like post')));
+      AppNotice.failure(context);
     }
   }
 

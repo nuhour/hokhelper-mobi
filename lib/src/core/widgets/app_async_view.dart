@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../feedback/app_notice.dart';
 import 'app_error_state.dart';
-import '../i18n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import 'app_responsive.dart';
 
@@ -47,11 +47,11 @@ class AppAsyncView<T> extends StatelessWidget {
   }
 
   String _errorMessage(BuildContext context, Object error) {
-    final message = error.toString();
-    if (message.contains('TimeoutException') || message.contains('timed out')) {
-      return AppLocalizations.of(context).serviceSlow;
-    }
-    return message;
+    return friendlyErrorMessage(
+      context,
+      error,
+      fallbackKey: 'authRequestFailed',
+    );
   }
 }
 

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -748,7 +749,7 @@ class _SlotsPanel extends StatelessWidget {
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stackTrace) => Text(
-              error.toString(),
+              friendlyErrorMessage(context, error),
               style: const TextStyle(color: AppTheme.error),
             ),
           ),
@@ -1105,7 +1106,7 @@ class _BuildEditorPanelState extends ConsumerState<_BuildEditorPanel> {
                             const Center(child: CircularProgressIndicator()),
                         error: (error, stackTrace) => Center(
                           child: Text(
-                            error.toString(),
+                            friendlyErrorMessage(context, error),
                             style: const TextStyle(color: AppTheme.error),
                           ),
                         ),
@@ -3066,11 +3067,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
         return;
       }
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Failed to load more builds')),
-        );
+      AppNotice.failure(context);
     }
   }
 
@@ -3235,7 +3232,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => Text(
-            error.toString(),
+            friendlyErrorMessage(context, error),
             style: const TextStyle(color: AppTheme.error),
           ),
         ),
@@ -3317,11 +3314,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
       await _runAction(key, action);
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Unable to update this build')),
-        );
+      AppNotice.failure(context);
     }
   }
 
@@ -3373,9 +3366,7 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
         ? scheme.heroId
         : int.tryParse(hero?.heroId ?? '');
     if (heroId == null || heroId <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to resolve this build hero')),
-      );
+      AppNotice.failure(context);
       return;
     }
     widget.onHeroRequested(heroId);
@@ -3452,16 +3443,10 @@ class _CommunityBuildsState extends ConsumerState<_CommunityBuilds> {
 }
 
 void _showBuildLoginPrompt(BuildContext context) {
-  final messenger = ScaffoldMessenger.of(context);
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: const Text('Sign in to save or interact with builds'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  AppNotice.show(
+    context,
+    AppLocalizations.of(context).translate('buildSignInToInteract'),
+  );
 }
 
 class _ExploreSortButton extends StatelessWidget {
@@ -3703,7 +3688,7 @@ class _BuildCloneSheetState extends ConsumerState<_BuildCloneSheet> {
                 child: AppEmptyState(
                   icon: Icons.cloud_off_outlined,
                   title: AppLocalizations.of(context).serviceSlow,
-                  message: error.toString(),
+                  message: friendlyErrorMessage(context, error),
                 ),
               ),
             ),
@@ -3722,9 +3707,7 @@ class _BuildCloneSheetState extends ConsumerState<_BuildCloneSheet> {
       return;
     }
     setState(() => _busySlot = null);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Failed to clone build')));
+    AppNotice.failure(context);
   }
 }
 

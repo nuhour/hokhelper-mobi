@@ -39,11 +39,19 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     return null;
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(
+    String email,
+    String password, {
+    String languageCode = 'en',
+  }) async {
     final repository = ref.read(authRepositoryProvider);
     state = const AsyncLoading();
     try {
-      final user = await repository.loginWithEmail(email, password);
+      final user = await repository.loginWithEmail(
+        email,
+        password,
+        languageCode: languageCode,
+      );
       state = AsyncData(user);
     } on ApiError catch (error, stackTrace) {
       if (_shouldClearSession(error)) {
@@ -60,6 +68,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String code,
     required String redirectUri,
     String? codeVerifier,
+    String languageCode = 'en',
   }) async {
     final repository = ref.read(authRepositoryProvider);
     state = const AsyncLoading();
@@ -69,6 +78,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
         code: code,
         redirectUri: redirectUri,
         codeVerifier: codeVerifier,
+        languageCode: languageCode,
       );
       state = AsyncData(user);
     } on ApiError catch (error, stackTrace) {
@@ -89,6 +99,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String code,
     String? username,
     AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
   }) async {
     final repository = ref.read(authRepositoryProvider);
     state = const AsyncLoading();
@@ -99,6 +110,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
         code: code,
         username: username,
         integrityProof: integrityProof,
+        languageCode: languageCode,
       );
       state = AsyncData(user);
     } catch (error, stackTrace) {
@@ -110,6 +122,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     required String email,
     String turnstileToken = '',
     AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
   }) {
     return ref
         .read(authRepositoryProvider)
@@ -117,23 +130,34 @@ class AuthController extends AsyncNotifier<AuthUser?> {
           email: email,
           turnstileToken: turnstileToken,
           integrityProof: integrityProof,
+          languageCode: languageCode,
         );
   }
 
-  Future<void> sendVerificationCode(String email) {
-    return ref.read(authRepositoryProvider).sendVerificationCode(email);
-  }
-
-  Future<void> verifyCode({required String email, required String code}) {
+  Future<void> sendVerificationCode(
+    String email, {
+    String languageCode = 'en',
+  }) {
     return ref
         .read(authRepositoryProvider)
-        .verifyCode(email: email, code: code);
+        .sendVerificationCode(email, languageCode: languageCode);
+  }
+
+  Future<void> verifyCode({
+    required String email,
+    required String code,
+    String languageCode = 'en',
+  }) {
+    return ref
+        .read(authRepositoryProvider)
+        .verifyCode(email: email, code: code, languageCode: languageCode);
   }
 
   Future<void> resetForgottenPassword({
     required String email,
     required String code,
     required String newPassword,
+    String languageCode = 'en',
   }) async {
     final repository = ref.read(authRepositoryProvider);
     state = const AsyncLoading();
@@ -142,6 +166,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
         email: email,
         code: code,
         newPassword: newPassword,
+        languageCode: languageCode,
       );
       state = const AsyncData(null);
     } catch (error, stackTrace) {

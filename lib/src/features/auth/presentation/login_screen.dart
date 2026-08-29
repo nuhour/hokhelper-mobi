@@ -7,6 +7,8 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/feedback/app_notice.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../data/native_apple_sign_in.dart';
@@ -73,7 +75,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     text: AppConfig.loginPassword,
   );
   String? _oauthLoadingProvider;
-  String? _oauthError;
 
   @override
   void dispose() {
@@ -84,19 +85,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
     final isOAuthLoading = _oauthLoadingProvider != null;
-    final error = authState.hasError ? authState.error.toString() : null;
 
     ref.listen(authControllerProvider, (previous, next) {
+      if (next.hasError && mounted) {
+        AppNotice.error(context, next.error!);
+      }
       if (next.hasValue && next.value != null && mounted) {
         context.go(_safeReturnRoute(widget.returnTo));
       }
     });
 
     return AuthPageScaffold(
-      title: 'Sign in',
+      title: l10n.translate('authSignInTitle'),
       fallbackRoute: '/me',
       body: SafeArea(
         child: Center(
@@ -108,7 +112,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Welcome to HOK Helper',
+                    l10n.translate('authWelcome'),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: context.hokTheme.onSurfaceStrong,
                       fontWeight: FontWeight.w900,
@@ -116,7 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Sign in to sync your builds, tier lists, and community activity.',
+                    l10n.translate('authSignInSubtitle'),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: context.hokTheme.onSurfaceMuted,
                     ),
@@ -133,7 +137,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Quick sign in',
+                          l10n.translate('authQuickSignIn'),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: context.hokTheme.onSurfaceStrong,
@@ -142,7 +146,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Continue securely with your existing account.',
+                          l10n.translate('authContinueSecurely'),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: context.hokTheme.onSurfaceMuted,
@@ -173,7 +177,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ],
                         _OAuthButton(
                           provider: 'google',
-                          label: 'Continue with Google',
+                          label: l10n.translate('authContinueGoogle'),
                           isLoading: _oauthLoadingProvider == 'google',
                           enabled: !isLoading && !isOAuthLoading,
                           onPressed: () => _startOAuth('google'),
@@ -181,20 +185,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 10),
                         _OAuthButton(
                           provider: 'discord',
-                          label: 'Continue with Discord',
+                          label: l10n.translate('authContinueDiscord'),
                           isLoading: _oauthLoadingProvider == 'discord',
                           enabled: !isLoading && !isOAuthLoading,
                           onPressed: () => _startOAuth('discord'),
                         ),
-                        if (_oauthError != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            _oauthError!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -205,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          'or continue with email',
+                          l10n.translate('authOrContinueWithEmail'),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: context.hokTheme.onSurfaceMuted,
@@ -221,9 +216,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
+                    decoration: InputDecoration(
+                      labelText: l10n.translate('authEmailLabel'),
+                      prefixIcon: const Icon(Icons.email_outlined),
                     ),
                     enabled: !isLoading,
                   ),
@@ -233,9 +228,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     obscureText: true,
                     textInputAction: TextInputAction.done,
                     autofillHints: const [AutofillHints.password],
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: Icon(Icons.lock_outline),
+                    decoration: InputDecoration(
+                      labelText: l10n.translate('authPasswordLabel'),
+                      prefixIcon: const Icon(Icons.lock_outline),
                     ),
                     enabled: !isLoading,
                     onSubmitted: (_) => _submit(),
@@ -246,18 +241,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: isLoading
                           ? null
                           : () => context.go('/forgot-password'),
-                      child: const Text('Forgot password?'),
+                      child: Text(l10n.translate('authForgotPassword')),
                     ),
                   ),
-                  if (error != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      error,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: isLoading || isOAuthLoading ? null : _submit,
@@ -269,7 +255,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             dimension: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Login'),
+                        : Text(l10n.translate('authLogin')),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -277,7 +263,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        'New to HOK Helper?',
+                        l10n.translate('authNewToHok'),
                         style: TextStyle(
                           color: context.hokTheme.onSurfaceMuted,
                         ),
@@ -286,7 +272,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onPressed: isLoading
                             ? null
                             : () => context.go('/register'),
-                        child: const Text('Create account'),
+                        child: Text(l10n.translate('authCreateAccount')),
                       ),
                     ],
                   ),
@@ -302,13 +288,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _submit() {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    ref.read(authControllerProvider.notifier).login(email, password);
+    ref
+        .read(authControllerProvider.notifier)
+        .login(
+          email,
+          password,
+          languageCode: Localizations.localeOf(context).languageCode,
+        );
   }
 
   Future<void> _startOAuth(String provider) async {
+    final languageCode = Localizations.localeOf(context).languageCode;
     setState(() {
       _oauthLoadingProvider = provider;
-      _oauthError = null;
     });
 
     try {
@@ -331,6 +323,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           identityToken: result.identityToken!,
           rawNonce: result.rawNonce!,
           name: result.name,
+          languageCode: languageCode,
         );
         ref.invalidate(authControllerProvider);
         if (mounted) {
@@ -342,6 +335,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final nativeResult = await _tryNativeGoogleSignIn(
           repository: repository,
           serverClientId: AppConfig.googleServerClientId,
+          languageCode: languageCode,
         );
         if (nativeResult.status == NativeGoogleSignInStatus.authenticated) {
           if (mounted) {
@@ -382,6 +376,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         codeChallenge: codeVerifier == null
             ? null
             : OAuthPkce.createCodeChallenge(codeVerifier),
+        languageCode: languageCode,
       );
 
       if (provider == 'discord' &&
@@ -389,19 +384,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           !_hasOAuthQueryParameter(authUrl, 'code_challenge')) {
         // Discord 的移动端自定义回调必须使用 PKCE；当前后端未返回
         // challenge 时不启动一个不完整的授权请求。
-        throw StateError(
-          'Discord mobile login needs the latest backend OAuth deployment. '
-          'Please try again after the API is updated.',
-        );
+        throw StateError('Discord mobile OAuth is not ready.');
       }
 
       await ref.read(oauthUrlOpenerProvider)(provider: provider, url: authUrl);
     } catch (error) {
       await ref.read(oauthStateStoreProvider).clear(provider);
       if (mounted) {
-        setState(() {
-          _oauthError = 'Failed to start OAuth login. ${error.toString()}';
-        });
+        AppNotice.error(context, error, fallbackKey: 'authOAuthStartFailed');
       }
     } finally {
       if (mounted) {
@@ -415,6 +405,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<NativeGoogleSignInResult> _tryNativeGoogleSignIn({
     required AuthRepository repository,
     required String serverClientId,
+    required String languageCode,
   }) async {
     final result = await ref
         .read(nativeGoogleSignInProvider)
@@ -432,12 +423,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     try {
-      await repository.loginWithGoogleIdToken(idToken);
+      await repository.loginWithGoogleIdToken(
+        idToken,
+        languageCode: languageCode,
+      );
       ref.invalidate(authControllerProvider);
       return result;
     } catch (error) {
       return NativeGoogleSignInResult.unavailable(
-        'Native Google sign-in could not be completed: $error',
+        'Native Google sign-in could not be completed.',
       );
     }
   }

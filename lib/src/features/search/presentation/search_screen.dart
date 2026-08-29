@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/regions.dart';
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/routing/portal_link.dart';
 import '../../../core/theme/app_theme.dart';
@@ -257,7 +258,11 @@ class _SearchContentState extends ConsumerState<_SearchContent> {
                 return AppEmptyState(
                   icon: Icons.search_off_outlined,
                   title: 'Search failed',
-                  message: snapshot.error.toString(),
+                  message: friendlyErrorMessage(
+                    context,
+                    snapshot.error!,
+                    fallbackKey: 'authRequestFailed',
+                  ),
                 );
               }
 

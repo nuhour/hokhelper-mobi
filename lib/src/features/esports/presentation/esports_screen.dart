@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/i18n/app_localizations.dart';
@@ -343,9 +344,7 @@ class _MatchesTabState extends ConsumerState<_MatchesTab> {
         return;
       }
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load more matches')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -567,9 +566,7 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
         return;
       }
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load more stats')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -696,8 +693,12 @@ class _StatsTabState extends ConsumerState<_StatsTab> {
           ] else if (value.hasError)
             AppEmptyState(
               icon: Icons.cloud_off_outlined,
-              title: 'Stats unavailable',
-              message: '${value.error}',
+              title: AppLocalizations.of(context).serviceSlow,
+              message: friendlyErrorMessage(
+                context,
+                value.error!,
+                fallbackKey: 'authRequestFailed',
+              ),
             )
           else if (!value.isLoading)
             const AppEmptyState(
@@ -1896,13 +1897,13 @@ String _formatEsportsMetricValue(
   final minutes = totalSeconds ~/ 60;
   final seconds = totalSeconds % 60;
   return switch (AppLocalizations.of(context).locale.languageCode) {
-    'zh' => '${minutes}分${seconds}秒',
-    'id' => '${minutes} mnt ${seconds} dtk',
-    'fil' => '${minutes} min ${seconds} seg',
-    'pt' || 'es' => '${minutes} min ${seconds} s',
-    'ar' => '${minutes} د ${seconds} ث',
-    'ru' => '${minutes} мин ${seconds} с',
-    'ms' => '${minutes} min ${seconds} saat',
+    'zh' => '$minutes分$seconds秒',
+    'id' => '$minutes mnt $seconds dtk',
+    'fil' => '$minutes min $seconds seg',
+    'pt' || 'es' => '$minutes min $seconds s',
+    'ar' => '$minutes د $seconds ث',
+    'ru' => '$minutes мин $seconds с',
+    'ms' => '$minutes min $seconds saat',
     _ => '${minutes}m ${seconds}s',
   };
 }
@@ -2568,7 +2569,11 @@ Future<void> _showTeamDetailDialog(
               ),
               loading: () => const _DetailLoadingState(),
               error: (error, stackTrace) => _DetailErrorState(
-                message: '$error',
+                message: friendlyErrorMessage(
+                  context,
+                  error,
+                  fallbackKey: 'authRequestFailed',
+                ),
                 onRetry: () =>
                     dialogRef.invalidate(esportsTeamDetailProvider(teamId)),
               ),
@@ -2599,7 +2604,11 @@ Future<void> _showPlayerDetailDialog(
               data: (detail) => _PlayerDetailContent(detail: detail),
               loading: () => const _DetailLoadingState(),
               error: (error, stackTrace) => _DetailErrorState(
-                message: '$error',
+                message: friendlyErrorMessage(
+                  context,
+                  error,
+                  fallbackKey: 'authRequestFailed',
+                ),
                 onRetry: () =>
                     dialogRef.invalidate(esportsPlayerDetailProvider(playerId)),
               ),
@@ -2717,7 +2726,7 @@ class _DetailErrorState extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(AppLocalizations.of(context).retry),
             ),
           ],
         ),

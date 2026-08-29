@@ -84,6 +84,7 @@ void main() {
       expect(apiClient.body, {
         'email': 'lam@example.test',
         'password': 'secret',
+        'language_code': 'en',
       });
       expect(tokenStore.access, 'access-token');
       expect(tokenStore.refresh, 'refresh-token');
@@ -194,6 +195,7 @@ void main() {
       expect(apiClient.path, '/auth/email/send_register_code');
       expect(apiClient.body, {
         'email': 'lam@example.test',
+        'language_code': 'en',
         'turnstile_token': 'turnstile-token',
       });
     });
@@ -217,6 +219,7 @@ void main() {
 
       expect(apiClient.body, {
         'email': 'lam@example.test',
+        'language_code': 'en',
         'app_integrity': {
           'provider': 'play_integrity',
           'token': 'integrity-token',
@@ -257,6 +260,7 @@ void main() {
         'email': 'new@example.test',
         'password': 'StrongPass1!',
         'code': '123456',
+        'language_code': 'en',
         'username': 'new-user',
       });
       expect(tokenStore.access, 'access-token');
@@ -300,6 +304,7 @@ void main() {
         'email': 'new@example.test',
         'password': 'StrongPass1!',
         'code': '123456',
+        'language_code': 'en',
         'username': 'new-user',
         'app_integrity': {
           'provider': 'play_integrity',
@@ -330,6 +335,7 @@ void main() {
       expect(apiClient.body, {
         'redirect_uri': 'https://hokhelper.com/auth/google/callback',
         'state': 'hokhelper-mobile.google.nonce',
+        'language_code': 'en',
       });
     });
 
@@ -365,6 +371,7 @@ void main() {
       expect(apiClient.body, {
         'redirect_uri': 'discord-1459515499649175663:/authorize/callback',
         'state': 'hokhelper-mobile.discord.nonce',
+        'language_code': 'en',
         'code_challenge': challenge,
       });
 
@@ -378,6 +385,7 @@ void main() {
       expect(apiClient.body, {
         'code': 'callback-code',
         'redirect_uri': 'discord-1459515499649175663:/authorize/callback',
+        'language_code': 'en',
         'code_verifier': verifier,
       });
     });
@@ -411,6 +419,7 @@ void main() {
       expect(apiClient.body, {
         'code': 'callback-code',
         'redirect_uri': 'https://hokhelper.com/auth/google/callback',
+        'language_code': 'en',
       });
       expect(tokenStore.access, 'oauth-access');
       expect(tokenStore.refresh, 'oauth-refresh');
@@ -440,7 +449,10 @@ void main() {
       final user = await repository.loginWithGoogleIdToken('google-id-token');
 
       expect(apiClient.path, '/auth/google/login');
-      expect(apiClient.body, {'id_token': 'google-id-token'});
+      expect(apiClient.body, {
+        'id_token': 'google-id-token',
+        'language_code': 'en',
+      });
       expect(tokenStore.access, 'native-access');
       expect(tokenStore.refresh, 'native-refresh');
       expect(user.id, 11);
@@ -492,15 +504,20 @@ void main() {
           '/auth/email/verify_code',
           '/auth/email/forgot_password_reset',
         ]);
-        expect(apiClient.calls[0].body, {'email': 'lam@example.test'});
+        expect(apiClient.calls[0].body, {
+          'email': 'lam@example.test',
+          'language_code': 'en',
+        });
         expect(apiClient.calls[1].body, {
           'email': 'lam@example.test',
           'code': '654321',
+          'language_code': 'en',
         });
         expect(apiClient.calls[2].body, {
           'email': 'lam@example.test',
           'code': '654321',
           'new_password': 'NewStrongPass1!',
+          'language_code': 'en',
         });
       },
     );

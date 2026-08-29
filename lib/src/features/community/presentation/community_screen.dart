@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/formatters/app_time_formatter.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/providers/core_providers.dart';
@@ -955,11 +956,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
         return;
       }
       setState(() => _isLoadingMorePosts = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to load more posts')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -1023,11 +1020,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
         return false;
       }
       setState(() => _createSubmitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to create post')),
-      );
+      AppNotice.failure(context);
       return false;
     }
   }
@@ -1049,11 +1042,7 @@ class _PostsTabState extends ConsumerState<_PostsTab> {
       if (!mounted || !context.mounted) {
         return;
       }
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to delete post')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -1912,11 +1901,7 @@ class _LeaksTabState extends ConsumerState<_LeaksTab> {
         return;
       }
       setState(() => _isLoadingMoreLeaks = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to load more leaks')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -2251,11 +2236,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
         return;
       }
       setState(() => _likeSubmitting = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Failed to like post')),
-      );
+      AppNotice.failure(context);
     }
   }
 }

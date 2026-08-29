@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/providers/core_providers.dart';
@@ -86,9 +87,7 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
         return;
       }
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load more tier lists')),
-      );
+      AppNotice.failure(context);
     }
   }
 
@@ -201,11 +200,13 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
         return;
       }
       setState(() => _isCreating = false);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(content: Text(_writeFailureMessage(error))),
-      );
+      if (error is ApiError &&
+          (error.kind == ApiErrorKind.authExpired ||
+              error.kind == ApiErrorKind.forbidden)) {
+        AppNotice.failure(context, fallbackKey: 'authSignInToSaveTierLists');
+      } else {
+        AppNotice.error(context, error);
+      }
     }
   }
 
@@ -255,22 +256,15 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
       if (!mounted) {
         return;
       }
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(content: Text(_writeFailureMessage(error))),
-      );
+      if (error is ApiError &&
+          (error.kind == ApiErrorKind.authExpired ||
+              error.kind == ApiErrorKind.forbidden)) {
+        AppNotice.failure(context, fallbackKey: 'authSignInToSaveTierLists');
+      } else {
+        AppNotice.error(context, error);
+      }
     }
   }
-}
-
-String _writeFailureMessage(Object error) {
-  if (error is ApiError &&
-      (error.kind == ApiErrorKind.authExpired ||
-          error.kind == ApiErrorKind.forbidden)) {
-    return 'Sign in to save tier lists';
-  }
-  return 'Failed to save tier list';
 }
 
 class _TierListCreateSheet extends StatefulWidget {

@@ -123,6 +123,8 @@ class ApiClient {
       throw ApiError(
         kind: ApiErrorKind.backend,
         message: _readEnvelopeMessage(json),
+        code: _readEnvelopeCode(json),
+        params: _readEnvelopeParams(json),
       );
     }
 
@@ -137,6 +139,8 @@ class ApiClient {
         kind: ApiErrorKind.authExpired,
         message: _readErrorMessage(error),
         statusCode: statusCode,
+        code: _readErrorCode(error),
+        params: _readErrorParams(error),
       );
     }
 
@@ -145,6 +149,8 @@ class ApiClient {
         kind: ApiErrorKind.forbidden,
         message: _readErrorMessage(error),
         statusCode: statusCode,
+        code: _readErrorCode(error),
+        params: _readErrorParams(error),
       );
     }
 
@@ -153,6 +159,8 @@ class ApiClient {
         kind: ApiErrorKind.backend,
         message: _readErrorMessage(error),
         statusCode: statusCode,
+        code: _readErrorCode(error),
+        params: _readErrorParams(error),
       );
     }
 
@@ -174,6 +182,16 @@ class ApiClient {
     return error.message ?? 'Request failed';
   }
 
+  String? _readErrorCode(DioException error) {
+    final data = error.response?.data;
+    return data is Map ? _readEnvelopeCode(data) : null;
+  }
+
+  Map<String, dynamic>? _readErrorParams(DioException error) {
+    final data = error.response?.data;
+    return data is Map ? _readEnvelopeParams(data) : null;
+  }
+
   String _readEnvelopeMessage(Map<dynamic, dynamic> json) {
     final message = json['message'] ?? json['msg'] ?? json['error'];
     if (message != null && message.toString().isNotEmpty) {
@@ -181,6 +199,20 @@ class ApiClient {
     }
 
     return 'Request failed';
+  }
+
+  String? _readEnvelopeCode(Map<dynamic, dynamic> json) {
+    final value = json['error_code'] ?? json['errorCode'] ?? json['code'];
+    final code = value?.toString().trim();
+    return code == null || code.isEmpty ? null : code;
+  }
+
+  Map<String, dynamic>? _readEnvelopeParams(Map<dynamic, dynamic> json) {
+    final value = json['error_params'] ?? json['errorParams'];
+    if (value is! Map) {
+      return null;
+    }
+    return Map<String, dynamic>.from(value);
   }
 
   Future<void> _notifyAuthFailure(ApiError error) async {

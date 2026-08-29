@@ -29,6 +29,7 @@ class _FakeAuthRepository implements AuthRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   var didRegister = false;
+  var didSendRegisterCode = false;
   var didReset = false;
   var didOAuthLogin = false;
   var requestedOAuthProvider = '';
@@ -46,12 +47,23 @@ class _FakeAuthRepository implements AuthRepository {
   bool includeDiscordPkce = true;
 
   @override
+  Future<void> sendRegisterCode({
+    required String email,
+    String turnstileToken = '',
+    AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
+  }) async {
+    didSendRegisterCode = true;
+  }
+
+  @override
   Future<AuthUser> registerWithEmail({
     required String email,
     required String password,
     required String code,
     String? username,
     AppIntegrityProof? integrityProof,
+    String languageCode = 'en',
   }) async {
     didRegister = true;
     return AuthUser(
@@ -67,6 +79,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String email,
     required String code,
     required String newPassword,
+    String languageCode = 'en',
   }) async {
     didReset = true;
   }
@@ -77,6 +90,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String code,
     required String redirectUri,
     String? codeVerifier,
+    String languageCode = 'en',
   }) async {
     didOAuthLogin = true;
     oauthProvider = provider;
@@ -92,7 +106,10 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AuthUser> loginWithGoogleIdToken(String idToken) async {
+  Future<AuthUser> loginWithGoogleIdToken(
+    String idToken, {
+    String languageCode = 'en',
+  }) async {
     googleIdToken = idToken;
     return const AuthUser(
       id: 28,
@@ -107,6 +124,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String identityToken,
     required String rawNonce,
     String? name,
+    String languageCode = 'en',
   }) async {
     appleIdentityToken = identityToken;
     appleRawNonce = rawNonce;
@@ -125,6 +143,7 @@ class _FakeAuthRepository implements AuthRepository {
     required String redirectUri,
     required String state,
     String? codeChallenge,
+    String languageCode = 'en',
   }) async {
     requestedOAuthProvider = provider;
     requestedOAuthRedirectUri = redirectUri;
@@ -461,10 +480,7 @@ void main() {
 
     expect(repository.requestedOAuthProvider, isEmpty);
     expect(openedUrls, isEmpty);
-    expect(
-      find.textContaining('Google sign-in is unavailable'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Could not start sign-in'), findsOneWidget);
 
     await tester.tap(
       find.widgetWithText(OutlinedButton, 'Continue with Discord'),
@@ -531,7 +547,7 @@ void main() {
 
     expect(repository.requestedOAuthProvider, isEmpty);
     expect(openedUrls, isEmpty);
-    expect(find.textContaining('provider configuration'), findsOneWidget);
+    expect(find.textContaining('Could not start sign-in'), findsOneWidget);
   });
 
   testWidgets('Discord mobile OAuth uses custom callback and PKCE', (
@@ -631,10 +647,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
 
     expect(openedUrls, isEmpty);
-    expect(
-      find.textContaining('latest backend OAuth deployment'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Could not start sign-in'), findsOneWidget);
   });
 
   testWidgets(
@@ -772,6 +785,43 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(repository.didRegister, isTrue);
+  });
+
+  testWidgets('register code send is locked for sixty seconds', (tester) async {
+    final repository = _FakeAuthRepository(tokenStore: _NoopTokenStore());
+    final router = GoRouter(
+      initialLocation: '/register',
+      routes: [
+        GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+        GoRoute(path: '/login', builder: (_, _) => const SizedBox()),
+        GoRoute(path: '/me', builder: (_, _) => const SizedBox()),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(_NoopTokenStore()),
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'cooldown@example.test',
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Send'));
+    await tester.pump();
+
+    expect(repository.didSendRegisterCode, isTrue);
+    expect(find.text('Resend in 60s'), findsOneWidget);
+    final button = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Resend in 60s'),
+    );
+    expect(button.onPressed, isNull);
   });
 
   testWidgets('forgot password screen submits reset', (tester) async {
@@ -952,6 +1002,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.didOAuthLogin, isFalse);
-    expect(find.text('Missing OAuth callback code.'), findsOneWidget);
+    expect(
+      find.text('Sign-in could not be completed. Please start again.'),
+      findsNWidgets(2),
+    );
   });
 }
