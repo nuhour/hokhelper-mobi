@@ -43,6 +43,28 @@ void main() {
     expect(find.byKey(const ValueKey('trend-signal-hero-199')), findsOneWidget);
     expect(find.byKey(const ValueKey('trend-best-skill-199')), findsOneWidget);
     expect(find.byKey(const ValueKey('trend-best-equip-199')), findsOneWidget);
+    final skillImage = tester.widget<AppImage>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('trend-best-skill-199')),
+            matching: find.byType(AppImage),
+          )
+          .first,
+    );
+    final equipImage = tester.widget<AppImage>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('trend-best-equip-199')),
+            matching: find.byType(AppImage),
+          )
+          .first,
+    );
+    expect(skillImage.width, 17);
+    expect(skillImage.height, 17);
+    expect(skillImage.borderRadius, 999);
+    expect(equipImage.width, 17);
+    expect(equipImage.height, 17);
+    expect(equipImage.borderRadius, 999);
     expect(find.text('🔥'), findsNWidgets(2));
     expect(find.text('热'), findsNothing);
     expect(find.byIcon(Icons.arrow_drop_up_rounded), findsWidgets);

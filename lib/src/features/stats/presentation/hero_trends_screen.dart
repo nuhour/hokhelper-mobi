@@ -724,26 +724,12 @@ class _TrendLoadoutIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: label,
-      child: Container(
+      child: AppImage(
+        url: url,
         width: 17,
         height: 17,
-        padding: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(
-            color:
-                Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                context.hokTheme.outlineSoft,
-          ),
-        ),
-        child: AppImage(
-          url: url,
-          width: 15,
-          height: 15,
-          borderRadius: 4,
-          semanticLabel: label,
-        ),
+        borderRadius: 999,
+        semanticLabel: label,
       ),
     );
   }
