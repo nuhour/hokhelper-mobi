@@ -37,11 +37,25 @@ class _RecordingTeamBuilderRepository extends TeamBuilderRepository {
     int slotIndex = 0,
     int limit = 10,
     int? mainJob,
+    List<int>? blueBans,
+    List<int>? redBans,
+    List<int>? bluePicks,
+    List<int>? redPicks,
+    String? activeSide,
+    String? activeSlotType,
+    int? activeSlotIndex,
   }) async {
     calls.add({
       'myPicks': myPicks,
       'enemyPicks': enemyPicks,
       'bans': bans,
+      'blueBans': blueBans,
+      'redBans': redBans,
+      'bluePicks': bluePicks,
+      'redPicks': redPicks,
+      'activeSide': activeSide,
+      'activeSlotType': activeSlotType,
+      'activeSlotIndex': activeSlotIndex,
       'slotType': slotType,
       'limit': limit,
     });
@@ -96,6 +110,37 @@ Widget _app({TeamBuilderScreen screen = const TeamBuilderScreen()}) =>
                 counter: .4,
               ),
             ],
+            fitRecommendations: [
+              TeamRecommendation(
+                heroId: 99,
+                externalHeroId: '199',
+                name: 'Dolia',
+                mainJob: 6,
+                score: .79,
+                reason: 'Fits the lineup',
+                pickRate: .1,
+                banRate: .02,
+                synergy: .5,
+                counter: .4,
+                protect: .7,
+                confidence: .8,
+              ),
+            ],
+            counterRecommendations: [
+              TeamRecommendation(
+                heroId: 7,
+                externalHeroId: '107',
+                name: 'Marco Polo',
+                mainJob: 5,
+                score: .73,
+                reason: 'Counters the enemy',
+                pickRate: .08,
+                banRate: .03,
+                synergy: .2,
+                counter: .8,
+                confidence: .75,
+              ),
+            ],
             sideWinRates: TeamSideWinRates(blue: .57, red: .43),
           ),
         ),
@@ -126,6 +171,10 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    await tester.tap(find.text('Counter Picks'));
+    await _pumpTeamBuilder(tester);
+    expect(find.text('Marco Polo'), findsOneWidget);
   });
 
   testWidgets('fills the active pick slot and locks the hero in the pool', (
@@ -147,6 +196,30 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('team-pool-42')));
       await _pumpTeamBuilder(tester);
       expect(find.byKey(const ValueKey('team-ban-ally-0')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'switches recommendation lists locally without a second request',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = _RecordingTeamBuilderRepository();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            teamBuilderHeroesProvider.overrideWith((ref) async => _heroes),
+            teamBuilderRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const MaterialApp(home: Scaffold(body: TeamBuilderScreen())),
+        ),
+      );
+      await _pumpTeamBuilder(tester);
+      final requestCount = repository.calls.length;
+
+      await tester.tap(find.text('Counter Picks'));
+      await _pumpTeamBuilder(tester);
+
+      expect(repository.calls.length, requestCount);
     },
   );
 
@@ -172,26 +245,31 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('team-ban-ally-0')));
     await _pumpTeamBuilder(tester);
-    expect(find.text('Priority Bans'), findsOneWidget);
-    expect(find.text('Counter Bans'), findsOneWidget);
+    expect(find.text('Protect lineup'), findsOneWidget);
+    expect(find.text('Deny enemy'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('team-pool-7')));
     await _pumpTeamBuilder(tester);
 
-    // 主请求：slot_type=ban，上下文为双方已 ban 列表。
+    // Draft v2：slot_type=ban 仍使用双方实际已选阵容，双方 Ban 独立传递。
     final banCalls = repository.calls
         .where((call) => call['slotType'] == 'ban')
         .toList();
     expect(banCalls, isNotEmpty);
-    expect(banCalls.last['myPicks'], [7]);
+    expect(banCalls.last['myPicks'], isEmpty);
     expect(banCalls.last['enemyPicks'], isEmpty);
     expect(banCalls.last['bans'], [7]);
-    // 胜率请求：ban 位时仍按双方已选阵容单独计算。
-    final rateCalls = repository.calls
-        .where((call) => call['slotType'] == 'pick' && call['limit'] == 1)
-        .toList();
-    expect(rateCalls, isNotEmpty);
-    expect(rateCalls.last['myPicks'], [42]);
+    expect(banCalls.last['blueBans'], [7]);
+    expect(banCalls.last['redBans'], isEmpty);
+    expect(banCalls.last['bluePicks'], [42]);
+    expect(banCalls.last['redPicks'], isEmpty);
+    expect(banCalls.last['activeSide'], 'blue');
+    expect(banCalls.last['activeSlotType'], 'ban');
+    expect(banCalls.last['activeSlotIndex'], 1);
+    expect(
+      repository.calls.where((call) => call['slotType'] == 'ban'),
+      hasLength(2),
+    );
   });
 
   testWidgets(

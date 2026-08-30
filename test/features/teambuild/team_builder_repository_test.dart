@@ -38,6 +38,45 @@ class _FakeApiClient extends ApiClient {
               'counter': 0.31,
             },
           ],
+          'fit_recommendations': [
+            {
+              'hero_id': 99,
+              'heroId': '199',
+              'hero_name': 'Dolia',
+              'mainJob': 6,
+              'minorJob': 4,
+              'score': 88.5,
+              'reason': 'Strong synergy with Lam',
+              'pick_rate': 12.5,
+              'ban_rate': 4.0,
+              'synergy': 0.72,
+              'counter': 0.31,
+              'protect': 0.66,
+              'deny': 0.18,
+              'role_fit': 0.9,
+              'confidence': 0.8,
+              'components': {'synergy': 0.72, 'role_fit': 0.9},
+              'reason_codes': ['strong_synergy'],
+            },
+          ],
+          'counter_recommendations': [
+            {
+              'hero_id': 7,
+              'heroId': '107',
+              'hero_name': 'Marco Polo',
+              'mainJob': 5,
+              'score': 81.0,
+              'reason': 'Counters the enemy',
+              'pick_rate': 8.0,
+              'ban_rate': 5.0,
+              'synergy': 0.25,
+              'counter': 0.86,
+              'confidence': 0.7,
+            },
+          ],
+          'phase': 'early_pick',
+          'model_version': 'draft-v2.0',
+          'stats_snapshot': '2026-08-30',
           'total': 1,
           'side_win_rates': {
             'blue': 0.57,
@@ -125,8 +164,47 @@ void main() {
       expect(result.recommendations.single.reason, 'Strong synergy with Lam');
       expect(result.recommendations.single.pickRate, 0.125);
       expect(result.recommendations.single.synergy, 0.72);
+      expect(result.fitRecommendations.single.protect, 0.66);
+      expect(result.fitRecommendations.single.minorJob, 4);
+      expect(result.fitRecommendations.single.components['role_fit'], 0.9);
+      expect(result.fitRecommendations.single.reasonCodes, ['strong_synergy']);
+      expect(result.counterRecommendations.single.heroId, 7);
+      expect(result.counterRecommendations.single.counter, 0.86);
+      expect(result.phase, 'early_pick');
+      expect(result.modelVersion, 'draft-v2.0');
       expect(result.sideWinRates?.blue, 0.57);
       expect(result.sideWinRates?.red, 0.43);
+    });
+
+    test('sends explicit DraftState v2 and keeps both result lists', () async {
+      final apiClient = _FakeApiClient();
+      final repository = TeamBuilderRepository(apiClient: apiClient);
+
+      final result = await repository.loadRecommendations(
+        regionId: 2,
+        blueBans: const [11],
+        redBans: const [12],
+        bluePicks: const [42],
+        redPicks: const [7],
+        activeSide: 'red',
+        activeSlotType: 'ban',
+        activeSlotIndex: 2,
+        limit: 50,
+      );
+
+      final body = apiClient.postBody! as Map<String, Object?>;
+      expect(body['blue_bans'], [11]);
+      expect(body['red_bans'], [12]);
+      expect(body['blue_picks'], [42]);
+      expect(body['red_picks'], [7]);
+      expect(body['active_side'], 'red');
+      expect(body['active_slot_type'], 'ban');
+      expect(body['active_slot_index'], 2);
+      expect(body['my_picks'], [7]);
+      expect(body['enemy_picks'], [42]);
+      expect(body['recommend_type'], 'balanced');
+      expect(result.fitRecommendations, hasLength(1));
+      expect(result.counterRecommendations, hasLength(1));
     });
   });
 }

@@ -36,7 +36,6 @@ class TeamBuilderDraft {
     this.activeSlotType = TeamBuilderSlotType.pick,
     this.activeSide = TeamBuilderSide.ally,
     this.activeIndex = 0,
-    this.recommendType = TeamRecommendType.balanced,
     this.allyIsBlue = true,
   });
 
@@ -47,7 +46,6 @@ class TeamBuilderDraft {
   final TeamBuilderSlotType activeSlotType;
   final TeamBuilderSide activeSide;
   final int activeIndex;
-  final TeamRecommendType recommendType;
   final bool allyIsBlue;
 
   TeamBuilderDraft copyWith({
@@ -58,7 +56,6 @@ class TeamBuilderDraft {
     TeamBuilderSlotType? activeSlotType,
     TeamBuilderSide? activeSide,
     int? activeIndex,
-    TeamRecommendType? recommendType,
     bool? allyIsBlue,
   }) {
     return TeamBuilderDraft(
@@ -69,7 +66,6 @@ class TeamBuilderDraft {
       activeSlotType: activeSlotType ?? this.activeSlotType,
       activeSide: activeSide ?? this.activeSide,
       activeIndex: activeIndex ?? this.activeIndex,
-      recommendType: recommendType ?? this.recommendType,
       allyIsBlue: allyIsBlue ?? this.allyIsBlue,
     );
   }
@@ -100,47 +96,42 @@ final teamBuilderDraftProvider = StateProvider<TeamBuilderDraft>((ref) {
   return const TeamBuilderDraft();
 });
 
+/// 只影响结果 Tab，不属于服务端 DraftState，切换时不重复请求推荐接口。
+final teamBuilderRecommendTypeProvider = StateProvider<TeamRecommendType>((
+  ref,
+) {
+  return TeamRecommendType.balanced;
+});
+
 final teamRecommendationsProvider =
     FutureProvider.family<TeamRecommendationResult, int?>((ref, mainJob) async {
       final settings = await ref.watch(appSettingsControllerProvider.future);
       final draft = ref.watch(teamBuilderDraftProvider);
       final repository = ref.watch(teamBuilderRepositoryProvider);
       final isAllyTarget = draft.activeSide == TeamBuilderSide.ally;
-      final isBanSlot = draft.activeSlotType == TeamBuilderSlotType.ban;
-      // HOKX 规则：ban 位推荐的上下文是双方已禁英雄，pick 位才用双方阵容。
-      final recommendationFuture = repository.loadRecommendations(
+      final activeSide = isAllyTarget == draft.allyIsBlue ? 'blue' : 'red';
+      final bluePicks = draft.allyIsBlue ? draft.allyIds : draft.enemyIds;
+      final redPicks = draft.allyIsBlue ? draft.enemyIds : draft.allyIds;
+      final blueBans = draft.allyIsBlue ? draft.allyBanIds : draft.enemyBanIds;
+      final redBans = draft.allyIsBlue ? draft.enemyBanIds : draft.allyBanIds;
+      // Draft v2：Ban 只使用双方已选阵容作为上下文，Pick 使用双方实际阵容；
+      // 双方 Ban 独立传递，服务端一次返回适配/保护和克制/拆解两组结果。
+      return repository.loadRecommendations(
         regionId: settings.region.regionId,
-        myPicks: isBanSlot
-            ? (isAllyTarget ? draft.allyBanIds : draft.enemyBanIds)
-            : (isAllyTarget ? draft.allyIds : draft.enemyIds),
-        enemyPicks: isBanSlot
-            ? (isAllyTarget ? draft.enemyBanIds : draft.allyBanIds)
-            : (isAllyTarget ? draft.enemyIds : draft.allyIds),
         bans: draft.banIds,
-        mySide: isAllyTarget == draft.allyIsBlue ? 'blue' : 'red',
+        mySide: activeSide,
         slotType: draft.activeSlotType.apiValue,
         slotIndex: draft.activeIndex,
-        recommendType: draft.recommendType,
+        recommendType: TeamRecommendType.balanced,
         mainJob: mainJob,
         limit: 50,
-      );
-      if (!isBanSlot) {
-        return recommendationFuture;
-      }
-      // HOKX 规则：ban 位时两侧胜率仍按双方已选阵容单独计算。
-      final sideRateFuture = repository.loadRecommendations(
-        regionId: settings.region.regionId,
-        myPicks: draft.allyIsBlue ? draft.allyIds : draft.enemyIds,
-        enemyPicks: draft.allyIsBlue ? draft.enemyIds : draft.allyIds,
-        bans: draft.banIds,
-        mySide: 'blue',
-        slotIndex: draft.activeIndex,
-        limit: 1,
-      );
-      final results = await Future.wait([recommendationFuture, sideRateFuture]);
-      return TeamRecommendationResult(
-        recommendations: results[0].recommendations,
-        sideWinRates: results[1].sideWinRates ?? results[0].sideWinRates,
+        blueBans: blueBans,
+        redBans: redBans,
+        bluePicks: bluePicks,
+        redPicks: redPicks,
+        activeSide: activeSide,
+        activeSlotType: draft.activeSlotType.apiValue,
+        activeSlotIndex: draft.activeIndex,
       );
     });
 
@@ -304,8 +295,12 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
                 ref.read(teamBuilderDraftProvider.notifier).state = draft
                     .copyWith(allyIsBlue: !draft.allyIsBlue);
               },
-              onReset: () => ref.read(teamBuilderDraftProvider.notifier).state =
-                  const TeamBuilderDraft(),
+              onReset: () {
+                ref.read(teamBuilderDraftProvider.notifier).state =
+                    const TeamBuilderDraft();
+                ref.read(teamBuilderRecommendTypeProvider.notifier).state =
+                    TeamRecommendType.balanced;
+              },
             ),
             _WinRateBar(
               rates: recommendations.valueOrNull?.sideWinRates,
@@ -330,11 +325,12 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
                 heroes: heroesValue.valueOrNull ?? const <TeamBuildHero>[],
                 recommendations: recommendations,
                 recommendJob: _recommendJob,
+                recommendationType: ref.watch(teamBuilderRecommendTypeProvider),
                 onRecommendationJobChanged: (value) =>
                     setState(() => _recommendJob = value),
                 onRecommendationTypeChanged: (type) {
-                  ref.read(teamBuilderDraftProvider.notifier).state = draft
-                      .copyWith(recommendType: type);
+                  ref.read(teamBuilderRecommendTypeProvider.notifier).state =
+                      type;
                 },
                 onSlotTap: (side, index) =>
                     _activateSlot(TeamBuilderSlotType.pick, side, index),
@@ -575,6 +571,7 @@ class _DraftBoard extends StatelessWidget {
     required this.heroes,
     required this.recommendations,
     required this.recommendJob,
+    required this.recommendationType,
     required this.onRecommendationJobChanged,
     required this.onRecommendationTypeChanged,
     required this.onSlotTap,
@@ -585,6 +582,7 @@ class _DraftBoard extends StatelessWidget {
   final List<TeamBuildHero> heroes;
   final AsyncValue<TeamRecommendationResult> recommendations;
   final int? recommendJob;
+  final TeamRecommendType recommendationType;
   final ValueChanged<int?> onRecommendationJobChanged;
   final ValueChanged<TeamRecommendType> onRecommendationTypeChanged;
   final void Function(TeamBuilderSide, int) onSlotTap;
@@ -618,7 +616,7 @@ class _DraftBoard extends StatelessWidget {
                     hero.externalHeroId == recommendation.externalHeroId,
               )
               .firstOrNull,
-          type: draft.recommendType,
+          type: recommendationType,
           slotType: draft.activeSlotType,
           mainJob: recommendJob,
           onTypeChanged: onRecommendationTypeChanged,
@@ -938,9 +936,20 @@ class _RecommendationPanel extends StatelessWidget {
     final result = value.valueOrNull;
     final isBanSlot = slotType == TeamBuilderSlotType.ban;
     // HOKX 网页端全量渲染推荐列表，移动端保持一致，不做条数截断。
-    final items = (result?.recommendations ?? const <TeamRecommendation>[])
-        .where((item) => mainJob == null || item.mainJob == mainJob)
-        .toList(growable: false);
+    final source = type == TeamRecommendType.counter
+        ? (result?.counterRecommendations ?? const <TeamRecommendation>[])
+        : (result?.fitRecommendations ?? const <TeamRecommendation>[]);
+    final items =
+        (source.isNotEmpty
+                ? source
+                : (result?.recommendations ?? const <TeamRecommendation>[]))
+            .where(
+              (item) =>
+                  mainJob == null ||
+                  item.mainJob == mainJob ||
+                  item.minorJob == mainJob,
+            )
+            .toList(growable: false);
     // 短列表不渲染到底提示，避免噪音。
     final showEndFooter = items.length > 10;
     return DecoratedBox(
@@ -959,7 +968,7 @@ class _RecommendationPanel extends StatelessWidget {
                   child: _RecTab(
                     // HOKX 规则：ban 位展示禁用优先级推荐，pick 位展示适配阵容推荐。
                     label: isBanSlot
-                        ? l10n.translate('teamPriorityBans')
+                        ? l10n.translate('teamProtectLineup')
                         : l10n.translate('teamSynergy'),
                     selected: type != TeamRecommendType.counter,
                     onTap: () => onTypeChanged(TeamRecommendType.balanced),
@@ -969,7 +978,7 @@ class _RecommendationPanel extends StatelessWidget {
                 Expanded(
                   child: _RecTab(
                     label: isBanSlot
-                        ? l10n.translate('teamCounterBans')
+                        ? l10n.translate('teamDenyEnemy')
                         : l10n.translate('teamCounter'),
                     selected: type == TeamRecommendType.counter,
                     onTap: () => onTypeChanged(TeamRecommendType.counter),
@@ -1010,6 +1019,7 @@ class _RecommendationPanel extends StatelessWidget {
                         item: items[index],
                         hero: heroForRecommendation(items[index]),
                         isBanSlot: isBanSlot,
+                        isCounterMode: type == TeamRecommendType.counter,
                         onTap: () => onTap(items[index]),
                       );
                     },
@@ -1059,22 +1069,45 @@ class _RecommendationTile extends StatelessWidget {
     required this.item,
     required this.hero,
     required this.isBanSlot,
+    required this.isCounterMode,
     required this.onTap,
   });
   final TeamRecommendation item;
   final TeamBuildHero? hero;
   final bool isBanSlot;
+  final bool isCounterMode;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final pickLabel = l10n.translate('statsPickRate');
+    final banLabel = l10n.translate('statsBanRate');
+    final synergyLabel = l10n.translate('teamSynergyScore');
+    final counterLabel = l10n.translate('teamCounterScore');
+    final protectLabel = l10n.translate('teamProtectLineup');
+    final denyLabel = l10n.translate('teamDenyEnemy');
+    final confidenceLabel = l10n.translate('teamRecommendationConfidence');
+    final contextualValue = isBanSlot
+        ? (isCounterMode ? item.deny : item.protect)
+        : (isCounterMode ? item.counter : item.synergy);
+    final contextualLabel = isBanSlot
+        ? (isCounterMode ? denyLabel : protectLabel)
+        : (isCounterMode ? counterLabel : synergyLabel);
     final rawScore = item.score > 0
         ? item.score
-        : item.counter > 0
-        ? item.counter
-        : item.synergy > 0
-        ? item.synergy
+        : contextualValue > 0
+        ? contextualValue
         : item.pickRate + item.banRate;
-    final score = rawScore <= 1 ? rawScore * 100 : rawScore;
+    final score = (rawScore <= 1 ? rawScore * 100 : rawScore)
+        .clamp(0.0, 100.0)
+        .toDouble();
+    final metricText = isBanSlot
+        ? '$banLabel ${(item.banRate * 100).toStringAsFixed(1)}% · '
+              '$contextualLabel ${(contextualValue * 100).toStringAsFixed(0)}% · '
+              '$confidenceLabel ${(item.confidence * 100).toStringAsFixed(0)}%'
+        : '$pickLabel ${(item.pickRate * 100).toStringAsFixed(1)}% · '
+              '$contextualLabel ${(contextualValue * 100).toStringAsFixed(0)}% · '
+              '$confidenceLabel ${(item.confidence * 100).toStringAsFixed(0)}%';
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1121,10 +1154,7 @@ class _RecommendationTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      // HOKX 规则：ban 位显示禁用率与克制度，pick 位显示登场率与协同。
-                      isBanSlot
-                          ? 'Ban ${(item.banRate * 100).toStringAsFixed(1)}% · Counter ${(item.counter * 100).toStringAsFixed(1)}%'
-                          : 'Pick ${(item.pickRate * 100).toStringAsFixed(1)}% · Synergy ${(item.synergy * 100).toStringAsFixed(1)}%',
+                      metricText,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

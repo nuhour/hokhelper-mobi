@@ -26,11 +26,22 @@ class TeamSideWinRates {
 class TeamRecommendationResult {
   const TeamRecommendationResult({
     required this.recommendations,
+    this.fitRecommendations = const [],
+    this.counterRecommendations = const [],
     this.sideWinRates,
+    this.phase,
+    this.modelVersion,
+    this.statsSnapshot,
   });
 
+  /// 兼容旧接口的主列表；Draft v2 下等同于适配/保护推荐。
   final List<TeamRecommendation> recommendations;
+  final List<TeamRecommendation> fitRecommendations;
+  final List<TeamRecommendation> counterRecommendations;
   final TeamSideWinRates? sideWinRates;
+  final String? phase;
+  final String? modelVersion;
+  final String? statsSnapshot;
 }
 
 class TeamRecommendation {
@@ -45,6 +56,13 @@ class TeamRecommendation {
     required this.banRate,
     required this.synergy,
     required this.counter,
+    this.protect = 0,
+    this.deny = 0,
+    this.roleFit = 0,
+    this.confidence = 0,
+    this.minorJob = 0,
+    this.components = const {},
+    this.reasonCodes = const [],
   });
 
   final int heroId;
@@ -57,6 +75,13 @@ class TeamRecommendation {
   final double banRate;
   final double synergy;
   final double counter;
+  final double protect;
+  final double deny;
+  final double roleFit;
+  final double confidence;
+  final int minorJob;
+  final Map<String, double> components;
+  final List<String> reasonCodes;
 
   factory TeamRecommendation.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -74,8 +99,32 @@ class TeamRecommendation {
       banRate: _readRate(map['ban_rate']),
       synergy: _readRate(map['synergy']),
       counter: _readRate(map['counter']),
+      protect: _readRate(map['protect']),
+      deny: _readRate(map['deny']),
+      roleFit: _readRate(map['role_fit'] ?? map['roleFit']),
+      confidence: _readRate(map['confidence']),
+      minorJob: _readInt(map['minorJob'] ?? map['minor_job']),
+      components: _readComponents(map['components']),
+      reasonCodes: _readReasonCodes(map['reason_codes'] ?? map['reasonCodes']),
     );
   }
+}
+
+Map<String, double> _readComponents(Object? value) {
+  if (value is! Map) return const {};
+  return Map<String, double>.fromEntries(
+    value.entries.map(
+      (entry) => MapEntry(entry.key.toString(), _readRate(entry.value)),
+    ),
+  );
+}
+
+List<String> _readReasonCodes(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .map((item) => item.toString())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
 }
 
 double _readRate(Object? value) {

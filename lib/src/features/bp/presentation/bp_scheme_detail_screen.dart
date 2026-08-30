@@ -1206,10 +1206,17 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
           .read(teamBuilderRepositoryProvider)
           .loadRecommendations(
             regionId: settings.region.regionId,
-            enemyPicks: _peakUserPicks,
+            bluePicks: _peakUserPicks,
+            redPicks: const [],
+            blueBans: const [],
+            redBans: const [],
             mySide: 'red',
             slotType: 'pick',
-            recommendType: TeamRecommendType.counter,
+            activeSide: 'red',
+            activeSlotType: 'pick',
+            activeSlotIndex: 0,
+            // Draft v2 一次返回两组结果，这里取红方克制蓝方的列表。
+            recommendType: TeamRecommendType.balanced,
             limit: 120,
           );
       final byId = {for (final hero in heroes) int.tryParse(hero.id): hero};
@@ -1217,20 +1224,19 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
       final usedPositions = <int>{};
       // HOKX 规则：对手阵容不能包含玩家已选英雄。
       final excluded = <int>{..._peakUserPicks};
-      for (final recommendation in result.recommendations) {
+      final recommendations = result.counterRecommendations.isNotEmpty
+          ? result.counterRecommendations
+          : result.recommendations;
+      for (final recommendation in recommendations) {
         final id = recommendation.heroId;
         final hero = byId[id];
-        final position = recommendation.mainJob > 0
-            ? recommendation.mainJob
-            : hero?.position;
+        final position = hero?.position;
         if (id <= 0 || excluded.contains(id) || picked.contains(id)) continue;
-        if (position != null &&
-            position > 0 &&
-            usedPositions.contains(position)) {
+        if (position != null && usedPositions.contains(position)) {
           continue;
         }
         picked.add(id);
-        if (position != null && position > 0) usedPositions.add(position);
+        if (position != null) usedPositions.add(position);
         if (picked.length == 5) break;
       }
       final filled = _randomPeakEnemyPicks(heroes, existing: picked);
