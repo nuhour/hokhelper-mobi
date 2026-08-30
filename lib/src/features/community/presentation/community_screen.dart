@@ -1592,29 +1592,27 @@ class _CreatePostCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            SizedBox(
+            Wrap(
               key: const ValueKey('community-create-post-suggested-tags'),
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _recommendedPostTags.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemBuilder: (context, index) {
-                  final tag = _recommendedPostTags[index];
-                  final selected = selectedTags.contains(tag);
-                  return ChoiceChip(
-                    label: Text(tag),
-                    selected: selected,
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final tag in _recommendedPostTags)
+                  ChoiceChip(
+                    label: Text(tag, style: const TextStyle(fontSize: 11)),
+                    selected: selectedTags.contains(tag),
                     visualDensity: VisualDensity.compact,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 5),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 4),
                     onSelected: (_) => onTagToggled(tag),
                     avatar: Icon(
-                      selected ? Icons.check : Icons.tag_outlined,
-                      size: 15,
+                      selectedTags.contains(tag)
+                          ? Icons.check
+                          : Icons.tag_outlined,
+                      size: 14,
                     ),
-                  );
-                },
-              ),
+                  ),
+              ],
             ),
             if (selectedTags.isNotEmpty) ...[
               const SizedBox(height: 12),

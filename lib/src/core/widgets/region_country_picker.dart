@@ -1,4 +1,5 @@
 import 'package:country_code/country_code.dart';
+import 'package:country_picker/country_picker.dart' as country_picker;
 import 'package:country_flags/country_flags.dart' as flags;
 import 'package:flutter/material.dart';
 
@@ -8,25 +9,53 @@ class RegionCountry {
   final int regionCode;
   final String isoCode;
 
-  String get name => _countryNames[isoCode] ?? 'Country / region';
+  /// 完整 ISO 目录来自 country_picker，同时合并后端选项以保留自定义/旧编码。
+  static final List<RegionCountry> all = _buildCatalog();
+
+  String get name => _countryByIso[isoCode]?.name ?? 'Country / region';
 
   String get label => name;
 
   String nameFor(Locale locale) {
-    if (locale.languageCode == 'zh') {
-      return _countryNamesZh[isoCode] ?? '国家/地区';
-    }
-    return name;
+    return country_picker.CountryLocalizations(
+          locale,
+        ).countryName(countryCode: isoCode) ??
+        name;
+  }
+
+  String get phoneCode => _countryByIso[isoCode]?.phoneCode ?? '';
+
+  static List<RegionCountry> _buildCatalog() {
+    return _countryByIso.values
+        .map((country) {
+          final numeric = CountryCode.tryParse(country.countryCode)?.numeric;
+          if (numeric == null || numeric <= 0) return null;
+          return RegionCountry(
+            regionCode: numeric,
+            isoCode: country.countryCode,
+          );
+        })
+        .whereType<RegionCountry>()
+        .toList(growable: false);
   }
 
   static RegionCountry? fromRegionCode(int regionCode) {
     if (regionCode <= 0) return null;
     final country = CountryCode.tryParse('$regionCode');
     final isoCode = country?.alpha2 ?? _dialingCodeFallback[regionCode];
-    if (isoCode == null || isoCode.isEmpty) return null;
+    if (isoCode == null ||
+        isoCode.isEmpty ||
+        !_countryByIso.containsKey(isoCode)) {
+      return null;
+    }
     return RegionCountry(regionCode: regionCode, isoCode: isoCode);
   }
 }
+
+final _countryByIso = <String, country_picker.Country>{
+  for (final country in country_picker.CountryService().getAll())
+    country.countryCode: country,
+};
 
 const _dialingCodeFallback = <int, String>{
   1: 'US',
@@ -58,76 +87,6 @@ const _dialingCodeFallback = <int, String>{
   852: 'HK',
   853: 'MO',
   886: 'TW',
-};
-
-const _countryNames = <String, String>{
-  'AR': 'Argentina',
-  'AU': 'Australia',
-  'BR': 'Brazil',
-  'BS': 'Bahamas',
-  'CA': 'Canada',
-  'CN': 'China',
-  'CO': 'Colombia',
-  'DE': 'Germany',
-  'EG': 'Egypt',
-  'ES': 'Spain',
-  'FR': 'France',
-  'GB': 'United Kingdom',
-  'HN': 'Honduras',
-  'HK': 'Hong Kong',
-  'ID': 'Indonesia',
-  'IN': 'India',
-  'IT': 'Italy',
-  'JP': 'Japan',
-  'KR': 'South Korea',
-  'MO': 'Macao',
-  'MM': 'Myanmar',
-  'MY': 'Malaysia',
-  'MX': 'Mexico',
-  'NZ': 'New Zealand',
-  'PH': 'Philippines',
-  'RU': 'Russia',
-  'SG': 'Singapore',
-  'TH': 'Thailand',
-  'TR': 'Türkiye',
-  'TW': 'Taiwan',
-  'US': 'United States',
-  'VN': 'Vietnam',
-};
-
-const _countryNamesZh = <String, String>{
-  'AR': '阿根廷',
-  'AU': '澳大利亚',
-  'BR': '巴西',
-  'BS': '巴哈马',
-  'CA': '加拿大',
-  'CN': '中国',
-  'CO': '哥伦比亚',
-  'DE': '德国',
-  'EG': '埃及',
-  'ES': '西班牙',
-  'FR': '法国',
-  'GB': '英国',
-  'HN': '洪都拉斯',
-  'HK': '中国香港',
-  'ID': '印度尼西亚',
-  'IN': '印度',
-  'IT': '意大利',
-  'JP': '日本',
-  'KR': '韩国',
-  'MO': '中国澳门',
-  'MM': '缅甸',
-  'MY': '马来西亚',
-  'MX': '墨西哥',
-  'NZ': '新西兰',
-  'PH': '菲律宾',
-  'RU': '俄罗斯',
-  'SG': '新加坡',
-  'TH': '泰国',
-  'TR': '土耳其',
-  'TW': '中国台湾',
-  'US': '美国',
-  'VN': '越南',
 };
 
 class RegionFlag extends StatelessWidget {
@@ -215,23 +174,34 @@ Future<int?> showRegionCountryPicker(
   required int value,
   required List<int> options,
 }) async {
-  final normalized = options.where((item) => item > 0).toSet().toList()..sort();
+  final countriesByIso = <String, RegionCountry>{};
+  for (final regionCode in <int>[value, ...options]) {
+    final country = RegionCountry.fromRegionCode(regionCode);
+    if (country != null) {
+      countriesByIso[country.isoCode] = country;
+    }
+  }
+  for (final country in RegionCountry.all) {
+    countriesByIso.putIfAbsent(country.isoCode, () => country);
+  }
   return showModalBottomSheet<int>(
     context: context,
     isDismissible: true,
     enableDrag: true,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) =>
-        _RegionCountrySheet(value: value, options: normalized),
+    builder: (context) => _RegionCountrySheet(
+      value: value,
+      countries: countriesByIso.values.toList(growable: false),
+    ),
   );
 }
 
 class _RegionCountrySheet extends StatefulWidget {
-  const _RegionCountrySheet({required this.value, required this.options});
+  const _RegionCountrySheet({required this.value, required this.countries});
 
   final int value;
-  final List<int> options;
+  final List<RegionCountry> countries;
 
   @override
   State<_RegionCountrySheet> createState() => _RegionCountrySheetState();
@@ -250,14 +220,13 @@ class _RegionCountrySheetState extends State<_RegionCountrySheet> {
   Widget build(BuildContext context) {
     final query = _controller.text.trim().toUpperCase();
     final locale = Localizations.localeOf(context);
-    final countries = widget.options
-        .map(RegionCountry.fromRegionCode)
-        .whereType<RegionCountry>()
+    final countries = widget.countries
         .where(
           (country) =>
               query.isEmpty ||
               country.isoCode.contains(query) ||
               '${country.regionCode}'.contains(query) ||
+              country.phoneCode.contains(query) ||
               country.nameFor(locale).toUpperCase().contains(query),
         )
         .toList(growable: false);

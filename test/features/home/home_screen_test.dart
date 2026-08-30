@@ -135,7 +135,8 @@ void main() {
     expect(find.textContaining('Live Now'), findsOneWidget);
     expect(find.text('Core Stats'), findsOneWidget);
     expect(find.text('Tier List'), findsAtLeastNWidgets(1));
-    expect(find.byIcon(Icons.live_tv_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.new_releases_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.live_tv_rounded), findsNothing);
     expect(find.byIcon(Icons.workspace_premium_rounded), findsWidgets);
 
     expect(find.text('Trending Heroes'), findsNothing);

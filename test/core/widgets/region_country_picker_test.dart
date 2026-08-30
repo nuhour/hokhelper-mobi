@@ -19,6 +19,11 @@ void main() {
     expect(RegionCountry.fromRegionCode(840)?.label.contains('+'), false);
   });
 
+  test('uses the complete country catalog for the picker', () {
+    expect(RegionCountry.all.length, greaterThanOrEqualTo(200));
+    expect(RegionCountry.fromRegionCode(566)?.label, 'Nigeria');
+  });
+
   testWidgets('country picker does not summon the keyboard automatically', (
     tester,
   ) async {

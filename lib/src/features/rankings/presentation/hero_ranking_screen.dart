@@ -73,7 +73,7 @@ final tierRankingProvider = FutureProvider<List<TierListEntry>>((ref) async {
   final settings = await ref.watch(appSettingsControllerProvider.future);
   return ref
       .watch(rankingsRepositoryProvider)
-      .loadTierList(settings.region.regionId);
+      .loadTierList(settings.region.regionId, source: 'peak_1000');
 });
 
 final tierHistoryProvider = FutureProvider.family<List<TierHistoryPoint>, int>((

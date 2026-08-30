@@ -149,14 +149,10 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
         .where((column) => !column.isIdentity && !column.isSparkline)
         .toList(growable: false);
     final hasSparkline = table.columns.any((column) => column.isSparkline);
-    final showIdentityName = !const {
-      'power_rank',
-      'tier_rank',
-    }.contains(table.dimension);
+    final showIdentityName = table.dimension == 'player_rank';
     final fixedWidth = switch (table.dimension) {
       'player_rank' => 174.0,
-      'power_rank' || 'tier_rank' => 136.0,
-      _ => 164.0,
+      _ => 136.0,
     };
 
     return Padding(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hok_helper_mobile/src/core/i18n/app_localizations.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_image.dart';
+import 'package:hok_helper_mobile/src/core/widgets/app_stats_table.dart';
 import 'package:hok_helper_mobile/src/features/stats/domain/stats_trends.dart';
 import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_screen.dart';
 
@@ -333,10 +334,43 @@ void main() {
 
       final curve = find.byKey(const ValueKey('trend-curve-hero-199'));
       expect(curve, findsOneWidget);
+      expect(find.text('Lam'), findsNothing);
+      expect(
+        tester
+            .widget<AppStatsTable>(find.byType(AppStatsTable))
+            .fixedColumnWidth,
+        136,
+      );
 
       await tester.tap(find.text('Power'));
       await tester.pumpAndSettle();
       expect(find.text('Lam'), findsNothing);
+      expect(
+        tester
+            .widget<AppStatsTable>(find.byType(AppStatsTable))
+            .fixedColumnWidth,
+        136,
+      );
+
+      await tester.tap(find.text('Equipment'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lam'), findsNothing);
+      expect(
+        tester
+            .widget<AppStatsTable>(find.byType(AppStatsTable))
+            .fixedColumnWidth,
+        136,
+      );
+
+      await tester.tap(find.text('Tier'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lam'), findsNothing);
+      expect(
+        tester
+            .widget<AppStatsTable>(find.byType(AppStatsTable))
+            .fixedColumnWidth,
+        136,
+      );
     },
   );
 

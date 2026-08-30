@@ -922,7 +922,11 @@ class _HomeLiveBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.live_tv_rounded, color: AppTheme.gold, size: 17),
+            const Icon(
+              Icons.new_releases_rounded,
+              color: AppTheme.gold,
+              size: 17,
+            ),
             const SizedBox(width: 5),
             Text(
               '${season.isEmpty ? 'S15' : season}  Live Now',

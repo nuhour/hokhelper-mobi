@@ -237,6 +237,23 @@ void main() {
     );
   });
 
+  test(
+    'loads the peak top 1000 tier source when requested by the app',
+    () async {
+      final apiClient = _FakeApiClient();
+      final repository = RankingsRepository(apiClient: apiClient);
+
+      await repository.loadTierList(2, source: 'peak_1000');
+
+      expect(apiClient.getPath, '/ranking/tier-list');
+      expect(apiClient.getQuery, {
+        'region_id': 2,
+        'source': 'peak_1000',
+        'window_days': 999,
+      });
+    },
+  );
+
   test('loads tier history from the web-compatible endpoint', () async {
     final apiClient = _FakeApiClient();
     final repository = RankingsRepository(apiClient: apiClient);

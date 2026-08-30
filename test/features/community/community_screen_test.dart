@@ -921,6 +921,30 @@ void main() {
       find.byKey(const ValueKey('community-create-post-suggested-tags')),
       findsOneWidget,
     );
+    final suggestedTags = find.byKey(
+      const ValueKey('community-create-post-suggested-tags'),
+    );
+    expect(tester.widget<Wrap>(suggestedTags).children, hasLength(10));
+    expect(
+      find.descendant(of: suggestedTags, matching: find.byType(ChoiceChip)),
+      findsNWidgets(10),
+    );
+    expect(
+      find.descendant(of: suggestedTags, matching: find.byType(Scrollable)),
+      findsNothing,
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.descendant(
+              of: suggestedTags,
+              matching: find.text('Ranked Tips'),
+            ),
+          )
+          .style
+          ?.fontSize,
+      11,
+    );
     expect(
       tester.getSize(find.widgetWithText(TextField, 'Content')).height,
       greaterThan(120),
