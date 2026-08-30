@@ -408,12 +408,42 @@ void main() {
           buildSimEditorCatalogProvider.overrideWith((ref) async {
             return const BuildEditorCatalog(
               equips: [
-                BuildEquipSummary(id: 101, name: 'Storm Axe', iconUrl: ''),
+                BuildEquipSummary(
+                  id: 101,
+                  name: 'Storm Axe',
+                  iconUrl: '',
+                  description: 'A heavy axe for frontline fights.',
+                  price: 2500,
+                  level: 3,
+                  effects: [
+                    BuildEquipEffect(effectType: 1, valueType: 1, value: 10),
+                  ],
+                  skills: [
+                    {'name': 'Cleave', 'description': 'Deals bonus damage.'},
+                  ],
+                  passiveSkills: ['Battle Ready'],
+                ),
                 BuildEquipSummary(id: 102, name: 'Swift Boots', iconUrl: ''),
               ],
-              runes: [BuildRuneSummary(id: 201, name: 'Fate', color: 1)],
+              runes: [
+                BuildRuneSummary(
+                  id: 201,
+                  name: 'Fate',
+                  color: 1,
+                  description: 'Attack speed scales with level.',
+                  effects: [
+                    BuildRuneEffect(effectType: 18, valueType: 2, value: 10000),
+                  ],
+                ),
+              ],
               summonerSkills: [
-                BuildSummonerSkillSummary(id: 12, name: 'Smite', iconUrl: ''),
+                BuildSummonerSkillSummary(
+                  id: 12,
+                  name: 'Smite',
+                  iconUrl: '',
+                  description: 'Deals true damage to a nearby monster.',
+                  cooldown: 8000,
+                ),
               ],
             );
           }),
@@ -436,6 +466,15 @@ void main() {
     expect(find.text('Spells'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Mobile burst');
+    await tester.longPress(find.bySemanticsLabel('Storm Axe'));
+    await tester.pumpAndSettle();
+    expect(find.text('A heavy axe for frontline fights.'), findsOneWidget);
+    expect(find.text('Price: 2500'), findsOneWidget);
+    expect(find.text('+10 Physical Attack'), findsOneWidget);
+    expect(find.textContaining('Cleave'), findsOneWidget);
+    await tester.tapAt(const Offset(1, 1));
+    await tester.pumpAndSettle();
+
     await tester.ensureVisible(find.bySemanticsLabel('Storm Axe'));
     await tester.tap(find.bySemanticsLabel('Storm Axe'));
     await tester.ensureVisible(find.bySemanticsLabel('Swift Boots'));
@@ -447,7 +486,18 @@ void main() {
     expect(find.text('Red'), findsOneWidget);
     expect(find.text('0/10'), findsOneWidget);
     expect(find.byTooltip('Empty arcana slot'), findsNWidgets(30));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('arcana-level-3')),
+    );
     await tester.tap(find.byKey(const ValueKey('arcana-level-3')));
+    await tester.pump();
+    await tester.longPress(find.text('Fate'));
+    await tester.pumpAndSettle();
+    expect(find.text('Selected level: L3'), findsOneWidget);
+    expect(find.text('+0.6% Attack Speed'), findsOneWidget);
+    await tester.tapAt(const Offset(1, 1));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const ValueKey('arcana-plus-201')));
     await tester.pump();
     expect(find.text('1/10'), findsOneWidget);
@@ -458,6 +508,13 @@ void main() {
     expect(find.text('1/30 ARCANA'), findsOneWidget);
     await tester.tap(find.text('Spells'));
     await tester.pump(const Duration(milliseconds: 200));
+    await tester.longPress(find.text('Smite'));
+    await tester.pumpAndSettle();
+    expect(find.text('Deals true damage to a nearby monster.'), findsOneWidget);
+    expect(find.text('Cooldown: 8s'), findsOneWidget);
+    await tester.tapAt(const Offset(1, 1));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Smite'));
     await tester.pump();
     await tester.tap(find.byTooltip('Save build'));

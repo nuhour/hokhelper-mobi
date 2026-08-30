@@ -1628,7 +1628,7 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                       key: ValueKey('selected-equip-$equipId'),
                       width: _BuildEquipmentSlots.itemWidth,
                       height: _BuildEquipmentSlots.itemHeight,
-                      // 不包 Tooltip：长按手势要留给拖拽排序使用。
+                      // 长按槽位继续用于拖拽排序；装备详情从下方目录长按查看。
                       child: ReorderableDelayedDragStartListener(
                         index: index,
                         child: Stack(
@@ -1721,6 +1721,19 @@ class _BuildEquipmentWorkspace extends StatelessWidget {
                       imageUrl: equip.iconUrl,
                       selected: selected,
                       onTap: () => onToggle(equip.id),
+                      onLongPress: () => _showBuildAssetDetails(
+                        context: context,
+                        title: equip.name,
+                        iconUrl: equip.iconUrl,
+                        lines: _equipmentDetailLines(
+                          equip,
+                          Localizations.localeOf(context).languageCode,
+                        ),
+                      ),
+                      tooltipMessage: _equipmentDetailsText(
+                        equip,
+                        Localizations.localeOf(context).languageCode,
+                      ),
                       showLabel: false,
                     );
                   },
@@ -2487,109 +2500,115 @@ class _ArcanaRuneRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _arcanaAccent(rune.color);
-    return Material(
-      color: count > 0
-          ? accent.withValues(alpha: 0.1)
-          : context.hokTheme.surfaceSlate,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onLongPress: () => _showArcanaDetails(context, rune, selectedLevel),
+    final languageCode = Localizations.localeOf(context).languageCode;
+    return Tooltip(
+      message: _runeDetailsText(rune, selectedLevel, languageCode),
+      preferBelow: false,
+      triggerMode: TooltipTriggerMode.manual,
+      child: Material(
+        color: count > 0
+            ? accent.withValues(alpha: 0.1)
+            : context.hokTheme.surfaceSlate,
         borderRadius: BorderRadius.circular(10),
-        child: Container(
-          height: 52,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: count > 0
-                  ? accent.withValues(alpha: 0.42)
-                  : context.hokTheme.outlineSoft,
-            ),
-          ),
-          child: Row(
-            children: [
-              AppImage(
-                url: rune.iconUrl,
-                width: 34,
-                height: 34,
-                borderRadius: 7,
-                semanticLabel: rune.name,
+        child: InkWell(
+          onLongPress: () => _showArcanaDetails(context, rune, selectedLevel),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: count > 0
+                    ? accent.withValues(alpha: 0.42)
+                    : context.hokTheme.outlineSoft,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      rune.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: context.hokTheme.onSurfaceStrong,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (rune.description.isNotEmpty)
+            ),
+            child: Row(
+              children: [
+                AppImage(
+                  url: rune.iconUrl,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 7,
+                  semanticLabel: rune.name,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        rune.description.replaceAll('\n', ' · '),
+                        rune.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: context.hokTheme.onSurfaceMuted,
-                          fontSize: 8,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Container(
-                height: 30,
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                decoration: BoxDecoration(
-                  color: context.hokTheme.backgroundDeep,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: context.hokTheme.outlineSoft),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      key: ValueKey('arcana-minus-${rune.id}'),
-                      onPressed: onDecrease,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 28,
-                        height: 28,
-                      ),
-                      icon: const Icon(Icons.remove, size: 15),
-                    ),
-                    SizedBox(
-                      width: 22,
-                      child: Text(
-                        '$count',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
                           color: context.hokTheme.onSurfaceStrong,
                           fontSize: 11,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    ),
-                    IconButton(
-                      key: ValueKey('arcana-plus-${rune.id}'),
-                      onPressed: canAdd ? onIncrease : null,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 28,
-                        height: 28,
-                      ),
-                      icon: const Icon(Icons.add, size: 15),
-                    ),
-                  ],
+                      if (rune.description.isNotEmpty)
+                        Text(
+                          rune.description.replaceAll('\n', ' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.hokTheme.onSurfaceMuted,
+                            fontSize: 8,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Container(
+                  height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: context.hokTheme.backgroundDeep,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: context.hokTheme.outlineSoft),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: ValueKey('arcana-minus-${rune.id}'),
+                        onPressed: onDecrease,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 28,
+                          height: 28,
+                        ),
+                        icon: const Icon(Icons.remove, size: 15),
+                      ),
+                      SizedBox(
+                        width: 22,
+                        child: Text(
+                          '$count',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: context.hokTheme.onSurfaceStrong,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        key: ValueKey('arcana-plus-${rune.id}'),
+                        onPressed: canAdd ? onIncrease : null,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 28,
+                          height: 28,
+                        ),
+                        icon: const Icon(Icons.add, size: 15),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -2623,7 +2642,8 @@ class _ArcanaOverview extends StatelessWidget {
         stats[effect.effectType] = _ArcanaStat(
           value: (current?.value ?? 0) + effect.value * (level / 5),
           valueType: effect.valueType == 0
-              ? (current?.valueType ?? 1)
+              ? (current?.valueType ??
+                    _defaultBuildEffectValueType(effect.effectType))
               : effect.valueType,
         );
       }
@@ -2783,70 +2803,325 @@ String _formatArcanaEffect(_ArcanaStat stat) {
   return stat.valueType == 2 ? '$text%' : text;
 }
 
+List<String> _equipmentDetailLines(
+  BuildEquipSummary equip,
+  String languageCode,
+) {
+  final lines = <String>[];
+  if (equip.price > 0) {
+    lines.add('Price: ${equip.price}');
+  }
+  if (equip.level > 0) {
+    lines.add('Level: ${equip.level}');
+  }
+
+  final description = _cleanBuildDescription(equip.description);
+  if (description.isNotEmpty) {
+    lines.add(description);
+  }
+
+  for (final effect in equip.effects) {
+    final valueType = _defaultBuildEffectValueType(
+      effect.effectType,
+      effect.valueType,
+    );
+    final value = _formatBuildEffectValue(effect.value, valueType);
+    final name = _equipEffectName(effect.effectType, languageCode);
+    lines.add('+$value $name');
+  }
+  lines.addAll(_rawBuildDetailLines('Skill', equip.skills));
+  lines.addAll(_rawBuildDetailLines('Passive', equip.passiveSkills));
+  return lines;
+}
+
+String _equipmentDetailsText(BuildEquipSummary equip, String languageCode) {
+  return _assetDetailsText(
+    equip.name,
+    _equipmentDetailLines(equip, languageCode),
+  );
+}
+
+List<String> _skillDetailLines(BuildSummonerSkillSummary skill) {
+  final lines = <String>[];
+  final description = _cleanBuildDescription(skill.description);
+  if (description.isNotEmpty) {
+    lines.add(description);
+  }
+  if (skill.cooldown > 0) {
+    lines.add('Cooldown: ${_formatBuildCooldown(skill.cooldown)}');
+  }
+  return lines;
+}
+
+String _skillDetailsText(BuildSummonerSkillSummary skill) {
+  return _assetDetailsText(skill.name, _skillDetailLines(skill));
+}
+
+List<String> _runeDetailLines(
+  BuildRuneSummary rune,
+  int selectedLevel,
+  String languageCode,
+) {
+  final lines = <String>[
+    'Color: ${_arcanaColorName(rune.color)}',
+    'Selected level: L$selectedLevel',
+  ];
+  final description = _cleanBuildDescription(rune.description);
+  if (description.isNotEmpty) {
+    lines.add(description);
+  }
+  for (final effect in rune.effects) {
+    final valueType = _defaultBuildEffectValueType(
+      effect.effectType,
+      effect.valueType,
+    );
+    final value = _formatBuildEffectValue(
+      effect.value * (selectedLevel / 5),
+      valueType,
+    );
+    final name = _arcanaEffectName(effect.effectType, languageCode);
+    lines.add('+$value $name');
+  }
+  return lines;
+}
+
+String _runeDetailsText(
+  BuildRuneSummary rune,
+  int selectedLevel,
+  String languageCode,
+) {
+  return _assetDetailsText(
+    rune.name,
+    _runeDetailLines(rune, selectedLevel, languageCode),
+  );
+}
+
+String _assetDetailsText(String title, List<String> lines) {
+  return <String>[
+    title,
+    ...lines,
+  ].where((line) => line.trim().isNotEmpty).join('\n');
+}
+
+String _cleanBuildDescription(String value) {
+  return value
+      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'<color=[^>]*>'), '')
+      .replaceAll(RegExp(r'</?color>'), '')
+      .replaceAll(RegExp(r'<[^>]+>'), '')
+      .replaceAll('\\n', '\n')
+      .replaceAll('\r\n', '\n')
+      .trim();
+}
+
+List<String> _rawBuildDetailLines(String label, List<Object?> values) {
+  final lines = <String>[];
+  for (final value in values) {
+    final text = _formatRawBuildDetail(value);
+    if (text.isNotEmpty) {
+      lines.add('$label: $text');
+    }
+  }
+  return lines;
+}
+
+String _formatRawBuildDetail(Object? value) {
+  if (value == null) {
+    return '';
+  }
+  if (value is String) {
+    return _cleanBuildDescription(value);
+  }
+  if (value is num || value is bool) {
+    return value.toString();
+  }
+  if (value is Map) {
+    return value.entries
+        .map((entry) {
+          final detail = _formatRawBuildDetail(entry.value);
+          if (detail.isEmpty) return '';
+          return '${_humanizeBuildKey(entry.key.toString())}: $detail';
+        })
+        .where((entry) => entry.isNotEmpty)
+        .join(', ');
+  }
+  if (value is Iterable) {
+    return value
+        .map(_formatRawBuildDetail)
+        .where((entry) => entry.isNotEmpty)
+        .join(', ');
+  }
+  return _cleanBuildDescription(value.toString());
+}
+
+String _humanizeBuildKey(String key) {
+  final spaced = key
+      .replaceAll(RegExp(r'([a-z])([A-Z])'), r'$1 $2')
+      .replaceAll('_', ' ')
+      .replaceAll('-', ' ');
+  if (spaced.isEmpty) return spaced;
+  return '${spaced[0].toUpperCase()}${spaced.substring(1)}';
+}
+
+String _formatBuildEffectValue(double value, int valueType) {
+  final converted = switch (valueType) {
+    2 => value / 10000,
+    3 || 4 => value / 100,
+    _ => value,
+  };
+  final text = converted == converted.roundToDouble()
+      ? converted.toStringAsFixed(0)
+      : converted.toStringAsFixed(1);
+  return valueType == 2 ? '$text%' : text;
+}
+
+int _defaultBuildEffectValueType(int effectType, [int valueType = 0]) {
+  if (valueType > 0) return valueType;
+  return switch (effectType) {
+    6 || 9 || 10 || 12 || 18 || 19 => 2,
+    15 => 3,
+    _ => 1,
+  };
+}
+
+String _formatBuildCooldown(int milliseconds) {
+  final seconds = milliseconds / 1000;
+  final text = seconds == seconds.roundToDouble()
+      ? seconds.toStringAsFixed(0)
+      : seconds.toStringAsFixed(1);
+  return '${text}s';
+}
+
+String _equipEffectName(int type, String languageCode) {
+  const names = <int, ({String en, String zh, String id})>{
+    1: (en: 'Physical Attack', zh: '物理攻击', id: 'Serangan Fisik'),
+    2: (en: 'Magical Attack', zh: '法术攻击', id: 'Serangan Magis'),
+    3: (en: 'Physical Defense', zh: '物理防御', id: 'Pertahanan Fisik'),
+    4: (en: 'Magical Defense', zh: '法术防御', id: 'Pertahanan Magis'),
+    5: (en: 'Max Health', zh: '最大生命', id: 'HP Maks'),
+    6: (en: 'Critical Rate', zh: '暴击率', id: 'Critical Rate'),
+    9: (en: 'Physical Lifesteal', zh: '物理吸血', id: 'Lifesteal Fisik'),
+    15: (en: 'Movement Speed', zh: '移速', id: 'Kecepatan Gerakan'),
+    18: (en: 'Attack Speed', zh: '攻速', id: 'Kecepatan Serangan'),
+    19: (en: 'Cooldown Reduction', zh: '冷却缩减', id: 'Reduksi Cooldown'),
+    100: (en: 'Mana', zh: '法力值', id: 'Mana'),
+  };
+  final name = names[type];
+  if (name == null) return 'Effect $type';
+  if (languageCode == 'zh') return name.zh;
+  if (languageCode == 'id') return name.id;
+  return name.en;
+}
+
 Future<void> _showArcanaDetails(
   BuildContext context,
   BuildRuneSummary rune,
   int selectedLevel,
 ) {
+  return _showBuildAssetDetails(
+    context: context,
+    title: rune.name,
+    iconUrl: rune.iconUrl,
+    lines: _runeDetailLines(
+      rune,
+      selectedLevel,
+      Localizations.localeOf(context).languageCode,
+    ),
+  );
+}
+
+Future<void> _showBuildAssetDetails({
+  required BuildContext context,
+  required String title,
+  required String iconUrl,
+  required List<String> lines,
+}) {
+  final visibleLines = lines
+      .map(_cleanBuildDescription)
+      .where((line) => line.isNotEmpty)
+      .toList(growable: false);
   return showModalBottomSheet<void>(
     context: context,
     isDismissible: true,
     enableDrag: true,
+    isScrollControlled: true,
     backgroundColor: context.hokTheme.surfaceSlate,
     showDragHandle: true,
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppImage(
-              url: rune.iconUrl,
-              width: 54,
-              height: 54,
-              borderRadius: 10,
-              semanticLabel: rune.name,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rune.name,
-                    style: TextStyle(
-                      color: context.hokTheme.onSurfaceStrong,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
+    builder: (sheetContext) {
+      final theme = sheetContext.hokTheme;
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppImage(
+                      url: iconUrl,
+                      width: 58,
+                      height: 58,
+                      borderRadius: 12,
+                      semanticLabel: title,
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Selected level: L$selectedLevel',
-                    style: const TextStyle(
-                      color: AppTheme.gold,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                    ),
-                  ),
-                  if (rune.description.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      rune.description,
-                      style: TextStyle(
-                        color: context.hokTheme.onSurfaceMuted,
-                        height: 1.4,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          title,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: theme.onSurfaceStrong,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 17,
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                if (visibleLines.isEmpty)
+                  Text(
+                    'No additional details available.',
+                    style: TextStyle(color: theme.onSurfaceMuted, height: 1.4),
+                  )
+                else
+                  for (final line in visibleLines)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 7),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.backgroundDeep.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: theme.outlineSoft),
+                      ),
+                      child: Text(
+                        line,
+                        style: TextStyle(
+                          color: theme.onSurfaceMuted,
+                          height: 1.4,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
@@ -2897,6 +3172,13 @@ class _BuildSkillWorkspace extends StatelessWidget {
               imageUrl: skill.iconUrl,
               selected: selectedId == skill.id,
               onTap: () => onSelected(skill.id),
+              onLongPress: () => _showBuildAssetDetails(
+                context: context,
+                title: skill.name,
+                iconUrl: skill.iconUrl,
+                lines: _skillDetailLines(skill),
+              ),
+              tooltipMessage: _skillDetailsText(skill),
             );
           },
         );
@@ -2911,6 +3193,8 @@ class _BuildCatalogAsset extends StatelessWidget {
     required this.imageUrl,
     required this.selected,
     required this.onTap,
+    this.onLongPress,
+    this.tooltipMessage,
     this.showLabel = true,
   });
 
@@ -2918,14 +3202,21 @@ class _BuildCatalogAsset extends StatelessWidget {
   final String imageUrl;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? tooltipMessage;
   final bool showLabel;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: label,
+      message: tooltipMessage ?? label,
+      preferBelow: false,
+      triggerMode: onLongPress == null
+          ? TooltipTriggerMode.longPress
+          : TooltipTriggerMode.manual,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(10),
         child: Column(
           children: [

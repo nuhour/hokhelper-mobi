@@ -131,6 +131,18 @@ class _FakeApiClient extends ApiClient {
               'equip_id': 101,
               'name': 'Storm Axe',
               'icon': 'https://example.test/storm.png',
+              'description': 'A heavy axe for frontline fights.',
+              'price': 2500,
+              'equip_type': 1,
+              'equip_level': 3,
+              'pre_equip_ids': [11],
+              'equip_effects': [
+                {'effect_type': 1, 'value_type': 1, 'value': 10},
+              ],
+              'equip_skills': [
+                {'name': 'Cleave', 'description': 'Deals bonus damage.'},
+              ],
+              'passive_skills': ['Battle Ready'],
             },
           ],
         },
@@ -145,6 +157,9 @@ class _FakeApiClient extends ApiClient {
               'skill_id': 12,
               'name': 'Smite',
               'icon': 'https://example.test/smite.png',
+              'description': 'Deals true damage to a nearby monster.',
+              'cooldown': 8000,
+              'video_url': 'https://example.test/smite.mp4',
             },
           ],
         },
@@ -325,6 +340,17 @@ void main() {
     ]);
     expect(equips.single.id, 101);
     expect(equips.single.name, 'Storm Axe');
+    expect(equips.single.description, 'A heavy axe for frontline fights.');
+    expect(equips.single.price, 2500);
+    expect(equips.single.level, 3);
+    expect(equips.single.preEquipIds, [11]);
+    expect(equips.single.effects.single.effectType, 1);
+    expect(equips.single.effects.single.value, 10);
+    expect(equips.single.skills.single, {
+      'name': 'Cleave',
+      'description': 'Deals bonus damage.',
+    });
+    expect(equips.single.passiveSkills.single, 'Battle Ready');
   });
 
   test('loads summoner skills with backend region filters', () async {
@@ -340,6 +366,9 @@ void main() {
     ]);
     expect(skills.single.id, 12);
     expect(skills.single.name, 'Smite');
+    expect(skills.single.description, 'Deals true damage to a nearby monster.');
+    expect(skills.single.cooldown, 8000);
+    expect(skills.single.videoUrl, 'https://example.test/smite.mp4');
   });
 
   test('loads the complete rune catalog with backend region filter', () async {

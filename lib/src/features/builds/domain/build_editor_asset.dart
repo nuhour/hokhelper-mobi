@@ -16,12 +16,26 @@ class BuildEquipSummary {
     required this.name,
     required this.iconUrl,
     this.category = '',
+    this.description = '',
+    this.price = 0,
+    this.level = 0,
+    this.preEquipIds = const [],
+    this.effects = const [],
+    this.skills = const [],
+    this.passiveSkills = const [],
   });
 
   final int id;
   final String name;
   final String iconUrl;
   final String category;
+  final String description;
+  final int price;
+  final int level;
+  final List<int> preEquipIds;
+  final List<BuildEquipEffect> effects;
+  final List<Object?> skills;
+  final List<Object?> passiveSkills;
 
   factory BuildEquipSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -38,6 +52,44 @@ class BuildEquipSummary {
       category: _readString(
         map['category'] ?? map['type'] ?? map['equip_type'] ?? map['function'],
       ).toLowerCase(),
+      description: _readString(
+        map['description'] ?? map['desc'] ?? map['equip_desc'],
+      ),
+      price: _readInt(map['price']),
+      level: _readInt(map['equip_level'] ?? map['level']),
+      preEquipIds: _readList(
+        map['pre_equip_ids'] ?? map['preEquipIds'],
+      ).map(_readInt).where((id) => id > 0).toList(growable: false),
+      effects: _readList(
+        map['equip_effects'] ?? map['effects'],
+      ).map(BuildEquipEffect.fromJson).toList(growable: false),
+      skills: _readList(
+        map['equip_skills'] ?? map['skills'],
+      ).toList(growable: false),
+      passiveSkills: _readList(
+        map['passive_skills'] ?? map['passiveSkills'],
+      ).toList(growable: false),
+    );
+  }
+}
+
+class BuildEquipEffect {
+  const BuildEquipEffect({
+    required this.effectType,
+    required this.valueType,
+    required this.value,
+  });
+
+  final int effectType;
+  final int valueType;
+  final double value;
+
+  factory BuildEquipEffect.fromJson(Object? json) {
+    final map = json is Map ? json : const <String, Object?>{};
+    return BuildEquipEffect(
+      effectType: _readInt(map['effectType'] ?? map['effect_type']),
+      valueType: _readInt(map['valueType'] ?? map['value_type']),
+      value: _readDouble(map['value']),
     );
   }
 }
@@ -47,11 +99,17 @@ class BuildSummonerSkillSummary {
     required this.id,
     required this.name,
     required this.iconUrl,
+    this.description = '',
+    this.cooldown = 0,
+    this.videoUrl = '',
   });
 
   final int id;
   final String name;
   final String iconUrl;
+  final String description;
+  final int cooldown;
+  final String videoUrl;
 
   factory BuildSummonerSkillSummary.fromJson(Object? json) {
     final map = json is Map ? json : const <String, Object?>{};
@@ -65,6 +123,11 @@ class BuildSummonerSkillSummary {
         kind: 'summoner_skill',
         id: id,
       ),
+      description: _readString(
+        map['description'] ?? map['desc'] ?? map['skill_desc'],
+      ),
+      cooldown: _readInt(map['cooldown']),
+      videoUrl: _readString(map['video_url'] ?? map['videoUrl']),
     );
   }
 }
