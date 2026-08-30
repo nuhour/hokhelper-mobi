@@ -205,7 +205,7 @@ class _ShareTarget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: color.withValues(alpha: 0.25)),
                 ),
-                child: icon,
+                child: Center(child: icon),
               ),
               const SizedBox(height: 6),
               Text(

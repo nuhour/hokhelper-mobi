@@ -425,6 +425,8 @@ class _TierListSchemeDetailScreenState
         _hydratedSchemeId = null;
         _isSaving = false;
       });
+      ref.read(tierListLastSavedSchemeProvider.notifier).state = saved;
+      ref.invalidate(tierListToolSchemesProvider);
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(const SnackBar(content: Text('Tier list saved')));

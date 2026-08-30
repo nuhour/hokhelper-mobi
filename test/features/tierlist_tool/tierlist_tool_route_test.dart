@@ -18,13 +18,14 @@ class _FakeTierListToolRepository extends TierListToolRepository {
   _FakeTierListToolRepository() : super(apiClient: _NoopApiClient());
 
   TierListSchemeSummary? savedScheme;
+  TierListSchemeSummary? responseAfterSave;
 
   @override
   Future<TierListSchemeSummary> updateScheme(
     TierListSchemeSummary scheme,
   ) async {
     savedScheme = scheme;
-    return scheme;
+    return responseAfterSave ?? scheme;
   }
 }
 
@@ -564,6 +565,91 @@ void main() {
     expect(repository.savedScheme!.name, 'My Jungle Meta');
     expect(repository.savedScheme!.rows.single.label, 'S');
     expect(repository.savedScheme!.rows.single.color, 'bg-blue-500');
+  });
+
+  testWidgets('refreshes tier counts on the card after saving the editor', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final repository = _FakeTierListToolRepository()
+      ..responseAfterSave = const TierListSchemeSummary(
+        id: '42',
+        name: 'Saved Tier List',
+        createdAt: '2026-07-02T08:00:00Z',
+        updatedAt: '2026-07-05T12:00:00Z',
+        rows: [
+          TierListSchemeRowSummary(
+            id: 'r1',
+            label: 'T0',
+            color: 'bg-red-600',
+            heroCount: 4,
+            heroIds: [101, 102, 103, 104],
+          ),
+        ],
+      );
+    var listLoads = 0;
+    final oldScheme = const TierListSchemeSummary(
+      id: '42',
+      name: 'Editable Tier List',
+      createdAt: '2026-07-02T08:00:00Z',
+      updatedAt: '2026-07-04T12:00:00Z',
+      rows: [
+        TierListSchemeRowSummary(
+          id: 'r1',
+          label: 'T0',
+          color: 'bg-red-600',
+          heroCount: 1,
+          heroIds: [101],
+        ),
+      ],
+    );
+    final router = createAppRouter();
+    router.go('/tools/tier-list');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tierListToolRepositoryProvider.overrideWithValue(repository),
+          tierListToolSchemesProvider.overrideWith((ref) async {
+            listLoads += 1;
+            return listLoads == 1
+                ? [oldScheme]
+                : [repository.responseAfterSave!];
+          }),
+          tierListSchemeDetailProvider('42').overrideWith((ref) async {
+            return oldScheme;
+          }),
+        ],
+        child: HokHelperApp(router: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('tier-list-row-count-r1')))
+          .data,
+      '1',
+    );
+    await tester.tap(find.text('Editable Tier List'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('tier-list-save-changes-top')));
+    await tester.pumpAndSettle();
+
+    expect(router.routeInformationProvider.value.uri.path, '/tools/tier-list');
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('tier-list-row-count-r1')))
+          .data,
+      '4',
+    );
+    expect(listLoads, greaterThanOrEqualTo(2));
   });
 
   testWidgets('tier list fullscreen editor exports the board image', (

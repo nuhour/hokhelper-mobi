@@ -23,6 +23,11 @@ final tierListToolSchemesProvider = FutureProvider<List<TierListSchemeSummary>>(
   },
 );
 
+// 详情页保存后先把服务端返回的方案同步给列表卡片，避免等待列表请求期间继续展示旧数字。
+final tierListLastSavedSchemeProvider = StateProvider<TierListSchemeSummary?>(
+  (ref) => null,
+);
+
 class TierListToolScreen extends ConsumerStatefulWidget {
   const TierListToolScreen({super.key});
 
@@ -94,6 +99,7 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(tierListToolSchemesProvider);
+    final latestSavedScheme = ref.watch(tierListLastSavedSchemeProvider);
     final l10n = AppLocalizations.of(context);
 
     return AppAsyncView<List<TierListSchemeSummary>>(
@@ -101,8 +107,12 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
       retry: () => ref.invalidate(tierListToolSchemesProvider),
       data: (schemes) {
         final visibleSchemes = [
-          ...(_localSchemes ?? schemes),
-          ..._extraSchemes,
+          ...(_localSchemes ?? schemes).map(
+            (scheme) => _latestSavedVersion(scheme, latestSavedScheme),
+          ),
+          ..._extraSchemes.map(
+            (scheme) => _latestSavedVersion(scheme, latestSavedScheme),
+          ),
         ];
         final hasMore = !_reachedEnd && schemes.length >= _schemesPageSize;
         return RefreshIndicator(
@@ -267,6 +277,15 @@ class _TierListToolScreenState extends ConsumerState<TierListToolScreen> {
       }
     }
   }
+}
+
+TierListSchemeSummary _latestSavedVersion(
+  TierListSchemeSummary scheme,
+  TierListSchemeSummary? latestSavedScheme,
+) {
+  return latestSavedScheme != null && latestSavedScheme.id == scheme.id
+      ? latestSavedScheme
+      : scheme;
 }
 
 class _TierListCreateSheet extends StatefulWidget {
@@ -478,6 +497,7 @@ class _RowPreview extends StatelessWidget {
               SizedBox(
                 width: 18,
                 child: Text(
+                  key: ValueKey('tier-list-row-count-${row.id}'),
                   '${row.heroCount}',
                   textAlign: TextAlign.end,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
