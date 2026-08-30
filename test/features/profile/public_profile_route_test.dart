@@ -336,7 +336,7 @@ void main() {
     expect(clipboardCall, isNotNull);
     expect(clipboardCall!.arguments, {
       'text':
-          'Lam\n\nhttps://hokhelper.com/profile/42\n\nContent from HOK Helper',
+          'Lam\n\nhttps://hokhelper.com/profile/42\n\nSee more on HOK Helper',
     });
     expect(find.text('Link copied'), findsOneWidget);
   });

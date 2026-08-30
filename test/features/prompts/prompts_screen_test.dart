@@ -546,7 +546,7 @@ void main() {
 
     expect(clipboardCall?.arguments, {
       'text':
-          'Cyber skin concept\n\nhttps://hokhelper.com/tools/prompts?promptId=7\n\nContent from HOK Helper',
+          'Cyber skin concept\n\nhttps://hokhelper.com/tools/prompts?promptId=7\n\nSee more on HOK Helper',
     });
     expect(find.text('Link copied'), findsOneWidget);
   });

@@ -321,7 +321,7 @@ void main() {
     expect(clipboardCall, isNotNull);
     expect(clipboardCall!.arguments, {
       'text':
-          'Best jungle rotation\n\nhttps://hokhelper.com/community/post/99\n\nContent from HOK Helper',
+          'Best jungle rotation\n\nhttps://hokhelper.com/community/post/99\n\nSee more on HOK Helper',
     });
     expect(find.text('Link copied'), findsOneWidget);
   });
