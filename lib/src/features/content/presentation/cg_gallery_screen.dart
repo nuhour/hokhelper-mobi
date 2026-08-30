@@ -1069,7 +1069,7 @@ class _CgCommentOrderSelector extends StatelessWidget {
   }
 }
 
-class _CgDetailContent extends StatelessWidget {
+class _CgDetailContent extends StatefulWidget {
   const _CgDetailContent({
     required this.detail,
     required this.viewCount,
@@ -1087,53 +1087,80 @@ class _CgDetailContent extends StatelessWidget {
   final ValueChanged<double> onRate;
 
   @override
+  State<_CgDetailContent> createState() => _CgDetailContentState();
+}
+
+class _CgDetailContentState extends State<_CgDetailContent> {
+  var _isVideoOpen = false;
+
+  @override
+  void didUpdateWidget(covariant _CgDetailContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.detail.playUrl != widget.detail.playUrl) {
+      _isVideoOpen = false;
+    }
+  }
+
+  void _openVideo() {
+    final uri = Uri.tryParse(widget.detail.playUrl.trim());
+    if (uri == null || !uri.hasScheme) {
+      AppNotice.failure(context);
+      return;
+    }
+    setState(() => _isVideoOpen = true);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final detail = widget.detail;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
-          child: InkWell(
+        if (_isVideoOpen)
+          AppVideoPlayerView(
+            key: ValueKey(detail.playUrl),
+            url: Uri.parse(detail.playUrl.trim()),
+            title: detail.title,
             borderRadius: BorderRadius.circular(18),
-            onTap: detail.playUrl.isEmpty
-                ? null
-                : () => showAppVideoPlayer(
-                    context,
-                    url: detail.playUrl,
-                    title: detail.title,
+          )
+        else
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: detail.playUrl.isEmpty ? null : _openVideo,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AppImage(
+                    url: detail.coverUrl,
+                    width: double.infinity,
+                    height: 210,
+                    borderRadius: 18,
+                    semanticLabel: detail.title,
                   ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                AppImage(
-                  url: detail.coverUrl,
-                  width: double.infinity,
-                  height: 210,
-                  borderRadius: 18,
-                  semanticLabel: detail.title,
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.56),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.32),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.56),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.32),
+                      ),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Icon(
+                        Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 34,
+                      ),
                     ),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Icon(
-                      Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 34,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 16),
         Text(
           detail.heroName,
@@ -1155,20 +1182,24 @@ class _CgDetailContent extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [_DetailChip(label: '${_compact(viewCount)} views')],
+          children: [_DetailChip(label: '${_compact(widget.viewCount)} views')],
         ),
         const SizedBox(height: 14),
-        AppRatingStars(rating: rating, ratingCount: ratingCount, size: 18),
+        AppRatingStars(
+          rating: widget.rating,
+          ratingCount: widget.ratingCount,
+          size: 18,
+        ),
         const SizedBox(height: 14),
-        _CgRatingControl(rating: rating, isRating: isRating, onRate: onRate),
-        if (detail.playUrl.isNotEmpty) ...[
+        _CgRatingControl(
+          rating: widget.rating,
+          isRating: widget.isRating,
+          onRate: widget.onRate,
+        ),
+        if (detail.playUrl.isNotEmpty && !_isVideoOpen) ...[
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () => showAppVideoPlayer(
-              context,
-              url: detail.playUrl,
-              title: detail.title,
-            ),
+            onPressed: _openVideo,
             icon: const Icon(Icons.play_circle_outline, size: 18),
             label: const Text('Play video'),
           ),

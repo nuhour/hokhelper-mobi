@@ -301,7 +301,7 @@ void main() {
     );
   });
 
-  testWidgets('cg detail video opens in an in-app player panel', (
+  testWidgets('cg detail video starts inline without a second player panel', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(800, 1200);
@@ -355,6 +355,8 @@ void main() {
     await tester.pump();
 
     expect(router.routeInformationProvider.value.uri.path, '/cg/501');
-    expect(find.byType(AppVideoPlayerSheet), findsOneWidget);
+    expect(find.byType(AppVideoPlayerSheet), findsNothing);
+    expect(find.byType(AppVideoPlayerView), findsOneWidget);
+    expect(find.text('Play video'), findsNothing);
   });
 }

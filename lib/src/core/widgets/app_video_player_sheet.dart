@@ -24,7 +24,7 @@ Future<void> showAppVideoPlayer(
   );
 }
 
-class AppVideoPlayerSheet extends StatefulWidget {
+class AppVideoPlayerSheet extends StatelessWidget {
   const AppVideoPlayerSheet({
     required this.url,
     required this.title,
@@ -35,10 +35,72 @@ class AppVideoPlayerSheet extends StatefulWidget {
   final String title;
 
   @override
-  State<AppVideoPlayerSheet> createState() => _AppVideoPlayerSheetState();
+  Widget build(BuildContext context) {
+    final displayTitle = title.trim().isEmpty ? 'Video player' : title;
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+      backgroundColor: context.hokTheme.surfaceSlate,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 8, 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.play_circle_outline, color: AppTheme.gold),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: context.hokTheme.onSurfaceStrong,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close video',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            AppVideoPlayerView(url: url, title: title),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _AppVideoPlayerSheetState extends State<AppVideoPlayerSheet> {
+/// 内嵌视频播放器，既可放在详情页，也可被弹层复用。
+class AppVideoPlayerView extends StatefulWidget {
+  const AppVideoPlayerView({
+    required this.url,
+    required this.title,
+    this.autoPlay = true,
+    this.borderRadius = BorderRadius.zero,
+    super.key,
+  });
+
+  final Uri url;
+  final String title;
+  final bool autoPlay;
+  final BorderRadius borderRadius;
+
+  @override
+  State<AppVideoPlayerView> createState() => _AppVideoPlayerViewState();
+}
+
+class _AppVideoPlayerViewState extends State<AppVideoPlayerView> {
   late final VideoPlayerController _controller;
   var _isReady = false;
   var _hasError = false;
@@ -62,6 +124,19 @@ class _AppVideoPlayerSheetState extends State<AppVideoPlayerSheet> {
     try {
       await _controller.initialize();
       _controller.addListener(_refresh);
+      if (widget.autoPlay) {
+        // 初始化完成后立即播放，避免用户进入播放器后还要再次点击播放。
+        try {
+          await _controller.play();
+        } catch (_) {
+          // 某些平台可能暂时拒绝自动播放，但不应把已加载的视频判定为失败。
+          try {
+            await _controller.pause();
+          } catch (_) {
+            // 保留播放器界面，让用户仍可重试播放。
+          }
+        }
+      }
       if (mounted) {
         setState(() => _isReady = true);
       }
@@ -92,42 +167,14 @@ class _AppVideoPlayerSheetState extends State<AppVideoPlayerSheet> {
     final value = _controller.value;
     final title = widget.title.trim().isEmpty ? 'Video player' : widget.title;
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
-      backgroundColor: context.hokTheme.surfaceSlate,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 8, 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.play_circle_outline, color: AppTheme.gold),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: context.hokTheme.onSurfaceStrong,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close video',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            AspectRatio(
+    return Semantics(
+      label: title,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ClipRRect(
+            borderRadius: widget.borderRadius,
+            child: AspectRatio(
               aspectRatio: _isReady && value.aspectRatio > 0
                   ? value.aspectRatio
                   : 16 / 9,
@@ -183,32 +230,32 @@ class _AppVideoPlayerSheetState extends State<AppVideoPlayerSheet> {
                       ),
               ),
             ),
-            if (_isReady)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: value.isPlaying ? 'Pause video' : 'Play video',
-                      onPressed: _togglePlayback,
-                      icon: Icon(
-                        value.isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                      ),
+          ),
+          if (_isReady)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: value.isPlaying ? 'Pause video' : 'Play video',
+                    onPressed: _togglePlayback,
+                    icon: Icon(
+                      value.isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
                     ),
-                    Text(
-                      '${_formatDuration(value.position)} / ${_formatDuration(value.duration)}',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: context.hokTheme.onSurfaceMuted,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                  ),
+                  Text(
+                    '${_formatDuration(value.position)} / ${_formatDuration(value.duration)}',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
