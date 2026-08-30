@@ -14,7 +14,7 @@ const msTranslations = {
   'settingsLanguageTitle': 'Bahasa',
   'settingsLanguageSubtitle': 'Menukar bahasa antara muka aplikasi.',
   'settingsThemeTitle': 'Tema',
-  'settingsThemeSubtitle': 'Beralih antara tema cerah dan gelap HOKX.',
+  'settingsThemeSubtitle': 'Beralih antara tema cerah dan gelap aplikasi.',
   'settingsClearCacheTitle': 'Cache',
   'settingsClearCacheSubtitle':
       'Kosongkan imej sementara dan cache antara muka.',
@@ -35,11 +35,12 @@ const msTranslations = {
   'settingsUpdateOpenFailed':
       'Buka Google Play daripada aplikasi kedai, kemudian cuba lagi.',
   'settingsAboutTitle': 'Perihal',
-  'settingsAboutSubtitle': 'Versi, identiti aplikasi dan maklumat projek.',
+  'settingsAboutSubtitle': 'Versi, maklumat aplikasi dan ciri HOK Helper.',
   'settingsAboutAction': 'Perihal',
   'settingsAboutDialogTitle': 'HOK Helper Mobile',
   'settingsAboutDialogBody':
-      'HOK Helper Mobile membawa hero, skin, esports, statistik, alat, komuniti dan ciri akaun hokx ke Android.',
+      'HOK Helper Mobile menghimpunkan maklumat hero, skin, esports, statistik, alat, komuniti dan ciri akaun dalam satu aplikasi.',
+  'settingsVersionLabel': 'Versi {version}',
   'settingsClose': 'Tutup',
   'profileNotifications': 'Pemberitahuan',
   'profileGuestTitle': 'Ruang HOK anda',
@@ -63,6 +64,14 @@ const msTranslations = {
   'profileNoSignature': 'Belum ada bio peribadi',
   'profileSignature': 'Bio peribadi',
   'profileSignatureHint': 'Pengenalan ringkas di bawah avatar anda',
+  'profileBackgroundTitle': 'Latar belakang profil',
+  'profileBackgroundSubtitle':
+      'Pilih imej yang disimpan pada peranti ini sahaja. Ia tidak akan dimuat naik.',
+  'profileBackgroundChange': 'Pilih imej',
+  'profileBackgroundReset': 'Guna lalai',
+  'profileBackgroundUpdated': 'Latar belakang profil dikemas kini',
+  'profileBackgroundResetDone': 'Latar belakang lalai dipulihkan',
+  'profileBackgroundFailed': 'Imej tidak dapat disimpan. Cuba lagi.',
   'profileSocialLinks': 'Pautan sosial',
   'profileNoSocialLinks': 'Tidak disambungkan',
   'profileSocialLinksHint': 'Tambah URL profil atau nama akaun platform.',

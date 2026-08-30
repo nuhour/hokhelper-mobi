@@ -124,4 +124,23 @@ void main() {
     });
     expect(find.text('Friend link application submitted'), findsOneWidget);
   });
+
+  testWidgets('about page uses customer-facing copy and shows app version', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: InfoStaticPage(section: InfoStaticSection.about),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('App version'), findsOneWidget);
+    expect(find.byKey(const ValueKey('app-version-label')), findsOneWidget);
+    expect(find.textContaining('hokx'), findsNothing);
+    expect(find.textContaining('backend'), findsNothing);
+    expect(find.textContaining('dev team'), findsNothing);
+  });
 }

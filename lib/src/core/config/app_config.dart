@@ -24,6 +24,12 @@ class AppConfig {
     httpProxy: String.fromEnvironment('HOK_HTTP_PROXY'),
   );
 
+  // PackageInfo 不可用时使用构建清单中的版本作为显示兜底。
+  static const fallbackAppVersion = String.fromEnvironment(
+    'HOK_APP_VERSION',
+    defaultValue: '1.0.3 (4)',
+  );
+
   // Debug credentials are injected at build time and deliberately have no
   // source-controlled defaults.
   static const loginEmail = String.fromEnvironment('HOK_LOGIN_EMAIL');

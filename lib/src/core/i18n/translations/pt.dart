@@ -15,7 +15,7 @@ const ptTranslations = {
   'settingsLanguageTitle': 'Idioma',
   'settingsLanguageSubtitle': 'Altera o idioma da interface do app.',
   'settingsThemeTitle': 'Tema',
-  'settingsThemeSubtitle': 'Alterna entre os temas claro e escuro do HOKX.',
+  'settingsThemeSubtitle': 'Alterna entre os temas claro e escuro do app.',
   'settingsClearCacheTitle': 'Cache',
   'settingsClearCacheSubtitle':
       'Limpa imagens temporárias e o cache da interface.',
@@ -38,11 +38,12 @@ const ptTranslations = {
       'Abra o Google Play pelo app da loja e tente novamente.',
   'settingsAboutTitle': 'Sobre',
   'settingsAboutSubtitle':
-      'Versão, identidade do app e informações do projeto.',
+      'Versão, informações do app e recursos do HOK Helper.',
   'settingsAboutAction': 'Sobre',
   'settingsAboutDialogTitle': 'HOK Helper Mobile',
   'settingsAboutDialogBody':
-      'O HOK Helper Mobile leva ao Android os heróis, skins, esports, estatísticas, ferramentas, comunidade e recursos de conta do hokx.',
+      'O HOK Helper Mobile reúne informações de heróis, skins, esports, estatísticas, ferramentas, comunidade e recursos de conta em um só app.',
+  'settingsVersionLabel': 'Versão {version}',
   'settingsClose': 'Fechar',
   'profileNotifications': 'Notificações',
   'profileGuestTitle': 'Seu espaço HOK',
@@ -65,6 +66,15 @@ const ptTranslations = {
   'profileNoSignature': 'Nenhuma biografia adicionada',
   'profileSignature': 'Biografia',
   'profileSignatureHint': 'Uma apresentação curta exibida abaixo do avatar',
+  'profileBackgroundTitle': 'Fundo do perfil',
+  'profileBackgroundSubtitle':
+      'Escolha uma imagem salva apenas neste dispositivo. Ela não será enviada.',
+  'profileBackgroundChange': 'Escolher imagem',
+  'profileBackgroundReset': 'Usar padrão',
+  'profileBackgroundUpdated': 'Fundo do perfil atualizado',
+  'profileBackgroundResetDone': 'Fundo padrão restaurado',
+  'profileBackgroundFailed':
+      'Não foi possível salvar a imagem. Tente novamente.',
   'profileSocialLinks': 'Links sociais',
   'profileNoSocialLinks': 'Não conectado',
   'profileSocialLinksHint': 'Adicione a URL do perfil ou nome da conta.',

@@ -10,7 +10,6 @@ import '../../../core/config/app_config.dart';
 import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
-import '../data/auth_repository.dart';
 import '../data/native_apple_sign_in.dart';
 import '../data/native_google_sign_in.dart';
 import '../data/oauth_pkce.dart';
@@ -337,7 +336,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       if (provider == 'google') {
         final nativeResult = await _tryNativeGoogleSignIn(
-          repository: repository,
           serverClientId: AppConfig.googleServerClientId,
           languageCode: languageCode,
         );
@@ -407,7 +405,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<NativeGoogleSignInResult> _tryNativeGoogleSignIn({
-    required AuthRepository repository,
     required String serverClientId,
     required String languageCode,
   }) async {
@@ -427,11 +424,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     try {
-      await repository.loginWithGoogleIdToken(
-        idToken,
-        languageCode: languageCode,
-      );
-      ref.invalidate(authControllerProvider);
+      await ref
+          .read(authControllerProvider.notifier)
+          .loginWithGoogleIdToken(idToken, languageCode: languageCode);
       return result;
     } catch (error) {
       return NativeGoogleSignInResult.unavailable(

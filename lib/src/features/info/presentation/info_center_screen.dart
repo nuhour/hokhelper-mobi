@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/feedback/app_notice.dart';
+import '../../../core/platform/app_version.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -41,7 +42,7 @@ class InfoCenterScreen extends ConsumerWidget {
               const SizedBox(height: 8),
             ],
             Text(
-              'HOK Helper platform information, support policies, and partner links.',
+              'Learn about HOK Helper, find support information, and explore partner links.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: context.hokTheme.onSurfaceMuted,
               ),
@@ -204,7 +205,7 @@ class _FaqCard extends StatelessWidget {
           _QuestionAnswer(
             question: 'Where does hero data come from?',
             answer:
-                'Stats are read from public game and HOK Helper backend sources, then normalized for region-aware mobile views.',
+                'Stats are prepared from public game sources and HOK Helper data services, then organized for regional app views.',
           ),
           SizedBox(height: 12),
           _QuestionAnswer(
@@ -216,7 +217,7 @@ class _FaqCard extends StatelessWidget {
           _QuestionAnswer(
             question: 'How do I report incorrect data?',
             answer:
-                'Use the community channels or support contact listed by the portal team.',
+                'Use the community channels or the support contact listed by the HOK Helper team.',
           ),
         ],
       ),
@@ -572,7 +573,7 @@ class _PortalDirectorySection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Mobile map of the same discovery, community, tool, and support links available in the hokx portal footer.',
+            'Explore discovery, community, tool, and support links from HOK Helper in one place.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: context.hokTheme.onSurfaceMuted,
             ),
@@ -791,6 +792,8 @@ class _AboutDetail extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        const _AboutVersionPanel(),
+        const SizedBox(height: 12),
         const _AboutStatsGrid(),
         const SizedBox(height: 12),
         const _AboutMissionPanel(),
@@ -801,6 +804,24 @@ class _AboutDetail extends StatelessWidget {
         const SizedBox(height: 12),
         const _AboutCompliancePanel(),
       ],
+    );
+  }
+}
+
+class _AboutVersionPanel extends StatelessWidget {
+  const _AboutVersionPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return _InfoPanel(
+      icon: Icons.info_outline,
+      title: 'App version',
+      child: AppVersionLabel(
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: context.hokTheme.onSurfaceMuted,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
@@ -1089,7 +1110,7 @@ class _AboutPipelinePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _BodyText(
-            'Our automated data pipeline keeps hero stats fresh and reliable around the clock.',
+            'Regular data updates keep hero stats fresh and useful for your next match.',
           ),
           const SizedBox(height: 14),
           for (var index = 0; index < _steps.length; index++) ...[
@@ -1239,7 +1260,7 @@ class _FaqDetail extends StatelessWidget {
               _QuestionAnswer(
                 question: 'Where does hero data come from?',
                 answer:
-                    'Hero, equipment, and stats data are normalized from HOK Helper backend sources and public game-facing datasets for region-aware app views.',
+                    'Hero, equipment, and stats data are prepared from public game-facing sources and organized for regional app views.',
               ),
               SizedBox(height: 12),
               _QuestionAnswer(
@@ -1284,7 +1305,7 @@ class _FaqDetail extends StatelessWidget {
               _QuestionAnswer(
                 question: 'How can I report a bug or incorrect data?',
                 answer:
-                    "The fastest way to reach the dev team is through our Discord server. You can also use the 'Report Post' feature in the Community section for content violations.",
+                    "Contact HOK Helper through our Discord server. You can also use the 'Report Post' feature in the Community section for content violations.",
               ),
             ],
           ),

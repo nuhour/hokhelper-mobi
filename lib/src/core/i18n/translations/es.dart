@@ -15,7 +15,7 @@ const esTranslations = {
   'settingsLanguageTitle': 'Idioma',
   'settingsLanguageSubtitle': 'Cambia el idioma de la interfaz de la app.',
   'settingsThemeTitle': 'Tema',
-  'settingsThemeSubtitle': 'Alterna entre los temas claro y oscuro de HOKX.',
+  'settingsThemeSubtitle': 'Alterna entre los temas claro y oscuro de la app.',
   'settingsClearCacheTitle': 'Caché',
   'settingsClearCacheSubtitle':
       'Borra las imágenes temporales y la caché de la interfaz.',
@@ -38,11 +38,12 @@ const esTranslations = {
       'Abre Google Play desde la tienda y vuelve a intentarlo.',
   'settingsAboutTitle': 'Acerca de',
   'settingsAboutSubtitle':
-      'Versión, identidad de la aplicación e información del proyecto.',
+      'Versión, información de la aplicación y funciones de HOK Helper.',
   'settingsAboutAction': 'Acerca de',
   'settingsAboutDialogTitle': 'HOK Helper Mobile',
   'settingsAboutDialogBody':
-      'HOK Helper Mobile lleva la experiencia de HOKX a Android: héroes, skins, esports, estadísticas, herramientas, comunidad y cuenta.',
+      'HOK Helper Mobile reúne información de héroes, skins, esports, estadísticas, herramientas, comunidad y funciones de cuenta en una sola app.',
+  'settingsVersionLabel': 'Versión {version}',
   'settingsClose': 'Cerrar',
   'profileNotifications': 'Notificaciones',
   'profileGuestTitle': 'Tu espacio HOK',
@@ -67,6 +68,15 @@ const esTranslations = {
   'profileNoSignature': 'Aún no hay una biografía personal',
   'profileSignature': 'Biografía personal',
   'profileSignatureHint': 'Una breve presentación bajo tu avatar',
+  'profileBackgroundTitle': 'Fondo del perfil',
+  'profileBackgroundSubtitle':
+      'Elige una imagen guardada solo en este dispositivo. Nunca se subirá.',
+  'profileBackgroundChange': 'Elegir imagen',
+  'profileBackgroundReset': 'Usar predeterminado',
+  'profileBackgroundUpdated': 'Fondo del perfil actualizado',
+  'profileBackgroundResetDone': 'Fondo predeterminado restaurado',
+  'profileBackgroundFailed':
+      'No se pudo guardar la imagen. Inténtalo de nuevo.',
   'profileSocialLinks': 'Enlaces sociales',
   'profileNoSocialLinks': 'Sin conectar',
   'profileSocialLinksHint':

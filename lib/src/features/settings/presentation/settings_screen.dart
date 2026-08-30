@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/cache/app_cache_service.dart';
 import '../../../core/feedback/app_notice.dart';
 import '../../../core/i18n/app_localizations.dart';
+import '../../../core/platform/app_version.dart';
 import '../../../core/platform/app_update_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
@@ -289,18 +290,40 @@ class SettingsScreen extends ConsumerWidget {
   static void _showAbout(BuildContext context, AppLocalizations l10n) {
     showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(l10n.settingsAboutDialogTitle),
-          content: Text(l10n.settingsAboutDialogBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.settingsClose),
+      builder: (_) => _AboutDialog(l10n: l10n),
+    );
+  }
+}
+
+class _AboutDialog extends ConsumerWidget {
+  const _AboutDialog({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AlertDialog(
+      title: Text(l10n.settingsAboutDialogTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.settingsAboutDialogBody),
+          const SizedBox(height: 16),
+          AppVersionLabel(
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.settingsClose),
+        ),
+      ],
     );
   }
 }

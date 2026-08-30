@@ -16,7 +16,7 @@ final idTranslations = {
   'settingsLanguageSubtitle':
       'Menerapkan locale aplikasi untuk teks UI yang didukung.',
   'settingsThemeTitle': 'Tema',
-  'settingsThemeSubtitle': 'Beralih antara palet gelap dan terang hokx.',
+  'settingsThemeSubtitle': 'Beralih antara palet gelap dan terang aplikasi.',
   'settingsClearCacheTitle': 'Cache',
   'settingsClearCacheSubtitle': 'Hapus gambar sementara dan cache UI lokal.',
   'settingsClearCacheAction': 'Hapus Cache',
@@ -37,11 +37,12 @@ final idTranslations = {
   'settingsUpdateOpenFailed':
       'Buka Google Play dari aplikasi toko, lalu coba lagi.',
   'settingsAboutTitle': 'Tentang',
-  'settingsAboutSubtitle': 'Versi, identitas aplikasi, dan informasi proyek.',
+  'settingsAboutSubtitle': 'Versi, informasi aplikasi, dan fitur HOK Helper.',
   'settingsAboutAction': 'Tentang',
   'settingsAboutDialogTitle': 'HOK Helper Mobile',
   'settingsAboutDialogBody':
-      'HOK Helper Mobile membawa pengalaman portal hokx ke Android, termasuk hero, skin, esports, statistik, alat, komunitas, dan akun.',
+      'HOK Helper Mobile menyatukan wawasan hero, skin, esports, statistik, alat, komunitas, dan fitur akun dalam satu aplikasi.',
+  'settingsVersionLabel': 'Versi {version}',
   'settingsClose': 'Tutup',
   'profileNotifications': 'Notifikasi',
   'profileGuestTitle': 'Ruang HOK Anda',
@@ -65,6 +66,14 @@ final idTranslations = {
   'profileNoSignature': 'Belum ada bio pribadi',
   'profileSignature': 'Bio pribadi',
   'profileSignatureHint': 'Perkenalan singkat yang tampil di bawah avatar',
+  'profileBackgroundTitle': 'Latar belakang profil',
+  'profileBackgroundSubtitle':
+      'Pilih gambar yang hanya disimpan di perangkat ini. Tidak akan diunggah.',
+  'profileBackgroundChange': 'Pilih gambar',
+  'profileBackgroundReset': 'Gunakan bawaan',
+  'profileBackgroundUpdated': 'Latar belakang profil diperbarui',
+  'profileBackgroundResetDone': 'Latar belakang bawaan dipulihkan',
+  'profileBackgroundFailed': 'Gambar gagal disimpan. Silakan coba lagi.',
   'profileSocialLinks': 'Tautan sosial',
   'profileNoSocialLinks': 'Belum terhubung',
   'profileSocialLinksHint':

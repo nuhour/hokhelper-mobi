@@ -80,7 +80,7 @@
 		<string>discord</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>HOK Helper uses selected images when you attach original and result artwork to a prompt.</string>
+	<string>HOK Helper uses selected images for your profile background and prompt artwork.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>HOK Helper saves tier list images to your photo library when you choose Download.</string>
 	<key>UIApplicationSceneManifest</key>

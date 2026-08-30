@@ -15,7 +15,7 @@ const filTranslations = {
   'settingsLanguageTitle': 'Wika',
   'settingsLanguageSubtitle': 'Binabago ang wika ng interface ng app.',
   'settingsThemeTitle': 'Tema',
-  'settingsThemeSubtitle': 'Lumipat sa madilim o maliwanag na tema ng HOKX.',
+  'settingsThemeSubtitle': 'Lumipat sa madilim o maliwanag na tema ng app.',
   'settingsClearCacheTitle': 'Cache',
   'settingsClearCacheSubtitle':
       'Burahin ang pansamantalang larawan at UI cache.',
@@ -38,11 +38,12 @@ const filTranslations = {
       'Buksan ang Google Play sa store app at subukan muli.',
   'settingsAboutTitle': 'Tungkol',
   'settingsAboutSubtitle':
-      'Bersyon, pagkakakilanlan ng app, at impormasyon ng proyekto.',
+      'Bersyon, impormasyon ng app, at mga feature ng HOK Helper.',
   'settingsAboutAction': 'Tungkol',
   'settingsAboutDialogTitle': 'HOK Helper Mobile',
   'settingsAboutDialogBody':
-      'Dinadala ng HOK Helper Mobile sa Android ang mga hero, skin, esports, stats, tool, komunidad, at account feature ng hokx.',
+      'Pinagsasama ng HOK Helper Mobile ang hero insights, skin, esports, stats, tools, komunidad, at account feature sa isang app.',
+  'settingsVersionLabel': 'Bersyon {version}',
   'settingsClose': 'Isara',
   'profileNotifications': 'Mga Notification',
   'profileGuestTitle': 'Iyong HOK space',
@@ -66,6 +67,14 @@ const filTranslations = {
   'profileNoSignature': 'Wala pang personal na bio',
   'profileSignature': 'Personal na bio',
   'profileSignatureHint': 'Maikling pagpapakilala sa ilalim ng avatar',
+  'profileBackgroundTitle': 'Background ng profile',
+  'profileBackgroundSubtitle':
+      'Pumili ng larawang sa device lang ise-save. Hindi ito ia-upload.',
+  'profileBackgroundChange': 'Pumili ng larawan',
+  'profileBackgroundReset': 'Gamitin ang default',
+  'profileBackgroundUpdated': 'Na-update ang background ng profile',
+  'profileBackgroundResetDone': 'Naibalik ang default na background',
+  'profileBackgroundFailed': 'Hindi na-save ang larawan. Subukan muli.',
   'profileSocialLinks': 'Mga social link',
   'profileNoSocialLinks': 'Hindi nakakonekta',
   'profileSocialLinksHint':

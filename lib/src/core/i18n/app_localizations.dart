@@ -76,6 +76,7 @@ class AppLocalizations {
   String get settingsAboutAction => _t('settingsAboutAction');
   String get settingsAboutDialogTitle => _t('settingsAboutDialogTitle');
   String get settingsAboutDialogBody => _t('settingsAboutDialogBody');
+  String get settingsVersionLabel => _t('settingsVersionLabel');
   String get settingsClose => _t('settingsClose');
   String get profileNotifications => _t('profileNotifications');
   String get profileGuestTitle => _t('profileGuestTitle');

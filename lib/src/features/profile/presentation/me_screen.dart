@@ -1,19 +1,22 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/feedback/app_notice.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_async_view.dart';
 import '../../../core/widgets/app_platform_icon.dart';
 import '../../../core/widgets/app_list_footer.dart';
 import '../../../core/providers/core_providers.dart';
-import '../../../core/i18n/app_localizations.dart';
 import '../../auth/domain/auth_user.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../data/avatar_background_store.dart';
 import '../data/profile_repository.dart';
 import '../domain/user_profile.dart';
 
@@ -22,8 +25,75 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 });
 
 final currentUserProfileProvider = FutureProvider<UserProfile>((ref) {
+  // 账号切换时让个人资料跟随认证状态重建，避免沿用上一个账号的缓存。
+  ref.watch(authControllerProvider);
   return ref.watch(profileRepositoryProvider).loadProfile();
 });
+
+final avatarBackgroundStoreProvider = FutureProvider<AvatarBackgroundStore>((
+  ref,
+) {
+  return AvatarBackgroundStore.create();
+});
+
+final avatarBackgroundPickerProvider = Provider<Future<XFile?> Function()>((
+  ref,
+) {
+  final picker = ImagePicker();
+  return () => picker.pickImage(source: ImageSource.gallery, imageQuality: 92);
+});
+
+final avatarBackgroundControllerProvider =
+    AsyncNotifierProvider<AvatarBackgroundController, String?>(
+      AvatarBackgroundController.new,
+    );
+
+class AvatarBackgroundController extends AsyncNotifier<String?> {
+  @override
+  Future<String?> build() async {
+    try {
+      return await ref
+          .watch(avatarBackgroundStoreProvider.future)
+          .then((store) => store.readPath());
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<bool> chooseFromGallery() async {
+    final previous = state.valueOrNull;
+    state = const AsyncLoading();
+    try {
+      final image = await ref.read(avatarBackgroundPickerProvider)();
+      if (image == null) {
+        state = AsyncData(previous);
+        return false;
+      }
+      final path = await ref
+          .read(avatarBackgroundStoreProvider.future)
+          .then((store) => store.save(image));
+      state = AsyncData(path);
+      return true;
+    } on Object catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      return false;
+    }
+  }
+
+  Future<void> resetToDefault() async {
+    final previous = state.valueOrNull;
+    state = const AsyncLoading();
+    try {
+      await ref
+          .read(avatarBackgroundStoreProvider.future)
+          .then((store) => store.clear());
+      state = const AsyncData(null);
+    } on Object catch (error, stackTrace) {
+      state = AsyncData(previous);
+      state = AsyncError(error, stackTrace);
+    }
+  }
+}
 
 class MeScreen extends ConsumerWidget {
   const MeScreen({this.initialFollowListTab, super.key});
@@ -335,6 +405,8 @@ class ProfileAccountSettingsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(16),
                     children: [
                       _AccountIdentityPanel(profile: profile),
+                      const SizedBox(height: 16),
+                      const _AvatarBackgroundPanel(),
                       const SizedBox(height: 16),
                       Material(
                         color: colors.panel,
@@ -700,7 +772,7 @@ class ProfileAvatar extends StatelessWidget {
   }
 }
 
-class _ProfileAvatarBackdrop extends StatelessWidget {
+class _ProfileAvatarBackdrop extends ConsumerWidget {
   const _ProfileAvatarBackdrop({
     required this.avatarUrl,
     required this.fallback,
@@ -710,8 +782,12 @@ class _ProfileAvatarBackdrop extends StatelessWidget {
   final String fallback;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final background = Theme.of(context).scaffoldBackgroundColor;
+    final customPath = ref
+        .watch(avatarBackgroundControllerProvider)
+        .valueOrNull
+        ?.trim();
     return SizedBox(
       key: const ValueKey('me-avatar-backdrop'),
       width: double.infinity,
@@ -734,12 +810,25 @@ class _ProfileAvatarBackdrop extends StatelessWidget {
                 ],
                 stops: [0, 0.16, 0.84, 1],
               ).createShader(bounds),
-              child: Image.asset(
-                'assets/home/avatar_bg.webp',
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-                filterQuality: FilterQuality.high,
-              ),
+              child: customPath == null || customPath.isEmpty
+                  ? Image.asset(
+                      'assets/home/avatar_bg.webp',
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.high,
+                    )
+                  : Image.file(
+                      File(customPath),
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (context, error, stackTrace) => Image.asset(
+                        'assets/home/avatar_bg.webp',
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        filterQuality: FilterQuality.high,
+                      ),
+                    ),
             ),
             DecoratedBox(
               decoration: BoxDecoration(
@@ -769,6 +858,153 @@ class _ProfileAvatarBackdrop extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _AvatarBackgroundPanel extends ConsumerWidget {
+  const _AvatarBackgroundPanel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final colors = _ProfileColors.of(context);
+    final state = ref.watch(avatarBackgroundControllerProvider);
+    final customPath = state.valueOrNull?.trim();
+
+    return DecoratedBox(
+      key: const ValueKey('profile-avatar-background-panel'),
+      decoration: BoxDecoration(
+        color: colors.panel,
+        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 76,
+              height: 76,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: customPath == null || customPath.isEmpty
+                    ? Image.asset(
+                        'assets/home/avatar_bg.webp',
+                        fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                      )
+                    : Image.file(
+                        File(customPath),
+                        fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                        errorBuilder: (_, _, _) => Image.asset(
+                          'assets/home/avatar_bg.webp',
+                          fit: BoxFit.cover,
+                          filterQuality: FilterQuality.high,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.translate('profileBackgroundTitle'),
+                    style: TextStyle(
+                      color: colors.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.translate('profileBackgroundSubtitle'),
+                    style: TextStyle(color: colors.muted),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      TextButton.icon(
+                        key: const ValueKey(
+                          'profile-avatar-background-change-button',
+                        ),
+                        onPressed: state.isLoading
+                            ? null
+                            : () => _chooseBackground(context, ref),
+                        icon: const Icon(
+                          Icons.photo_library_outlined,
+                          size: 18,
+                        ),
+                        label: Text(l10n.translate('profileBackgroundChange')),
+                      ),
+                      if (customPath != null && customPath.isNotEmpty)
+                        TextButton(
+                          key: const ValueKey(
+                            'profile-avatar-background-reset-button',
+                          ),
+                          onPressed: state.isLoading
+                              ? null
+                              : () => _resetBackground(context, ref),
+                          child: Text(l10n.translate('profileBackgroundReset')),
+                        ),
+                    ],
+                  ),
+                  if (state.hasError)
+                    Text(
+                      l10n.translate('profileBackgroundFailed'),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _chooseBackground(BuildContext context, WidgetRef ref) async {
+    final changed = await ref
+        .read(avatarBackgroundControllerProvider.notifier)
+        .chooseFromGallery();
+    if (!context.mounted) {
+      return;
+    }
+    if (changed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).translate('profileBackgroundUpdated'),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _resetBackground(BuildContext context, WidgetRef ref) async {
+    await ref
+        .read(avatarBackgroundControllerProvider.notifier)
+        .resetToDefault();
+    if (!context.mounted) {
+      return;
+    }
+    if (!ref.read(avatarBackgroundControllerProvider).hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            ).translate('profileBackgroundResetDone'),
+          ),
+        ),
+      );
+    }
   }
 }
 
@@ -1576,10 +1812,19 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                   controller: _socialControllers[_socialPlatforms[index].key],
                   decoration: InputDecoration(
                     labelText: _socialPlatforms[index].label,
-                    prefixIcon: AppPlatformIcon(
-                      platform: _socialPlatforms[index].platform,
-                      size: 19,
-                      color: _socialPlatforms[index].color,
+                    prefixIconConstraints: const BoxConstraints(
+                      minWidth: 56,
+                      minHeight: 48,
+                    ),
+                    prefixIcon: SizedBox(
+                      width: 56,
+                      child: Center(
+                        child: AppPlatformIcon(
+                          platform: _socialPlatforms[index].platform,
+                          size: 19,
+                          color: _socialPlatforms[index].color,
+                        ),
+                      ),
                     ),
                     hintText: 'https://',
                   ),

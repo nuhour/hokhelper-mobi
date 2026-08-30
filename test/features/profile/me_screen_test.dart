@@ -1,15 +1,20 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:hok_helper_mobile/src/core/config/app_config.dart';
 import 'package:hok_helper_mobile/src/core/network/api_client.dart';
 import 'package:hok_helper_mobile/src/core/widgets/app_list_footer.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/profile/data/profile_repository.dart';
+import 'package:hok_helper_mobile/src/features/profile/data/avatar_background_store.dart';
 import 'package:hok_helper_mobile/src/features/profile/domain/user_profile.dart';
 import 'package:hok_helper_mobile/src/features/profile/presentation/me_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _TestAuthController extends AuthController {
   _TestAuthController(this.user);
@@ -19,6 +24,43 @@ class _TestAuthController extends AuthController {
   @override
   Future<AuthUser?> build() async {
     return user;
+  }
+}
+
+class _SwitchableAuthController extends AuthController {
+  _SwitchableAuthController(this.user);
+
+  AuthUser? user;
+
+  @override
+  Future<AuthUser?> build() async => user;
+
+  void setUser(AuthUser? nextUser) {
+    user = nextUser;
+    state = AsyncData(nextUser);
+  }
+}
+
+class _MemoryAvatarBackgroundStore extends AvatarBackgroundStore {
+  _MemoryAvatarBackgroundStore({required super.preferences});
+
+  String? storedPath;
+  List<int>? storedBytes;
+
+  @override
+  Future<String?> readPath() async => storedPath;
+
+  @override
+  Future<String> save(XFile source) async {
+    storedBytes = await source.readAsBytes();
+    storedPath = 'memory://profile-avatar-background.webp';
+    return storedPath!;
+  }
+
+  @override
+  Future<void> clear() async {
+    storedPath = null;
+    storedBytes = null;
   }
 }
 
@@ -733,6 +775,15 @@ void main() {
       find.widgetWithText(TextFormField, 'Discord'),
       'lam#9999',
     );
+    final discordField = find.widgetWithText(TextFormField, 'Discord');
+    final discordDecorator = tester.widget<InputDecorator>(
+      find.descendant(of: discordField, matching: find.byType(InputDecorator)),
+    );
+    expect(
+      discordDecorator.decoration.prefixIconConstraints,
+      const BoxConstraints(minWidth: 56, minHeight: 48),
+    );
+    expect(discordDecorator.decoration.prefixIcon, isA<SizedBox>());
     await tester.ensureVisible(find.text('Save profile'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save profile'));
@@ -742,6 +793,144 @@ void main() {
     expect(repository.updatedAvatar, 'https://example.test/new.png');
     expect(repository.updatedBio, 'Roamer main');
     expect(repository.updatedSocialLinks, {'discord': 'lam#9999'});
+  });
+
+  testWidgets('profile background is stored locally and can be reset', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = _MemoryAvatarBackgroundStore(
+      preferences: await SharedPreferences.getInstance(),
+    );
+    final sourceBytes = Uint8List.fromList([1, 2, 3, 4]);
+    final source = XFile.fromData(sourceBytes, name: 'picked.webp');
+
+    const user = AuthUser(
+      id: 42,
+      username: 'lam',
+      email: 'lam@example.test',
+      displayName: 'Lam',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(() => _TestAuthController(user)),
+          profileRepositoryProvider.overrideWithValue(
+            _FakeProfileRepository(_profile),
+          ),
+          avatarBackgroundStoreProvider.overrideWith((ref) async => store),
+          avatarBackgroundPickerProvider.overrideWithValue(() async {
+            return source;
+          }),
+        ],
+        child: const MaterialApp(home: ProfileAccountSettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final changeButton = find.byKey(
+      const ValueKey('profile-avatar-background-change-button'),
+    );
+    await tester.tap(changeButton);
+    await tester.pumpAndSettle();
+
+    final savedPath = store.storedPath;
+    expect(savedPath, isNotNull);
+    expect(store.storedBytes, sourceBytes);
+    expect(
+      find.byKey(const ValueKey('profile-avatar-background-reset-button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('profile-avatar-background-reset-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(store.storedPath, isNull);
+    expect(store.storedBytes, isNull);
+  });
+
+  test('current profile reloads after switching accounts', () async {
+    final emailUser = const AuthUser(
+      id: 42,
+      username: 'email-user',
+      email: 'email@example.test',
+      displayName: 'Email User',
+    );
+    final googleUser = const AuthUser(
+      id: 84,
+      username: 'google-user',
+      email: 'google@example.test',
+      displayName: 'Google User',
+    );
+    final emailProfile = UserProfile(
+      id: emailUser.id,
+      username: emailUser.username,
+      displayName: emailUser.displayName!,
+      email: emailUser.email,
+      avatar: '',
+      level: 1,
+      points: 0,
+      xpTotal: 0,
+      xpCurrentLevel: 0,
+      xpToNextLevel: 100,
+      levelProgress: 0,
+      levelCap: false,
+      bio: 'Email profile',
+      socialLinks: const {},
+      stats: const ProfileStats(posts: 0, following: 0, followers: 0, likes: 0),
+      isFollowing: false,
+      isLiked: false,
+      isSelf: true,
+    );
+    final googleProfile = UserProfile(
+      id: googleUser.id,
+      username: googleUser.username,
+      displayName: googleUser.displayName!,
+      email: googleUser.email,
+      avatar: '',
+      level: 2,
+      points: 10,
+      xpTotal: 10,
+      xpCurrentLevel: 10,
+      xpToNextLevel: 90,
+      levelProgress: 10,
+      levelCap: false,
+      bio: 'Google profile',
+      socialLinks: const {},
+      stats: const ProfileStats(posts: 1, following: 1, followers: 1, likes: 1),
+      isFollowing: false,
+      isLiked: false,
+      isSelf: true,
+    );
+    final repository = _FakeProfileRepository(emailProfile);
+    late _SwitchableAuthController authController;
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => authController = _SwitchableAuthController(emailUser),
+        ),
+        profileRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(
+      (await container.read(authControllerProvider.future))?.email,
+      'email@example.test',
+    );
+    expect(
+      (await container.read(currentUserProfileProvider.future)).email,
+      'email@example.test',
+    );
+    repository.profile = googleProfile;
+    authController.setUser(googleUser);
+
+    expect(
+      (await container.read(currentUserProfileProvider.future)).email,
+      'google@example.test',
+    );
   });
 
   testWidgets('change password sheet submits old and new passwords', (

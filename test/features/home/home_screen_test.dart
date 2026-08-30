@@ -442,6 +442,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Lam'), findsOneWidget);
+    expect(_portalMenuText('Personal Information'), findsNothing);
+    expect(tester.widget<Text>(find.text('Lam')).textAlign, TextAlign.center);
 
     await tester.tap(find.byKey(const ValueKey('home-portal-menu-account')));
     await tester.pumpAndSettle();

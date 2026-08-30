@@ -93,6 +93,30 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     }
   }
 
+  Future<void> loginWithGoogleIdToken(
+    String idToken, {
+    String languageCode = 'en',
+  }) async {
+    final repository = ref.read(authRepositoryProvider);
+    state = const AsyncLoading();
+    try {
+      final user = await repository.loginWithGoogleIdToken(
+        idToken,
+        languageCode: languageCode,
+      );
+      state = AsyncData(user);
+    } on ApiError catch (error, stackTrace) {
+      if (_shouldClearSession(error)) {
+        await repository.logout();
+      }
+      state = AsyncError(error, stackTrace);
+      Error.throwWithStackTrace(error, stackTrace);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  }
+
   Future<void> register({
     required String email,
     required String password,

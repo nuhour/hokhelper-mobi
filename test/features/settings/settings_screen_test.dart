@@ -168,6 +168,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('settings-about-tile')));
     await tester.pumpAndSettle();
     expect(find.text('HOK Helper Mobile'), findsOneWidget);
+    expect(find.byKey(const ValueKey('app-version-label')), findsOneWidget);
+    expect(find.textContaining('Version '), findsOneWidget);
+    expect(find.textContaining('hokx'), findsNothing);
   });
 
   testWidgets('settings screen action panels follow hokx classic palette', (

@@ -15,7 +15,8 @@ const enTranslations = {
   'settingsLanguageSubtitle':
       'Applies the app locale for supported UI strings.',
   'settingsThemeTitle': 'Theme',
-  'settingsThemeSubtitle': 'Switches between hokx dark and light palettes.',
+  'settingsThemeSubtitle':
+      'Switches between the app\'s dark and light palettes.',
   'settingsClearCacheTitle': 'Cache',
   'settingsClearCacheSubtitle': 'Clear temporary images and local UI cache.',
   'settingsClearCacheAction': 'Clear Cache',
@@ -35,11 +36,12 @@ const enTranslations = {
   'settingsUpdateOpenFailed':
       'Open Google Play from the store app, then try again.',
   'settingsAboutTitle': 'About',
-  'settingsAboutSubtitle': 'Version, app identity, and project information.',
+  'settingsAboutSubtitle': 'Version, app identity, and what HOK Helper offers.',
   'settingsAboutAction': 'About',
   'settingsAboutDialogTitle': 'HOK Helper Mobile',
   'settingsAboutDialogBody':
-      'HOK Helper Mobile brings the hokx portal experience to Android, including heroes, skins, esports, stats, tools, community, and account features.',
+      'HOK Helper Mobile brings hero insights, skins, esports, statistics, tools, community features, and account tools together in one app.',
+  'settingsVersionLabel': 'Version {version}',
   'settingsClose': 'Close',
   'profileNotifications': 'Notifications',
   'profileGuestTitle': 'Your HOK space',
@@ -63,6 +65,14 @@ const enTranslations = {
   'profileNoSignature': 'No personal signature yet',
   'profileSignature': 'Personal signature',
   'profileSignatureHint': 'A short introduction shown below your avatar',
+  'profileBackgroundTitle': 'Profile background',
+  'profileBackgroundSubtitle':
+      'Choose an image stored only on this device. It is never uploaded.',
+  'profileBackgroundChange': 'Choose image',
+  'profileBackgroundReset': 'Use default',
+  'profileBackgroundUpdated': 'Profile background updated',
+  'profileBackgroundResetDone': 'Default profile background restored',
+  'profileBackgroundFailed': 'Could not save this image. Please try again.',
   'profileSocialLinks': 'Social links',
   'profileNoSocialLinks': 'Not connected',
   'profileSocialLinksHint':

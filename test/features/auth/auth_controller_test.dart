@@ -89,6 +89,20 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> loginWithGoogleIdToken(
+    String idToken, {
+    String languageCode = 'en',
+  }) async {
+    return userToReturn ??
+        const AuthUser(
+          id: 101,
+          username: 'google-user',
+          email: 'google@example.test',
+          displayName: 'Google User',
+        );
+  }
+
+  @override
   Future<void> sendRegisterCode({
     required String email,
     String turnstileToken = '',
@@ -176,6 +190,32 @@ void main() {
       expect(state.valueOrNull?.id, 7);
       expect(state.valueOrNull?.displayName, 'Mulan');
     });
+
+    test(
+      'Google token login publishes the returned account immediately',
+      () async {
+        final tokenStore = _MemoryTokenStore();
+        final repository = _FakeAuthRepository(tokenStore: tokenStore)
+          ..userToReturn = const AuthUser(
+            id: 84,
+            username: 'google-user',
+            email: 'google@example.test',
+            displayName: 'Google User',
+          );
+        final container = ProviderContainer(
+          overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        );
+        addTearDown(container.dispose);
+
+        await container
+            .read(authControllerProvider.notifier)
+            .loginWithGoogleIdToken('google-id-token');
+
+        final state = container.read(authControllerProvider);
+        expect(state.valueOrNull?.id, 84);
+        expect(state.valueOrNull?.email, 'google@example.test');
+      },
+    );
 
     test(
       'successful registration updates auth state with returned user',

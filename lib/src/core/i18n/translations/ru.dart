@@ -14,7 +14,7 @@ const ruTranslations = {
   'settingsLanguageTitle': 'Язык',
   'settingsLanguageSubtitle': 'Изменяет язык интерфейса приложения.',
   'settingsThemeTitle': 'Тема',
-  'settingsThemeSubtitle': 'Переключает светлую и тёмную темы HOKX.',
+  'settingsThemeSubtitle': 'Переключает светлую и тёмную темы приложения.',
   'settingsClearCacheTitle': 'Кэш',
   'settingsClearCacheSubtitle':
       'Удаляет временные изображения и кэш интерфейса.',
@@ -35,11 +35,13 @@ const ruTranslations = {
   'settingsUpdateOpenFailed':
       'Откройте Google Play через магазин приложений и повторите попытку.',
   'settingsAboutTitle': 'О приложении',
-  'settingsAboutSubtitle': 'Версия, данные приложения и информация о проекте.',
+  'settingsAboutSubtitle':
+      'Версия, информация о приложении и функции HOK Helper.',
   'settingsAboutAction': 'О приложении',
   'settingsAboutDialogTitle': 'HOK Helper Mobile',
   'settingsAboutDialogBody':
-      'HOK Helper Mobile переносит на Android героев, скины, киберспорт, статистику, инструменты, сообщество и функции аккаунта hokx.',
+      'HOK Helper Mobile объединяет сведения о героях, скинах, киберспорте, статистике, инструментах, сообществе и аккаунте в одном приложении.',
+  'settingsVersionLabel': 'Версия {version}',
   'settingsClose': 'Закрыть',
   'profileNotifications': 'Уведомления',
   'profileGuestTitle': 'Ваше пространство HOK',
@@ -63,6 +65,15 @@ const ruTranslations = {
   'profileNoSignature': 'Описание профиля пока не добавлено',
   'profileSignature': 'Описание профиля',
   'profileSignatureHint': 'Краткое описание под вашим аватаром',
+  'profileBackgroundTitle': 'Фон профиля',
+  'profileBackgroundSubtitle':
+      'Выберите изображение, которое сохранится только на этом устройстве и не будет загружено.',
+  'profileBackgroundChange': 'Выбрать изображение',
+  'profileBackgroundReset': 'Использовать стандартный',
+  'profileBackgroundUpdated': 'Фон профиля обновлён',
+  'profileBackgroundResetDone': 'Стандартный фон восстановлен',
+  'profileBackgroundFailed':
+      'Не удалось сохранить изображение. Повторите попытку.',
   'profileSocialLinks': 'Социальные ссылки',
   'profileNoSocialLinks': 'Не подключено',
   'profileSocialLinksHint': 'Добавьте ссылку на профиль или имя аккаунта.',
