@@ -331,7 +331,7 @@ const _communitySocialChannels = [
   ),
   _CommunitySocialChannel(
     label: 'Discord',
-    url: 'https://discord.gg/jmVttVkzU',
+    url: 'https://discord.gg/AqFmxKqSGZ',
     platform: 'discord',
     color: Color(0xFF818CF8),
   ),
