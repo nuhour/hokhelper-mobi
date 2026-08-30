@@ -53,30 +53,18 @@ class HomeScreen extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () => ref.refresh(homeStatsProvider.future),
-      child: ListView(
-        key: const ValueKey('home-main-scroll-view'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-        children: [
-          AppAsyncView<HomeStats>(
-            value: statsValue,
-            retry: () => ref.invalidate(homeStatsProvider),
-            loadingStyle: AppAsyncLoadingStyle.dashboard,
-            data: (stats) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _HomePortalFramework(
-                  result: stats.result,
-                  initialPortalTab: initialPortalTab,
-                  initialHeroId: initialHeroId,
-                  initialSkinId: initialSkinId,
-                  initialEsportsTab: initialEsportsTab,
-                  showPortalBack: showPortalBack,
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: AppAsyncView<HomeStats>(
+        value: statsValue,
+        retry: () => ref.invalidate(homeStatsProvider),
+        loadingStyle: AppAsyncLoadingStyle.dashboard,
+        data: (stats) => _HomePortalFramework(
+          result: stats.result,
+          initialPortalTab: initialPortalTab,
+          initialHeroId: initialHeroId,
+          initialSkinId: initialSkinId,
+          initialEsportsTab: initialEsportsTab,
+          showPortalBack: showPortalBack,
+        ),
       ),
     );
   }
@@ -170,50 +158,58 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
       980.0,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _HomePortalTopBar(
-          selectedIndex: _selectedPage,
-          onSelected: _selectPage,
-          showBack: widget.showPortalBack && _selectedPage == 2,
+    return CustomScrollView(
+      key: const ValueKey('home-main-scroll-view'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _HomePortalHeaderDelegate(
+            selectedIndex: _selectedPage,
+            onSelected: _selectPage,
+            showBack: widget.showPortalBack && _selectedPage == 2,
+          ),
         ),
-        const SizedBox(height: 18),
-        SizedBox(
-          key: const ValueKey('home-tab-page-view'),
-          height: pageHeight,
-          child: PageView(
-            controller: _pageController,
-            allowImplicitScrolling: true,
-            onPageChanged: (index) {
-              setState(() {
-                _selectedPage = index;
-              });
-            },
-            children: [
-              EsportsScreen(
-                key: ValueKey(
-                  'home-esports-${widget.initialEsportsTab ?? 'schedule'}',
-                ),
-                initialTab: esportsInitialTabFromRoute(
-                  widget.initialEsportsTab,
-                ),
-                syncRouteOnTabTap: false,
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 18, 12, 16),
+            child: SizedBox(
+              key: const ValueKey('home-tab-page-view'),
+              height: pageHeight,
+              child: PageView(
+                controller: _pageController,
+                allowImplicitScrolling: true,
+                onPageChanged: (index) {
+                  setState(() {
+                    _selectedPage = index;
+                  });
+                },
+                children: [
+                  EsportsScreen(
+                    key: ValueKey(
+                      'home-esports-${widget.initialEsportsTab ?? 'schedule'}',
+                    ),
+                    initialTab: esportsInitialTabFromRoute(
+                      widget.initialEsportsTab,
+                    ),
+                    syncRouteOnTabTap: false,
+                  ),
+                  _openedSkinId == null
+                      ? SkinGalleryScreen(onSkinSelected: _openSkinDetail)
+                      : SkinDetailScreen(
+                          skinId: _openedSkinId!,
+                          onBack: _closeSkinDetail,
+                        ),
+                  _openedHeroId == null
+                      ? HeroGalleryScreen(onHeroSelected: _openHeroDetail)
+                      : HeroDetailScreen(
+                          heroId: _openedHeroId!,
+                          onBack: _closeHeroDetail,
+                        ),
+                  _HomeLandingTab(result: widget.result),
+                ],
               ),
-              _openedSkinId == null
-                  ? SkinGalleryScreen(onSkinSelected: _openSkinDetail)
-                  : SkinDetailScreen(
-                      skinId: _openedSkinId!,
-                      onBack: _closeSkinDetail,
-                    ),
-              _openedHeroId == null
-                  ? HeroGalleryScreen(onHeroSelected: _openHeroDetail)
-                  : HeroDetailScreen(
-                      heroId: _openedHeroId!,
-                      onBack: _closeHeroDetail,
-                    ),
-              _HomeLandingTab(result: widget.result),
-            ],
+            ),
           ),
         ),
       ],
@@ -238,6 +234,49 @@ class _HomePortalFrameworkState extends State<_HomePortalFramework> {
   void _closeSkinDetail() {
     setState(() => _openedSkinId = null);
     context.go('/?tab=skins');
+  }
+}
+
+class _HomePortalHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _HomePortalHeaderDelegate({
+    required this.selectedIndex,
+    required this.onSelected,
+    required this.showBack,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final bool showBack;
+
+  @override
+  double get minExtent => 58;
+
+  @override
+  double get maxExtent => 58;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ColoredBox(
+      color: context.hokTheme.backgroundDeep,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+        child: _HomePortalTopBar(
+          selectedIndex: selectedIndex,
+          onSelected: onSelected,
+          showBack: showBack,
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _HomePortalHeaderDelegate oldDelegate) {
+    return selectedIndex != oldDelegate.selectedIndex ||
+        showBack != oldDelegate.showBack;
   }
 }
 

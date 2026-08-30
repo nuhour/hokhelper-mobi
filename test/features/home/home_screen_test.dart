@@ -143,6 +143,53 @@ void main() {
     expect(find.text('Quick Tools'), findsNothing);
   });
 
+  testWidgets(
+    'home portal header stays reachable after nested vertical scrolling',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHomeScreen(
+          const HomeStats(
+            success: true,
+            message: 'Home portal ready',
+            result: {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final mainScrollable = find
+          .descendant(
+            of: find.byKey(const ValueKey('home-main-scroll-view')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final mainScrollState = tester.state<ScrollableState>(mainScrollable);
+      mainScrollState.position.jumpTo(mainScrollState.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      final landingScroll = find.byKey(
+        const ValueKey('home-landing-scroll-view'),
+      );
+      await tester.drag(
+        landingScroll,
+        const Offset(0, -420),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        landingScroll,
+        const Offset(0, 800),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      final topTabs = find.byKey(const ValueKey('home-top-tab-strip'));
+      expect(topTabs, findsOneWidget);
+      expect(tester.getTopLeft(topTabs).dy, greaterThanOrEqualTo(0));
+      expect(tester.getTopLeft(topTabs).dy, lessThan(80));
+    },
+  );
+
   testWidgets('home top tabs are centered and switch pages in place', (
     tester,
   ) async {
