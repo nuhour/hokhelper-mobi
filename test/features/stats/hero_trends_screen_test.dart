@@ -468,6 +468,29 @@ void main() {
     expect(find.text('Power'), findsWidgets);
     expect(find.text('Single Equip'), findsOneWidget);
     expect(find.text('Builds'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('hero-preparation-tabs')),
+        matching: find.text('Power'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-1')),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Single Equip'));
     await tester.pumpAndSettle();
     // HOKX 单件装备矩阵表：分组表头 + 排序列 + 槽位份额/胜率格。
@@ -512,7 +535,7 @@ void main() {
       warnIfMissed: false,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Pro Builds'), findsOneWidget);
+    expect(find.text('Master Builds'), findsOneWidget);
     expect(find.text('Skill Flow'), findsOneWidget);
     expect(find.text('BP'), findsOneWidget);
     expect(find.text('Matchups'), findsNothing);
@@ -541,6 +564,44 @@ void main() {
     expect(find.text('Power'), findsWidgets);
     expect(find.text('Playstyle'), findsOneWidget);
     expect(find.text('Equipment'), findsWidgets);
+    // 综合 tab 的日期横轴与共享百分比纵轴只保留稀疏刻度。
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-1')),
+      findsOneWidget,
+    );
+    final detailPowerTab = find.descendant(
+      of: find.byKey(const ValueKey('trend-detail-tabs')),
+      matching: find.text('Power'),
+    );
+    await tester.tap(detailPowerTab);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-1')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('trend-detail-tabs')),
+        matching: find.text('Overview'),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.drag(
       find.byKey(const ValueKey('trend-detail-tabs')),
       const Offset(-300, 0),
@@ -578,6 +639,16 @@ void main() {
             'win_rate': 54.2,
             'points': [
               {
+                'snapshot_date': '2026-07-13',
+                'pick_rate': 65.0,
+                'win_rate': 52.0,
+              },
+              {
+                'snapshot_date': '2026-07-14',
+                'pick_rate': 68.0,
+                'win_rate': 53.0,
+              },
+              {
                 'snapshot_date': '2026-07-15',
                 'pick_rate': 70.24,
                 'win_rate': 54.2,
@@ -590,6 +661,16 @@ void main() {
             'pick_rate': 45.1,
             'win_rate': 60.0,
             'points': [
+              {
+                'snapshot_date': '2026-07-13',
+                'pick_rate': 40.0,
+                'win_rate': 58.0,
+              },
+              {
+                'snapshot_date': '2026-07-14',
+                'pick_rate': 42.0,
+                'win_rate': 59.0,
+              },
               {
                 'snapshot_date': '2026-07-15',
                 'pick_rate': 45.1,
@@ -634,6 +715,26 @@ void main() {
       expect(find.text('抵抗之靴'), findsNothing);
       expect(find.text('Pick Rate 70.24%'), findsOneWidget);
       expect(find.text('Win Rate 54.20%'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('trend-chart-y-axis-label-0')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('trend-chart-y-axis-label-2')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('trend-chart-x-axis-label-0')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('trend-chart-x-axis-label-2')),
+        findsOneWidget,
+      );
+      final summaryCard = tester.renderObject<RenderBox>(
+        find.byKey(const ValueKey('trend-series-summary-0')),
+      );
+      expect(summaryCard.size.height, lessThan(60));
 
       final images = tester.widgetList<AppImage>(find.byType(AppImage));
       expect(
@@ -652,6 +753,101 @@ void main() {
       );
     },
   );
+
+  testWidgets('shows sparse axes for playstyle trend charts', (tester) async {
+    final detail = StatsTrendDetail.fromJson({
+      'playstyle_trend_series': [
+        {
+          'skill': {'id': 80115, 'name': 'Flash'},
+          'points': [
+            {
+              'snapshot_date': '2026-07-13',
+              'style_share': 10.0,
+              'win_rate': 50.0,
+            },
+            {
+              'snapshot_date': '2026-07-14',
+              'style_share': 12.0,
+              'win_rate': 52.0,
+            },
+            {
+              'snapshot_date': '2026-07-15',
+              'style_share': 14.0,
+              'win_rate': 54.0,
+            },
+            {
+              'snapshot_date': '2026-07-16',
+              'style_share': 15.0,
+              'win_rate': 55.0,
+            },
+            {
+              'snapshot_date': '2026-07-17',
+              'style_share': 16.0,
+              'win_rate': 56.0,
+            },
+            {
+              'snapshot_date': '2026-07-18',
+              'style_share': 17.0,
+              'win_rate': 57.0,
+            },
+            {
+              'snapshot_date': '2026-07-19',
+              'style_share': 18.0,
+              'win_rate': 58.0,
+            },
+          ],
+        },
+      ],
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith(
+            (ref, query) async => sampleStatsTrendTable(),
+          ),
+          heroTrendDetailProvider.overrideWith((ref, request) async => detail),
+        ],
+        child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('trend-curve-hero-199')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('trend-detail-tabs')),
+        matching: find.text('Playstyle'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-3')),
+      findsNothing,
+    );
+    expect(find.text('07/13'), findsOneWidget);
+  });
 
   testWidgets('equip avatar opens the single equip matrix table', (
     tester,
@@ -682,6 +878,22 @@ void main() {
     expect(find.text('Pick Rate'), findsNWidgets(3));
     expect(find.text('54.20%'), findsNWidgets(2));
     expect(find.text('70.24%'), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-y-axis-label-2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-x-axis-label-1')),
+      findsOneWidget,
+    );
     // HOKX 装备抽屉没有窗口天数切换。
     expect(find.byKey(const ValueKey('trend-window-select')), findsNothing);
 

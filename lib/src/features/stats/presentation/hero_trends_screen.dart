@@ -1477,7 +1477,7 @@ class _HeroPreparationSheetState extends ConsumerState<_HeroPreparationSheet> {
       ('power', 'Power'),
       ('hero_equip', 'Single Equip'),
       ('skill_equip', 'Builds'),
-      ('master_build', 'Pro Builds'),
+      ('master_build', 'Master Builds'),
       ('playstyle', 'Skill Flow'),
       ('bp', 'BP'),
     ];
@@ -2400,25 +2400,6 @@ class _MasterBuildTable extends StatelessWidget {
           _heroBadgeCell(context, heroRow, row, 'skill'),
       leadingSortText: (row) => _map(row['skill'])['name']?.toString() ?? '',
       columns: [
-        _TableColumnSpec(
-          id: 'player_name',
-          label: 'Player',
-          width: 104,
-          sortText: (row) => row['player_name']?.toString() ?? '',
-          cell: (context, row) =>
-              _tableText(context, row['player_name']?.toString() ?? '-'),
-        ),
-        _TableColumnSpec(
-          id: 'desc',
-          label: 'Notes',
-          width: 150,
-          sortText: (row) => row['desc']?.toString() ?? '',
-          cell: (context, row) => _tableText(
-            context,
-            row['desc']?.toString() ?? '-',
-            color: colors?.onSurfaceMuted,
-          ),
-        ),
         for (var slot = 0; slot < 6; slot++)
           _TableColumnSpec(
             id: 'equip_slot_$slot',
@@ -2438,6 +2419,25 @@ class _MasterBuildTable extends StatelessWidget {
               );
             },
           ),
+        _TableColumnSpec(
+          id: 'player_name',
+          label: 'Player',
+          width: 104,
+          sortText: (row) => row['player_name']?.toString() ?? '',
+          cell: (context, row) =>
+              _tableText(context, row['player_name']?.toString() ?? '-'),
+        ),
+        _TableColumnSpec(
+          id: 'desc',
+          label: 'Notes',
+          width: 150,
+          sortText: (row) => row['desc']?.toString() ?? '',
+          cell: (context, row) => _tableText(
+            context,
+            row['desc']?.toString() ?? '-',
+            color: colors?.onSurfaceMuted,
+          ),
+        ),
       ],
     );
   }
@@ -2903,7 +2903,12 @@ class _OverviewDetail extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          _TrendChart(height: 250, series: series),
+          _TrendChart(
+            height: 250,
+            series: series,
+            xLabels: _trendXAxisLabels(points),
+            yAxisSuffix: '%',
+          ),
         ],
       );
     }
@@ -2917,6 +2922,8 @@ class _OverviewDetail extends StatelessWidget {
       children: [
         _TrendChart(
           height: 250,
+          xLabels: _trendXAxisLabels(points),
+          yAxisSuffix: '%',
           series: [
             _seriesFromMaps('WR', const Color(0xFF60A5FA), points, 'wr'),
             _seriesFromMaps('P', const Color(0xFFFBBF24), points, 'pick_rate'),
@@ -2961,6 +2968,7 @@ class _PowerDetail extends StatelessWidget {
       children: [
         _TrendChart(
           height: 250,
+          xLabels: _trendXAxisLabels(points),
           series: [
             _seriesFromMaps('Top1', const Color(0xFFEF4444), points, 'top1'),
             _seriesFromMaps('Top10', const Color(0xFFF59E0B), points, 'top10'),
@@ -2985,6 +2993,14 @@ class _PowerDetail extends StatelessWidget {
       ],
     );
   }
+}
+
+List<String> _seriesListXAxisLabels(List<Map<String, dynamic>> rows) {
+  for (final row in rows) {
+    final points = _listOfMaps(row['points']);
+    if (points.length > 1) return _trendXAxisLabels(points);
+  }
+  return const [];
 }
 
 /// HOKX 趋势抽屉「打法/装备」tab：多系列合并折线图（胜率实线 + 占比虚线同色）。
@@ -3063,13 +3079,20 @@ class _SeriesListDetailState extends State<_SeriesListDetail> {
           ),
           const SizedBox(height: 8),
         ],
-        _TrendChart(height: 250, showLegend: false, series: chartSeries),
+        _TrendChart(
+          height: 250,
+          showLegend: false,
+          series: chartSeries,
+          xLabels: _seriesListXAxisLabels(rows),
+          yAxisSuffix: '%',
+        ),
         const SizedBox(height: 8),
         // 每个系列一张摘要卡：色点 + 名称 + 最新占比/胜率。
         for (var index = 0; index < rows.length; index++)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Container(
+              key: ValueKey('trend-series-summary-$index'),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 color: Theme.of(
@@ -3340,46 +3363,52 @@ class _SeriesSummaryRow extends StatelessWidget {
     final points = _listOfMaps(row['points']);
     final latest = points.isNotEmpty ? points.last : row;
     final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Semantics(
-          label: accessibleName,
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              if (iconUrl.isNotEmpty) ...[
-                Tooltip(
-                  message: accessibleName,
-                  child: AppImage(
-                    url: iconUrl,
-                    width: 24,
-                    height: 24,
-                    borderRadius: 6,
-                    semanticLabel: accessibleName,
+        Expanded(
+          child: Semantics(
+            label: accessibleName,
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
+                if (iconUrl.isNotEmpty) ...[
+                  Tooltip(
+                    message: accessibleName,
+                    child: AppImage(
+                      url: iconUrl,
+                      width: 24,
+                      height: 24,
+                      borderRadius: 6,
+                      semanticLabel: accessibleName,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                if (name.isNotEmpty)
+                  Expanded(
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                  ),
               ],
-              if (name.isNotEmpty)
-                Expanded(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(width: 10),
         Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
@@ -3742,11 +3771,15 @@ class _TrendChart extends StatelessWidget {
     required this.series,
     this.height = 190,
     this.showLegend = true,
+    this.xLabels = const [],
+    this.yAxisSuffix = '',
   });
 
   final List<_ChartSeries> series;
   final double height;
   final bool showLegend;
+  final List<String> xLabels;
+  final String yAxisSuffix;
 
   @override
   Widget build(BuildContext context) {
@@ -3757,18 +3790,109 @@ class _TrendChart extends StatelessWidget {
         child: const Center(child: Text('No trend data')),
       );
     }
+    final pointCount = visible.fold<int>(
+      0,
+      (count, item) => math.max(count, item.values.length),
+    );
+    final sampledXLabels = _sampleTrendXAxisLabels(pointCount, xLabels);
+    final allValues = [
+      for (final item in visible)
+        ...item.values.where((value) => value.isFinite),
+    ];
+    final yAxisLabels = _trendYAxisLabels(allValues, yAxisSuffix);
+    const yAxisWidth = 44.0;
+    const xAxisHeight = 24.0;
+    final plotHeight = math.max(1.0, height - xAxisHeight);
+    final axisColor =
+        Theme.of(context).extension<HokThemeColors>()?.onSurfaceMuted ??
+        context.hokTheme.onSurfaceMuted;
+    final axisTextStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: axisColor,
+      fontSize: 9,
+      height: 1,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
     return Column(
       children: [
         SizedBox(
-          height: height,
+          height: plotHeight,
           width: double.infinity,
-          child: CustomPaint(
-            painter: _TrendChartPainter(
-              series: visible,
-              gridColor:
-                  Theme.of(context).extension<HokThemeColors>()?.outlineSoft ??
-                  context.hokTheme.outlineSoft,
-            ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: yAxisWidth,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 6, 4, 6),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (var index = 0; index < yAxisLabels.length; index++)
+                        Text(
+                          yAxisLabels[index],
+                          key: ValueKey('trend-chart-y-axis-label-$index'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: axisTextStyle,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: CustomPaint(
+                  painter: _TrendChartPainter(
+                    series: visible,
+                    gridColor:
+                        Theme.of(
+                          context,
+                        ).extension<HokThemeColors>()?.outlineSoft ??
+                        context.hokTheme.outlineSoft,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: xAxisHeight,
+          child: Row(
+            children: [
+              const SizedBox(width: yAxisWidth),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (
+                        var index = 0;
+                        index < sampledXLabels.length;
+                        index++
+                      )
+                        Expanded(
+                          child: Align(
+                            alignment: index == 0
+                                ? Alignment.centerLeft
+                                : index == sampledXLabels.length - 1
+                                ? Alignment.centerRight
+                                : Alignment.center,
+                            child: Text(
+                              sampledXLabels[index],
+                              key: ValueKey('trend-chart-x-axis-label-$index'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: axisTextStyle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         if (showLegend) ...[
@@ -3806,6 +3930,79 @@ class _TrendChart extends StatelessWidget {
   }
 }
 
+List<String> _trendXAxisLabels(List<Map<String, dynamic>> points) {
+  return [
+    for (var index = 0; index < points.length; index++)
+      _trendPointXAxisLabel(points[index], index),
+  ];
+}
+
+String _trendPointXAxisLabel(Map<String, dynamic> point, int index) {
+  final raw =
+      point['snapshot_date'] ?? point['date'] ?? point['label'] ?? point['x'];
+  final text = raw?.toString().trim() ?? '';
+  if (text.isEmpty) return '${index + 1}';
+  final date = RegExp(r'^\d{4}[-/](\d{1,2})[-/](\d{1,2})').firstMatch(text);
+  if (date != null) {
+    final month = date.group(1)!.padLeft(2, '0');
+    final day = date.group(2)!.padLeft(2, '0');
+    return '$month/$day';
+  }
+  return text.length > 10 ? text.substring(0, 10) : text;
+}
+
+List<String> _sampleTrendXAxisLabels(int pointCount, List<String> labels) {
+  if (pointCount <= 0) return const [];
+  final normalized = [
+    for (var index = 0; index < pointCount; index++)
+      index < labels.length && labels[index].trim().isNotEmpty
+          ? labels[index].trim()
+          : '${index + 1}',
+  ];
+  final indices = <int>[];
+  void addIndex(int index) {
+    if (!indices.contains(index)) indices.add(index);
+  }
+
+  addIndex(0);
+  if (pointCount > 2) addIndex(pointCount ~/ 2);
+  if (pointCount > 1) addIndex(pointCount - 1);
+  return [for (final index in indices) normalized[index]];
+}
+
+List<String> _trendYAxisLabels(List<double> values, String suffix) {
+  if (values.isEmpty) return const [];
+  final minValue = values.reduce(math.min);
+  final maxValue = values.reduce(math.max);
+  final middleValue = (minValue + maxValue) / 2;
+  return [
+    _formatTrendAxisValue(maxValue, suffix),
+    _formatTrendAxisValue(middleValue, suffix),
+    _formatTrendAxisValue(minValue, suffix),
+  ];
+}
+
+String _formatTrendAxisValue(double value, String suffix) {
+  final absolute = value.abs();
+  final String text;
+  if (absolute >= 1000000) {
+    text = '${_trimAxisZeros((value / 1000000).toStringAsFixed(2))}M';
+  } else if (absolute >= 1000) {
+    text = '${_trimAxisZeros((value / 1000).toStringAsFixed(2))}k';
+  } else if (value == value.roundToDouble()) {
+    text = value.toStringAsFixed(0);
+  } else {
+    text = _trimAxisZeros(value.toStringAsFixed(1));
+  }
+  return '$text$suffix';
+}
+
+String _trimAxisZeros(String value) {
+  return value
+      .replaceFirst(RegExp(r'\.0+$'), '')
+      .replaceFirst(RegExp(r'(\.\d*?)0+$'), r'$1');
+}
+
 class _TrendChartPainter extends CustomPainter {
   const _TrendChartPainter({required this.series, required this.gridColor});
 
@@ -3818,8 +4015,8 @@ class _TrendChartPainter extends CustomPainter {
     final grid = Paint()
       ..color = gridColor.withValues(alpha: 0.55)
       ..strokeWidth = 1;
-    for (var index = 0; index <= 3; index++) {
-      final y = chart.top + chart.height * index / 3;
+    for (var index = 0; index <= 2; index++) {
+      final y = chart.top + chart.height * index / 2;
       canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), grid);
     }
     // HOKX recharts 单一共享 Y 轴：全部系列用同一个 min/max 归一化。
