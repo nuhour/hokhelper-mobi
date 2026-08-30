@@ -48,7 +48,7 @@ void main() {
     expect(find.text('Home ready'), findsOneWidget);
   });
 
-  testWidgets('does not block startup indefinitely when preload is slow', (
+  testWidgets('keeps the branded splash through a normal slow preload', (
     tester,
   ) async {
     final homeStats = Completer<HomeStats>();
@@ -65,7 +65,12 @@ void main() {
       ),
     );
 
-    for (var second = 0; second < 6; second++) {
+    for (var second = 0; second < 7; second++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.text('HOK HELPER'), findsOneWidget);
+
+    for (var second = 0; second < 15; second++) {
       await tester.pump(const Duration(seconds: 1));
     }
     await tester.pumpAndSettle();

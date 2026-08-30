@@ -21,7 +21,9 @@ class StartupSplash extends ConsumerStatefulWidget {
 
 class _StartupSplashState extends ConsumerState<StartupSplash>
     with TickerProviderStateMixin {
-  static const _maximumPreloadWait = Duration(milliseconds: 4500);
+  // 线上首页聚合接口首响通常需要数秒，开屏覆盖这段预热时间；网络异常时
+  // 仍在上限后进入首页的可重试状态，避免无限停留在开屏动画。
+  static const _maximumPreloadWait = Duration(seconds: 20);
 
   late final AnimationController _gatherController;
   late final AnimationController _pulseController;
