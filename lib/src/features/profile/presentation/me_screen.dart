@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -735,13 +734,11 @@ class _ProfileAvatarBackdrop extends StatelessWidget {
                 ],
                 stops: [0, 0.16, 0.84, 1],
               ).createShader(bounds),
-              child: ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: Image.asset(
-                  'assets/home/avatar_bg.webp',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center,
-                ),
+              child: Image.asset(
+                'assets/home/avatar_bg.webp',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                filterQuality: FilterQuality.high,
               ),
             ),
             DecoratedBox(

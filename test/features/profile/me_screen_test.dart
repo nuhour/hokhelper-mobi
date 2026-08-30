@@ -369,6 +369,24 @@ void main() {
     expect(find.byKey(const ValueKey('me-avatar-backdrop')), findsOneWidget);
   });
 
+  testWidgets('keeps the avatar backdrop image sharp', (tester) async {
+    await tester.pumpWidget(_buildMeScreen(null));
+    await tester.pumpAndSettle();
+
+    final backdrop = find.byKey(const ValueKey('me-avatar-backdrop'));
+    expect(
+      find.descendant(of: backdrop, matching: find.byType(ImageFiltered)),
+      findsNothing,
+    );
+    final images = tester
+        .widgetList<Image>(
+          find.descendant(of: backdrop, matching: find.byType(Image)),
+        )
+        .toList();
+    expect(images, hasLength(1));
+    expect(images.single.filterQuality, FilterQuality.high);
+  });
+
   testWidgets('signed-out profile can open settings from header', (
     tester,
   ) async {
