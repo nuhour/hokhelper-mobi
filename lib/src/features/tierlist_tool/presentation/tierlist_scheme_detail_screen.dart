@@ -971,6 +971,8 @@ class _TierBoardPanel extends StatelessWidget {
   }
 }
 
+const _tierLaneOrder = <int>[0, 3, 1, 2, 4];
+
 class _TierLaneHeader extends StatelessWidget {
   const _TierLaneHeader();
 
@@ -1967,7 +1969,7 @@ class _TierLaneHeroGroups extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var lane = 0; lane < 5; lane++)
+          for (final lane in _tierLaneOrder)
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(minHeight: 40),
