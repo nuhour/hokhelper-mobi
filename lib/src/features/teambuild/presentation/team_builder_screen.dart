@@ -235,8 +235,18 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
       enemyPicks: enemyPicks,
       allyBans: allyBans,
       enemyBans: enemyBans,
-      activeIndex: (draft.activeIndex + 1).clamp(0, 4),
+      activeIndex: _nextActiveIndex(draft),
     );
+  }
+
+  int _nextActiveIndex(TeamBuilderDraft draft) {
+    // 对方 Ban 位从右向左展示，数字索引递减才是视觉上的下一个位置。
+    final step =
+        draft.activeSlotType == TeamBuilderSlotType.ban &&
+            draft.activeSide == TeamBuilderSide.enemy
+        ? -1
+        : 1;
+    return (draft.activeIndex + step).clamp(0, 4);
   }
 
   TeamBuildHero? _heroAtActiveSlot(TeamBuilderDraft draft) {
@@ -779,7 +789,7 @@ class _TeamSlotState extends State<_TeamSlot>
       duration: const Duration(milliseconds: 1500),
     );
     if (widget.active) {
-      _rotationController.repeat(count: 4);
+      _rotationController.repeat();
     }
   }
 
@@ -788,7 +798,7 @@ class _TeamSlotState extends State<_TeamSlot>
     super.didUpdateWidget(oldWidget);
     if (widget.active == oldWidget.active) return;
     if (widget.active) {
-      _rotationController.repeat(count: 4);
+      _rotationController.repeat();
     } else {
       _rotationController
         ..stop()

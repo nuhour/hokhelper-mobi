@@ -60,7 +60,11 @@ class TierListToolRepository {
   Future<TierListSchemeSummary> loadScheme(String schemeId) async {
     final json = await apiClient.getJson('/tierlist/schemes/$schemeId');
     final result = json['result'];
-    return TierListSchemeSummary.fromJson(result is Map ? result : json);
+    // HOKX 详情接口返回 result.scheme；保留直接返回方案的兼容格式。
+    final scheme = result is Map ? result['scheme'] : json['scheme'];
+    return TierListSchemeSummary.fromJson(
+      scheme is Map ? scheme : result ?? json,
+    );
   }
 
   Future<TierListSchemeSummary> createScheme({required String name}) async {

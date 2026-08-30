@@ -28,24 +28,26 @@ class _FakeApiClient extends ApiClient {
       'success': true,
       'message': 'success',
       'result': {
-        'id': '42',
-        'name': 'KIC Knockout Meta',
-        'createdAt': '2026-07-02T08:00:00Z',
-        'updatedAt': '2026-07-04T12:00:00Z',
-        'rows': [
-          {
-            'id': 'r1',
-            'label': 'T0',
-            'color': 'bg-red-600',
-            'heroIds': [111, 222, 333],
-          },
-          {
-            'id': 'r2',
-            'label': 'T1',
-            'color': 'bg-orange-500',
-            'heroIds': [444],
-          },
-        ],
+        'scheme': {
+          'id': '42',
+          'name': 'KIC Knockout Meta',
+          'createdAt': '2026-07-02T08:00:00Z',
+          'updatedAt': '2026-07-04T12:00:00Z',
+          'rows': [
+            {
+              'id': 'r1',
+              'label': 'T0',
+              'color': 'bg-red-600',
+              'heroIds': [111, 222, 333],
+            },
+            {
+              'id': 'r2',
+              'label': 'T1',
+              'color': 'bg-orange-500',
+              'heroIds': [444],
+            },
+          ],
+        },
       },
     };
   }

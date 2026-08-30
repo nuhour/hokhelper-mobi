@@ -103,12 +103,18 @@ Widget _app({TeamBuilderScreen screen = const TeamBuilderScreen()}) =>
       child: MaterialApp(home: Scaffold(body: screen)),
     );
 
+Future<void> _pumpTeamBuilder(WidgetTester tester) async {
+  // 活跃槽位的旋转动画是持续的，固定时长 pump 可等待异步数据而不等待永动帧。
+  await tester.pump(const Duration(milliseconds: 120));
+  await tester.pump(const Duration(milliseconds: 120));
+}
+
 void main() {
   testWidgets('renders the HOKX-style mobile team builder workspace', (
     tester,
   ) async {
     await tester.pumpWidget(_app());
-    await tester.pumpAndSettle();
+    await _pumpTeamBuilder(tester);
     expect(find.text('Smart Team Builder'), findsNothing);
     expect(find.text('Synergy Picks'), findsOneWidget);
     expect(find.text('Counter Picks'), findsOneWidget);
@@ -126,9 +132,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(_app());
-    await tester.pumpAndSettle();
+    await _pumpTeamBuilder(tester);
     await tester.tap(find.byKey(const ValueKey('team-pool-42')));
-    await tester.pumpAndSettle();
+    await _pumpTeamBuilder(tester);
     expect(find.byKey(const ValueKey('team-pick-ally-0')), findsOneWidget);
   });
 
@@ -136,60 +142,57 @@ void main() {
     'uses either ban strip side and sends its combined bans to recommendations',
     (tester) async {
       await tester.pumpWidget(_app());
-      await tester.pumpAndSettle();
+      await _pumpTeamBuilder(tester);
       await tester.tap(find.byKey(const ValueKey('team-ban-ally-0')));
       await tester.tap(find.byKey(const ValueKey('team-pool-42')));
-      await tester.pumpAndSettle();
+      await _pumpTeamBuilder(tester);
       expect(find.byKey(const ValueKey('team-ban-ally-0')), findsOneWidget);
     },
   );
 
-  testWidgets(
-    'ban slot switches recommendation labels and uses ban context',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final repository = _RecordingTeamBuilderRepository();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            teamBuilderHeroesProvider.overrideWith((ref) async => _heroes),
-            teamBuilderRepositoryProvider.overrideWithValue(repository),
-          ],
-          child: const MaterialApp(home: Scaffold(body: TeamBuilderScreen())),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('ban slot switches recommendation labels and uses ban context', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _RecordingTeamBuilderRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          teamBuilderHeroesProvider.overrideWith((ref) async => _heroes),
+          teamBuilderRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TeamBuilderScreen())),
+      ),
+    );
+    await _pumpTeamBuilder(tester);
 
-      expect(find.text('Synergy Picks'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('team-pool-42')));
-      await tester.pumpAndSettle();
+    expect(find.text('Synergy Picks'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('team-pool-42')));
+    await _pumpTeamBuilder(tester);
 
-      await tester.tap(find.byKey(const ValueKey('team-ban-ally-0')));
-      await tester.pumpAndSettle();
-      expect(find.text('Priority Bans'), findsOneWidget);
-      expect(find.text('Counter Bans'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('team-ban-ally-0')));
+    await _pumpTeamBuilder(tester);
+    expect(find.text('Priority Bans'), findsOneWidget);
+    expect(find.text('Counter Bans'), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('team-pool-7')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('team-pool-7')));
+    await _pumpTeamBuilder(tester);
 
-      // 主请求：slot_type=ban，上下文为双方已 ban 列表。
-      final banCalls = repository.calls
-          .where((call) => call['slotType'] == 'ban')
-          .toList();
-      expect(banCalls, isNotEmpty);
-      expect(banCalls.last['myPicks'], [7]);
-      expect(banCalls.last['enemyPicks'], isEmpty);
-      expect(banCalls.last['bans'], [7]);
-      // 胜率请求：ban 位时仍按双方已选阵容单独计算。
-      final rateCalls = repository.calls
-          .where(
-            (call) => call['slotType'] == 'pick' && call['limit'] == 1,
-          )
-          .toList();
-      expect(rateCalls, isNotEmpty);
-      expect(rateCalls.last['myPicks'], [42]);
-    },
-  );
+    // 主请求：slot_type=ban，上下文为双方已 ban 列表。
+    final banCalls = repository.calls
+        .where((call) => call['slotType'] == 'ban')
+        .toList();
+    expect(banCalls, isNotEmpty);
+    expect(banCalls.last['myPicks'], [7]);
+    expect(banCalls.last['enemyPicks'], isEmpty);
+    expect(banCalls.last['bans'], [7]);
+    // 胜率请求：ban 位时仍按双方已选阵容单独计算。
+    final rateCalls = repository.calls
+        .where((call) => call['slotType'] == 'pick' && call['limit'] == 1)
+        .toList();
+    expect(rateCalls, isNotEmpty);
+    expect(rateCalls.last['myPicks'], [42]);
+  });
 
   testWidgets(
     'hydrates incoming HOKX draft query values into workspace slots',
@@ -204,10 +207,55 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpTeamBuilder(tester);
       expect(find.byKey(const ValueKey('team-pick-ally-0')), findsOneWidget);
       expect(find.byKey(const ValueKey('team-pick-enemy-0')), findsOneWidget);
       expect(find.byKey(const ValueKey('team-ban-ally-0')), findsOneWidget);
     },
   );
+
+  testWidgets('advances enemy bans in the displayed right-to-left order', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await _pumpTeamBuilder(tester);
+
+    await tester.tap(find.byKey(const ValueKey('team-ban-enemy-4')));
+    await _pumpTeamBuilder(tester);
+    await tester.tap(find.byKey(const ValueKey('team-pool-42')));
+    await _pumpTeamBuilder(tester);
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('team-ban-enemy-3')),
+        matching: find.byType(RotationTransition),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('team-ban-enemy-4')),
+        matching: find.byType(RotationTransition),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('keeps the active slot ring rotating beyond five seconds', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await _pumpTeamBuilder(tester);
+
+    final rotation = tester.widget<RotationTransition>(
+      find.descendant(
+        of: find.byKey(const ValueKey('team-pick-ally-0')),
+        matching: find.byType(RotationTransition),
+      ),
+    );
+    final initialTurns = rotation.turns.value;
+    await tester.pump(const Duration(seconds: 5));
+
+    expect(rotation.turns.value, isNot(equals(initialTurns)));
+  });
 }

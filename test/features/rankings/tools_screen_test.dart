@@ -129,6 +129,12 @@ List<Override> _toolOverrides({
   ];
 }
 
+Future<void> _pumpTeamBuilderRoute(WidgetTester tester) async {
+  // Team Builder 的当前槽位会持续旋转，导航测试只需推进一帧即可验证路由。
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
 void main() {
   testWidgets('standalone tool pages expose button and system back', (
     tester,
@@ -377,6 +383,7 @@ void main() {
   });
 
   testWidgets('team builder tile opens the team builder route', (tester) async {
+    final router = _buildRouter();
     await tester.pumpWidget(
       ProviderScope(
         overrides: _toolOverrides(
@@ -392,7 +399,7 @@ void main() {
             ];
           },
         ),
-        child: MaterialApp.router(routerConfig: _buildRouter()),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -400,9 +407,12 @@ void main() {
     await tester.scrollUntilVisible(find.text('Team Builder'), 120);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Team Builder'));
-    await tester.pumpAndSettle();
+    await _pumpTeamBuilderRoute(tester);
 
-    expect(find.text('Team Builder'), findsOneWidget);
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/tools/team-builder',
+    );
     expect(
       find.byKey(const ValueKey('standalone-back-button')),
       findsOneWidget,
@@ -435,7 +445,11 @@ void main() {
     for (final (label, route) in tools) {
       await tester.ensureVisible(find.text(label));
       await tester.tap(find.text(label));
-      await tester.pumpAndSettle();
+      if (route == '/tools/team-builder') {
+        await _pumpTeamBuilderRoute(tester);
+      } else {
+        await tester.pumpAndSettle();
+      }
 
       expect(router.routeInformationProvider.value.uri.path, route);
       router.go('/tools');
