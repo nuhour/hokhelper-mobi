@@ -152,60 +152,71 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
       context: context,
       isDismissible: true,
       enableDrag: true,
+      isScrollControlled: true,
       backgroundColor: context.hokTheme.surfaceSlate,
       showDragHandle: true,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                Text(
-                  'Domain Records',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppTheme.gold,
-                    fontWeight: FontWeight.w900,
+        final viewport = MediaQuery.sizeOf(context);
+        // 竖屏按 3:4 控制面板比例，横屏预留拖拽手柄后仍占满高度的 90%。
+        final panelHeight = math.min(
+          viewport.width * 4 / 3,
+          viewport.height * 0.92,
+        );
+
+        return SizedBox(
+          key: const ValueKey('world-map-region-detail-panel'),
+          height: panelHeight,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: ListView(
+                children: [
+                  Text(
+                    'Domain Records',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.gold,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  region.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: context.hokTheme.onSurfaceStrong,
-                    fontWeight: FontWeight.w900,
+                  const SizedBox(height: 8),
+                  Text(
+                    region.name,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  region.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.hokTheme.onSurfaceMuted,
+                  const SizedBox(height: 12),
+                  Text(
+                    region.description,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.hokTheme.onSurfaceMuted,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Representative Heroes',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: context.hokTheme.onSurfaceStrong,
-                    fontWeight: FontWeight.w800,
+                  const SizedBox(height: 20),
+                  Text(
+                    'Representative Heroes',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: context.hokTheme.onSurfaceStrong,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                if (region.representativeHeroes.isEmpty)
-                  const AppEmptyState(
-                    icon: Icons.travel_explore_outlined,
-                    title: 'No hero data',
-                    message: 'Switch region or pull to refresh hero records.',
-                  )
-                else
-                  ...region.representativeHeroes.map((hero) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _HeroDetailRow(hero: hero),
-                    );
-                  }),
-              ],
+                  const SizedBox(height: 10),
+                  if (region.representativeHeroes.isEmpty)
+                    const AppEmptyState(
+                      icon: Icons.travel_explore_outlined,
+                      title: 'No hero data',
+                      message: 'Switch region or pull to refresh hero records.',
+                    )
+                  else
+                    ...region.representativeHeroes.map((hero) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _HeroDetailRow(hero: hero),
+                      );
+                    }),
+                ],
+              ),
             ),
           ),
         );
@@ -262,7 +273,8 @@ class _WorldAtlasState extends State<_WorldAtlas>
   late final TransformationController _controller;
   late final AnimationController _cloudFrontController;
   late final AnimationController _cloudBackController;
-  var _hasCenteredMap = false;
+  Size? _lastCenteredViewport;
+  Size? _pendingCenterViewport;
 
   @override
   void initState() {
@@ -286,17 +298,41 @@ class _WorldAtlasState extends State<_WorldAtlas>
     super.dispose();
   }
 
+  double _initialScaleFor(Size viewport) {
+    if (!widget.immersive ||
+        !viewport.width.isFinite ||
+        !viewport.height.isFinite ||
+        viewport.width <= 0 ||
+        viewport.height <= 0) {
+      return 1.0;
+    }
+    return math.max(viewport.width / _mapWidth, viewport.height / _mapHeight);
+  }
+
+  void _scheduleCenter(Size viewport) {
+    if (_lastCenteredViewport == viewport ||
+        _pendingCenterViewport == viewport) {
+      return;
+    }
+    _pendingCenterViewport = viewport;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pendingCenterViewport = null;
+      if (mounted) {
+        _centerMap();
+      }
+    });
+  }
+
   bool _centerMap() {
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null || !renderBox.hasSize) {
       return false;
     }
     final viewport = renderBox.size;
-    final scale = widget.immersive
-        ? math.max(viewport.width / _mapWidth, viewport.height / _mapHeight)
-        : 1.0;
+    final scale = _initialScaleFor(viewport);
     final scaledWidth = _mapWidth * scale;
     final scaledHeight = _mapHeight * scale;
+    _lastCenteredViewport = viewport;
     _controller.value = Matrix4.identity()
       ..translateByDouble(
         (viewport.width - scaledWidth) / 2,
@@ -310,171 +346,152 @@ class _WorldAtlasState extends State<_WorldAtlas>
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasCenteredMap) {
-      _hasCenteredMap = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !_centerMap()) {
-          _hasCenteredMap = false;
-        }
-      });
-    }
     final height = (MediaQuery.sizeOf(context).height * 0.7).clamp(
       460.0,
       720.0,
     );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewport = widget.immersive
+            ? constraints.biggest
+            : Size(constraints.maxWidth, height);
+        final minimumScale = _initialScaleFor(viewport);
+        _scheduleCenter(viewport);
 
-    final atlas = DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: widget.immersive
-            ? BorderRadius.zero
-            : BorderRadius.circular(18),
-        border: widget.immersive
-            ? null
-            : Border.all(
-                color: context.hokTheme.onSurfaceMuted.withValues(alpha: 0.22),
-              ),
-      ),
-      child: SizedBox.expand(
-        child: ClipRRect(
-          borderRadius: widget.immersive
-              ? BorderRadius.zero
-              : BorderRadius.circular(17),
-          child: Stack(
-            children: [
-              InteractiveViewer(
-                transformationController: _controller,
-                constrained: false,
-                minScale: 0.28,
-                maxScale: 2.8,
-                boundaryMargin: const EdgeInsets.all(180),
-                child: SizedBox(
-                  width: _mapWidth,
-                  height: _mapHeight,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(
-                        'assets/world/hok_world.png',
-                        fit: BoxFit.cover,
-                      ),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0x12000000), Color(0x56000000)],
+        final atlas = DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: widget.immersive
+                ? BorderRadius.zero
+                : BorderRadius.circular(18),
+            border: widget.immersive
+                ? null
+                : Border.all(
+                    color: context.hokTheme.onSurfaceMuted.withValues(
+                      alpha: 0.22,
+                    ),
+                  ),
+          ),
+          child: SizedBox.expand(
+            child: ClipRRect(
+              borderRadius: widget.immersive
+                  ? BorderRadius.zero
+                  : BorderRadius.circular(17),
+              child: Stack(
+                children: [
+                  InteractiveViewer(
+                    transformationController: _controller,
+                    constrained: false,
+                    minScale: minimumScale,
+                    maxScale: 2.8,
+                    boundaryMargin: EdgeInsets.zero,
+                    child: SizedBox(
+                      width: _mapWidth,
+                      height: _mapHeight,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            'assets/world/hok_world.png',
+                            fit: BoxFit.cover,
                           ),
-                        ),
-                      ),
-                      // 与 HOKX 一致：用虚线边界图标出每个 region 的范围。
-                      for (final region in widget.regions)
-                        if (_regionLineBounds[region.areaId] case final bounds?)
-                          Positioned(
-                            left: bounds.left * _mapWidth / _sourceMapWidth,
-                            top: bounds.top * _mapHeight / _sourceMapHeight,
-                            width: bounds.width * _mapWidth / _sourceMapWidth,
-                            height:
-                                bounds.height * _mapHeight / _sourceMapHeight,
-                            child: IgnorePointer(
-                              child: Opacity(
-                                opacity: 0.62,
-                                child: Image.asset(
-                                  'assets/world/line_${region.areaId}.png',
-                                  fit: BoxFit.fill,
-                                ),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Color(0x12000000), Color(0x56000000)],
                               ),
                             ),
                           ),
-                      for (final region in widget.regions)
-                        if (_regionAnchors[region.id] case final anchor?)
-                          Positioned(
-                            left: anchor.dx - 46,
-                            top: anchor.dy - 40,
-                            child: _WorldRegionMarker(
-                              region: region,
-                              onTap: () => widget.onOpenDetail(region),
-                            ),
-                          ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: ClipRect(
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge([
-                        _cloudFrontController,
-                        _cloudBackController,
-                      ]),
-                      builder: (context, child) {
-                        return Stack(
-                          children: [
-                            _FloatingCloudBand(
-                              progress: _cloudBackController.value,
-                              assetPath: 'assets/world/cloud_2.png',
-                              topFactor: 0.02,
-                              opacity: 0.31,
-                              scale: 1.36,
-                            ),
-                            _FloatingCloudBand(
-                              progress: _cloudFrontController.value,
-                              assetPath: 'assets/world/cloud_1.png',
-                              topFactor: 0.12,
-                              opacity: 0.43,
-                              scale: 1.56,
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: IconButton.filledTonal(
-                  tooltip: 'Recenter map',
-                  onPressed: _centerMap,
-                  icon: const Icon(Icons.center_focus_strong_rounded),
-                ),
-              ),
-              Positioned(
-                left: 14,
-                bottom: 14,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.58),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.16),
+                          // 与 HOKX 一致：用虚线边界图标出每个 region 的范围。
+                          for (final region in widget.regions)
+                            if (_regionLineBounds[region.areaId]
+                                case final bounds?)
+                              Positioned(
+                                left: bounds.left * _mapWidth / _sourceMapWidth,
+                                top: bounds.top * _mapHeight / _sourceMapHeight,
+                                width:
+                                    bounds.width * _mapWidth / _sourceMapWidth,
+                                height:
+                                    bounds.height *
+                                    _mapHeight /
+                                    _sourceMapHeight,
+                                child: IgnorePointer(
+                                  child: Opacity(
+                                    opacity: 0.62,
+                                    child: Image.asset(
+                                      'assets/world/line_${region.areaId}.png',
+                                      fit: BoxFit.fill,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          for (final region in widget.regions)
+                            if (_regionAnchors[region.id] case final anchor?)
+                              Positioned(
+                                left: anchor.dx - 46,
+                                top: anchor.dy - 40,
+                                child: _WorldRegionMarker(
+                                  region: region,
+                                  onTap: () => widget.onOpenDetail(region),
+                                ),
+                              ),
+                        ],
                       ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 7,
-                      ),
-                      child: Text(
-                        'Pinch to zoom · Drag to explore',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w700,
+                  ),
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: ClipRect(
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _cloudFrontController,
+                            _cloudBackController,
+                          ]),
+                          builder: (context, child) {
+                            return Stack(
+                              children: [
+                                _FloatingCloudBand(
+                                  progress: _cloudBackController.value,
+                                  assetPath: 'assets/world/cloud_2.png',
+                                  topFactor: 0.02,
+                                  opacity: 0.31,
+                                  scale: 1.36,
+                                ),
+                                _FloatingCloudBand(
+                                  progress: _cloudFrontController.value,
+                                  assetPath: 'assets/world/cloud_1.png',
+                                  topFactor: 0.12,
+                                  opacity: 0.43,
+                                  scale: 1.56,
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
-                ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: IconButton.filledTonal(
+                      tooltip: 'Recenter map',
+                      onPressed: _centerMap,
+                      icon: const Icon(Icons.center_focus_strong_rounded),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+        return widget.immersive
+            ? atlas
+            : SizedBox(height: height, child: atlas);
+      },
     );
-    return widget.immersive ? atlas : SizedBox(height: height, child: atlas);
   }
 }
 
