@@ -563,9 +563,9 @@ class _TierLaneFilterBar extends StatelessWidget {
   static const _options = <({String label, String? asset, int? position})>[
     (label: 'All lanes', asset: null, position: null),
     (label: 'Clash', asset: 'clash', position: 0),
+    (label: 'Jungle', asset: 'jungle', position: 3),
     (label: 'Mid', asset: 'mid', position: 1),
     (label: 'Farm', asset: 'adc', position: 2),
-    (label: 'Jungle', asset: 'jungle', position: 3),
     (label: 'Support', asset: 'support', position: 4),
   ];
 

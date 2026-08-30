@@ -618,9 +618,9 @@ class _BuildLaneFilterBar extends StatelessWidget {
   static const _options = [
     _BuildLaneOption(label: 'All', assetName: null, value: null),
     _BuildLaneOption(label: 'Clash', assetName: 'clash', value: 0),
+    _BuildLaneOption(label: 'Jungle', assetName: 'jungle', value: 3),
     _BuildLaneOption(label: 'Mid', assetName: 'mid', value: 1),
     _BuildLaneOption(label: 'Farm', assetName: 'adc', value: 2),
-    _BuildLaneOption(label: 'Jungle', assetName: 'jungle', value: 3),
     _BuildLaneOption(label: 'Support', assetName: 'support', value: 4),
   ];
 

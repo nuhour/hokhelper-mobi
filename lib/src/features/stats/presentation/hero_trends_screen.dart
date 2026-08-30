@@ -1407,9 +1407,9 @@ class _LaneFilter extends StatelessWidget {
     const lanes = <(int?, String, String?)>[
       (null, 'All lanes', null),
       (0, 'Clash lane', 'clash'),
+      (3, 'Jungle', 'jungle'),
       (1, 'Mid lane', 'mid'),
       (2, 'Farm lane', 'adc'),
-      (3, 'Jungle', 'jungle'),
       (4, 'Support', 'support'),
     ];
     return Wrap(

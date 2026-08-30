@@ -1292,7 +1292,7 @@ class _LaneFilter extends StatelessWidget {
   const _LaneFilter({required this.selected, required this.onChanged});
   final int? selected;
   final ValueChanged<int?> onChanged;
-  static const _lanes = <int?>[null, 0, 1, 2, 3, 4];
+  static const _lanes = <int?>[null, 0, 3, 1, 2, 4];
   @override
   Widget build(BuildContext context) => Container(
     height: 48,

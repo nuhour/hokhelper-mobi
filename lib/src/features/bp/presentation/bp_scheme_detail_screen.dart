@@ -723,9 +723,9 @@ class _BpLandscapeEditorState extends ConsumerState<_BpLandscapeEditor> {
   static const _lanes = <_BpLaneOption>[
     _BpLaneOption(label: 'ALL', assetName: null, value: null),
     _BpLaneOption(label: 'CLASH', assetName: 'clash', value: 0),
+    _BpLaneOption(label: 'JUNGLE', assetName: 'jungle', value: 3),
     _BpLaneOption(label: 'MID', assetName: 'mid', value: 1),
     _BpLaneOption(label: 'FARM', assetName: 'adc', value: 2),
-    _BpLaneOption(label: 'JUNGLE', assetName: 'jungle', value: 3),
     _BpLaneOption(label: 'SUPPORT', assetName: 'support', value: 4),
   ];
   static const _standardSteps = <_BpStep>[

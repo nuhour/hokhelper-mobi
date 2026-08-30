@@ -506,9 +506,9 @@ class _LaneFilterBar extends StatelessWidget {
   static const _options = [
     _LaneFilterOption(label: 'All lanes', assetName: null),
     _LaneFilterOption(label: 'Clash', assetName: 'clash', value: 0),
+    _LaneFilterOption(label: 'Jungle', assetName: 'jungle', value: 3),
     _LaneFilterOption(label: 'Mid', assetName: 'mid', value: 1),
     _LaneFilterOption(label: 'Farm', assetName: 'adc', value: 2),
-    _LaneFilterOption(label: 'Jungle', assetName: 'jungle', value: 3),
     _LaneFilterOption(label: 'Support', assetName: 'support', value: 4),
   ];
 

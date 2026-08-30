@@ -974,8 +974,8 @@ class _TierBoardPanel extends StatelessWidget {
 class _TierLaneHeader extends StatelessWidget {
   const _TierLaneHeader();
 
-  static const _assets = ['clash', 'mid', 'adc', 'jungle', 'support'];
-  static const _labels = ['Clash', 'Mid', 'Farm', 'Jungle', 'Support'];
+  static const _assets = ['clash', 'jungle', 'mid', 'adc', 'support'];
+  static const _labels = ['Clash', 'Jungle', 'Mid', 'Farm', 'Support'];
 
   @override
   Widget build(BuildContext context) {
@@ -1158,9 +1158,9 @@ class _LaneIconFilterBar extends StatelessWidget {
   static const _options = [
     _LaneFilterOption(label: 'All', assetName: null, value: null),
     _LaneFilterOption(label: 'Clash', assetName: 'clash', value: 0),
+    _LaneFilterOption(label: 'Jungle', assetName: 'jungle', value: 3),
     _LaneFilterOption(label: 'Mid', assetName: 'mid', value: 1),
     _LaneFilterOption(label: 'Farm', assetName: 'adc', value: 2),
-    _LaneFilterOption(label: 'Jungle', assetName: 'jungle', value: 3),
     _LaneFilterOption(label: 'Support', assetName: 'support', value: 4),
   ];
 
