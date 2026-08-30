@@ -32,6 +32,9 @@ class TeamRecommendationResult {
     this.phase,
     this.modelVersion,
     this.statsSnapshot,
+    this.hasOwnPickContext = false,
+    this.hasEnemyPickContext = false,
+    this.counterContextAvailable = false,
   });
 
   /// 兼容旧接口的主列表；Draft v2 下等同于适配/保护推荐。
@@ -42,6 +45,9 @@ class TeamRecommendationResult {
   final String? phase;
   final String? modelVersion;
   final String? statsSnapshot;
+  final bool hasOwnPickContext;
+  final bool hasEnemyPickContext;
+  final bool counterContextAvailable;
 }
 
 class TeamRecommendation {
@@ -56,6 +62,8 @@ class TeamRecommendation {
     required this.banRate,
     required this.synergy,
     required this.counter,
+    this.synergyAvailable = true,
+    this.counterAvailable = true,
     this.protect = 0,
     this.deny = 0,
     this.roleFit = 0,
@@ -75,6 +83,8 @@ class TeamRecommendation {
   final double banRate;
   final double synergy;
   final double counter;
+  final bool synergyAvailable;
+  final bool counterAvailable;
   final double protect;
   final double deny;
   final double roleFit;
@@ -99,6 +109,8 @@ class TeamRecommendation {
       banRate: _readRate(map['ban_rate']),
       synergy: _readRate(map['synergy']),
       counter: _readRate(map['counter']),
+      synergyAvailable: _readBool(map['synergy_available'], defaultValue: true),
+      counterAvailable: _readBool(map['counter_available'], defaultValue: true),
       protect: _readRate(map['protect']),
       deny: _readRate(map['deny']),
       roleFit: _readRate(map['role_fit'] ?? map['roleFit']),
@@ -147,6 +159,14 @@ int _readInt(Object? value) {
     return value;
   }
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+bool _readBool(Object? value, {required bool defaultValue}) {
+  if (value is bool) return value;
+  final text = value?.toString().trim().toLowerCase();
+  if (text == 'true' || text == '1') return true;
+  if (text == 'false' || text == '0') return false;
+  return defaultValue;
 }
 
 String _readString(Object? value, {String fallback = ''}) {

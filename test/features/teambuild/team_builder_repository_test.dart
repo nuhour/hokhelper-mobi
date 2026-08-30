@@ -36,6 +36,8 @@ class _FakeApiClient extends ApiClient {
               'ban_rate': 4.0,
               'synergy': 0.72,
               'counter': 0.31,
+              'synergy_available': true,
+              'counter_available': true,
             },
           ],
           'fit_recommendations': [
@@ -75,7 +77,7 @@ class _FakeApiClient extends ApiClient {
             },
           ],
           'phase': 'early_pick',
-          'model_version': 'draft-v2.0',
+          'model_version': 'draft-v2.1',
           'stats_snapshot': '2026-08-30',
           'total': 1,
           'side_win_rates': {
@@ -164,6 +166,8 @@ void main() {
       expect(result.recommendations.single.reason, 'Strong synergy with Lam');
       expect(result.recommendations.single.pickRate, 0.125);
       expect(result.recommendations.single.synergy, 0.72);
+      expect(result.recommendations.single.synergyAvailable, isTrue);
+      expect(result.recommendations.single.counterAvailable, isTrue);
       expect(result.fitRecommendations.single.protect, 0.66);
       expect(result.fitRecommendations.single.minorJob, 4);
       expect(result.fitRecommendations.single.components['role_fit'], 0.9);
@@ -171,7 +175,7 @@ void main() {
       expect(result.counterRecommendations.single.heroId, 7);
       expect(result.counterRecommendations.single.counter, 0.86);
       expect(result.phase, 'early_pick');
-      expect(result.modelVersion, 'draft-v2.0');
+      expect(result.modelVersion, 'draft-v2.1');
       expect(result.sideWinRates?.blue, 0.57);
       expect(result.sideWinRates?.red, 0.43);
     });

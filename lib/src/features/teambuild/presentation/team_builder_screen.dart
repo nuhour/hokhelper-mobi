@@ -326,6 +326,12 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
                 recommendations: recommendations,
                 recommendJob: _recommendJob,
                 recommendationType: ref.watch(teamBuilderRecommendTypeProvider),
+                hasEnemyPickContext:
+                    (draft.activeSide == TeamBuilderSide.ally
+                            ? draft.enemyPicks
+                            : draft.allyPicks)
+                        .whereType<TeamBuildHero>()
+                        .isNotEmpty,
                 onRecommendationJobChanged: (value) =>
                     setState(() => _recommendJob = value),
                 onRecommendationTypeChanged: (type) {
@@ -572,6 +578,7 @@ class _DraftBoard extends StatelessWidget {
     required this.recommendations,
     required this.recommendJob,
     required this.recommendationType,
+    required this.hasEnemyPickContext,
     required this.onRecommendationJobChanged,
     required this.onRecommendationTypeChanged,
     required this.onSlotTap,
@@ -583,6 +590,7 @@ class _DraftBoard extends StatelessWidget {
   final AsyncValue<TeamRecommendationResult> recommendations;
   final int? recommendJob;
   final TeamRecommendType recommendationType;
+  final bool hasEnemyPickContext;
   final ValueChanged<int?> onRecommendationJobChanged;
   final ValueChanged<TeamRecommendType> onRecommendationTypeChanged;
   final void Function(TeamBuilderSide, int) onSlotTap;
@@ -618,6 +626,7 @@ class _DraftBoard extends StatelessWidget {
               .firstOrNull,
           type: recommendationType,
           slotType: draft.activeSlotType,
+          hasEnemyPickContext: hasEnemyPickContext,
           mainJob: recommendJob,
           onTypeChanged: onRecommendationTypeChanged,
           onMainJobChanged: onRecommendationJobChanged,
@@ -723,33 +732,40 @@ class _SlotColumn extends StatelessWidget {
   final void Function(TeamBuilderSide, int) onTap;
   final void Function(TeamBuilderSide, int) onRemove;
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: .04),
-      border: Border.symmetric(
-        vertical: BorderSide(color: color.withValues(alpha: .14)),
+  Widget build(BuildContext context) {
+    // Draft 槽位固定为五个；即使外部状态缺少元素，也不能让对方一侧少渲染槽位。
+    final visibleSlots = List<TeamBuildHero?>.generate(
+      5,
+      (index) => index < slots.length ? slots[index] : null,
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .04),
+        border: Border.symmetric(
+          vertical: BorderSide(color: color.withValues(alpha: .14)),
+        ),
       ),
-    ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        for (var index = 0; index < slots.length; index++)
-          _TeamSlot(
-            key: ValueKey('team-pick-${side.name}-$index'),
-            hero: slots[index],
-            color: color,
-            active:
-                activeType == TeamBuilderSlotType.pick &&
-                activeSide == side &&
-                activeIndex == index,
-            onTap: () => onTap(side, index),
-            onLongPress: slots[index] == null
-                ? null
-                : () => onRemove(side, index),
-          ),
-      ],
-    ),
-  );
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          for (var index = 0; index < visibleSlots.length; index++)
+            _TeamSlot(
+              key: ValueKey('team-pick-${side.name}-$index'),
+              hero: visibleSlots[index],
+              color: color,
+              active:
+                  activeType == TeamBuilderSlotType.pick &&
+                  activeSide == side &&
+                  activeIndex == index,
+              onTap: () => onTap(side, index),
+              onLongPress: visibleSlots[index] == null
+                  ? null
+                  : () => onRemove(side, index),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TeamSlot extends StatefulWidget {
@@ -915,6 +931,7 @@ class _RecommendationPanel extends StatelessWidget {
     required this.heroForRecommendation,
     required this.type,
     required this.slotType,
+    required this.hasEnemyPickContext,
     required this.mainJob,
     required this.onTypeChanged,
     required this.onMainJobChanged,
@@ -925,6 +942,7 @@ class _RecommendationPanel extends StatelessWidget {
   final TeamBuildHero? Function(TeamRecommendation) heroForRecommendation;
   final TeamRecommendType type;
   final TeamBuilderSlotType slotType;
+  final bool hasEnemyPickContext;
   final int? mainJob;
   final ValueChanged<TeamRecommendType> onTypeChanged;
   final ValueChanged<int?> onMainJobChanged;
@@ -935,21 +953,23 @@ class _RecommendationPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final result = value.valueOrNull;
     final isBanSlot = slotType == TeamBuilderSlotType.ban;
+    final counterNeedsContext =
+        !isBanSlot && type == TeamRecommendType.counter && !hasEnemyPickContext;
     // HOKX 网页端全量渲染推荐列表，移动端保持一致，不做条数截断。
+    final fitSource = result?.fitRecommendations.isNotEmpty == true
+        ? result!.fitRecommendations
+        : (result?.recommendations ?? const <TeamRecommendation>[]);
     final source = type == TeamRecommendType.counter
         ? (result?.counterRecommendations ?? const <TeamRecommendation>[])
-        : (result?.fitRecommendations ?? const <TeamRecommendation>[]);
-    final items =
-        (source.isNotEmpty
-                ? source
-                : (result?.recommendations ?? const <TeamRecommendation>[]))
-            .where(
-              (item) =>
-                  mainJob == null ||
-                  item.mainJob == mainJob ||
-                  item.minorJob == mainJob,
-            )
-            .toList(growable: false);
+        : fitSource;
+    final items = source
+        .where(
+          (item) =>
+              mainJob == null ||
+              item.mainJob == mainJob ||
+              item.minorJob == mainJob,
+        )
+        .toList(growable: false);
     // 短列表不渲染到底提示，避免噪音。
     final showEndFooter = items.length > 10;
     return DecoratedBox(
@@ -969,6 +989,8 @@ class _RecommendationPanel extends StatelessWidget {
                     // HOKX 规则：ban 位展示禁用优先级推荐，pick 位展示适配阵容推荐。
                     label: isBanSlot
                         ? l10n.translate('teamProtectLineup')
+                        : result?.phase == 'opening_pick'
+                        ? l10n.translate('teamOpeningPicks')
                         : l10n.translate('teamSynergy'),
                     selected: type != TeamRecommendType.counter,
                     onTap: () => onTypeChanged(TeamRecommendType.balanced),
@@ -999,7 +1021,9 @@ class _RecommendationPanel extends StatelessWidget {
                 : items.isEmpty
                 ? Center(
                     child: Text(
-                      'No recommendations',
+                      counterNeedsContext
+                          ? l10n.translate('teamCounterWaiting')
+                          : l10n.translate('teamNoRecommendations'),
                       style: TextStyle(
                         color: context.hokTheme.onSurfaceMuted,
                         fontSize: 12,
@@ -1093,6 +1117,11 @@ class _RecommendationTile extends StatelessWidget {
     final contextualLabel = isBanSlot
         ? (isCounterMode ? denyLabel : protectLabel)
         : (isCounterMode ? counterLabel : synergyLabel);
+    final contextualAvailable = isBanSlot
+        ? true
+        : isCounterMode
+        ? item.counterAvailable
+        : item.synergyAvailable;
     final rawScore = item.score > 0
         ? item.score
         : contextualValue > 0
@@ -1101,12 +1130,15 @@ class _RecommendationTile extends StatelessWidget {
     final score = (rawScore <= 1 ? rawScore * 100 : rawScore)
         .clamp(0.0, 100.0)
         .toDouble();
+    final contextualText = contextualAvailable
+        ? '${(contextualValue * 100).toStringAsFixed(0)}%'
+        : '—';
     final metricText = isBanSlot
         ? '$banLabel ${(item.banRate * 100).toStringAsFixed(1)}% · '
               '$contextualLabel ${(contextualValue * 100).toStringAsFixed(0)}% · '
               '$confidenceLabel ${(item.confidence * 100).toStringAsFixed(0)}%'
         : '$pickLabel ${(item.pickRate * 100).toStringAsFixed(1)}% · '
-              '$contextualLabel ${(contextualValue * 100).toStringAsFixed(0)}% · '
+              '$contextualLabel $contextualText · '
               '$confidenceLabel ${(item.confidence * 100).toStringAsFixed(0)}%';
     return Material(
       color: Colors.transparent,

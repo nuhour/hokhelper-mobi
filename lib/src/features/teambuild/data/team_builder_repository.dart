@@ -118,6 +118,11 @@ class TeamBuilderRepository {
       phase: data is Map ? data['phase']?.toString() : null,
       modelVersion: data is Map ? data['model_version']?.toString() : null,
       statsSnapshot: data is Map ? data['stats_snapshot']?.toString() : null,
+      hasOwnPickContext: data is Map && data['has_own_pick_context'] == true,
+      hasEnemyPickContext:
+          data is Map && data['has_enemy_pick_context'] == true,
+      counterContextAvailable:
+          data is Map && data['counter_context_available'] == true,
     );
   }
 

@@ -94,9 +94,13 @@ Widget _app({TeamBuilderScreen screen = const TeamBuilderScreen()}) =>
     ProviderScope(
       overrides: [
         teamBuilderHeroesProvider.overrideWith((ref) async => _heroes),
-        teamRecommendationsProvider.overrideWith(
-          (ref, mainJob) async => const TeamRecommendationResult(
-            recommendations: [
+        teamRecommendationsProvider.overrideWith((ref, mainJob) async {
+          final hasEnemyPick = ref
+              .watch(teamBuilderDraftProvider)
+              .enemyIds
+              .isNotEmpty;
+          return TeamRecommendationResult(
+            recommendations: const [
               TeamRecommendation(
                 heroId: 99,
                 externalHeroId: '199',
@@ -110,7 +114,7 @@ Widget _app({TeamBuilderScreen screen = const TeamBuilderScreen()}) =>
                 counter: .4,
               ),
             ],
-            fitRecommendations: [
+            fitRecommendations: const [
               TeamRecommendation(
                 heroId: 99,
                 externalHeroId: '199',
@@ -126,24 +130,26 @@ Widget _app({TeamBuilderScreen screen = const TeamBuilderScreen()}) =>
                 confidence: .8,
               ),
             ],
-            counterRecommendations: [
-              TeamRecommendation(
-                heroId: 7,
-                externalHeroId: '107',
-                name: 'Marco Polo',
-                mainJob: 5,
-                score: .73,
-                reason: 'Counters the enemy',
-                pickRate: .08,
-                banRate: .03,
-                synergy: .2,
-                counter: .8,
-                confidence: .75,
-              ),
-            ],
-            sideWinRates: TeamSideWinRates(blue: .57, red: .43),
-          ),
-        ),
+            counterRecommendations: hasEnemyPick
+                ? const [
+                    TeamRecommendation(
+                      heroId: 7,
+                      externalHeroId: '107',
+                      name: 'Marco Polo',
+                      mainJob: 5,
+                      score: .73,
+                      reason: 'Counters the enemy',
+                      pickRate: .08,
+                      banRate: .03,
+                      synergy: .2,
+                      counter: .8,
+                      confidence: .75,
+                    ),
+                  ]
+                : const [],
+            sideWinRates: const TeamSideWinRates(blue: .57, red: .43),
+          );
+        }),
       ],
       child: MaterialApp(home: Scaffold(body: screen)),
     );
@@ -174,7 +180,21 @@ void main() {
 
     await tester.tap(find.text('Counter Picks'));
     await _pumpTeamBuilder(tester);
+    expect(
+      find.text('Pick an opponent hero to calculate counters'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('team-pick-enemy-0')));
+    await tester.tap(find.byKey(const ValueKey('team-pool-42')));
+    await _pumpTeamBuilder(tester);
+    await tester.tap(find.byKey(const ValueKey('team-pick-ally-0')));
+    await tester.tap(find.text('Counter Picks'));
+    await _pumpTeamBuilder(tester);
     expect(find.text('Marco Polo'), findsOneWidget);
+    for (var index = 0; index < 5; index++) {
+      expect(find.byKey(ValueKey('team-pick-enemy-$index')), findsOneWidget);
+    }
   });
 
   testWidgets('fills the active pick slot and locks the hero in the pool', (
