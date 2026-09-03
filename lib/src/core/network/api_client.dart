@@ -10,6 +10,26 @@ import 'api_error.dart';
 
 typedef AuthFailureCallback = Future<void> Function(ApiError error);
 
+const _skipAuthHeaderExtra = 'hokhelper.skip-auth-header';
+
+// 这些 POST 只读取公开数据；带着过期会话请求时，失败后可以安全地按游客
+// 身份重试。写入接口不放在这里，避免重复提交用户操作。
+const _anonymousPostReadPaths = <String>{
+  '/esports/matches/list',
+  '/esports/stats/list',
+  '/esports/teams/list',
+  '/esports/players/list',
+  '/hero/all',
+  '/hero/gallery',
+  '/hero/skills',
+  '/hero/history',
+  '/hero/relationships',
+  '/cg/list',
+  '/skin/list',
+  '/player/search',
+  '/search/global',
+};
+
 class ApiClient {
   ApiClient({
     Dio? dio,
@@ -41,9 +61,52 @@ class ApiClient {
       return _readJsonMap(response.data);
     } on DioException catch (error) {
       final apiError = _mapDioException(error);
+      if (_shouldRetryWithoutAuth(error)) {
+        // 统计、社区和目录类接口支持游客访问。旧的或已失效的登录态
+        // 被服务器拒绝时，先清理本地会话，再用游客请求重试一次，避免
+        // 一个失效 token 把整个导航或首页子页锁在权限错误页。
+        await _notifyAuthFailure(apiError);
+        try {
+          final response = await _retryHandshakeFailure(
+            () => _dio.get<Object?>(
+              path,
+              queryParameters: query,
+              options: Options(extra: const {_skipAuthHeaderExtra: true}),
+            ),
+          );
+          return _readJsonMap(response.data);
+        } on DioException {
+          // 保留首次响应的错误语义；受保护的请求会继续显示登录/权限
+          // 提示，而公开请求的匿名重试成功时已经在上面返回。
+          throw apiError;
+        } on ApiError {
+          throw apiError;
+        }
+      }
       await _notifyAuthFailure(apiError);
       throw apiError;
     }
+  }
+
+  bool _shouldRetryWithoutAuth(DioException error) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode != 401 && statusCode != 403) {
+      return false;
+    }
+
+    final requestPath = error.requestOptions.path.split('?').first;
+    final method = error.requestOptions.method.toUpperCase();
+    final isAnonymousRead =
+        method == 'GET' ||
+        (method == 'POST' && _anonymousPostReadPaths.contains(requestPath));
+    if (!isAnonymousRead) {
+      return false;
+    }
+
+    final authorization = error.requestOptions.headers['Authorization'];
+    return authorization is String &&
+        authorization.trim().isNotEmpty &&
+        error.requestOptions.extra[_skipAuthHeaderExtra] != true;
   }
 
   Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
@@ -54,6 +117,23 @@ class ApiClient {
       return _readJsonMap(response.data);
     } on DioException catch (error) {
       final apiError = _mapDioException(error);
+      if (_shouldRetryWithoutAuth(error)) {
+        await _notifyAuthFailure(apiError);
+        try {
+          final response = await _retryHandshakeFailure(
+            () => _dio.post<Object?>(
+              path,
+              data: body,
+              options: Options(extra: const {_skipAuthHeaderExtra: true}),
+            ),
+          );
+          return _readJsonMap(response.data);
+        } on DioException {
+          throw apiError;
+        } on ApiError {
+          throw apiError;
+        }
+      }
       await _notifyAuthFailure(apiError);
       throw apiError;
     }
@@ -286,6 +366,12 @@ class _ApiClientAuthInterceptor extends Interceptor {
   ) async {
     if (options.data is! FormData) {
       options.headers[Headers.contentTypeHeader] = Headers.jsonContentType;
+    }
+
+    if (options.extra[_skipAuthHeaderExtra] == true) {
+      options.headers.remove('Authorization');
+      handler.next(options);
+      return;
     }
 
     try {

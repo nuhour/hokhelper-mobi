@@ -50,6 +50,55 @@ class _UnauthorizedInterceptor extends Interceptor {
   }
 }
 
+class _RetryableAuthInterceptor extends Interceptor {
+  var requestCount = 0;
+  final authorizationHeaders = <Object?>[];
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    requestCount++;
+    authorizationHeaders.add(options.headers['Authorization']);
+    if (requestCount == 1) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          response: Response<Object?>(
+            requestOptions: options,
+            statusCode: 403,
+            data: {'message': 'Forbidden'},
+          ),
+        ),
+      );
+      return;
+    }
+
+    handler.resolve(
+      Response<Object?>(
+        requestOptions: options,
+        statusCode: 200,
+        data: const {
+          'success': true,
+          'result': {'source': 'anonymous'},
+        },
+      ),
+    );
+  }
+}
+
+class _MemoryTokenStore extends SecureTokenStore {
+  String? access;
+  var didClear = false;
+
+  @override
+  Future<String?> readAccessToken() async => access;
+
+  @override
+  Future<void> clear() async {
+    didClear = true;
+    access = null;
+  }
+}
+
 void main() {
   test(
     'allows local development certificates for configured lan https hosts',
@@ -145,5 +194,62 @@ void main() {
 
     expect(callbackError?.kind, ApiErrorKind.authExpired);
     expect(callbackError?.statusCode, 401);
+  });
+
+  test('retries a rejected authenticated GET without stale auth', () async {
+    final tokenStore = _MemoryTokenStore()..access = 'stale-access-token';
+    final authInterceptor = _RetryableAuthInterceptor();
+    final dio = Dio();
+    final client = ApiClient(
+      dio: dio,
+      tokenStore: tokenStore,
+      onAuthFailure: (error) async => tokenStore.clear(),
+      config: const AppConfig(
+        apiBaseUrl: 'https://example.test',
+        apiPrefix: '',
+      ),
+    );
+    dio.interceptors.add(authInterceptor);
+
+    final response = await client.getJson('/public-data');
+
+    expect(response['result'], {'source': 'anonymous'});
+    expect(authInterceptor.requestCount, 2);
+    expect(authInterceptor.authorizationHeaders, [
+      'Bearer stale-access-token',
+      null,
+    ]);
+    expect(tokenStore.didClear, isTrue);
+    expect(tokenStore.access, isNull);
+  });
+
+  test('retries public list POST without stale auth', () async {
+    final tokenStore = _MemoryTokenStore()..access = 'stale-access-token';
+    final authInterceptor = _RetryableAuthInterceptor();
+    final dio = Dio();
+    final client = ApiClient(
+      dio: dio,
+      tokenStore: tokenStore,
+      onAuthFailure: (error) async => tokenStore.clear(),
+      config: const AppConfig(
+        apiBaseUrl: 'https://example.test',
+        apiPrefix: '',
+      ),
+    );
+    dio.interceptors.add(authInterceptor);
+
+    final response = await client.postJson(
+      '/hero/gallery',
+      body: const {'page': 1, 'pageSize': 1},
+    );
+
+    expect(response['result'], {'source': 'anonymous'});
+    expect(authInterceptor.requestCount, 2);
+    expect(authInterceptor.authorizationHeaders, [
+      'Bearer stale-access-token',
+      null,
+    ]);
+    expect(tokenStore.didClear, isTrue);
+    expect(tokenStore.access, isNull);
   });
 }
