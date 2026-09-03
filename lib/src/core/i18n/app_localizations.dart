@@ -69,6 +69,9 @@ class AppLocalizations {
   String get settingsUpdatesSubtitle => _t('settingsUpdatesSubtitle');
   String get settingsCheckUpdatesAction => _t('settingsCheckUpdatesAction');
   String get settingsLatestVersion => _t('settingsLatestVersion');
+  String get settingsUpdateStarted => _t('settingsUpdateStarted');
+  String get settingsUpdateDeclined => _t('settingsUpdateDeclined');
+  String get settingsUpdateFailed => _t('settingsUpdateFailed');
   String get settingsUpdateStoreOpened => _t('settingsUpdateStoreOpened');
   String get settingsUpdateOpenFailed => _t('settingsUpdateOpenFailed');
   String get settingsAboutTitle => _t('settingsAboutTitle');

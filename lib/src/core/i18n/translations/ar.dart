@@ -29,7 +29,12 @@ const arTranslations = {
   'settingsUpdatesSubtitle': 'التحقق من تحديث التطبيق.',
   'settingsCheckUpdatesAction': 'التحقق من التحديثات',
   'settingsLatestVersion': 'أنت تستخدم أحدث إصدار',
-  'settingsUpdateStoreOpened': 'تم فتح Google Play. تحقق من توفر تحديث.',
+  'settingsUpdateStarted': 'بدأ تثبيت التحديث في Google Play.',
+  'settingsUpdateDeclined': 'لم يتم تثبيت التحديث.',
+  'settingsUpdateFailed':
+      'لم يكتمل تثبيت التحديث. حاول مرة أخرى من Google Play.',
+  'settingsUpdateStoreOpened':
+      'Google Play مفتوح. راجع أحدث إصدار من هذا التطبيق هناك.',
   'settingsUpdateOpenFailed':
       'افتح Google Play من تطبيق المتجر ثم حاول مرة أخرى.',
   'settingsAboutTitle': 'حول',

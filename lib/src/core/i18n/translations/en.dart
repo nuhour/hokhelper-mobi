@@ -31,8 +31,12 @@ const enTranslations = {
   'settingsUpdatesSubtitle': 'Check whether this app is up to date.',
   'settingsCheckUpdatesAction': 'Check for Updates',
   'settingsLatestVersion': 'You are using the latest version',
+  'settingsUpdateStarted': 'Update installation has started in Google Play.',
+  'settingsUpdateDeclined': 'The update was not installed.',
+  'settingsUpdateFailed':
+      'Update installation did not finish. Try again in Google Play.',
   'settingsUpdateStoreOpened':
-      'Google Play opened. Check whether an update is available.',
+      'Google Play is open. Review this app\'s latest version there.',
   'settingsUpdateOpenFailed':
       'Open Google Play from the store app, then try again.',
   'settingsAboutTitle': 'About',

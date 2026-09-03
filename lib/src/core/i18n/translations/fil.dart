@@ -32,8 +32,13 @@ const filTranslations = {
   'settingsUpdatesSubtitle': 'Tingnan kung napapanahon ang app.',
   'settingsCheckUpdatesAction': 'Tingnan ang Update',
   'settingsLatestVersion': 'Pinakabagong bersyon na ang gamit mo',
+  'settingsUpdateStarted':
+      'Nagsimula na ang pag-install ng update sa Google Play.',
+  'settingsUpdateDeclined': 'Hindi na-install ang update.',
+  'settingsUpdateFailed':
+      'Hindi natapos ang pag-install ng update. Subukan muli sa Google Play.',
   'settingsUpdateStoreOpened':
-      'Binuksan ang Google Play. Tingnan kung may update.',
+      'Bukas na ang Google Play. Tingnan doon ang pinakabagong bersyon ng app na ito.',
   'settingsUpdateOpenFailed':
       'Buksan ang Google Play sa store app at subukan muli.',
   'settingsAboutTitle': 'Tungkol',

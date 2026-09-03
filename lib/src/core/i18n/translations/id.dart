@@ -32,8 +32,12 @@ final idTranslations = {
   'settingsUpdatesSubtitle': 'Periksa apakah aplikasi sudah versi terbaru.',
   'settingsCheckUpdatesAction': 'Periksa Pembaruan',
   'settingsLatestVersion': 'Anda menggunakan versi terbaru',
+  'settingsUpdateStarted': 'Instalasi pembaruan dimulai di Google Play.',
+  'settingsUpdateDeclined': 'Pembaruan belum diinstal.',
+  'settingsUpdateFailed':
+      'Instalasi pembaruan belum selesai. Coba lagi di Google Play.',
   'settingsUpdateStoreOpened':
-      'Google Play dibuka. Periksa apakah pembaruan tersedia.',
+      'Google Play terbuka. Lihat versi terbaru aplikasi ini di sana.',
   'settingsUpdateOpenFailed':
       'Buka Google Play dari aplikasi toko, lalu coba lagi.',
   'settingsAboutTitle': 'Tentang',

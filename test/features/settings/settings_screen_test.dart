@@ -71,6 +71,7 @@ void main() {
           ),
           appUpdateServiceProvider.overrideWithValue(
             AppUpdateService(
+              isAndroid: false,
               launchExternal: (uri) async {
                 launchedUris.add(uri);
                 return true;
@@ -144,7 +145,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(launchedUris, [AppUpdateService.playStoreMarketUri]);
     expect(
-      find.text('Google Play opened. Check whether an update is available.'),
+      find.text(
+        'Google Play is open. Review this app\'s latest version there.',
+      ),
       findsOneWidget,
     );
     ScaffoldMessenger.of(

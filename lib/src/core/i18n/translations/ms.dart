@@ -30,8 +30,13 @@ const msTranslations = {
   'settingsUpdatesSubtitle': 'Semak sama ada aplikasi ini terkini.',
   'settingsCheckUpdatesAction': 'Semak kemas kini',
   'settingsLatestVersion': 'Anda menggunakan versi terkini',
+  'settingsUpdateStarted':
+      'Pemasangan kemas kini telah dimulakan dalam Google Play.',
+  'settingsUpdateDeclined': 'Kemas kini belum dipasang.',
+  'settingsUpdateFailed':
+      'Pemasangan kemas kini belum selesai. Cuba lagi dalam Google Play.',
   'settingsUpdateStoreOpened':
-      'Google Play dibuka. Semak sama ada kemas kini tersedia.',
+      'Google Play telah dibuka. Semak versi terkini aplikasi ini di sana.',
   'settingsUpdateOpenFailed':
       'Buka Google Play daripada aplikasi kedai, kemudian cuba lagi.',
   'settingsAboutTitle': 'Perihal',

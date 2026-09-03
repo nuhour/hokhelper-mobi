@@ -255,24 +255,23 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
   ) async {
-    final openedUri = await ref
-        .read(appUpdateServiceProvider)
-        .openStoreListing();
+    final result = await ref.read(appUpdateServiceProvider).checkForUpdates();
     if (!context.mounted) {
       return;
     }
 
+    final message = switch (result.outcome) {
+      AppUpdateOutcome.latest => l10n.settingsLatestVersion,
+      AppUpdateOutcome.updateStarted => l10n.settingsUpdateStarted,
+      AppUpdateOutcome.updateDeclined => l10n.settingsUpdateDeclined,
+      AppUpdateOutcome.updateFailed => l10n.settingsUpdateFailed,
+      AppUpdateOutcome.storeOpened => l10n.settingsUpdateStoreOpened,
+      AppUpdateOutcome.storeOpenFailed => l10n.settingsUpdateOpenFailed,
+    };
+
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            openedUri == null
-                ? l10n.settingsUpdateOpenFailed
-                : l10n.settingsUpdateStoreOpened,
-          ),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   static void _showBlockedUsers(BuildContext context) {

@@ -32,8 +32,13 @@ const ptTranslations = {
   'settingsUpdatesSubtitle': 'Verifica se o app está atualizado.',
   'settingsCheckUpdatesAction': 'Verificar atualizações',
   'settingsLatestVersion': 'Você já está usando a versão mais recente',
+  'settingsUpdateStarted':
+      'A instalação da atualização começou no Google Play.',
+  'settingsUpdateDeclined': 'A atualização não foi instalada.',
+  'settingsUpdateFailed':
+      'A instalação da atualização não terminou. Tente novamente no Google Play.',
   'settingsUpdateStoreOpened':
-      'O Google Play foi aberto. Veja se há uma atualização.',
+      'O Google Play está aberto. Veja a versão mais recente deste app.',
   'settingsUpdateOpenFailed':
       'Abra o Google Play pelo app da loja e tente novamente.',
   'settingsAboutTitle': 'Sobre',

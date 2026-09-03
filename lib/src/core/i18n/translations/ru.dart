@@ -30,8 +30,12 @@ const ruTranslations = {
   'settingsUpdatesSubtitle': 'Проверить актуальность версии приложения.',
   'settingsCheckUpdatesAction': 'Проверить обновления',
   'settingsLatestVersion': 'У вас установлена последняя версия',
+  'settingsUpdateStarted': 'Установка обновления началась в Google Play.',
+  'settingsUpdateDeclined': 'Обновление не установлено.',
+  'settingsUpdateFailed':
+      'Установка обновления не завершена. Повторите попытку в Google Play.',
   'settingsUpdateStoreOpened':
-      'Google Play открыт. Проверьте наличие обновления.',
+      'Google Play открыт. Проверьте там последнюю версию этого приложения.',
   'settingsUpdateOpenFailed':
       'Откройте Google Play через магазин приложений и повторите попытку.',
   'settingsAboutTitle': 'О приложении',
