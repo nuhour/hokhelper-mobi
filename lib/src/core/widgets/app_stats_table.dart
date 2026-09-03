@@ -105,7 +105,7 @@ class _AppStatsTableState extends State<AppStatsTable> {
     );
     final fixedColumnWidth = math.min(
       widget.fixedColumnWidth,
-      math.max(132.0, MediaQuery.sizeOf(context).width * 0.42),
+      math.max(90.0, MediaQuery.sizeOf(context).width * 0.42),
     );
     final headerHeight = hasGroupedHeader ? 64.0 : 44.0;
     final totalScrollableWidth = widget.columns.fold<double>(

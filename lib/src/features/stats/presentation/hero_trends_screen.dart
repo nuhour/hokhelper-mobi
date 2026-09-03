@@ -152,7 +152,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
     final showIdentityName = table.dimension == 'player_rank';
     final fixedWidth = switch (table.dimension) {
       'player_rank' => 174.0,
-      _ => 136.0,
+      _ => 90.0,
     };
 
     return Padding(
@@ -704,7 +704,7 @@ class _TrendIdentityCell extends StatelessWidget {
               ),
             ),
           ] else
-            Expanded(child: Center(child: avatar)),
+            avatar,
         ],
       ),
     );

@@ -339,7 +339,7 @@ void main() {
         tester
             .widget<AppStatsTable>(find.byType(AppStatsTable))
             .fixedColumnWidth,
-        136,
+        90,
       );
 
       await tester.tap(find.text('Power'));
@@ -349,7 +349,7 @@ void main() {
         tester
             .widget<AppStatsTable>(find.byType(AppStatsTable))
             .fixedColumnWidth,
-        136,
+        90,
       );
 
       await tester.tap(find.text('Equipment'));
@@ -359,7 +359,7 @@ void main() {
         tester
             .widget<AppStatsTable>(find.byType(AppStatsTable))
             .fixedColumnWidth,
-        136,
+        90,
       );
 
       await tester.tap(find.text('Tier'));
@@ -369,7 +369,7 @@ void main() {
         tester
             .widget<AppStatsTable>(find.byType(AppStatsTable))
             .fixedColumnWidth,
-        136,
+        90,
       );
     },
   );
