@@ -1,4 +1,4 @@
-package com.hokhelper.hok_helper_mobile
+package com.bottlegame.hokhelper
 
 import android.content.ContentValues
 import android.content.Intent

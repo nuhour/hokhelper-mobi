@@ -40,7 +40,7 @@ if (isReleaseBuild) {
 }
 
 android {
-    namespace = "com.hokhelper.hok_helper_mobile"
+    namespace = "com.bottlegame.hokhelper"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -50,7 +50,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.hokhelper.hok_helper_mobile"
+        applicationId = "com.bottlegame.hokhelper"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

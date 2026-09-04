@@ -79,7 +79,7 @@ class AppUpdateService {
        _isAndroid =
            isAndroid ?? defaultTargetPlatform == TargetPlatform.android;
 
-  static const packageName = 'com.hokhelper.hok_helper_mobile';
+  static const packageName = 'com.bottlegame.hokhelper';
 
   final ExternalUrlLauncher _launchExternal;
 
