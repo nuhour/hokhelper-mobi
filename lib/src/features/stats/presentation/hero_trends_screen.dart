@@ -150,6 +150,12 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
         .toList(growable: false);
     final hasSparkline = table.columns.any((column) => column.isSparkline);
     final showIdentityName = table.dimension == 'player_rank';
+    // 切换维度且新数据尚未返回时，table 可能还是上一个维度的数据。
+    // 仅使用与当前维度匹配的元数据，避免把 Hero 的视图标签短暂显示在 Player 下。
+    final playerViews =
+        _query.dimension == 'player_rank' && table.dimension == 'player_rank'
+        ? _availablePlayerTrendViews(table)
+        : const <StatsTrendView>[];
     final fixedWidth = switch (table.dimension) {
       'player_rank' => 174.0,
       _ => 90.0,
@@ -177,8 +183,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
               );
             },
           ),
-          if (_query.dimension == 'player_rank' &&
-              _availablePlayerTrendViews(table).length > 1) ...[
+          if (playerViews.length > 1) ...[
             const SizedBox(height: 7),
             Align(
               alignment: Alignment.centerLeft,
@@ -186,7 +191,7 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
                 spacing: 7,
                 runSpacing: 7,
                 children: [
-                  for (final view in _availablePlayerTrendViews(table))
+                  for (final view in playerViews)
                     ChoiceChip(
                       key: ValueKey('stats-trend-player-view-${view.id}'),
                       selected:

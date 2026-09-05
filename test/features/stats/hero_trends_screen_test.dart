@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -257,6 +259,74 @@ void main() {
 
     expect(dimensions, contains('hero_rank'));
     expect(dimensions, contains('power_rank'));
+  });
+
+  testWidgets('does not show stale hero view tabs while switching to player', (
+    tester,
+  ) async {
+    final playerTable = Completer<StatsTrendTable>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          heroTrendTableProvider.overrideWith((ref, query) async {
+            if (query.dimension == 'player_rank') {
+              return playerTable.future;
+            }
+            return sampleStatsTrendTable(
+              dimension: query.dimension,
+              view: query.view,
+              availableViews: const [
+                {'id': 'base', 'label': 'Base Stats'},
+                {'id': 'prep', 'label': 'Preparation'},
+                {'id': 'trend', 'label': 'Trend Detail'},
+              ],
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          home: Scaffold(body: HeroTrendsScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Player'));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      find.byKey(const ValueKey('stats-trend-player-view-base')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('stats-trend-player-view-prep')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('stats-trend-player-view-trend')),
+      findsNothing,
+    );
+
+    playerTable.complete(
+      sampleStatsTrendTable(
+        dimension: 'player_rank',
+        view: 'peak',
+        availableViews: const [
+          {'id': 'peak', 'label': 'Peak'},
+          {'id': 'ranked', 'label': 'Rank'},
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stats-trend-player-view-peak')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stats-trend-player-view-ranked')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('highlights the strongest match phase in red', (tester) async {
