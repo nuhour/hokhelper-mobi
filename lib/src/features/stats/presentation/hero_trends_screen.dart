@@ -68,6 +68,9 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
   void _setQuery(StatsTrendQuery query) {
     final normalizedQuery = _normalizeTrendQuery(query);
     setState(() {
+      if (_query.dimension != normalizedQuery.dimension) {
+        _searchController.clear();
+      }
       _query = normalizedQuery;
       _sortColumn = '';
       _sortAscending = false;
@@ -216,7 +219,10 @@ class _HeroTrendsScreenState extends ConsumerState<HeroTrendsScreen> {
             table: table,
             rowCount: rows.length,
             onOpenFilters: () => _openFilters(table),
-            onSearch: () => setState(() => _showSearch = !_showSearch),
+            onSearch: () => setState(() {
+              _showSearch = !_showSearch;
+              if (!_showSearch) _searchController.clear();
+            }),
             onRefresh: () {
               ref.invalidate(heroTrendTableProvider(_query));
               ref.invalidate(

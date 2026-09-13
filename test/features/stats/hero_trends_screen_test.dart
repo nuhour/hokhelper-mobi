@@ -12,6 +12,39 @@ import 'package:hok_helper_mobile/src/features/stats/presentation/hero_trends_sc
 import 'stats_trends_fixture.dart';
 
 void main() {
+  for (final action in ['close search', 'switch dimension']) {
+    testWidgets('clears hidden trend search when users $action', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            heroTrendTableProvider.overrideWith(
+              (ref, query) async => sampleStatsTrendTable(
+                dimension: query.dimension,
+                view: query.view,
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: Scaffold(body: HeroTrendsScreen())),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.search_rounded));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'no-matching-hero');
+      await tester.pumpAndSettle();
+      expect(find.byType(AppStatsTable), findsNothing);
+      if (action == 'close search') {
+        await tester.tap(find.byIcon(Icons.search_rounded).first);
+      } else {
+        await tester.tap(find.text('Power'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(AppStatsTable), findsOneWidget);
+    });
+  }
+
   testWidgets('renders metadata driven filters, views, groups, and columns', (
     tester,
   ) async {
