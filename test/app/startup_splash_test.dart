@@ -8,7 +8,9 @@ import 'package:hok_helper_mobile/src/features/home/data/home_repository.dart';
 import 'package:hok_helper_mobile/src/features/home/presentation/home_screen.dart';
 
 void main() {
-  testWidgets('preloads home data before revealing the app', (tester) async {
+  testWidgets('preloads home data without delaying splash exit', (
+    tester,
+  ) async {
     final homeStats = Completer<HomeStats>();
     var loadCount = 0;
 
@@ -36,9 +38,6 @@ void main() {
       expect(find.bySemanticsLabel('Tool icon $index'), findsOneWidget);
     }
 
-    homeStats.complete(
-      const HomeStats(success: true, message: 'Ready', result: {}),
-    );
     await tester.pump(const Duration(milliseconds: 2500));
     expect(find.text('HOK HELPER'), findsOneWidget);
 
@@ -46,11 +45,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('HOK HELPER'), findsNothing);
     expect(find.text('Home ready'), findsOneWidget);
+
+    homeStats.complete(
+      const HomeStats(success: true, message: 'Ready', result: {}),
+    );
   });
 
-  testWidgets('keeps the branded splash through a normal slow preload', (
-    tester,
-  ) async {
+  testWidgets('reveals the app during a slow home preload', (tester) async {
     final homeStats = Completer<HomeStats>();
 
     await tester.pumpWidget(
@@ -65,17 +66,16 @@ void main() {
       ),
     );
 
-    for (var second = 0; second < 7; second++) {
-      await tester.pump(const Duration(seconds: 1));
-    }
-    expect(find.text('HOK HELPER'), findsOneWidget);
-
-    for (var second = 0; second < 15; second++) {
+    for (var second = 0; second < 4; second++) {
       await tester.pump(const Duration(seconds: 1));
     }
     await tester.pumpAndSettle();
 
     expect(find.text('HOK HELPER'), findsNothing);
     expect(find.text('App shell'), findsOneWidget);
+
+    homeStats.complete(
+      const HomeStats(success: true, message: 'Ready', result: {}),
+    );
   });
 }

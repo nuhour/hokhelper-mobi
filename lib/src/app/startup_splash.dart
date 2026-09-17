@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -21,14 +22,9 @@ class StartupSplash extends ConsumerStatefulWidget {
 
 class _StartupSplashState extends ConsumerState<StartupSplash>
     with TickerProviderStateMixin {
-  // 线上首页聚合接口首响通常需要数秒，开屏覆盖这段预热时间；网络异常时
-  // 仍在上限后进入首页的可重试状态，避免无限停留在开屏动画。
-  static const _maximumPreloadWait = Duration(seconds: 20);
-
   late final AnimationController _gatherController;
   late final AnimationController _pulseController;
   late final AnimationController _exitController;
-  late final Future<void> _homePreload;
   late final bool _isWidgetTest;
   bool _showSplash = true;
   bool _assetsPrecached = false;
@@ -53,13 +49,15 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
     );
     final shouldPreloadHome =
         !_isWidgetTest || widget.minimumGatherDelay != null;
-    _homePreload = !shouldPreloadHome
-        ? Future<void>.value()
-        : ref
-              .read(homeStatsProvider.future)
-              .then<void>((_) {})
-              .timeout(_maximumPreloadWait, onTimeout: () {})
-              .catchError((Object _) {});
+    if (shouldPreloadHome) {
+      // 预热请求与开屏动画并行，网络慢时由首页自己的 loading 状态承接。
+      unawaited(
+        ref
+            .read(homeStatsProvider.future)
+            .then<void>((_) {})
+            .catchError((Object _) {}),
+      );
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _beginVisibleStartup();
     });
@@ -103,10 +101,8 @@ class _StartupSplashState extends ConsumerState<StartupSplash>
 
   Future<void> _runStartup(Future<void> gatherAnimation) async {
     await gatherAnimation;
-    await Future.wait<void>([
-      _homePreload,
-      Future<void>.delayed(const Duration(seconds: 1)),
-    ]);
+    // 收尾时间只由视觉动画决定，不再被远端首页接口耗时拉长。
+    await Future<void>.delayed(const Duration(milliseconds: 600));
     if (!mounted) {
       return;
     }
