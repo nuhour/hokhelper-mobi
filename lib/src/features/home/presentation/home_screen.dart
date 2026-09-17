@@ -911,6 +911,7 @@ class _HomeLiveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.34),
@@ -929,7 +930,7 @@ class _HomeLiveBadge extends StatelessWidget {
             ),
             const SizedBox(width: 5),
             Text(
-              '${season.isEmpty ? 'S15' : season}  Live Now',
+              '${season.isEmpty ? 'S15' : season}  ${l10n.homeNewSeason}',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,

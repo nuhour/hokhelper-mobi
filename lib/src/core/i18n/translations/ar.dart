@@ -95,6 +95,7 @@ const arTranslations = {
   'close': 'إغلاق',
   'homeHeroDescription':
       'تصنيفات مباشرة وبيانات أبطال وقرارات عملية لكل مباراة.',
+  'homeNewSeason': 'موسم جديد',
   'homeCoreStats': 'الإحصائيات الأساسية',
   'homeTierList': 'قائمة التصنيف',
   'homeWorldDescription': 'استكشف عالم وشخصيات وقصص Honor of Kings.',

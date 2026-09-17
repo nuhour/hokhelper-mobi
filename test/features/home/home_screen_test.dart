@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hok_helper_mobile/src/core/i18n/app_localizations.dart';
 import 'package:hok_helper_mobile/src/features/auth/domain/auth_user.dart';
 import 'package:hok_helper_mobile/src/features/auth/presentation/auth_controller.dart';
 import 'package:hok_helper_mobile/src/features/content/domain/content_item_summary.dart';
@@ -54,10 +56,20 @@ const _menuProfile = UserProfile(
   isSelf: true,
 );
 
-Widget _buildHomeScreen(HomeStats stats) {
+Widget _buildHomeScreen(HomeStats stats, {Locale? locale}) {
   return ProviderScope(
     overrides: [homeStatsProvider.overrideWith((ref) async => stats)],
-    child: const MaterialApp(home: Scaffold(body: HomeScreen())),
+    child: MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const Scaffold(body: HomeScreen()),
+    ),
   );
 }
 
@@ -132,7 +144,7 @@ void main() {
     expect(find.text('Heroes'), findsWidgets);
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('HOK HELPER'), findsOneWidget);
-    expect(find.textContaining('Live Now'), findsOneWidget);
+    expect(find.textContaining('New Season'), findsOneWidget);
     expect(find.text('Core Stats'), findsOneWidget);
     expect(find.text('Tier List'), findsAtLeastNWidgets(1));
     expect(find.byIcon(Icons.new_releases_rounded), findsOneWidget);
@@ -142,6 +154,23 @@ void main() {
     expect(find.text('Trending Heroes'), findsNothing);
     expect(find.text('BP Simulator'), findsNothing);
     expect(find.text('Quick Tools'), findsNothing);
+  });
+
+  testWidgets('home season badge follows the selected locale', (tester) async {
+    await tester.pumpWidget(
+      _buildHomeScreen(
+        const HomeStats(
+          success: true,
+          message: 'Home portal ready',
+          result: {},
+        ),
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('新赛季'), findsOneWidget);
+    expect(find.textContaining('Live Now'), findsNothing);
   });
 
   testWidgets(

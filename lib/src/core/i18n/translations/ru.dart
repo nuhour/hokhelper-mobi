@@ -99,6 +99,7 @@ const ruTranslations = {
   'close': 'Закрыть',
   'homeHeroDescription':
       'Онлайн-рейтинги, данные героев и решения для каждого матча.',
+  'homeNewSeason': 'Новый сезон',
   'homeCoreStats': 'Основная статистика',
   'homeTierList': 'Тир-лист',
   'homeWorldDescription':

@@ -89,6 +89,7 @@ const zhTranslations = {
   'search': '搜索',
   'close': '关闭',
   'homeHeroDescription': '实时排行、英雄数据与每一局都能用上的实战决策。',
+  'homeNewSeason': '新赛季',
   'homeCoreStats': '核心数据',
   'homeTierList': '梯度榜',
   'homeWorldDescription': '探索王者荣耀的世界、英雄与故事。',

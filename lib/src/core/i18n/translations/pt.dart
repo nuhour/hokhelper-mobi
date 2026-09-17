@@ -101,6 +101,7 @@ const ptTranslations = {
   'close': 'Fechar',
   'homeHeroDescription':
       'Rankings ao vivo, dados de heróis e decisões práticas para cada partida.',
+  'homeNewSeason': 'Nova temporada',
   'homeCoreStats': 'Estatísticas principais',
   'homeTierList': 'Tier List',
   'homeWorldDescription':

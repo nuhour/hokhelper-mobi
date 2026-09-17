@@ -99,6 +99,7 @@ const enTranslations = {
   'close': 'Close',
   'homeHeroDescription':
       'Live rankings, hero data, and practical decisions for every match.',
+  'homeNewSeason': 'New Season',
   'homeCoreStats': 'Core Stats',
   'homeTierList': 'Tier List',
   'homeWorldDescription':

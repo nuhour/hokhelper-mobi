@@ -98,6 +98,7 @@ const msTranslations = {
   'close': 'Tutup',
   'homeHeroDescription':
       'Kedudukan langsung, data hero dan keputusan praktikal untuk setiap perlawanan.',
+  'homeNewSeason': 'Musim Baharu',
   'homeCoreStats': 'Statistik teras',
   'homeTierList': 'Senarai Tier',
   'homeWorldDescription': 'Terokai dunia, watak dan kisah Honor of Kings.',

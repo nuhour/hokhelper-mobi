@@ -105,6 +105,7 @@ const esTranslations = {
   'close': 'Cerrar',
   'homeHeroDescription':
       'Rankings en directo, datos de héroes y decisiones útiles para cada partida.',
+  'homeNewSeason': 'Nueva temporada',
   'homeCoreStats': 'Estadísticas clave',
   'homeTierList': 'Tier List',
   'homeWorldDescription':

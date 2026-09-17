@@ -122,6 +122,7 @@ class AppLocalizations {
   String get search => _t('search');
   String get close => _t('close');
   String get homeHeroDescription => _t('homeHeroDescription');
+  String get homeNewSeason => _t('homeNewSeason');
   String get homeCoreStats => _t('homeCoreStats');
   String get homeTierList => _t('homeTierList');
   String get homeWorldDescription => _t('homeWorldDescription');

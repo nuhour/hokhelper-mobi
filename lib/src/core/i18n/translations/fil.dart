@@ -102,6 +102,7 @@ const filTranslations = {
   'close': 'Isara',
   'homeHeroDescription':
       'Live rankings, hero data, at praktikal na desisyon sa bawat laro.',
+  'homeNewSeason': 'Bagong Season',
   'homeCoreStats': 'Core Stats',
   'homeTierList': 'Tier List',
   'homeWorldDescription':

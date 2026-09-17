@@ -100,6 +100,7 @@ final idTranslations = {
   'close': 'Tutup',
   'homeHeroDescription':
       'Peringkat langsung, data hero, dan keputusan praktis untuk setiap match.',
+  'homeNewSeason': 'Musim Baru',
   'homeCoreStats': 'Statistik Inti',
   'homeTierList': 'Tier List',
   'homeWorldDescription':
